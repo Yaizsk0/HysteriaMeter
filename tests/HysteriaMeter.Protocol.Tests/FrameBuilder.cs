@@ -31,5 +31,6 @@ internal static class FrameBuilder
 
     public static byte[] Concat(params byte[][] parts) => parts.SelectMany(p => p).ToArray();
 
-    public static byte[] Hex(string hex) => Convert.FromHexString(hex.Replace(" ", string.Empty, StringComparison.Ordinal).Replace("\n", string.Empty, StringComparison.Ordinal));
+    // Ignora cualquier espacio en blanco, incluido el \r de los checkouts con CRLF en Windows.
+    public static byte[] Hex(string hex) => Convert.FromHexString(string.Concat(hex.Where(c => !char.IsWhiteSpace(c))));
 }
