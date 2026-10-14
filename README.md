@@ -2,7 +2,7 @@
 
 DPS meter de escritorio para **AION 2**. Captura pasivamente el tráfico del juego con Npcap, decodifica los paquetes de combate y muestra un overlay con el DPS de la party en vivo.
 
-> **Estado**: esqueleto funcional (captura, reensamblado TCP, framing, motor de combate, overlay, historial, herramienta de análisis, 34 tests). **Falta identificar los opcodes reales** del juego; hasta entonces el meter captura pero no muestra daño. Ver [quickstart → Descubrir opcodes](specs/001-dps-meter-mvp/quickstart.md#descubrir-opcodes).
+> **Estado**: decodifica daño real del cliente global (framing, bundles LZ4, daño, aparición de NPC y muertes con nombres). Pendiente: confirmar la escala del daño contra Combat Analysis, críticos, curación y jugador local. Ver [notas del protocolo](specs/001-dps-meter-mvp/protocol-notes.md).
 
 ## Principio rector
 

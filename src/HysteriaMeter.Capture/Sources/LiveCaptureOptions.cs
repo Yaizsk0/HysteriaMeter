@@ -2,7 +2,7 @@ namespace HysteriaMeter.Capture.Sources;
 
 public sealed record LiveCaptureOptions
 {
-    /// <summary>Nombre o descripción (parcial) de la placa. Vacío = elegir la primera con tráfico del juego.</summary>
+    /// <summary>Nombre o descripción (parcial) de la placa. Vacío = escuchar en todas y quedarse con la que tenga tráfico del juego.</summary>
     public string? Device { get; init; }
 
     /// <summary>Filtro BPF aplicado en el driver. Se puede restringir a los puertos del juego una vez conocidos.</summary>

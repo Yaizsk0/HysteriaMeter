@@ -4,7 +4,8 @@ using System.Buffers.Binary;
 namespace HysteriaMeter.Protocol.Framing;
 
 /// <summary>
-/// Corta un stream TCP ya reensamblado en frames <c>[varint largo][opcode][cuerpo]</c>.
+/// Corta un stream TCP ya reensamblado en frames <c>[varint largo][opcode][cuerpo]</c>
+/// (ver <see cref="ProtocolOptions"/> para cómo se interpreta el largo).
 /// Un framer por dirección de cada conexión; acumula bytes entre llamadas.
 /// </summary>
 public sealed class PacketFramer(ProtocolOptions options)
@@ -27,12 +28,23 @@ public sealed class PacketFramer(ProtocolOptions options)
 
         while (offset < buffer.Length)
         {
-            if (!VarInt.TryRead(buffer[offset..], out var length, out var prefix))
+            ulong length;
+            int prefix;
+            try
             {
+                if (!VarInt.TryRead(buffer[offset..], out length, out prefix))
+                {
+                    break;
+                }
+            }
+            catch (InvalidDataException)
+            {
+                Desyncs++;
+                offset = buffer.Length;
                 break;
             }
 
-            var bodyLength = options.LengthIncludesPrefix ? (long)length - prefix : (long)length;
+            var bodyLength = (long)length - options.LengthBias;
             if (bodyLength < options.OpcodeSize || bodyLength > options.MaxFrameSize)
             {
                 // Perdimos sincronía (o el formato asumido es incorrecto). Descartamos lo pendiente

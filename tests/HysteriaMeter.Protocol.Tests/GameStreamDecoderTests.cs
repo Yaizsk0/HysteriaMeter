@@ -8,48 +8,84 @@ namespace HysteriaMeter.Protocol.Tests;
 
 public class GameStreamDecoderTests
 {
-    private const ushort DamageOpcode = 0x0100;
-    private const ushort BundleOpcode = 0x0200;
-
     private static readonly DateTimeOffset T0 = new(2026, 10, 14, 21, 0, 0, TimeSpan.Zero);
 
-    private static GameStreamDecoder CreateDecoder() => new(
-        new OpcodeTable(new Dictionary<PacketKind, IReadOnlyList<ushort>>
-        {
-            [PacketKind.Damage] = [DamageOpcode],
-            [PacketKind.Bundle] = [BundleOpcode],
-        }),
-        [new DamagePacketDecoder()]);
-
-    private static byte[] DamageFrame(ulong source, ulong target, ulong skill, ulong amount, HitModifiers modifiers = HitModifiers.None) =>
-        Frame(DamageOpcode, Concat(VarInts(source, target, skill, amount), [(byte)modifiers]));
+    private static GameStreamDecoder CreateDecoder() =>
+        new(OpcodeTable.Load(Path.Combine(AppContext.BaseDirectory, "data", "opcodes.json")), PacketDecoders.All);
 
     [Fact]
-    public void Decodes_damage_frames()
+    public void Decodes_real_damage_frame()
     {
-        var events = CreateDecoder().Push(DamageFrame(1, 99, 500, 1234, HitModifiers.Critical), T0);
+        var events = CreateDecoder().Push(Frame(0x3804, Hex(RealCapture.DamageBody)), T0);
 
         var damage = Assert.IsType<DamageEvent>(Assert.Single(events));
-        Assert.Equal((1UL, 99UL, 500U, 1234L, HitModifiers.Critical), (damage.SourceId, damage.TargetId, damage.SkillId, damage.Amount, damage.Modifiers));
+        Assert.Equal((12157UL, 43190UL, 0x00FF4791U, 672L), (damage.SourceId, damage.TargetId, damage.SkillId, damage.Amount));
         Assert.Equal(T0, damage.Timestamp);
     }
 
     [Fact]
-    public void Expands_lz4_bundles()
+    public void Decodes_damage_frame_with_extra_block()
     {
-        var inner = Concat(DamageFrame(1, 99, 500, 10), DamageFrame(2, 99, 501, 20));
-        var bundle = Frame(BundleOpcode, BundleDecoder.Compress(inner));
+        var events = CreateDecoder().Push(Frame(0x3804, Hex(RealCapture.DamageWithExtraBody)), T0);
 
-        var events = CreateDecoder().Push(bundle, T0);
-
-        Assert.Equal([10L, 20L], events.Cast<DamageEvent>().Select(e => e.Amount));
+        Assert.Equal(2221, Assert.IsType<DamageEvent>(Assert.Single(events)).Amount);
     }
 
     [Fact]
-    public void Malformed_packet_is_counted_not_thrown()
+    public void Effect_without_damage_flag_produces_no_event()
+    {
+        Assert.Empty(CreateDecoder().Push(Frame(0x3804, Hex(RealCapture.EffectWithoutDamageBody)), T0));
+    }
+
+    [Fact]
+    public void Decodes_npc_spawn()
+    {
+        var events = CreateDecoder().Push(Frame(0x3641, Hex(RealCapture.NpcSpawnBody)), T0);
+
+        var spawn = Assert.IsType<EntitySpawnEvent>(Assert.Single(events));
+        Assert.Equal((20402UL, (uint?)0x00203430), (spawn.EntityId, spawn.NpcId));
+    }
+
+    [Fact]
+    public void Decodes_kill_with_killer_name()
+    {
+        var events = CreateDecoder().Push(Frame(0x8D04, Hex(RealCapture.KillBody)), T0);
+
+        Assert.Collection(
+            events,
+            e => Assert.Equal(20402UL, Assert.IsType<DeathEvent>(e).EntityId),
+            e =>
+            {
+                var info = Assert.IsType<EntityInfoEvent>(e);
+                Assert.Equal((12157UL, "Tester"), (info.EntityId, info.Name));
+            });
+    }
+
+    [Fact]
+    public void Expands_real_lz4_bundle()
     {
         var decoder = CreateDecoder();
-        var events = decoder.Push(Frame(DamageOpcode, 0x01), T0);
+        decoder.Push(Hex(RealCapture.BundleFrame), T0);
+
+        Assert.Equal(0, decoder.Stats.Errors);
+        Assert.Equal(1, decoder.Stats.ByOpcode[0xFFFF]);
+        Assert.True(decoder.Stats.ByOpcode.Count > 1);
+    }
+
+    [Fact]
+    public void Expands_synthetic_bundle_with_damage()
+    {
+        var inner = Concat(Frame(0x3804, Hex(RealCapture.DamageBody)), Frame(0x3804, Hex(RealCapture.DamageWithExtraBody)));
+        var events = CreateDecoder().Push(Frame(0xFFFF, BundleDecoder.Compress(inner)), T0);
+
+        Assert.Equal([672L, 2221L], events.Cast<DamageEvent>().Select(e => e.Amount));
+    }
+
+    [Fact]
+    public void Truncated_packet_is_counted_not_thrown()
+    {
+        var decoder = CreateDecoder();
+        var events = decoder.Push(Frame(0x3804, Hex(RealCapture.DamageBody)[..10]), T0);
 
         Assert.Empty(events);
         Assert.Equal(1, decoder.Stats.Errors);

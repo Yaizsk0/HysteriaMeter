@@ -1,27 +1,32 @@
+using System.Buffers.Binary;
 using K4os.Compression.LZ4;
 
 namespace HysteriaMeter.Protocol.Framing;
 
 /// <summary>
-/// Un "bundle" es un frame cuyo cuerpo es <c>[varint largo descomprimido][bloque LZ4]</c> y que, una vez
-/// descomprimido, contiene más frames concatenados con el mismo formato.
+/// Un "bundle" (opcode 0xFFFF en AION 2) es un frame cuyo cuerpo es
+/// <c>[u32 LE largo descomprimido][bloque LZ4]</c>. Descomprimido contiene más frames
+/// concatenados con el mismo formato.
 /// </summary>
 public static class BundleDecoder
 {
+    private const int HeaderSize = 4;
+
     public static byte[] Decompress(ReadOnlySpan<byte> body, int maxSize = 4 << 20)
     {
-        if (!VarInt.TryRead(body, out var rawSize, out var prefix))
+        if (body.Length < HeaderSize)
         {
             throw new InvalidDataException("Bundle sin largo descomprimido.");
         }
 
-        if (rawSize > (ulong)maxSize)
+        var rawSize = BinaryPrimitives.ReadUInt32LittleEndian(body);
+        if (rawSize > (uint)maxSize)
         {
             throw new InvalidDataException($"Bundle de {rawSize} bytes supera el límite.");
         }
 
         var output = new byte[(int)rawSize];
-        var written = LZ4Codec.Decode(body[prefix..], output);
+        var written = LZ4Codec.Decode(body[HeaderSize..], output);
         if (written != output.Length)
         {
             throw new InvalidDataException($"LZ4 devolvió {written} bytes, se esperaban {output.Length}.");
@@ -32,9 +37,9 @@ public static class BundleDecoder
 
     public static byte[] Compress(ReadOnlySpan<byte> raw)
     {
-        var target = new byte[LZ4Codec.MaximumOutputSize(raw.Length) + VarInt.MaxBytes];
-        var prefix = VarInt.Write(target, (ulong)raw.Length);
-        var encoded = LZ4Codec.Encode(raw, target.AsSpan(prefix));
-        return target.AsSpan(0, prefix + encoded).ToArray();
+        var target = new byte[LZ4Codec.MaximumOutputSize(raw.Length) + HeaderSize];
+        BinaryPrimitives.WriteUInt32LittleEndian(target, (uint)raw.Length);
+        var encoded = LZ4Codec.Encode(raw, target.AsSpan(HeaderSize));
+        return target.AsSpan(0, HeaderSize + encoded).ToArray();
     }
 }

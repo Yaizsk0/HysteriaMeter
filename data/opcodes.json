@@ -1,16 +1,24 @@
 {
-  // Mapa tipo de paquete → opcodes. Cada tipo admite varios valores para que convivan
-  // los de antes y después de un parche. Formato hex "0x...." o decimal.
+  // Mapa tipo de paquete → opcodes (u16 little-endian). Cada tipo admite varios valores para que
+  // convivan los de antes y después de un parche. Formato hex "0x...." o decimal.
   //
-  // PENDIENTE: completar con capturas propias (ver specs/001-dps-meter-mvp/quickstart.md,
-  // "Descubrir opcodes"). Mientras esté vacío, el meter captura pero no decodifica nada.
+  // Confirmados con una captura real del cliente global (2026-10-14):
+  //   0xFFFF  bundle: [u32 LE largo descomprimido][bloque LZ4] con más frames adentro
+  //   0x3804  resultado de un efecto sobre un objetivo; con flags & 0x04 lleva daño
+  //   0x3641  aparición de NPC (entidad, ID de NPC, posición, HP actual y máximo)
+  //   0x8D04  muerte, con skill, ID y nombre del que mató
+  //
+  // Vistos pero todavía sin decoder:
+  //   0x3802  lanzamiento de skill (fuente, skill, objetivo, posición)
+  //   0x8D00  actualización de HP/MP (entidad, tipo, u32 valor actual)
+  //   0x371A-0x371D, 0x3600  movimiento de entidades
   "opcodes": {
-    "Bundle": [],
+    "Bundle": ["0xFFFF"],
     "LocalPlayer": [],
-    "EntitySpawn": [],
+    "EntitySpawn": ["0x3641"],
     "EntityInfo": [],
-    "Damage": [],
+    "Damage": ["0x3804"],
     "Heal": [],
-    "Death": []
+    "Death": ["0x8D04"]
   }
 }

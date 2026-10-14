@@ -16,7 +16,7 @@ public sealed class CaptureSettings
 
     public string? Device { get; set; }
 
-    public List<string> ProcessNames { get; set; } = ["Aion2"];
+    public List<string> ProcessNames { get; set; } = ["AION2"];
 
     public List<int> ServerPorts { get; set; } = [];
 
