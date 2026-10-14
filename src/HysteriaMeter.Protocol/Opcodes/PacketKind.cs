@@ -9,6 +9,7 @@ public enum PacketKind
     EntitySpawn,
     EntityInfo,
     Damage,
+    PeriodicEffect,
     Heal,
     Death,
 }

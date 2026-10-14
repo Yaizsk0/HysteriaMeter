@@ -24,6 +24,24 @@ internal static class RealCapture
     /// <summary>Muerte de la entidad 20402 a manos de 12157 ("Tester", legión "Legion").</summary>
     public const string KillBody = "b2 9f 01 54 c0 f4 00 fd 5e 79 05 06 54 65 73 74 65 72 06 4c 65 67 69 6f 6e 01 00 00 00 00 00 00 01 00";
 
+    /// <summary>Tick de DoT (0x3805, type 0x0A) de la dungeon: objetivo 22430, fuente 1244, valor 1401, skill 0x00B87B76.</summary>
+    public const string DotTickBody = "9e af 01 0a dc 09 07 1b e8 0f 48 f9 0a 76 7b b8 00";
+
+    /// <summary>0x3805 con type 0x00: otro formato, sin monto.</summary>
+    public const string PeriodicWithoutAmountBody = "a3 81 02 00 a3 81 02 01 0a e1 f5 05";
+
+    /// <summary>
+    /// Aparición de otro jugador (0x3645): entidad 16028, nombre reemplazado por "Tests".
+    /// Recortado después del nombre; el real sigue ~1,5 KB.
+    /// </summary>
+    public const string PlayerSpawnBody = "9c 7d 0f b0 a4 01 07 05 54 65 73 74 73 1a 00 00 00 01 02";
+
+    /// <summary>Invocación (0x3641, tipo 0x5F) con nombre de dueño reemplazado por "Tester": entidad 22627, NPC 2920650.</summary>
+    public const string SummonWithOwnerBody = "e3 b0 01 5f 00 01 06 54 65 73 74 65 72 ca 90 2c 00 40 02";
+
+    /// <summary>Invocación sin nombre de dueño: entidad 30599, NPC 2920655.</summary>
+    public const string SummonWithoutOwnerBody = "87 ef 01 5f 00 00 cf 90 2c 00 40 02";
+
     /// <summary>Frame bundle (0xFFFF) completo: 431 bytes con LZ4 adentro.</summary>
     public const string BundleFrame = """
         b103ffff20020000f30e970401910000f203000018018f9506003e07c7006d0ec70058b8457f000100f301018b950600feb7c7000f2ac700383c4617

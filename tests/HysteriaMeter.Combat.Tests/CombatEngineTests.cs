@@ -55,6 +55,28 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Summon_with_owner_name_is_attributed_once_the_owner_name_is_known()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, MySummon, OwnerId: null, NpcId: 2920650, OwnerName: "Aliado"));
+        engine.Apply(new EntityInfoEvent(T0, Ally, "Aliado", null));
+        engine.Apply(new DamageEvent(At(0), MySummon, Boss, 99, 700, HitModifiers.None));
+
+        var actor = Assert.Single(engine.CurrentSnapshot()!.Actors);
+        Assert.Equal((Ally, 700L), (actor.Id, actor.Damage));
+    }
+
+    [Fact]
+    public void Summon_with_unknown_owner_is_not_ranked()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, MySummon, OwnerId: null, NpcId: 2920650, OwnerName: "Nadie"));
+        engine.Apply(new DamageEvent(At(0), MySummon, Boss, 99, 700, HitModifiers.None));
+
+        Assert.Null(engine.CurrentSnapshot());
+    }
+
+    [Fact]
     public void Npc_damage_is_not_ranked()
     {
         var engine = CreateEngine();

@@ -8,7 +8,7 @@
 }
 ```
 
-- Claves: nombres de `PacketKind` sin distinguir mayúsculas (`Bundle`, `LocalPlayer`, `EntitySpawn`, `EntityInfo`, `Damage`, `Heal`, `Death`). Una clave desconocida es un error de carga.
+- Claves: nombres de `PacketKind` sin distinguir mayúsculas (`Bundle`, `LocalPlayer`, `EntitySpawn`, `EntityInfo`, `Damage`, `PeriodicEffect`, `Heal`, `Death`). Una clave desconocida es un error de carga.
 - Valores: opcodes en hex (`"0x...."`) o decimal. Varios por tipo para que convivan versiones.
 - Un mismo opcode no puede pertenecer a dos tipos.
 - Se permiten comentarios `//` y comas finales.

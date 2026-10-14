@@ -5,9 +5,10 @@ using HysteriaMeter.Protocol.Opcodes;
 namespace HysteriaMeter.Protocol.Decoding;
 
 /// <summary>
-/// Aparición de un NPC/monstruo (opcode 0x3641). Solo usamos el ID de entidad y el ID de NPC
-/// para que el motor no cuente a los monstruos en el ranking:
-/// <code>varint entityId | 3 bytes | u32 npcId | ... (posición, HP actual y máximo)</code>
+/// Aparición de un NPC, monstruo o invocación (opcode 0x3641):
+/// <code>varint entityId | u8 tipo | u8 | u8 hasOwnerName | [string ownerName] | u32 npcId | ... (posición, HP actual y máximo)</code>
+/// Las invocaciones de jugadores (tipo 0x5F) a veces traen el nombre del dueño; con eso el motor
+/// les asigna el daño. Los monstruos normales traen <c>hasOwnerName = 0</c>.
 /// </summary>
 public sealed class NpcSpawnDecoder : IPacketDecoder
 {
@@ -17,8 +18,9 @@ public sealed class NpcSpawnDecoder : IPacketDecoder
     {
         var reader = new PacketReader(body);
         var entity = reader.ReadVarUInt();
-        reader.Skip(3);
+        reader.Skip(2);
+        var ownerName = reader.ReadByte() != 0 ? reader.ReadUtf8String() : null;
         var npcId = reader.ReadUInt32();
-        output.Add(new EntitySpawnEvent(timestamp, entity, OwnerId: null, NpcId: npcId));
+        output.Add(new EntitySpawnEvent(timestamp, entity, OwnerId: null, NpcId: npcId, OwnerName: string.IsNullOrEmpty(ownerName) ? null : ownerName));
     }
 }

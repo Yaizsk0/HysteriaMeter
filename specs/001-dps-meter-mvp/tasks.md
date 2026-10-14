@@ -41,10 +41,10 @@ description: "Tareas del MVP de Hysteria Meter"
 
 - [X] T015 [US5] `hysteria-rec devices | record | dump` en `tools/HysteriaMeter.Recorder/Program.cs`
 - [X] T016 [US5] Confirmar el nombre del ejecutable del juego (`AION2`) y actualizar `appsettings.json` (FR-015)
-- [ ] T017 [US5] Grabar capturas de referencia (pelea solo ✓, party, cambio de zona) y guardarlas fuera del repo
+- [ ] T017 [US5] Grabar capturas de referencia (pelea solo ✓, party ✓, cambio de zona) y guardarlas fuera del repo
 - [X] T018 [US5] Confirmar framing real (opcode u16 LE, largo = bytes + 4, bundle 0xFFFF con u32 + LZ4) y ajustar `ProtocolOptions` (ver `protocol-notes.md`)
 - [X] T019 [US5] Identificar opcodes de Bundle, Damage, EntitySpawn y Death y cargarlos en `data/opcodes.json`
-- [ ] T019b [US5] Identificar LocalPlayer, EntityInfo (nombres fuera de kills) y Heal
+- [ ] T019b [US5] Identificar LocalPlayer, EntityInfo (nombres fuera de kills ✓ `0x3645`) y Heal (tick `0x3805` ✓, falta el directo y validar)
 
 ## Phase 4: User Story 1 - Mi DPS en vivo (P1) 🎯 MVP
 
@@ -52,7 +52,7 @@ description: "Tareas del MVP de Hysteria Meter"
 - [X] T021 [US1] `MeterPipeline` (BackgroundService) en `src/HysteriaMeter.App/Pipeline/MeterPipeline.cs`
 - [X] T022 [US1] Overlay básico con ranking en `src/HysteriaMeter.App/Overlay/`
 - [X] T023 [US1] Reemplazar el layout provisorio de `DamagePacketDecoder` por el real + test con bytes reales
-- [ ] T023b [US1] Confirmar la escala del daño de `0x3804` contra Combat Analysis e identificar el bit de crítico
+- [ ] T023b [US1] Confirmar la escala del daño de `0x3804` contra Combat Analysis (✓ exacto con DoT `0x3805`) e identificar el bit de crítico
 - [ ] T024 [P] [US1] `LocalPlayerDecoder` + test en `src/HysteriaMeter.Protocol/Decoding/`
 - [ ] T025 [US1] Validar contra Combat Analysis en 10 peleas (SC-001) y registrar resultados en `specs/001-dps-meter-mvp/validation.md`
 
@@ -62,7 +62,7 @@ description: "Tareas del MVP de Hysteria Meter"
 
 - [X] T026 [US2] Canonicalización de entidades y atribución de invocaciones en `src/HysteriaMeter.Combat/EntityRegistry.cs`
 - [X] T027 [P] [US2] `NpcSpawnDecoder` (NpcId) + test con bytes reales
-- [ ] T027b [US2] Dueño de invocaciones
+- [ ] T027b [US2] Dueño de invocaciones (✓ por nombre en `0x3641`; faltan las que no traen dueño)
 - [ ] T028 [P] [US2] `EntityInfoDecoder` (nombre, clase) + test
 - [ ] T029 [US2] Remapear IDs huérfanos al cambiar de zona/pull (edge case) + test en `tests/HysteriaMeter.Combat.Tests/`
 

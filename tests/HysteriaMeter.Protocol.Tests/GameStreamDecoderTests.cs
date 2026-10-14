@@ -47,6 +47,62 @@ public class GameStreamDecoderTests
     }
 
     [Fact]
+    public void Decodes_summon_spawn_with_owner_name()
+    {
+        var events = CreateDecoder().Push(Frame(0x3641, Hex(RealCapture.SummonWithOwnerBody)), T0);
+
+        var spawn = Assert.IsType<EntitySpawnEvent>(Assert.Single(events));
+        Assert.Equal((22627UL, (uint?)2920650, "Tester"), (spawn.EntityId, spawn.NpcId, spawn.OwnerName));
+    }
+
+    [Fact]
+    public void Decodes_summon_spawn_without_owner_name()
+    {
+        var events = CreateDecoder().Push(Frame(0x3641, Hex(RealCapture.SummonWithoutOwnerBody)), T0);
+
+        var spawn = Assert.IsType<EntitySpawnEvent>(Assert.Single(events));
+        Assert.Equal((30599UL, (uint?)2920655, (string?)null), (spawn.EntityId, spawn.NpcId, spawn.OwnerName));
+    }
+
+    [Fact]
+    public void Decodes_dot_tick_as_damage_over_time()
+    {
+        var events = CreateDecoder().Push(Frame(0x3805, Hex(RealCapture.DotTickBody)), T0);
+
+        var damage = Assert.IsType<DamageEvent>(Assert.Single(events));
+        Assert.Equal((1244UL, 22430UL, 0x00B87B76U, 1401L), (damage.SourceId, damage.TargetId, damage.SkillId, damage.Amount));
+        Assert.Equal(HitModifiers.DamageOverTime, damage.Modifiers);
+    }
+
+    [Fact]
+    public void Decodes_heal_tick_as_heal()
+    {
+        var body = Hex(RealCapture.DotTickBody);
+        body[3] = 0x0B; // mismo layout, tipo curación
+
+        var heal = Assert.IsType<HealEvent>(Assert.Single(CreateDecoder().Push(Frame(0x3805, body), T0)));
+        Assert.Equal((1244UL, 22430UL, 1401L), (heal.SourceId, heal.TargetId, heal.Amount));
+    }
+
+    [Fact]
+    public void Periodic_tick_without_amount_produces_no_event()
+    {
+        var decoder = CreateDecoder();
+
+        Assert.Empty(decoder.Push(Frame(0x3805, Hex(RealCapture.PeriodicWithoutAmountBody)), T0));
+        Assert.Equal(0, decoder.Stats.Errors);
+    }
+
+    [Fact]
+    public void Decodes_player_spawn_name()
+    {
+        var events = CreateDecoder().Push(Frame(0x3645, Hex(RealCapture.PlayerSpawnBody)), T0);
+
+        var info = Assert.IsType<EntityInfoEvent>(Assert.Single(events));
+        Assert.Equal((16028UL, "Tests"), (info.EntityId, info.Name));
+    }
+
+    [Fact]
     public void Decodes_kill_with_killer_name()
     {
         var events = CreateDecoder().Push(Frame(0x8D04, Hex(RealCapture.KillBody)), T0);

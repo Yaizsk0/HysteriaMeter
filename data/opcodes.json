@@ -5,19 +5,23 @@
   // Confirmados con una captura real del cliente global (2026-10-14):
   //   0xFFFF  bundle: [u32 LE largo descomprimido][bloque LZ4] con más frames adentro
   //   0x3804  resultado de un efecto sobre un objetivo; con flags & 0x04 lleva daño
-  //   0x3641  aparición de NPC (entidad, ID de NPC, posición, HP actual y máximo)
-  //   0x8D04  muerte, con skill, ID y nombre del que mató
+  //   0x3805  tick de efecto periódico: type 0x0A = DoT, 0x0B / 0x09 = curación
+  //   0x3645  aparición de otro jugador, con su nombre
+  //   0x3641  aparición de NPC o invocación (entidad, nombre del dueño opcional, ID de NPC, posición, HP)
+  //   0x8D04  muerte, con skill, ID y nombre del que mató (en dungeons llega vacío)
   //
   // Vistos pero todavía sin decoder:
   //   0x3802  lanzamiento de skill (fuente, skill, objetivo, posición)
-  //   0x8D00  actualización de HP/MP (entidad, tipo, u32 valor actual)
+  //   0x8D00  actualización de HP/MP: varint entidad | 02 01 00 | u32 HP
+  //   0x3806, 0x364A  solo del jugador local; sin daño (¿estado?)
   //   0x371A-0x371D, 0x3600  movimiento de entidades
   "opcodes": {
     "Bundle": ["0xFFFF"],
     "LocalPlayer": [],
     "EntitySpawn": ["0x3641"],
-    "EntityInfo": [],
+    "EntityInfo": ["0x3645"],
     "Damage": ["0x3804"],
+    "PeriodicEffect": ["0x3805"],
     "Heal": [],
     "Death": ["0x8D04"]
   }
