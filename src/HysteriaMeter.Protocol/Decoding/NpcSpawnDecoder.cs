@@ -21,6 +21,6 @@ public sealed class NpcSpawnDecoder : IPacketDecoder
         reader.Skip(2);
         var ownerName = reader.ReadByte() != 0 ? reader.ReadUtf8String() : null;
         var npcId = reader.ReadUInt32();
-        output.Add(new EntitySpawnEvent(timestamp, entity, OwnerId: null, NpcId: npcId, OwnerName: string.IsNullOrEmpty(ownerName) ? null : ownerName));
+        output.Add(new EntitySpawnEvent(timestamp, entity, OwnerId: null, NpcId: npcId, OwnerName: ownerName is not null && PlayerNames.IsPlausible(ownerName) ? ownerName : null));
     }
 }

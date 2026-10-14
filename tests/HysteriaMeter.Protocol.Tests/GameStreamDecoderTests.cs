@@ -103,6 +103,15 @@ public class GameStreamDecoderTests
     }
 
     [Fact]
+    public void Player_spawn_with_garbage_name_produces_no_event()
+    {
+        var body = Hex(RealCapture.PlayerSpawnBody);
+        body[8] = 0x01; // byte de control dentro del "nombre": otro layout
+
+        Assert.Empty(CreateDecoder().Push(Frame(0x3645, body), T0));
+    }
+
+    [Fact]
     public void Decodes_kill_with_killer_name()
     {
         var events = CreateDecoder().Push(Frame(0x8D04, Hex(RealCapture.KillBody)), T0);

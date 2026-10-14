@@ -24,7 +24,7 @@ public sealed class KillPacketDecoder : IPacketDecoder
         var name = reader.ReadUtf8String();
 
         output.Add(new DeathEvent(timestamp, victim));
-        if (name.Length > 0)
+        if (PlayerNames.IsPlausible(name))
         {
             output.Add(new EntityInfoEvent(timestamp, killer, name, ClassId: null));
         }

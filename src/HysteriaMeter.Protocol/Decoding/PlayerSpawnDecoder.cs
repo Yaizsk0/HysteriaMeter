@@ -21,7 +21,7 @@ public sealed class PlayerSpawnDecoder : IPacketDecoder
         reader.ReadVarUInt();
         reader.Skip(1);
         var name = reader.ReadUtf8String();
-        if (name.Length > 0)
+        if (PlayerNames.IsPlausible(name))
         {
             output.Add(new EntityInfoEvent(timestamp, entity, name, ClassId: null));
         }
