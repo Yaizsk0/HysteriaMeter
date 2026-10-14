@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>hysteria-rec</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\HysteriaMeter.Capture\HysteriaMeter.Capture.csproj" />
+    <ProjectReference Include="..\..\src\HysteriaMeter.Protocol\HysteriaMeter.Protocol.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\data\opcodes.json" Link="data\opcodes.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

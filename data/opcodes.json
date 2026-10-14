@@ -1,0 +1,16 @@
+{
+  // Mapa tipo de paquete → opcodes. Cada tipo admite varios valores para que convivan
+  // los de antes y después de un parche. Formato hex "0x...." o decimal.
+  //
+  // PENDIENTE: completar con capturas propias (ver specs/001-dps-meter-mvp/quickstart.md,
+  // "Descubrir opcodes"). Mientras esté vacío, el meter captura pero no decodifica nada.
+  "opcodes": {
+    "Bundle": [],
+    "LocalPlayer": [],
+    "EntitySpawn": [],
+    "EntityInfo": [],
+    "Damage": [],
+    "Heal": [],
+    "Death": []
+  }
+}

@@ -1,0 +1,40 @@
+# Hysteria Meter
+
+DPS meter de escritorio para **AION 2**. Captura pasivamente el tráfico del juego con Npcap, decodifica los paquetes de combate y muestra un overlay con el DPS de la party en vivo.
+
+> **Estado**: esqueleto funcional (captura, reensamblado TCP, framing, motor de combate, overlay, historial, herramienta de análisis, 34 tests). **Falta identificar los opcodes reales** del juego; hasta entonces el meter captura pero no muestra daño. Ver [quickstart → Descubrir opcodes](specs/001-dps-meter-mvp/quickstart.md#descubrir-opcodes).
+
+## Principio rector
+
+Solo lectura pasiva: no envía ni modifica paquetes, no lee ni escribe la memoria del juego, no automatiza nada. Ver la [constitución](.specify/memory/constitution.md).
+
+## Arquitectura
+
+```text
+Npcap ─► Capture ─► TcpFlowTracker ─► GameStreamDecoder ─► CombatEngine ─► Overlay WPF
+          (Live/Replay)  (reensamblado)   (varint + LZ4 +       (entidades,      └► SQLite
+                                           opcodes.json)         encuentros)
+```
+
+| Proyecto | Responsabilidad |
+|---|---|
+| `src/HysteriaMeter.Capture` | Npcap, filtro por proceso/puerto, reensamblado TCP, replay de `.pcap` |
+| `src/HysteriaMeter.Protocol` | Framing varint, bundles LZ4, `opcodes.json`, decoders → eventos |
+| `src/HysteriaMeter.Combat` | Modelo puro: canonicalización de entidades, encuentros, DPS |
+| `src/HysteriaMeter.Storage` | Historial en SQLite |
+| `src/HysteriaMeter.App` | Overlay WPF (click-through, Ctrl+Shift+L) |
+| `tools/HysteriaMeter.Recorder` | `hysteria-rec`: grabar y analizar capturas |
+
+## Uso rápido
+
+Requisitos: Windows 10/11, [Npcap](https://npcap.com/) en modo compatible WinPcap, .NET 10 SDK.
+
+```powershell
+dotnet build
+dotnet test
+dotnet run --project src/HysteriaMeter.App
+```
+
+## Spec Kit
+
+El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).

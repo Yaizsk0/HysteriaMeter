@@ -1,0 +1,101 @@
+<Window x:Class="HysteriaMeter.App.Overlay.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:HysteriaMeter.App.ViewModels"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance vm:MeterViewModel}"
+        Title="Hysteria Meter"
+        Width="340" SizeToContent="Height" MinHeight="60"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ResizeMode="NoResize" ShowInTaskbar="True"
+        FontFamily="Segoe UI" FontSize="12" Foreground="#EEE">
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="Panel" Color="#D0141821" />
+        <SolidColorBrush x:Key="Accent" Color="#B05B8CFF" />
+        <SolidColorBrush x:Key="AccentLocal" Color="#C0F2A33A" />
+        <Style x:Key="HeaderButton" TargetType="Button">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Margin" Value="2,0,0,0" />
+            <Setter Property="Foreground" Value="#CCC" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+    </Window.Resources>
+
+    <Border Background="{StaticResource Panel}" CornerRadius="6" Padding="8,6">
+        <StackPanel>
+            <!-- Encabezado: se arrastra la ventana desde acá -->
+            <DockPanel x:Name="Header" MouseLeftButtonDown="OnHeaderMouseDown" Background="Transparent">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Style="{StaticResource HeaderButton}" Content="⟲" ToolTip="Reiniciar encuentro" Command="{Binding ResetCommand}" />
+                    <Button Style="{StaticResource HeaderButton}" Content="🔒" ToolTip="Bloquear (click-through). Ctrl+Shift+L para desbloquear" Click="OnLockClick" />
+                    <Button Style="{StaticResource HeaderButton}" Content="✕" ToolTip="Cerrar" Click="OnCloseClick" />
+                </StackPanel>
+                <Ellipse Width="7" Height="7" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Setter Property="Fill" Value="#666" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLive}" Value="True">
+                                    <Setter Property="Fill" Value="#4CD964" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
+                <TextBlock FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                    <Run Text="{Binding Title, Mode=OneWay}" />
+                    <Run Text=" · " Foreground="#888" />
+                    <Run Text="{Binding Elapsed, Mode=OneWay}" Foreground="#AAA" />
+                    <Run Text=" · " Foreground="#888" />
+                    <Run Text="{Binding TotalDps, Mode=OneWay}" Foreground="#AAA" />
+                    <Run Text="dps" Foreground="#888" />
+                </TextBlock>
+            </DockPanel>
+
+            <ItemsControl ItemsSource="{Binding Actors}" Margin="0,6,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:ActorRowViewModel">
+                        <Grid Height="22" Margin="0,1">
+                            <!-- Barra proporcional al primero -->
+                            <Rectangle HorizontalAlignment="Stretch" RadiusX="3" RadiusY="3" RenderTransformOrigin="0,0.5">
+                                <Rectangle.Style>
+                                    <Style TargetType="Rectangle">
+                                        <Setter Property="Fill" Value="{StaticResource Accent}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsLocalPlayer}" Value="True">
+                                                <Setter Property="Fill" Value="{StaticResource AccentLocal}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Rectangle.Style>
+                                <Rectangle.RenderTransform>
+                                    <ScaleTransform ScaleX="{Binding Bar}" />
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                            <Grid Margin="6,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="56" />
+                                    <ColumnDefinition Width="40" />
+                                    <ColumnDefinition Width="40" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding Rank}" Foreground="#BBB" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="2" Text="{Binding Dps}" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3" Text="{Binding Share}" Foreground="#CCC" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="4" Text="{Binding CritRate}" Foreground="#CCC" HorizontalAlignment="Right" VerticalAlignment="Center" ToolTip="% de críticos" />
+                            </Grid>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </Border>
+</Window>

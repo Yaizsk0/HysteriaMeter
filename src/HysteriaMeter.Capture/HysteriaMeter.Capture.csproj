@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- LibraryImport (P/Invoke generado) para leer la tabla TCP de Windows. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="SharpPcap" />
+    <PackageReference Include="PacketDotNet" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="HysteriaMeter.Capture.Tests" />
+  </ItemGroup>
+</Project>
