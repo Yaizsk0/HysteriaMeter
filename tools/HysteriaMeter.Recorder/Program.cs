@@ -184,7 +184,8 @@ static async Task<int> ReplayAsync(string input, Options options)
     foreach (var encounter in encounters)
     {
         Console.WriteLine($"[{encounter.Start:HH:mm:ss}] {encounter.TargetName ?? "?"} · {encounter.Duration.TotalSeconds:0.0}s · {(encounter.TargetKilled ? "muerto" : "sin terminar")} · total {encounter.TotalDamage:N0}"
-            + (encounter.MainTargetDuration is { } window ? $" · contra el objetivo {window.TotalSeconds:0.00}s" : string.Empty));
+            + (encounter.MainTargetDuration is { } window ? $" · contra el objetivo {window.TotalSeconds:0.00}s" : string.Empty)
+            + (encounter.TargetHealth is { } health ? $" · vida {health.Hp:N0}/{health.MaxHp:N0}" : string.Empty));
         foreach (var actor in encounter.Actors)
         {
             var c = actor.Counts ?? HitCounts.Empty;

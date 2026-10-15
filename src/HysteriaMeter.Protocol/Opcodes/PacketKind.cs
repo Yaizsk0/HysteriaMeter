@@ -14,4 +14,5 @@ public enum PacketKind
     PeriodicEffect,
     Heal,
     Death,
+    Health,
 }

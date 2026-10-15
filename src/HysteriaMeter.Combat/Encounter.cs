@@ -54,6 +54,9 @@ internal sealed class ActorStats
 
     public long Healing { get; set; }
 
+    /// <summary>Daño que pasó de la vida que le quedaba al objetivo. Se informa aparte; no se descuenta del daño.</summary>
+    public long Overkill { get; set; }
+
     public long PeriodicDamage { get; private set; }
 
     /// <summary>Tiempo con actividad: suma de los huecos entre golpes, cada uno topeado en <see cref="ActiveGap"/>.</summary>

@@ -128,7 +128,9 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var encounter = EnsureEncounter(e.Timestamp);
-        encounter.Actor(source).AddHit(e.SkillId, e.TargetId, e.Amount, e.Modifiers, e.Timestamp);
+        var actor = encounter.Actor(source);
+        actor.AddHit(e.SkillId, e.TargetId, e.Amount, e.Modifiers, e.Timestamp);
+        actor.Overkill += Entities.ApplyDamage(e.TargetId, e.Amount);
         encounter.RegisterDamage(e.TargetId, e.Amount, e.Timestamp);
     }
 
@@ -225,7 +227,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
                     targetDamage,
                     targetDamage / targetSeconds,
                     stats.PeriodicDamage,
-                    stats.Damage / Math.Max(stats.ActiveTime.TotalSeconds, 1));
+                    stats.Damage / Math.Max(stats.ActiveTime.TotalSeconds, 1),
+                    stats.Overkill);
             })
             .OrderByDescending(a => a.Damage)
             .ToArray();
@@ -238,7 +241,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
             encounter.TargetKilled,
             total,
             actors,
-            targetDuration);
+            targetDuration,
+            target is { } th ? Entities.HealthOf(th) : null);
     }
 
     private static double Share(long part, long total) => total == 0 ? 0 : (double)part / total;

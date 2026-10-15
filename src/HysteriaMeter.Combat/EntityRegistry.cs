@@ -18,6 +18,7 @@ public sealed class EntityRegistry
     private readonly Dictionary<string, ulong> _idsByName = new(StringComparer.Ordinal);
     private readonly Dictionary<ulong, string> _pendingOwnerNames = [];
     private readonly Dictionary<ulong, DateTimeOffset> _partySeenAt = [];
+    private readonly Dictionary<ulong, Health> _health = [];
     private DateTimeOffset _now;
     private string? _localName;
 
@@ -40,6 +41,12 @@ public sealed class EntityRegistry
                 }
 
                 break;
+            case HealthEvent health:
+                // Sin el máximo del spawn (por ejemplo, si arrancamos a mitad de pelea) se usa el mayor visto.
+                _health[health.EntityId] = _health.TryGetValue(health.EntityId, out var known)
+                    ? new Health(health.Hp, Math.Max(known.MaxHp, health.Hp))
+                    : new Health(health.Hp, health.Hp);
+                break;
             case PartyMemberSeenEvent member:
                 _partySeenAt[member.EntityId] = member.Timestamp;
                 break;
@@ -59,6 +66,11 @@ public sealed class EntityRegistry
                     Update(spawn.EntityId, p => p with { NpcId = npcId });
                 }
 
+                if (spawn is { Hp: { } hp, MaxHp: { } maxHp })
+                {
+                    _health[spawn.EntityId] = new Health(hp, maxHp);
+                }
+
                 break;
             case EntityInfoEvent info:
                 SetName(info.EntityId, info.Name);
@@ -69,6 +81,25 @@ public sealed class EntityRegistry
 
                 break;
         }
+    }
+
+    /// <summary>Vida conocida de una entidad: la del último 0x8D00 menos el daño registrado desde entonces.</summary>
+    public Health? HealthOf(ulong id) => _health.TryGetValue(id, out var health) ? health : null;
+
+    /// <summary>
+    /// Descuenta un golpe de la vida conocida y devuelve el overkill: la parte que pasó de la vida que le quedaba.
+    /// Sin vida conocida no hay overkill.
+    /// </summary>
+    public long ApplyDamage(ulong id, long amount)
+    {
+        if (!_health.TryGetValue(id, out var health))
+        {
+            return 0;
+        }
+
+        var overkill = Math.Max(0, amount - Math.Max(health.Hp, 0));
+        _health[id] = health with { Hp = Math.Max(health.Hp - amount, 0) };
+        return overkill;
     }
 
     public bool IsPartyMember(ulong canonicalId) =>
@@ -118,6 +149,8 @@ public sealed class EntityRegistry
     private void Update(ulong id, Func<EntityProfile, EntityProfile> change) =>
         _profiles[id] = change(Profile(id));
 }
+
+public sealed record Health(long Hp, long MaxHp);
 
 public sealed record EntityProfile(string? Name, int? ClassId, uint? NpcId)
 {

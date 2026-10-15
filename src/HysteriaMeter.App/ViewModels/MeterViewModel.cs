@@ -110,6 +110,17 @@ public sealed partial class MeterViewModel : ObservableObject
     [ObservableProperty]
     public partial string Elapsed { get; set; } = "00:00";
 
+    /// <summary>Vida del objetivo principal, si el servidor la mandó (spawn 0x3641 o actualización 0x8D00).</summary>
+    [ObservableProperty]
+    public partial bool HasTargetHealth { get; set; }
+
+    [ObservableProperty]
+    public partial string TargetHealthText { get; set; } = string.Empty;
+
+    /// <summary>Proporción de vida restante (0..1) para la barra.</summary>
+    [ObservableProperty]
+    public partial double TargetHealthRatio { get; set; }
+
     /// <summary>DPS (o HPS) y total de toda la party, para el pie.</summary>
     [ObservableProperty]
     public partial string PartyPerSecond { get; set; } = "0";
@@ -223,11 +234,25 @@ public sealed partial class MeterViewModel : ObservableObject
         Actors.Clear();
         Title = NoTarget;
         Elapsed = "00:00";
+        HasTargetHealth = false;
         PartyPerSecond = "0";
         PartyTotal = "0";
         CritRate = "–";
         MaxHit = "–";
         IsEmpty = true;
+    }
+
+    private void UpdateTargetHealth(Health? health)
+    {
+        HasTargetHealth = health is { MaxHp: > 0 };
+        if (health is not { MaxHp: > 0 })
+        {
+            return;
+        }
+
+        var ratio = Math.Clamp((double)health.Hp / health.MaxHp, 0, 1);
+        TargetHealthRatio = ratio;
+        TargetHealthText = $"{ActorRowViewModel.Compact(health.Hp)} / {ActorRowViewModel.Compact(health.MaxHp)} · {ratio.ToString("P0", CultureInfo.CurrentCulture)}";
     }
 
     private void Refresh()
@@ -242,6 +267,7 @@ public sealed partial class MeterViewModel : ObservableObject
 
         Title = snapshot.TargetName ?? "Encuentro";
         Elapsed = snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
+        UpdateTargetHealth(snapshot.TargetHealth);
 
         Func<ActorSnapshot, long> metric = Tab == MeterTab.Healing ? a => a.Healing : a => a.Damage;
         var combined = ShowHealingColumn;

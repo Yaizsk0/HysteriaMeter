@@ -11,13 +11,13 @@
   //   0x8D04  muerte, con skill, ID y nombre del que mató (en dungeons llega vacío)
   //   0x364A  solo del jugador local: el primer varint es su entidad (llega en el primer bundle de
   //           cada conexión; cada cambio de zona abre conexión nueva y cambia la entidad)
+  //   0x8D00  vida actual: varint entidad | 02 01 00 | u32 HP (otros recursos traen otro prefijo)
   //   0x921B  HP/MP de un miembro de la party (~1 por segundo y por miembro): varint entidad | varint hp | varint hpMax | ...
   //           Solo llega para compañeros de party, desde el primer segundo de la conexión.
   //   0x3633  datos del jugador local al entrar a una zona: varint entidad | 4 bytes | u8 | string nombre
   //
   // Vistos pero todavía sin decoder:
   //   0x3802  lanzamiento de skill (fuente, skill, objetivo, posición)
-  //   0x8D00  actualización de HP/MP: varint entidad | 02 01 00 | u32 HP
   //   0x3806  estado de entidades: llega del jugador local y de NPCs, nunca de otros jugadores
   //   0x9200  lista completa de la party (entidad, GUID, ID de personaje, nombre, HP, legión); layout variable por miembro
   //   0x920E, 0x921A  estado de miembros de la party, incluido el local
@@ -33,6 +33,7 @@
     "Damage": ["0x3804"],
     "PeriodicEffect": ["0x3805"],
     "Heal": [],
-    "Death": ["0x8D04"]
+    "Death": ["0x8D04"],
+    "Health": ["0x8D00"]
   }
 }
