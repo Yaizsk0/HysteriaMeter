@@ -26,11 +26,12 @@ public enum MeterTab
 public static class MeterTabs
 {
     /// <summary>Lo que mide cada pestaña.</summary>
-    public static long Metric(this MeterTab tab, ActorSnapshot actor) => tab switch
+    /// <param name="bossOnly">En la pestaña de daño, solo lo que se le hizo al objetivo principal.</param>
+    public static long Metric(this MeterTab tab, ActorSnapshot actor, bool bossOnly = false) => tab switch
     {
         MeterTab.Healing => actor.Healing,
         MeterTab.Taken => actor.DamageTaken,
-        _ => actor.Damage,
+        _ => bossOnly ? actor.MainTargetDamage : actor.Damage,
     };
 
     public static string Unit(this MeterTab tab) => tab switch
@@ -68,7 +69,9 @@ public sealed partial class MeterViewModel : ObservableObject
     /// <param name="tab">Qué muestra esta ventana al abrirse.</param>
     /// <param name="showHealing">Columna HPS al lado del DPS en esta ventana.</param>
     /// <param name="compact">Modo compacto: solo las filas y el reloj.</param>
-    public MeterViewModel(MeterSession session, MeterTab tab = MeterTab.Damage, bool showHealing = true, bool compact = false)
+    /// <param name="sessionView">Mostrar la sesión entera en vez de la pelea actual.</param>
+    /// <param name="bossOnly">Contar solo el daño al objetivo principal.</param>
+    public MeterViewModel(MeterSession session, MeterTab tab = MeterTab.Damage, bool showHealing = true, bool compact = false, bool sessionView = false, bool bossOnly = false)
     {
         _session = session;
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(session.Preferences.RefreshMs), DispatcherPriority.Background, (_, _) => Refresh(), Dispatcher.CurrentDispatcher);
@@ -79,6 +82,8 @@ public sealed partial class MeterViewModel : ObservableObject
         Tab = tab;
         _showHealing = showHealing;
         IsCompact = compact;
+        IsSessionView = sessionView;
+        BossOnly = bossOnly;
         var dispatcher = Dispatcher.CurrentDispatcher;
         _engine.EncounterFinished += snapshot =>
         {
@@ -314,6 +319,47 @@ public sealed partial class MeterViewModel : ObservableObject
         return fadeWhenIdle && sinceCombat > FadeAfter ? Math.Min(chosen, FadedOpacity) : chosen;
     }
 
+    /// <summary>Esta ventana muestra la sesión (todas las peleas desde el reinicio), como el "Overall" de Details!.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFightView))]
+    public partial bool IsSessionView { get; set; }
+
+    public bool IsFightView
+    {
+        get => !IsSessionView;
+        set => IsSessionView = !value;
+    }
+
+    partial void OnIsSessionViewChanged(bool value) => Refresh();
+
+    /// <summary>Esta ventana cuenta solo el daño al objetivo principal (boss), sin adds.</summary>
+    [ObservableProperty]
+    public partial bool BossOnly { get; set; }
+
+    partial void OnBossOnlyChanged(bool value) => Refresh();
+
+    public int IdleSeconds
+    {
+        get => Preferences.IdleSeconds;
+        set => Update(Preferences with { IdleSeconds = value }, nameof(IdleSeconds));
+    }
+
+    public bool AutoBackToLive
+    {
+        get => Preferences.AutoBackToLive;
+        set => Update(Preferences with { AutoBackToLive = value }, nameof(AutoBackToLive));
+    }
+
+    /// <summary>Datos en la carpeta del programa (portable) o en %LOCALAPPDATA%.</summary>
+#pragma warning disable CA1822 // propiedad de instancia para el binding de WPF
+    public string DataFolderHint => AppPaths.IsPortable
+        ? $"Modo portable: datos en {AppPaths.DataFolder}"
+        : $"Datos en {AppPaths.DataFolder}";
+#pragma warning restore CA1822
+
+    // Cuándo se abrió la pelea guardada: si arranca una pelea nueva después, se vuelve al vivo.
+    private DateTimeOffset _pinnedAt;
+
     /// <summary>Modo compacto de esta ventana: sin objetivo, pestañas, encabezados ni pie.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsExpanded))]
@@ -488,8 +534,7 @@ public sealed partial class MeterViewModel : ObservableObject
     }
 
     /// <summary>Carpeta de los CSV y JSON exportados.</summary>
-    public static string ExportFolder { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HysteriaMeter", "Exportes");
+    public static string ExportFolder { get; } = AppPaths.In("Exportes");
 
     /// <summary>Resultado de la última exportación o envío, en configuración.</summary>
     [ObservableProperty]
@@ -742,6 +787,7 @@ public sealed partial class MeterViewModel : ObservableObject
         }
 
         _pinned = snapshot;
+        _pinnedAt = DateTimeOffset.Now;
         _pinnedId = item.Id;
         CurrentNote = item.Note ?? string.Empty;
         CanEditNote = true;
@@ -876,8 +922,19 @@ public sealed partial class MeterViewModel : ObservableObject
     private void Refresh()
     {
         var current = _engine.CurrentSnapshot();
+        if (_pinnedId is not null && Preferences.AutoBackToLive && current is not null && current.Start.ToLocalTime() > _pinnedAt)
+        {
+            BackToLive();
+            return;
+        }
+
         IsLive = _pinned is null && current is not null;
         UpdateStatus(current is not null);
+        if (_pinned is null && IsSessionView)
+        {
+            current = _engine.SessionSnapshot();
+        }
+
         var snapshot = _pinned ?? current ?? _lastFinished;
         if (snapshot is null)
         {
@@ -894,7 +951,8 @@ public sealed partial class MeterViewModel : ObservableObject
         }
 
         var tab = Tab;
-        Func<ActorSnapshot, long> metric = a => tab.Metric(a);
+        var bossOnly = BossOnly;
+        Func<ActorSnapshot, long> metric = a => tab.Metric(a, bossOnly);
         var combined = ShowHealingColumn;
         var rows = snapshot.Actors
             .Where(a => metric(a) > 0 || (combined && a.Healing > 0))
@@ -918,7 +976,7 @@ public sealed partial class MeterViewModel : ObservableObject
                 Actors.Add(new ActorRowViewModel());
             }
 
-            Actors[i].Update(i + 1, rows[i], Tab, top, total, snapshot.Duration);
+            Actors[i].Update(i + 1, rows[i], Tab, top, total, snapshot.Duration, BossOnly);
             Actors[i].Spark = Preferences.Sparklines && Tab == MeterTab.Damage ? ActorRowViewModel.Sparkline(rows[i].Timeline) : null;
             Actors[i].HealingPerSecond = combined && rows[i].Healing > 0
                 ? ActorRowViewModel.Compact(rows[i].Healing / snapshot.Duration.TotalSeconds)

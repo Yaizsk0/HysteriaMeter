@@ -4,11 +4,10 @@ using System.Text.Json.Serialization;
 
 namespace HysteriaMeter.App.Overlay;
 
-/// <summary>Preferencias del usuario en JSON bajo %LOCALAPPDATA%\HysteriaMeter, entre sesiones.</summary>
+/// <summary>Preferencias del usuario en JSON en la carpeta de datos (<see cref="AppPaths"/>), entre sesiones.</summary>
 internal static class UserStore
 {
-    private static readonly string Folder = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HysteriaMeter");
+    private static readonly string Folder = AppPaths.DataFolder;
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, Converters = { new JsonStringEnumConverter() } };
 

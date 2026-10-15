@@ -4,7 +4,7 @@ namespace HysteriaMeter.Combat;
 
 public sealed record CombatEngineOptions
 {
-    /// <summary>Sin daño durante este tiempo, el encuentro se cierra.</summary>
+    /// <summary>Sin daño durante este tiempo, el encuentro se cierra (valor inicial de <see cref="CombatEngine.IdleTimeout"/>).</summary>
     public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromSeconds(8);
 
     /// <summary>Cerrar el encuentro cuando muere el objetivo principal.</summary>
@@ -34,6 +34,12 @@ public sealed class CombatEngine(CombatEngineOptions options)
     private readonly Lock _gate = new();
     private Encounter? _current;
     private IReadOnlyList<CombatLogEntry> _lastLog = [];
+    private TimeSpan _idleTimeout = options.IdleTimeout;
+
+    // Sesión: suma todas las peleas desde el último reinicio (como el "Overall" de Details!).
+    private Encounter? _session;
+    private TimeSpan _sessionCombat;
+    private int _sessionFights;
     private ActorScope _scope = ActorScope.Party;
     private bool _splitEncounters = true;
 
@@ -42,6 +48,13 @@ public sealed class CombatEngine(CombatEngineOptions options)
     }
 
     public EntityRegistry Entities { get; } = new();
+
+    /// <summary>Sin daño durante este tiempo, el encuentro se cierra. Se puede cambiar en caliente.</summary>
+    public TimeSpan IdleTimeout
+    {
+        get { lock (_gate) { return _idleTimeout; } }
+        set { lock (_gate) { _idleTimeout = value; } }
+    }
 
     /// <summary>
     /// De quién se cuenta el daño. Mientras no se conoce al jugador local se cuenta a todos,
@@ -91,21 +104,45 @@ public sealed class CombatEngine(CombatEngineOptions options)
     {
         lock (_gate)
         {
-            if (_splitEncounters && _current is not null && now - _current.LastActivity > options.IdleTimeout)
+            if (_splitEncounters && _current is not null && now - _current.LastActivity > _idleTimeout)
             {
                 Finish();
             }
         }
     }
 
-    /// <summary>Cierra a mano el encuentro actual (botón "reset").</summary>
+    /// <summary>Cierra a mano el encuentro actual (botón "reset") y empieza una sesión nueva.</summary>
     public void Reset()
     {
         lock (_gate)
         {
             Finish();
+            _session = null;
+            _sessionCombat = TimeSpan.Zero;
+            _sessionFights = 0;
         }
     }
+
+    /// <summary>
+    /// Todas las peleas desde el último reinicio, como una sola. La duración es la suma del tiempo en combate
+    /// (sin los ratos entre peleas), así el DPS es comparable con el de cada pelea.
+    /// </summary>
+    public EncounterSnapshot? SessionSnapshot()
+    {
+        lock (_gate)
+        {
+            if (_session is null)
+            {
+                return null;
+            }
+
+            var combat = _sessionCombat + (_current is null ? TimeSpan.Zero : _current.LastActivity - _current.Start);
+            return BuildSnapshot(_session, combat) with { TargetName = SessionTitle(_sessionFights) };
+        }
+    }
+
+    /// <summary>"Sesión · 3 peleas".</summary>
+    public static string SessionTitle(int fights) => fights == 1 ? "Sesión · 1 pelea" : $"Sesión · {fights} peleas";
 
     public EncounterSnapshot? CurrentSnapshot()
     {
@@ -144,12 +181,33 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var encounter = EnsureEncounter(e.Timestamp);
+        var overkill = Entities.ApplyDamage(e.TargetId, e.Amount);
+        RecordHit(encounter, source, e, overkill);
+        RecordHit(_session!, source, e, overkill);
+        encounter.AddLog(Entry(e, LogKind.Damage, source, Entities.Canonical(e.TargetId), e.SkillId, e.Amount, e.Modifiers));
+    }
+
+    private static void RecordHit(Encounter encounter, ulong source, DamageEvent e, long overkill)
+    {
         var actor = encounter.Actor(source);
         actor.AddHit(e.SkillId, e.TargetId, e.Amount, e.Modifiers, e.Timestamp);
         actor.AddToTimeline((int)Math.Max((e.Timestamp - encounter.Start).TotalSeconds, 0), e.Amount);
-        actor.Overkill += Entities.ApplyDamage(e.TargetId, e.Amount);
+        actor.Overkill += overkill;
         encounter.RegisterDamage(e.TargetId, e.Amount, e.Timestamp);
-        encounter.AddLog(Entry(e, LogKind.Damage, source, Entities.Canonical(e.TargetId), e.SkillId, e.Amount, e.Modifiers));
+    }
+
+    /// <summary>La pelea actual y la sesión, para lo que se suma en las dos.</summary>
+    private IEnumerable<Encounter> Running()
+    {
+        if (_current is not null)
+        {
+            yield return _current;
+        }
+
+        if (_session is not null)
+        {
+            yield return _session;
+        }
     }
 
     /// <summary>Un monstruo le pega a un jugador: cuenta como daño recibido si hay pelea y el jugador entra en el filtro.</summary>
@@ -161,9 +219,13 @@ public sealed class CombatEngine(CombatEngineOptions options)
             return;
         }
 
-        var actor = _current.Actor(target);
-        actor.DamageTaken += e.Amount;
-        actor.HitsTaken++;
+        foreach (var encounter in Running())
+        {
+            var actor = encounter.Actor(target);
+            actor.DamageTaken += e.Amount;
+            actor.HitsTaken++;
+        }
+
         _current.AddLog(Entry(e, LogKind.Damage, npc, target, e.SkillId, e.Amount, e.Modifiers));
     }
 
@@ -180,7 +242,11 @@ public sealed class CombatEngine(CombatEngineOptions options)
         var source = Entities.Canonical(e.SourceId);
         if (!Entities.IsNpc(source) && InScope(source))
         {
-            _current.Actor(source).Healing += e.Amount;
+            foreach (var encounter in Running())
+            {
+                encounter.Actor(source).Healing += e.Amount;
+            }
+
             _current.AddLog(Entry(e, LogKind.Heal, source, Entities.Canonical(e.TargetId), e.SkillId, e.Amount));
         }
     }
@@ -195,8 +261,13 @@ public sealed class CombatEngine(CombatEngineOptions options)
             var lastHits = _current.Log
                 .Where(l => l.TargetId == dead && l.Kind == LogKind.Damage && l.Timestamp >= since)
                 .ToArray();
-            _current.Actor(dead).Deaths++;
-            _current.Deaths.Add(new DeathRecap(e.Timestamp, dead, Entities.DisplayName(dead), lastHits));
+            var recap = new DeathRecap(e.Timestamp, dead, Entities.DisplayName(dead), lastHits);
+            foreach (var encounter in Running())
+            {
+                encounter.Actor(dead).Deaths++;
+                encounter.Deaths.Add(recap);
+            }
+
             _current.AddLog(Entry(e, LogKind.Death, dead, dead, 0, 0));
         }
 
@@ -210,12 +281,19 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
     private Encounter EnsureEncounter(DateTimeOffset at)
     {
-        if (_splitEncounters && _current is not null && at - _current.LastActivity > options.IdleTimeout)
+        if (_splitEncounters && _current is not null && at - _current.LastActivity > _idleTimeout)
         {
             Finish();
         }
 
-        return _current ??= new Encounter(at);
+        if (_current is null)
+        {
+            _current = new Encounter(at);
+            _session ??= new Encounter(at);
+            _sessionFights++;
+        }
+
+        return _current;
     }
 
     private bool InScope(ulong canonicalSource)
@@ -236,15 +314,17 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var snapshot = BuildSnapshot(_current);
+        _sessionCombat += _current.LastActivity - _current.Start;
         _lastLog = _current.Log;
         _current = null;
         EncounterFinished?.Invoke(snapshot);
     }
 
-    private EncounterSnapshot BuildSnapshot(Encounter encounter)
+    /// <param name="combatTime">Duración a usar para el DPS; por defecto, del primer al último golpe.</param>
+    private EncounterSnapshot BuildSnapshot(Encounter encounter, TimeSpan? combatTime = null)
     {
         var total = encounter.Actors.Values.Sum(a => a.Damage);
-        var seconds = Math.Max((encounter.LastActivity - encounter.Start).TotalSeconds, 1);
+        var seconds = Math.Max((combatTime ?? (encounter.LastActivity - encounter.Start)).TotalSeconds, 1);
         var target = encounter.MainTarget;
         TimeSpan? targetDuration = target is { } mt && encounter.TargetWindows.TryGetValue(mt, out var window)
             ? window.Last - window.First
@@ -291,7 +371,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
         return new EncounterSnapshot(
             encounter.Id,
             encounter.Start,
-            encounter.LastActivity,
+            combatTime is { } combat ? encounter.Start + combat : encounter.LastActivity,
             // Los monstruos no traen nombre en el paquete: sin nombre conocido queda null, no "#entidad".
             target is { } t ? Entities.Profile(t).Name : null,
             encounter.TargetKilled,

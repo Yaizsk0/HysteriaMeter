@@ -9,8 +9,7 @@ namespace HysteriaMeter.App.Pipeline;
 /// </summary>
 public sealed class CaptureRecorder
 {
-    public static string Folder { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HysteriaMeter", "Grabaciones");
+    public static string Folder { get; } = AppPaths.In("Grabaciones");
 
     /// <summary>Archivo en el que se está grabando, o <c>null</c> si la grabación está apagada.</summary>
     public string? CurrentPath { get; private set; }

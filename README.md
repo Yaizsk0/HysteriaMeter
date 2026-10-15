@@ -53,6 +53,10 @@ En configuración, EXPORTAR Y COMPARTIR copia el overlay como imagen (para pegar
 
 La pestaña RECIBIDO muestra el daño que le hicieron los monstruos a cada uno (todavía sin validar contra Combat Analysis). Quien murió lleva una ✝ junto al nombre; en el detalle del jugador se ve qué lo mató y cuánto recibió en los 10 segundos anteriores. El botón "Registro" del detalle abre el golpe a golpe de la pelea, con búsqueda por jugador, skill o modificador.
 
+Cada ventana elige entre PELEA (la actual) y SESIÓN (todas las peleas desde el último reinicio, con el DPS sobre el tiempo en combate), y puede contar solo el daño al boss. En configuración se elige tras cuántos segundos sin daño termina una pelea, y si el overlay vuelve solo al vivo cuando arranca otra mientras mirás el historial.
+
+Los datos (preferencias, historial, grabaciones y exportes) van a `%LOCALAPPDATA%\HysteriaMeter`. Con un archivo `portable.txt` junto a `HysteriaMeter.exe`, van a la carpeta `datos` al lado del programa. El historial de versiones anteriores, que estaba junto al .exe, se copia solo la primera vez.
+
 Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: los nombres se cargan a mano en `data/skills.json`.
 
 Para grabar una pelea desde el overlay: engranaje → GRABACIÓN → "Grabar lo capturado (.pcap)". Mientras graba aparece `● REC` arriba; los archivos quedan en `%LOCALAPPDATA%\HysteriaMeter\Grabaciones` ("Abrir carpeta"). Esas grabaciones tienen nombres de personajes: no se suben al repo.
