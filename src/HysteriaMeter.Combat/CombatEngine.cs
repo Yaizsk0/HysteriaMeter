@@ -130,6 +130,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
         var encounter = EnsureEncounter(e.Timestamp);
         var actor = encounter.Actor(source);
         actor.AddHit(e.SkillId, e.TargetId, e.Amount, e.Modifiers, e.Timestamp);
+        actor.AddToTimeline((int)Math.Max((e.Timestamp - encounter.Start).TotalSeconds, 0), e.Amount);
         actor.Overkill += Entities.ApplyDamage(e.TargetId, e.Amount);
         encounter.RegisterDamage(e.TargetId, e.Amount, e.Timestamp);
     }
@@ -228,7 +229,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
                     targetDamage / targetSeconds,
                     stats.PeriodicDamage,
                     stats.Damage / Math.Max(stats.ActiveTime.TotalSeconds, 1),
-                    stats.Overkill);
+                    stats.Overkill,
+                    [.. stats.DamageBySecond]);
             })
             .OrderByDescending(a => a.Damage)
             .ToArray();

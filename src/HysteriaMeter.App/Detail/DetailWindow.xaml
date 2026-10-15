@@ -113,6 +113,18 @@
                 </StackPanel>
             </StackPanel>
 
+            <!-- DPS en el tiempo (promedio móvil de 5 s) -->
+            <Border DockPanel.Dock="Top" Margin="10,2,10,6" Height="92" Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="1"
+                    Visibility="{Binding HasChart, Converter={StaticResource Visible}}">
+                <Grid>
+                    <Polyline Points="{Binding ChartPoints}" Stretch="Fill" Margin="6,20,6,6" Stroke="{Binding Accent}" StrokeThickness="1.6" StrokeLineJoin="Round" />
+                    <TextBlock Margin="8,4,0,0" FontSize="11" Foreground="{StaticResource TextDim}" HorizontalAlignment="Left" VerticalAlignment="Top">
+                        <Run Text="DPS EN EL TIEMPO · ventana 5 s · pico" />
+                        <Run Text="{Binding PeakDps, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
+                    </TextBlock>
+                </Grid>
+            </Border>
+
             <!-- Encabezado de columnas, fila TOTAL abajo y skills en el medio -->
             <Border DockPanel.Dock="Top" BorderBrush="{StaticResource Rule}" BorderThickness="0,0,0,1" Margin="10,4,10,0" Padding="8,0,8,4">
                 <ContentControl Content="{x:Null}">

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using HysteriaMeter.Combat;
@@ -42,6 +43,22 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     [ObservableProperty]
     public partial bool IsMissing { get; set; }
 
+    /// <summary>Ventana del promedio móvil del gráfico, como en el mock ("ventana 5 s").</summary>
+    internal const int ChartWindowSeconds = 5;
+
+    /// <summary>
+    /// DPS en el tiempo: x = segundo, y = pico − DPS (WPF crece hacia abajo). El primer punto es (0, pico)
+    /// para que la base del gráfico sea DPS 0; el Polyline se estira al tamaño del recuadro.
+    /// </summary>
+    [ObservableProperty]
+    public partial PointCollection ChartPoints { get; set; } = [];
+
+    [ObservableProperty]
+    public partial bool HasChart { get; set; }
+
+    [ObservableProperty]
+    public partial string PeakDps { get; set; } = "–";
+
     public ObservableCollection<SkillRowViewModel> Skills { get; } = [];
 
     /// <summary>Fila TOTAL, con las mismas columnas que las skills.</summary>
@@ -50,6 +67,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     public void Select(ActorRowViewModel row)
     {
         ActorId = row.Id;
+        HasChart = false;
         Name = row.Name;
         Accent = row.Accent;
         BarFill = row.BarFill;
@@ -76,6 +94,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         Total = ActorRowViewModel.Compact(actor.Damage);
         Duration = duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
         Overkill = ActorRowViewModel.Compact(actor.Overkill);
+        UpdateChart(actor.Timeline ?? []);
 
         var skills = actor.Skills;
         var top = skills.Count > 0 ? skills[0].Damage : 0;
@@ -107,5 +126,45 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         Totals.MaxHit = hits == 0 ? "–" : ActorRowViewModel.Compact(actor.MaxHit);
         Totals.Average = hits == 0 ? "–" : ActorRowViewModel.Compact((double)direct / hits);
         Totals.Dps = ActorRowViewModel.Compact(actor.Dps);
+    }
+
+    private void UpdateChart(IReadOnlyList<long> timeline)
+    {
+        var dps = RollingDps(timeline, ChartWindowSeconds);
+        HasChart = dps.Count >= 2;
+        if (!HasChart)
+        {
+            return;
+        }
+
+        var peak = dps.Max();
+        var points = new PointCollection(dps.Count + 1) { new(0, peak) };
+        for (var i = 0; i < dps.Count; i++)
+        {
+            points.Add(new Point(i + 1, peak - dps[i]));
+        }
+
+        points.Freeze();
+        ChartPoints = points;
+        PeakDps = ActorRowViewModel.Compact(peak);
+    }
+
+    /// <summary>Promedio móvil: el DPS del segundo t es el daño de los últimos <paramref name="window"/> segundos dividido por la ventana.</summary>
+    public static IReadOnlyList<double> RollingDps(IReadOnlyList<long> damageBySecond, int window)
+    {
+        var result = new double[damageBySecond.Count];
+        long sum = 0;
+        for (var i = 0; i < damageBySecond.Count; i++)
+        {
+            sum += damageBySecond[i];
+            if (i >= window)
+            {
+                sum -= damageBySecond[i - window];
+            }
+
+            result[i] = (double)sum / window;
+        }
+
+        return result;
     }
 }
