@@ -162,6 +162,15 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     [ObservableProperty]
     public partial string PeakDps { get; set; } = "–";
 
+    /// <summary>" · marcas 0:42, 1:15" con los momentos marcados con el atajo, o vacío.</summary>
+    [ObservableProperty]
+    public partial string ChartMarks { get; set; } = string.Empty;
+
+    public static string MarksText(IReadOnlyList<int>? marks) =>
+        marks is not { Count: > 0 }
+            ? string.Empty
+            : " · marcas " + string.Join(", ", marks.Order().Select(m => TimeSpan.FromSeconds(m).ToString(@"m\:ss", CultureInfo.InvariantCulture)));
+
     public ObservableCollection<SkillRowViewModel> Skills { get; } = [];
 
     /// <summary>Fila TOTAL, con las mismas columnas que las skills.</summary>
@@ -213,6 +222,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         DeathCount = actor.Deaths.ToString(culture);
         UpdateDeaths(snapshot, actor.Id);
         UpdateChart(actor.Timeline ?? []);
+        ChartMarks = MarksText(snapshot.Marks);
         UpdateActivity(FightActivity.From(actor.Timeline));
         UpdateAdvice(snapshot, actor);
         UpdateComparison(snapshot, actor);

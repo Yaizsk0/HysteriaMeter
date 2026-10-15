@@ -233,7 +233,7 @@
                     <Polyline Points="{Binding ChartPoints}" Stretch="Fill" Margin="6,20,6,6" Stroke="{Binding Accent}" StrokeThickness="1.6" StrokeLineJoin="Round" />
                     <TextBlock Margin="8,4,0,0" FontSize="11" Foreground="{StaticResource TextDim}" HorizontalAlignment="Left" VerticalAlignment="Top">
                         <Run Text="DPS EN EL TIEMPO · ventana 5 s · pico" />
-                        <Run Text="{Binding PeakDps, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
+                        <Run Text="{Binding PeakDps, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" /><Run Text="{Binding ChartMarks, Mode=OneWay}" Foreground="{StaticResource Gold}" />
                     </TextBlock>
                 </Grid>
             </Border>

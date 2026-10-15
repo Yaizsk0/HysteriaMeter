@@ -372,6 +372,78 @@ public sealed partial class MeterViewModel : ObservableObject
         set => Update(Preferences with { PracticeSeconds = value }, nameof(PracticeSeconds));
     }
 
+    public string HotkeyClickThrough
+    {
+        get => Preferences.HotkeyClickThrough;
+        set => SetHotkey(value, Preferences.HotkeyClickThrough, text => Preferences with { HotkeyClickThrough = text }, nameof(HotkeyClickThrough));
+    }
+
+    public string HotkeyReset
+    {
+        get => Preferences.HotkeyReset;
+        set => SetHotkey(value, Preferences.HotkeyReset, text => Preferences with { HotkeyReset = text }, nameof(HotkeyReset));
+    }
+
+    public string HotkeyVisibility
+    {
+        get => Preferences.HotkeyVisibility;
+        set => SetHotkey(value, Preferences.HotkeyVisibility, text => Preferences with { HotkeyVisibility = text }, nameof(HotkeyVisibility));
+    }
+
+    public string HotkeyMark
+    {
+        get => Preferences.HotkeyMark;
+        set => SetHotkey(value, Preferences.HotkeyMark, text => Preferences with { HotkeyMark = text }, nameof(HotkeyMark));
+    }
+
+    /// <summary>Atajos que no se pudieron registrar (otro programa ya los usa); vacío si están todos.</summary>
+    [ObservableProperty]
+    public partial string HotkeyMessage { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Guarda un atajo: vacío lo saca; uno que no sirve como atajo global (una letra sola) o que ya usa otra acción
+    /// se ignora con un aviso.
+    /// </summary>
+    private void SetHotkey(string? value, string current, Func<string, MeterPreferences> with, string name)
+    {
+        var text = string.IsNullOrWhiteSpace(value) ? string.Empty : HotkeyGesture.Parse(value)?.ToString();
+        if (text is null)
+        {
+            HotkeyMessage = $"\"{value}\" no sirve como atajo: usá Ctrl, Alt o Shift con otra tecla, o una tecla F";
+            OnPropertyChanged(name);
+            return;
+        }
+
+        if (text.Length > 0 && text != current && HotkeyTexts().Contains(text))
+        {
+            HotkeyMessage = $"{text} ya es otro atajo del meter";
+            OnPropertyChanged(name);
+            return;
+        }
+
+        if (text != current)
+        {
+            HotkeyMessage = string.Empty;
+            Update(with(text), name);
+        }
+    }
+
+    private string[] HotkeyTexts() => [Preferences.HotkeyClickThrough, Preferences.HotkeyReset, Preferences.HotkeyVisibility, Preferences.HotkeyMark];
+
+    /// <summary>Marca este momento de la pelea en curso; se ve en el detalle y en el JSON exportado.</summary>
+    [RelayCommand]
+    private void MarkMoment()
+    {
+        var second = _session.Engine.Mark(DateTimeOffset.Now);
+        RecordMessage = second is { } s
+            ? $"Momento marcado a los {TimeSpan.FromSeconds(s).ToString(@"m\:ss", CultureInfo.InvariantCulture)}"
+            : "No hay pelea en curso para marcar";
+        HasRecordMessage = true;
+        _recordUntilUtc = DateTime.UtcNow + MarkNoticeDuration;
+    }
+
+    public static readonly TimeSpan MarkNoticeDuration = TimeSpan.FromSeconds(3);
+
     // Pelea cuya prueba de DPS ya terminó, para no volver a congelarla al salir del resultado.
     private Guid? _practiceDoneId;
 

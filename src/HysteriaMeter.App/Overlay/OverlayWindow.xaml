@@ -651,10 +651,51 @@
                                     ToolTip="Una pelea inventada para acomodar tamaño, fuente y opacidad sin combatir" />
 
                             <TextBlock Text="ATAJOS" Style="{StaticResource SettingsHeader}" />
+                            <Grid Margin="0,0,0,4">
+                                <Grid.Resources>
+                                    <Style TargetType="TextBox" BasedOn="{StaticResource Field}">
+                                        <Setter Property="IsReadOnly" Value="True" />
+                                        <Setter Property="IsReadOnlyCaretVisible" Value="False" />
+                                        <Setter Property="Margin" Value="0,1" />
+                                        <Setter Property="Cursor" Value="Hand" />
+                                        <Setter Property="ToolTip" Value="Hacé clic y apretá la combinación nueva; Borrar lo saca" />
+                                        <EventSetter Event="PreviewKeyDown" Handler="OnHotkeyKeyDown" />
+                                    </Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontSize" Value="12" />
+                                        <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+                                        <Setter Property="VerticalAlignment" Value="Center" />
+                                        <Setter Property="Margin" Value="8,0,0,0" />
+                                    </Style>
+                                </Grid.Resources>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                                </Grid.RowDefinitions>
+                                <TextBox Grid.Row="0" Text="{Binding HotkeyClickThrough, UpdateSourceTrigger=Explicit}" />
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="bloquear / desbloquear clics" />
+                                <TextBox Grid.Row="1" Text="{Binding HotkeyReset, UpdateSourceTrigger=Explicit}" />
+                                <TextBlock Grid.Row="1" Grid.Column="1" Text="reiniciar el encuentro" />
+                                <TextBox Grid.Row="2" Text="{Binding HotkeyVisibility, UpdateSourceTrigger=Explicit}" />
+                                <TextBlock Grid.Row="2" Grid.Column="1" Text="ocultar / mostrar el overlay" />
+                                <TextBox Grid.Row="3" Text="{Binding HotkeyMark, UpdateSourceTrigger=Explicit}" />
+                                <TextBlock Grid.Row="3" Grid.Column="1" Text="marcar este momento de la pelea" />
+                            </Grid>
+                            <TextBlock Text="{Binding HotkeyMessage}" FontSize="11" Foreground="{StaticResource Gold}" TextWrapping="Wrap" Margin="0,0,0,4">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <Trigger Property="Text" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                             <TextBlock FontSize="12" Foreground="{StaticResource TextMuted}" LineHeight="18">
-                                <Run Text="Ctrl+Shift+L" Foreground="{StaticResource Text}" /><Run Text="  bloquear / desbloquear clics" /><LineBreak />
-                                <Run Text="Ctrl+Shift+R" Foreground="{StaticResource Text}" /><Run Text="  reiniciar el encuentro" /><LineBreak />
-                                <Run Text="Ctrl+Shift+H" Foreground="{StaticResource Text}" /><Run Text="  ocultar / mostrar el overlay" /><LineBreak />
                                 <Run Text="Ctrl+rueda" Foreground="{StaticResource Text}" /><Run Text="  zoom" /><LineBreak />
                                 <Run Text="Doble clic arriba" Foreground="{StaticResource Text}" /><Run Text="  modo compacto" />
                             </TextBlock>

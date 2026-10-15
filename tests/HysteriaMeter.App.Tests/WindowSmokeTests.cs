@@ -75,6 +75,20 @@ public sealed class WindowSmokeTests
             var demo = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));
             Layout(new HysteriaMeter.App.Registro.LogWindow(new LogViewModel(() => demo.Deaths![0].LastHits, SkillNames.Empty, tharos.Id, "Tharos")));
 
+            // Atajos configurables: se guardan normalizados; una letra sola o uno repetido no.
+            viewModel.HotkeyMark = "alt+ctrl+k";
+            Assert.Equal("Ctrl+Alt+K", session.Preferences.HotkeyMark);
+            viewModel.HotkeyMark = "K";
+            Assert.Equal("Ctrl+Alt+K", session.Preferences.HotkeyMark);
+            Assert.Contains("no sirve como atajo", viewModel.HotkeyMessage, StringComparison.Ordinal);
+            viewModel.HotkeyMark = "Ctrl+Shift+L";
+            Assert.Equal("Ctrl+Alt+K", session.Preferences.HotkeyMark);
+            Assert.Contains("ya es otro atajo", viewModel.HotkeyMessage, StringComparison.Ordinal);
+            viewModel.HotkeyMark = string.Empty;
+            Assert.Equal(string.Empty, session.Preferences.HotkeyMark);
+            viewModel.MarkMomentCommand.Execute(null);
+            Assert.True(viewModel.HasRecordMessage);
+
             // Abrir una pelea compartida (JSON de otro Hysteria Meter) la fija en el overlay; un archivo que no es pelea no.
             var shared = Path.Combine(Path.GetTempPath(), $"hysteria-{Guid.NewGuid():N}.json");
             try
@@ -407,6 +421,24 @@ public sealed class WindowSmokeTests
         Assert.Equal("Encuentro", MeterViewModel.TitleOf(fight));
         Assert.Equal("NPC 12345", MeterViewModel.TitleOf(fight with { TargetNpcId = 12345 }));
         Assert.Equal("Tarka", MeterViewModel.TitleOf(fight with { TargetName = "Tarka", TargetNpcId = 12345 }));
+    }
+
+    [Fact]
+    public void Hotkeys_parse_and_print_the_same()
+    {
+        Assert.Equal("Ctrl+Shift+L", HotkeyGesture.Parse("ctrl + shift + l")?.ToString());
+        Assert.Equal("Alt+5", HotkeyGesture.Parse("Alt+5")?.ToString());
+        Assert.Equal("F9", HotkeyGesture.Parse("F9")?.ToString());
+        Assert.Equal("Shift+F2", HotkeyGesture.Parse("Shift+F2")?.ToString());
+        Assert.Null(HotkeyGesture.Parse("L"));
+        Assert.Null(HotkeyGesture.Parse("Shift+L"));
+        Assert.Null(HotkeyGesture.Parse("Ctrl+"));
+        Assert.Null(HotkeyGesture.Parse("Win+L"));
+        Assert.Null(HotkeyGesture.Parse("Ctrl+NoExiste"));
+        Assert.Null(HotkeyGesture.Parse("Ctrl+65"));
+        Assert.Null(HotkeyGesture.From(System.Windows.Input.ModifierKeys.Control, System.Windows.Input.Key.LeftShift));
+        Assert.Equal(" · marcas 0:05, 1:02", ActorDetailViewModel.MarksText([62, 5]));
+        Assert.Equal(string.Empty, ActorDetailViewModel.MarksText(null));
     }
 
     [Fact]

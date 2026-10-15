@@ -64,6 +64,15 @@ public sealed record MeterPreferences
     /// <summary>Apodos por nombre real de personaje; solo cambian lo que se muestra.</summary>
     public IReadOnlyDictionary<string, string> Nicknames { get; init; } = new Dictionary<string, string>();
 
+    /// <summary>Atajos globales, como "Ctrl+Shift+L"; vacío = sin atajo.</summary>
+    public string HotkeyClickThrough { get; init; } = "Ctrl+Shift+L";
+
+    public string HotkeyReset { get; init; } = "Ctrl+Shift+R";
+
+    public string HotkeyVisibility { get; init; } = "Ctrl+Shift+H";
+
+    public string HotkeyMark { get; init; } = "Ctrl+Shift+M";
+
     // "TextFont" y no "Font": así las preferencias guardadas con la fuente vieja no pisan la nueva por defecto.
     public string TextFont { get; init; } = "Inter";
 }

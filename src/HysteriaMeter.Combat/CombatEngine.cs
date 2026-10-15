@@ -112,6 +112,25 @@ public sealed class CombatEngine(CombatEngineOptions options)
     }
 
     /// <summary>Cierra a mano el encuentro actual (botón "reset") y empieza una sesión nueva.</summary>
+    /// <summary>
+    /// Marca un momento de la pelea en curso (por ejemplo, "acá tiré el burst"). Devuelve los segundos desde el
+    /// inicio, o <c>null</c> si no hay pelea.
+    /// </summary>
+    public int? Mark(DateTimeOffset at)
+    {
+        lock (_gate)
+        {
+            if (_current is null)
+            {
+                return null;
+            }
+
+            var second = Math.Max(0, (int)(at - _current.Start).TotalSeconds);
+            _current.Marks.Add(second);
+            return second;
+        }
+    }
+
     public void Reset()
     {
         lock (_gate)
@@ -382,7 +401,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
             target is { } th ? Entities.HealthOf(th) : null,
             [.. encounter.Deaths],
             targetNpc,
-            targetNpc is { } npc && Entities.Npcs.Of(npc) is { IsBoss: true });
+            targetNpc is { } npc && Entities.Npcs.Of(npc) is { IsBoss: true },
+            [.. encounter.Marks]);
     }
 
     private static double Share(long part, long total) => total == 0 ? 0 : (double)part / total;
