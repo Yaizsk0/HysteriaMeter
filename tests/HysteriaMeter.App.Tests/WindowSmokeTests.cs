@@ -45,6 +45,13 @@ public sealed class WindowSmokeTests
             Assert.False(healing.ShowHealingColumn);
             Layout(new DetailWindow(viewModel.Detail));
             Assert.Equal(2, viewModel.Detail.Skills.Count);
+
+            // Modo demo y compacto: la pelea inventada llena las filas y el overlay chico carga igual.
+            viewModel.ShowDemoCommand.Execute(null);
+            Assert.Equal(6, viewModel.Actors.Count);
+            Assert.True(viewModel.IsViewingHistory);
+            viewModel.IsCompact = true;
+            Layout(new OverlayWindow(viewModel));
         });
     }
 
@@ -55,6 +62,45 @@ public sealed class WindowSmokeTests
         Assert.Equal("v0.15.0", AppVersion.Format("0.15.0"));
         Assert.Equal("versión desconocida", AppVersion.Format(null));
         Assert.StartsWith("v0.15.0 · ", AppVersion.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Opacity_is_full_on_hover_and_faded_without_combat()
+    {
+        var quiet = MeterViewModel.FadeAfter + TimeSpan.FromSeconds(1);
+        Assert.Equal(0.6, MeterViewModel.ComputeOpacity(0.6, hovered: false, opaqueOnHover: true, fadeWhenIdle: false, quiet));
+        Assert.Equal(1, MeterViewModel.ComputeOpacity(0.6, hovered: true, opaqueOnHover: true, fadeWhenIdle: true, quiet));
+        Assert.Equal(0.6, MeterViewModel.ComputeOpacity(0.6, hovered: true, opaqueOnHover: false, fadeWhenIdle: false, quiet));
+        Assert.Equal(MeterViewModel.FadedOpacity, MeterViewModel.ComputeOpacity(0.6, hovered: false, opaqueOnHover: true, fadeWhenIdle: true, quiet));
+        Assert.Equal(0.6, MeterViewModel.ComputeOpacity(0.6, hovered: false, opaqueOnHover: true, fadeWhenIdle: true, TimeSpan.FromSeconds(5)));
+    }
+
+    [Fact]
+    public void Capture_status_warns_when_the_game_is_silent()
+    {
+        var start = new DateTime(2026, 10, 15, 21, 0, 0, DateTimeKind.Utc);
+        var status = new CaptureStatus(start);
+
+        Assert.Equal(CaptureState.Starting, status.Current(start.AddSeconds(5)));
+        Assert.Equal(CaptureState.NoTraffic, status.Current(start.AddSeconds(20)));
+
+        status.MarkTraffic(start.AddSeconds(21));
+        Assert.Equal(CaptureState.Capturing, status.Current(start.AddSeconds(30)));
+        Assert.Equal(CaptureState.NoTraffic, status.Current(start.AddSeconds(40)));
+
+        status.Fail("Npcap no está instalado");
+        Assert.Equal(CaptureState.Failed, status.Current(start.AddSeconds(41)));
+        Assert.Contains("Npcap", status.Describe(start.AddSeconds(41)), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Demo_encounter_is_consistent()
+    {
+        var demo = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));
+
+        Assert.Equal(demo.TotalDamage, demo.Actors.Sum(a => a.Damage));
+        Assert.Single(demo.Actors, a => a.IsLocalPlayer);
+        Assert.All(demo.Actors, a => Assert.Equal(95, a.Timeline!.Count));
     }
 
     [Fact]

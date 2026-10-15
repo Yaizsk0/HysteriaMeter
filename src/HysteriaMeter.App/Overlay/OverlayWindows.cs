@@ -54,7 +54,7 @@ public sealed class OverlayWindows(MeterSession session)
 
     private OverlayWindow Open(OverlayLayout? layout)
     {
-        var viewModel = new MeterViewModel(session, layout?.Tab ?? MeterTab.Damage, layout?.ShowHealing ?? true);
+        var viewModel = new MeterViewModel(session, layout?.Tab ?? MeterTab.Damage, layout?.ShowHealing ?? true, layout?.Compact ?? false);
         var window = new OverlayWindow(viewModel, layout, this);
         viewModel.NewWindowRequested += () => OpenNext(window);
         window.Closing += (_, _) => OnClosing(window);

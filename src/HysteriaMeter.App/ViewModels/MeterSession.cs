@@ -18,12 +18,14 @@ public sealed class MeterSession
         SkillNames skillNames,
         MeterPreferences preferences,
         Action<MeterPreferences> save,
-        EncounterRepository? history = null)
+        EncounterRepository? history = null,
+        CaptureStatus? status = null)
     {
         Engine = engine;
         Recorder = recorder;
         SkillNames = skillNames;
         History = history;
+        Status = status ?? new CaptureStatus();
         Preferences = preferences;
         _save = save;
         engine.Scope = preferences.Scope;
@@ -37,6 +39,8 @@ public sealed class MeterSession
     public SkillNames SkillNames { get; }
 
     public EncounterRepository? History { get; }
+
+    public CaptureStatus Status { get; }
 
     public MeterPreferences Preferences { get; private set; }
 
