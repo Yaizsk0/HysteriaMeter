@@ -11,6 +11,19 @@ public sealed record CombatEngineOptions
     public bool EndOnMainTargetDeath { get; init; } = true;
 }
 
+/// <summary>De quién se cuenta el daño y la curación.</summary>
+public enum ActorScope
+{
+    /// <summary>Todos los jugadores cercanos, incluidos los que no son de la party.</summary>
+    Everyone,
+
+    /// <summary>El jugador local y su party.</summary>
+    Party,
+
+    /// <summary>Solo el jugador local (y sus invocaciones).</summary>
+    Me,
+}
+
 /// <summary>
 /// Modelo de combate puro (sin I/O): consume eventos y mantiene el encuentro actual.
 /// <see cref="Apply"/> y <see cref="Tick"/> se llaman desde un único hilo (el pipeline);
@@ -20,12 +33,34 @@ public sealed class CombatEngine(CombatEngineOptions options)
 {
     private readonly Lock _gate = new();
     private Encounter? _current;
+    private ActorScope _scope = ActorScope.Party;
+    private bool _splitEncounters = true;
 
     public CombatEngine() : this(new CombatEngineOptions())
     {
     }
 
     public EntityRegistry Entities { get; } = new();
+
+    /// <summary>
+    /// De quién se cuenta el daño. Mientras no se conoce al jugador local se cuenta a todos,
+    /// para no dejar el overlay vacío los primeros segundos de una conexión.
+    /// </summary>
+    public ActorScope Scope
+    {
+        get { lock (_gate) { return _scope; } }
+        set { lock (_gate) { _scope = value; } }
+    }
+
+    /// <summary>
+    /// Con <c>true</c> cada pelea es un encuentro nuevo (se corta por inactividad o por la muerte del
+    /// objetivo). Con <c>false</c> todo se acumula hasta el reinicio manual.
+    /// </summary>
+    public bool SplitEncounters
+    {
+        get { lock (_gate) { return _splitEncounters; } }
+        set { lock (_gate) { _splitEncounters = value; } }
+    }
 
     /// <summary>Se dispara cuando un encuentro termina (idle o muerte del objetivo).</summary>
     public event Action<EncounterSnapshot>? EncounterFinished;
@@ -55,7 +90,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
     {
         lock (_gate)
         {
-            if (_current is not null && now - _current.LastActivity > options.IdleTimeout)
+            if (_splitEncounters && _current is not null && now - _current.LastActivity > options.IdleTimeout)
             {
                 Finish();
             }
@@ -87,9 +122,9 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var source = Entities.Canonical(e.SourceId);
-        if (Entities.IsNpc(source))
+        if (Entities.IsNpc(source) || !InScope(source))
         {
-            return; // daño que nos hacen los monstruos: fuera del ranking
+            return; // monstruos y jugadores fuera del filtro no cuentan ni abren encuentros
         }
 
         var encounter = EnsureEncounter(e.Timestamp);
@@ -105,7 +140,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var source = Entities.Canonical(e.SourceId);
-        if (!Entities.IsNpc(source))
+        if (!Entities.IsNpc(source) && InScope(source))
         {
             _current.Actor(source).Healing += e.Amount;
         }
@@ -113,7 +148,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
     private void OnDeath(DeathEvent e)
     {
-        if (_current is not null && options.EndOnMainTargetDeath && _current.MainTarget == e.EntityId && Entities.IsNpc(e.EntityId))
+        if (_current is not null && _splitEncounters && options.EndOnMainTargetDeath && _current.MainTarget == e.EntityId && Entities.IsNpc(e.EntityId))
         {
             _current.TargetKilled = true;
             _current.LastActivity = e.Timestamp;
@@ -123,12 +158,22 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
     private Encounter EnsureEncounter(DateTimeOffset at)
     {
-        if (_current is not null && at - _current.LastActivity > options.IdleTimeout)
+        if (_splitEncounters && _current is not null && at - _current.LastActivity > options.IdleTimeout)
         {
             Finish();
         }
 
         return _current ??= new Encounter(at);
+    }
+
+    private bool InScope(ulong canonicalSource)
+    {
+        if (_scope == ActorScope.Everyone || Entities.LocalPlayerId is not { } local || canonicalSource == local)
+        {
+            return true;
+        }
+
+        return _scope == ActorScope.Party && Entities.IsPartyMember(canonicalSource);
     }
 
     private void Finish()

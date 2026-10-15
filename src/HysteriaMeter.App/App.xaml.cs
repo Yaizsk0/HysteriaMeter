@@ -14,6 +14,8 @@ namespace HysteriaMeter.App;
 
 public partial class App : Application
 {
+    private const string PreferencesFile = "preferencias.json";
+
     private IHost? _host;
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -36,7 +38,10 @@ public partial class App : Application
         builder.Services.AddSingleton(sp => new EncounterRepository(
             Path.Combine(AppContext.BaseDirectory, sp.GetRequiredService<IOptions<MeterSettings>>().Value.DatabasePath)));
         builder.Services.AddHostedService<MeterPipeline>();
-        builder.Services.AddSingleton<MeterViewModel>();
+        builder.Services.AddSingleton(sp => new MeterViewModel(
+            sp.GetRequiredService<CombatEngine>(),
+            UserStore.Load<MeterPreferences>(PreferencesFile) ?? new MeterPreferences(),
+            preferences => UserStore.Save(PreferencesFile, preferences)));
         builder.Services.AddSingleton<OverlayWindow>();
 
         _host = builder.Build();

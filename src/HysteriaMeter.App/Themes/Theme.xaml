@@ -3,12 +3,13 @@
     <!--
         Paleta y fuentes de los mocks aprobados (hysteria-meter/mocks): paneles oscuros translúcidos,
         filetes dorados, títulos en Cinzel y números en Barlow Semi Condensed. Las fuentes son OFL
-        y van embebidas (Assets/Fonts, con su licencia al lado).
+        y van embebidas (Assets/Fonts, con su licencia al lado). La fuente del texto la elige el usuario
+        en la configuración; Cinzel queda solo para el logo.
     -->
     <FontFamily x:Key="TitleFont">pack://application:,,,/Assets/Fonts/#Cinzel</FontFamily>
-    <FontFamily x:Key="BodyFont">pack://application:,,,/Assets/Fonts/#Barlow Semi Condensed</FontFamily>
 
     <SolidColorBrush x:Key="Panel" Color="#E60A0D14" />
+    <SolidColorBrush x:Key="PanelSolid" Color="#F70A0D14" />
     <SolidColorBrush x:Key="Gold" Color="#E8CF8F" />
     <SolidColorBrush x:Key="GoldDim" Color="#6B5A35" />
     <SolidColorBrush x:Key="Rule" Color="#3A3222" />

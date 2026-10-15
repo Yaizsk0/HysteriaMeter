@@ -10,7 +10,7 @@
         Width="356" Height="300" MinWidth="260" MaxWidth="900" MinHeight="150" MaxHeight="1400"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="NoResize" ShowInTaskbar="True"
-        FontFamily="{StaticResource BodyFont}" FontSize="13" Foreground="{StaticResource Text}"
+        FontFamily="{Binding Font}" FontSize="13" Foreground="{StaticResource Text}"
         TextOptions.TextFormattingMode="Display">
 
     <!-- Referencia visual: mocks/Main.dc.html (aprobado por Mati el 2026-10-15). -->
@@ -85,6 +85,42 @@
         </Style>
 
         <BooleanToVisibilityConverter x:Key="Visible" />
+
+        <Style x:Key="SettingsHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextDim}" />
+            <Setter Property="Margin" Value="0,8,0,4" />
+        </Style>
+
+        <!-- Casilla y opción con el estilo del overlay; sirve para CheckBox y RadioButton. -->
+        <Style x:Key="Option" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Grid Width="14" Height="14" Margin="0,0,8,0" VerticalAlignment="Center">
+                                <Border x:Name="Box" BorderBrush="{StaticResource GoldDim}" BorderThickness="1" Background="{StaticResource Row}" />
+                                <Border x:Name="Mark" Margin="3" Background="{StaticResource Gold}" Visibility="Collapsed" />
+                            </Grid>
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Mark" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource Gold}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource Gold}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <!-- Margen para que entren las esquinas doradas, que sobresalen 2 px del marco. -->
@@ -110,6 +146,9 @@
                         </Button>
                         <Button Style="{StaticResource IconButton}" Command="{Binding ResetCommand}" ToolTip="Reiniciar encuentro">
                             <Path Style="{StaticResource Icon}" Data="M3,12 A9,9 0 1 0 6,5.3 L3,8 M3,3 V8 H8" />
+                        </Button>
+                        <Button Style="{StaticResource IconButton}" Command="{Binding ToggleSettingsCommand}" ToolTip="Configuración">
+                            <Path Style="{StaticResource Icon}" Data="M12,9 A3,3 0 1 0 12.01,9 Z M12,2 V5 M12,19 V22 M2,12 H5 M19,12 H22 M4.9,4.9 L7,7 M17,17 L19.1,19.1 M4.9,19.1 L7,17 M17,7 L19.1,4.9" />
                         </Button>
                         <Button Style="{StaticResource IconButton}" Click="OnCloseClick" ToolTip="Cerrar">
                             <Path Style="{StaticResource Icon}" Data="M6,6 L18,18 M18,6 L6,18" />
@@ -139,7 +178,7 @@
                 </DockPanel>
 
                 <!-- Objetivo principal -->
-                <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" Margin="10,8,10,6" FontFamily="{StaticResource TitleFont}" FontWeight="Bold" FontSize="14"
+                <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" Margin="10,8,10,6" FontWeight="Bold" FontSize="14"
                            Foreground="{StaticResource TextBright}" TextTrimming="CharacterEllipsis" />
 
                 <!-- Pestañas -->
@@ -148,7 +187,8 @@
                         <TextBlock DockPanel.Dock="Right" Text="{Binding ColumnsHeader}" FontSize="12" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
                         <StackPanel Orientation="Horizontal">
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="DAÑO" IsChecked="{Binding IsDamageTab}" />
-                            <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="CURACIÓN" IsChecked="{Binding IsHealingTab}" />
+                            <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="CURACIÓN" IsChecked="{Binding IsHealingTab}"
+                                         Visibility="{Binding ShowHealing, Converter={StaticResource Visible}}" />
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="RECIBIDO" IsEnabled="False"
                                          ToolTip="Próximamente: falta decodificar el daño que reciben los jugadores" ToolTipService.ShowOnDisabled="True" />
                         </StackPanel>
@@ -233,6 +273,57 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
                 </ScrollViewer>
+
+                <!-- Configuración: tapa las filas mientras está abierta -->
+                <Border Background="{StaticResource PanelSolid}" Visibility="{Binding IsSettingsOpen, Converter={StaticResource Visible}}">
+                    <ScrollViewer VerticalScrollBarVisibility="Hidden">
+                        <StackPanel Margin="12,10">
+                            <TextBlock Text="CONTAR DAÑO DE" Style="{StaticResource SettingsHeader}" />
+                            <RadioButton Style="{StaticResource Option}" GroupName="Scope" Content="Solo yo" IsChecked="{Binding ScopeMe}" />
+                            <RadioButton Style="{StaticResource Option}" GroupName="Scope" Content="Yo y mi party" IsChecked="{Binding ScopeParty}" />
+                            <RadioButton Style="{StaticResource Option}" GroupName="Scope" Content="Todos los jugadores cerca" IsChecked="{Binding ScopeEveryone}" />
+
+                            <TextBlock Text="MOSTRAR" Style="{StaticResource SettingsHeader}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Pestaña de curación" IsChecked="{Binding ShowHealing}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Reiniciar en cada pelea nueva" IsChecked="{Binding SplitEncounters}"
+                                      ToolTip="Apagado: el daño se acumula entre peleas hasta que reinicies a mano" />
+
+                            <TextBlock Text="FUENTE" Style="{StaticResource SettingsHeader}" />
+                            <ListBox ItemsSource="{x:Static vm:MeterPreferences.Fonts}" SelectedItem="{Binding FontName}"
+                                     Background="Transparent" BorderThickness="0" Padding="0">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+                                        <Setter Property="Cursor" Value="Hand" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="Chip" Margin="0,0,6,6" Padding="8,3" BorderBrush="{StaticResource RowBorder}" BorderThickness="1" Background="{StaticResource Row}">
+                                                        <TextBlock Text="{Binding}" FontFamily="{Binding}" />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource Gold}" />
+                                                            <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource GoldDim}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
                 </Grid>
 
             </DockPanel>

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Windows.Media;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -21,14 +22,75 @@ public sealed partial class MeterViewModel : ObservableObject
 
     private readonly CombatEngine _engine;
     private readonly DispatcherTimer _timer;
+    private readonly Action<MeterPreferences> _savePreferences;
+    private MeterPreferences _preferences;
     private EncounterSnapshot? _lastFinished;
 
-    public MeterViewModel(CombatEngine engine)
+    public MeterViewModel(CombatEngine engine, MeterPreferences preferences, Action<MeterPreferences> savePreferences)
     {
         _engine = engine;
+        _preferences = preferences;
+        _savePreferences = savePreferences;
+        _engine.Scope = preferences.Scope;
+        _engine.SplitEncounters = preferences.SplitEncounters;
         _engine.EncounterFinished += snapshot => _lastFinished = snapshot;
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, (_, _) => Refresh(), Dispatcher.CurrentDispatcher);
     }
+
+    [ObservableProperty]
+    public partial bool IsSettingsOpen { get; set; }
+
+    public bool ScopeMe
+    {
+        get => _preferences.Scope == ActorScope.Me;
+        set => SetScope(value, ActorScope.Me);
+    }
+
+    public bool ScopeParty
+    {
+        get => _preferences.Scope == ActorScope.Party;
+        set => SetScope(value, ActorScope.Party);
+    }
+
+    public bool ScopeEveryone
+    {
+        get => _preferences.Scope == ActorScope.Everyone;
+        set => SetScope(value, ActorScope.Everyone);
+    }
+
+    public bool ShowHealing
+    {
+        get => _preferences.ShowHealing;
+        set
+        {
+            Update(_preferences with { ShowHealing = value }, nameof(ShowHealing));
+            if (!value)
+            {
+                Tab = MeterTab.Damage;
+            }
+        }
+    }
+
+    public bool SplitEncounters
+    {
+        get => _preferences.SplitEncounters;
+        set
+        {
+            _engine.SplitEncounters = value;
+            Update(_preferences with { SplitEncounters = value }, nameof(SplitEncounters));
+        }
+    }
+
+    public string FontName
+    {
+        get => _preferences.Font;
+        set => Update(_preferences with { Font = value }, nameof(FontName), nameof(Font));
+    }
+
+    /// <summary>La Barlow va embebida; las demás son fuentes de Windows.</summary>
+    public FontFamily Font => _preferences.Font == "Barlow Semi Condensed"
+        ? new FontFamily(new Uri("pack://application:,,,/"), "./Assets/Fonts/#Barlow Semi Condensed")
+        : new FontFamily(_preferences.Font);
 
     public ObservableCollection<ActorRowViewModel> Actors { get; } = [];
 
@@ -98,6 +160,32 @@ public sealed partial class MeterViewModel : ObservableObject
     public void Stop() => _timer.Stop();
 
     partial void OnTabChanged(MeterTab value) => Refresh();
+
+    [RelayCommand]
+    private void ToggleSettings() => IsSettingsOpen = !IsSettingsOpen;
+
+    private void SetScope(bool selected, ActorScope scope)
+    {
+        if (!selected || _preferences.Scope == scope)
+        {
+            return;
+        }
+
+        // Cambiar el filtro a mitad de una pelea mezclaría criterios: se arranca de cero.
+        _engine.Scope = scope;
+        Reset();
+        Update(_preferences with { Scope = scope }, nameof(ScopeMe), nameof(ScopeParty), nameof(ScopeEveryone));
+    }
+
+    private void Update(MeterPreferences preferences, params string[] changed)
+    {
+        _preferences = preferences;
+        _savePreferences(preferences);
+        foreach (var name in changed)
+        {
+            OnPropertyChanged(name);
+        }
+    }
 
     [RelayCommand]
     private void Reset()

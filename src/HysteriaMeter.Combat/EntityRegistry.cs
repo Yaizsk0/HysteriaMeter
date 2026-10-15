@@ -14,6 +14,7 @@ public sealed class EntityRegistry
     private readonly Dictionary<ulong, EntityProfile> _profiles = [];
     private readonly Dictionary<string, ulong> _idsByName = new(StringComparer.Ordinal);
     private readonly Dictionary<ulong, string> _pendingOwnerNames = [];
+    private readonly HashSet<ulong> _partyMembers = [];
     private string? _localName;
 
     public ulong? LocalPlayerId { get; private set; }
@@ -33,6 +34,10 @@ public sealed class EntityRegistry
                     SetName(local.EntityId, name);
                 }
 
+                break;
+            case PartyMembersEvent party:
+                _partyMembers.Clear();
+                _partyMembers.UnionWith(party.EntityIds);
                 break;
             case EntitySpawnEvent spawn:
                 if (spawn.OwnerId is { } owner && owner != spawn.EntityId)
@@ -61,6 +66,8 @@ public sealed class EntityRegistry
                 break;
         }
     }
+
+    public bool IsPartyMember(ulong canonicalId) => _partyMembers.Contains(canonicalId);
 
     public ulong Canonical(ulong id)
     {

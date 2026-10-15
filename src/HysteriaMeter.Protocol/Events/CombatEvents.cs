@@ -13,6 +13,9 @@ public sealed record LocalPlayerEvent(DateTimeOffset Timestamp, ulong EntityId, 
 /// </summary>
 public sealed record EntitySpawnEvent(DateTimeOffset Timestamp, ulong EntityId, ulong? OwnerId, uint? NpcId, string? OwnerName = null) : CombatEvent(Timestamp);
 
+/// <summary>Miembros actuales de la party, sin el jugador local. Lista vacía = sin party.</summary>
+public sealed record PartyMembersEvent(DateTimeOffset Timestamp, IReadOnlyList<ulong> EntityIds) : CombatEvent(Timestamp);
+
 /// <summary>Nombre / clase de un jugador. Puede llegar tarde o no llegar.</summary>
 public sealed record EntityInfoEvent(DateTimeOffset Timestamp, ulong EntityId, string Name, int? ClassId) : CombatEvent(Timestamp);
 
