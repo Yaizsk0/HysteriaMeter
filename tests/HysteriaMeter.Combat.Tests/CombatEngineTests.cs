@@ -183,4 +183,29 @@ public class CombatEngineTests
 
         Assert.Equal(300, engine.CurrentSnapshot()!.Actors.Single(a => a.Id == Ally).Healing);
     }
+
+    [Fact]
+    public void Local_player_keeps_name_after_zone_change()
+    {
+        const ulong MeInNewZone = 3;
+        var engine = CreateEngine();
+        engine.Apply(new LocalPlayerEvent(At(0), MeInNewZone, Name: null));
+        engine.Apply(new DamageEvent(At(1), MeInNewZone, Boss, 1, 100, HitModifiers.None));
+
+        var me = engine.CurrentSnapshot()!.Actors.Single();
+        Assert.Equal((MeInNewZone, "Mati", true), (me.Id, me.Name, me.IsLocalPlayer));
+    }
+
+    [Fact]
+    public void Local_player_name_follows_character_change()
+    {
+        const ulong OtherCharacter = 4;
+        var engine = CreateEngine();
+        engine.Apply(new LocalPlayerEvent(At(0), OtherCharacter, Name: null));
+        engine.Apply(new LocalPlayerEvent(At(6), OtherCharacter, "Alt"));
+        engine.Apply(new DamageEvent(At(7), OtherCharacter, Boss, 1, 100, HitModifiers.None));
+
+        var me = engine.CurrentSnapshot()!.Actors.Single();
+        Assert.Equal(("Alt", true), (me.Name, me.IsLocalPlayer));
+    }
 }

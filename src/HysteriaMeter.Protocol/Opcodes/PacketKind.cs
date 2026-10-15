@@ -6,6 +6,7 @@ public enum PacketKind
     Unknown = 0,
     Bundle,
     LocalPlayer,
+    LocalPlayerInfo,
     EntitySpawn,
     EntityInfo,
     Damage,

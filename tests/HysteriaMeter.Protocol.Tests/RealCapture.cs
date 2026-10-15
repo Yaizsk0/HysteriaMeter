@@ -42,6 +42,15 @@ internal static class RealCapture
     /// <summary>Invocación sin nombre de dueño: entidad 30599, NPC 2920655.</summary>
     public const string SummonWithoutOwnerBody = "87 ef 01 5f 00 00 cf 90 2c 00 40 02";
 
+    /// <summary>Paquete del jugador local (0x364A, captura del mini boss): entidad 1879.</summary>
+    public const string LocalPlayerBody = "d7 0e 01 38 00 e0 00 00 00 00 00 00 00 00 00 00 00";
+
+    /// <summary>
+    /// Datos del jugador local al entrar a una zona (0x3633, captura del login): entidad 1698, nombre
+    /// reemplazado por "Tests". Recortado; el real sigue ~2,3 KB.
+    /// </summary>
+    public const string LocalPlayerInfoBody = "a2 0d 5f 91 c3 2b 3f 05 54 65 73 74 73 79 05 09 00 00 00 01 2d 00 00 00";
+
     /// <summary>Frame bundle (0xFFFF) completo: 431 bytes con LZ4 adentro.</summary>
     public const string BundleFrame = """
         b103ffff20020000f30e970401910000f203000018018f9506003e07c7006d0ec70058b8457f000100f301018b950600feb7c7000f2ac700383c4617

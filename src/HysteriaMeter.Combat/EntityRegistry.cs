@@ -14,6 +14,7 @@ public sealed class EntityRegistry
     private readonly Dictionary<ulong, EntityProfile> _profiles = [];
     private readonly Dictionary<string, ulong> _idsByName = new(StringComparer.Ordinal);
     private readonly Dictionary<ulong, string> _pendingOwnerNames = [];
+    private string? _localName;
 
     public ulong? LocalPlayerId { get; private set; }
 
@@ -23,7 +24,11 @@ public sealed class EntityRegistry
         {
             case LocalPlayerEvent local:
                 LocalPlayerId = local.EntityId;
-                if (local.Name is { } name)
+                _localName = local.Name ?? _localName;
+
+                // Al cambiar de zona el local recibe otra entidad y el nombre llega segundos después:
+                // mientras tanto se usa el que ya conocíamos.
+                if (_localName is { } name && Profile(local.EntityId).Name != name)
                 {
                     SetName(local.EntityId, name);
                 }
