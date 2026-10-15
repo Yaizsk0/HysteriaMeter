@@ -429,6 +429,47 @@ public sealed partial class MeterViewModel : ObservableObject
     [ObservableProperty]
     public partial string TargetHealthText { get; set; } = string.Empty;
 
+    /// <summary>Auto-verificación: cuánto de la vida que perdió el boss explica el daño contado.</summary>
+    [ObservableProperty]
+    public partial string? TargetHealthCheck { get; set; }
+
+    /// <summary>Contadores de captura y decodificación, en configuración.</summary>
+    [ObservableProperty]
+    public partial string Diagnostics { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Auto-verificación (MT-11): el daño que contamos contra el boss comparado con la vida que perdió desde el spawn.
+    /// Con el filtro de party no incluye a jugadores de afuera, así que puede dar menos de 100 % sin ser un error.
+    /// </summary>
+    public static string? HealthCheck(Health? health, long countedDamage)
+    {
+        if (health is not { MaxHp: > 0 } || health.MaxHp - health.Hp is var lost && lost <= 0)
+        {
+            return null;
+        }
+
+        var ratio = (double)countedDamage / lost;
+        return $"El daño contado explica el {ratio.ToString("P0", CultureInfo.CurrentCulture)} de la vida que perdió ({ActorRowViewModel.Compact(lost)}). " +
+            "Menos de 100 %: pegaron jugadores fuera del filtro o el boss ya estaba herido; más: curación del boss.";
+    }
+
+    /// <summary>
+    /// Aviso de parche (RB-01): mucho tráfico del juego pero ningún paquete conocido, o muchos errores al leer los
+    /// conocidos. Suele pasar cuando una actualización del juego cambia los opcodes o el formato.
+    /// </summary>
+    public static bool PatchSuspected(long frames, long unknown, long errors)
+    {
+        var known = frames - unknown;
+        return (frames >= 3_000 && known == 0) || (errors >= 50 && errors > known / 5);
+    }
+
+    public static string DescribeDecoder(long frames, long unknown, long errors, long resyncs)
+    {
+        var culture = CultureInfo.CurrentCulture;
+        return $"Frames {frames.ToString("N0", culture)} · conocidos {(frames - unknown).ToString("N0", culture)} · " +
+            $"errores {errors.ToString("N0", culture)} · resincronizaciones {resyncs.ToString("N0", culture)}";
+    }
+
     /// <summary>Proporción de vida restante (0..1) para la barra.</summary>
     [ObservableProperty]
     public partial double TargetHealthRatio { get; set; }
@@ -907,7 +948,20 @@ public sealed partial class MeterViewModel : ObservableObject
             _ when inCombat => "live",
             _ => "idle",
         };
-        EmptyText = state is CaptureState.Capturing ? "Esperando el primer golpe…" : StatusText;
+        var decoder = _session.Decoder;
+        var (frames, unknown, errors) = (decoder.TotalFrames, decoder.UnknownFrames, decoder.Errors);
+        if (IsSettingsOpen)
+        {
+            Diagnostics = DescribeDecoder(frames, unknown, errors, decoder.Resyncs);
+        }
+
+        if (state == CaptureState.Capturing && PatchSuspected(frames, unknown, errors))
+        {
+            StatusText = "El juego pudo haberse actualizado: no se reconocen los paquetes. Revisá si hay una versión nueva del meter.";
+            StatusKind = "warn";
+        }
+
+        EmptyText = StatusKind is "live" or "idle" ? "Esperando el primer golpe…" : StatusText;
         OnPropertyChanged(nameof(EffectiveOpacity));
     }
 
@@ -965,6 +1019,7 @@ public sealed partial class MeterViewModel : ObservableObject
         Title = snapshot.TargetName ?? "Encuentro";
         Elapsed = snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
         UpdateTargetHealth(snapshot.TargetHealth);
+        TargetHealthCheck = HealthCheck(snapshot.TargetHealth, snapshot.Actors.Sum(a => a.MainTargetDamage));
         if (IsLive && HasTargetHealth && EstimateTimeToKill(snapshot.TargetHealth!.Hp, snapshot.Actors.Sum(a => a.MainTargetDps)) is { } ttk)
         {
             TargetHealthText += $" · muere en {ttk.ToString(@"m\:ss", CultureInfo.InvariantCulture)}";

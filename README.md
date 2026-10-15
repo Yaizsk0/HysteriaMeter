@@ -57,6 +57,8 @@ Cada ventana elige entre PELEA (la actual) y SESIÓN (todas las peleas desde el 
 
 Los datos (preferencias, historial, grabaciones y exportes) van a `%LOCALAPPDATA%\HysteriaMeter`. Con un archivo `portable.txt` junto a `HysteriaMeter.exe`, van a la carpeta `datos` al lado del programa. El historial de versiones anteriores, que estaba junto al .exe, se copia solo la primera vez.
 
+En configuración, DIAGNÓSTICO muestra el estado de la captura y cuántos mensajes del juego se leyeron, cuántos se reconocen, los errores y las resincronizaciones. Si llega tráfico pero no se reconoce nada, el punto se pone ámbar con un aviso de que el juego pudo haberse actualizado. El tooltip de la vida del boss compara el daño contado con la vida que perdió (auto-verificación).
+
 Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: los nombres se cargan a mano en `data/skills.json`.
 
 Para grabar una pelea desde el overlay: engranaje → GRABACIÓN → "Grabar lo capturado (.pcap)". Mientras graba aparece `● REC` arriba; los archivos quedan en `%LOCALAPPDATA%\HysteriaMeter\Grabaciones` ("Abrir carpeta"). Esas grabaciones tienen nombres de personajes: no se suben al repo.

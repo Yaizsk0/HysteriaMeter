@@ -23,6 +23,7 @@ public sealed partial class MeterPipeline(
     EncounterRepository repository,
     CaptureRecorder recorder,
     CaptureStatus status,
+    DecoderStats stats,
     IOptions<CaptureSettings> captureOptions,
     ILogger<MeterPipeline> logger) : BackgroundService
 {
@@ -30,7 +31,7 @@ public sealed partial class MeterPipeline(
     private readonly Stopwatch _sinceLastSegment = Stopwatch.StartNew();
     private DateTimeOffset _lastSegmentAt = DateTimeOffset.UtcNow;
 
-    public DecoderStats Stats { get; } = new();
+    public DecoderStats Stats => stats;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

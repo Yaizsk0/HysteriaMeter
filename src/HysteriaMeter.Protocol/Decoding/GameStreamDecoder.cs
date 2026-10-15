@@ -43,7 +43,11 @@ public sealed class GameStreamDecoder
     }
 
     /// <summary>Llamar cuando el reensamblador reporta un hueco: el estado parcial ya no sirve.</summary>
-    public void Resync() => _framer.Reset();
+    public void Resync()
+    {
+        _stats.Resyncs++;
+        _framer.Reset();
+    }
 
     private void Handle(RawFrame frame, DateTimeOffset timestamp, List<CombatEvent> events, int depth)
     {
@@ -99,6 +103,12 @@ public sealed class DecoderStats
     public long Errors { get; set; }
 
     public long UnknownFrames { get; private set; }
+
+    /// <summary>Veces que se perdió el hilo del stream (hueco TCP) y hubo que resincronizar.</summary>
+    public long Resyncs { get; set; }
+
+    /// <summary>Frames leídos en total, de cualquier opcode.</summary>
+    public long TotalFrames => _byOpcode.Values.Sum();
 
     public IReadOnlyDictionary<ushort, long> ByOpcode => _byOpcode;
 
