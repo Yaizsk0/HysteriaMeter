@@ -40,17 +40,19 @@ description: "Tareas del MVP de Hysteria Meter"
 ## Phase 3: User Story 5 - Descubrimiento del protocolo (P1, habilitadora)
 
 - [X] T015 [US5] `hysteria-rec devices | record | dump` en `tools/HysteriaMeter.Recorder/Program.cs`
-- [ ] T016 [US5] Confirmar el nombre del ejecutable del juego y actualizar `appsettings.json` (FR-015)
-- [ ] T017 [US5] Grabar capturas de referencia (pelea solo, party, cambio de zona) y guardarlas fuera del repo
-- [ ] T018 [US5] Confirmar framing real (tamaño/endianness del opcode, largo con/sin prefijo, formato de bundle) y ajustar `ProtocolOptions`
-- [ ] T019 [US5] Identificar opcodes de Bundle, Damage, LocalPlayer, EntitySpawn, EntityInfo, Heal, Death y cargarlos en `data/opcodes.json`
+- [X] T016 [US5] Confirmar el nombre del ejecutable del juego (`AION2`) y actualizar `appsettings.json` (FR-015)
+- [ ] T017 [US5] Grabar capturas de referencia (pelea solo ✓, party ✓, cambio de zona) y guardarlas fuera del repo
+- [X] T018 [US5] Confirmar framing real (opcode u16 LE, largo = bytes + 4, bundle 0xFFFF con u32 + LZ4) y ajustar `ProtocolOptions` (ver `protocol-notes.md`)
+- [X] T019 [US5] Identificar opcodes de Bundle, Damage, EntitySpawn y Death y cargarlos en `data/opcodes.json`
+- [ ] T019b [US5] Identificar LocalPlayer, EntityInfo (nombres fuera de kills ✓ `0x3645`) y Heal (tick `0x3805` ✓, falta el directo y validar)
 
 ## Phase 4: User Story 1 - Mi DPS en vivo (P1) 🎯 MVP
 
 - [X] T020 [US1] `CombatEngine` y snapshots en `src/HysteriaMeter.Combat/`
 - [X] T021 [US1] `MeterPipeline` (BackgroundService) en `src/HysteriaMeter.App/Pipeline/MeterPipeline.cs`
 - [X] T022 [US1] Overlay básico con ranking en `src/HysteriaMeter.App/Overlay/`
-- [ ] T023 [US1] Reemplazar el layout provisorio de `DamagePacketDecoder` por el real + test con bytes reales
+- [X] T023 [US1] Reemplazar el layout provisorio de `DamagePacketDecoder` por el real + test con bytes reales
+- [ ] T023b [US1] Confirmar la escala del daño de `0x3804` contra Combat Analysis (✓ exacto con DoT `0x3805`) e identificar el bit de crítico
 - [ ] T024 [P] [US1] `LocalPlayerDecoder` + test en `src/HysteriaMeter.Protocol/Decoding/`
 - [ ] T025 [US1] Validar contra Combat Analysis en 10 peleas (SC-001) y registrar resultados en `specs/001-dps-meter-mvp/validation.md`
 
@@ -59,7 +61,8 @@ description: "Tareas del MVP de Hysteria Meter"
 ## Phase 5: User Story 2 - Ranking de la party (P2)
 
 - [X] T026 [US2] Canonicalización de entidades y atribución de invocaciones en `src/HysteriaMeter.Combat/EntityRegistry.cs`
-- [ ] T027 [P] [US2] `EntitySpawnDecoder` (dueño, NpcId) + test
+- [X] T027 [P] [US2] `NpcSpawnDecoder` (NpcId) + test con bytes reales
+- [ ] T027b [US2] Dueño de invocaciones (✓ por nombre en `0x3641`; faltan las que no traen dueño)
 - [ ] T028 [P] [US2] `EntityInfoDecoder` (nombre, clase) + test
 - [ ] T029 [US2] Remapear IDs huérfanos al cambiar de zona/pull (edge case) + test en `tests/HysteriaMeter.Combat.Tests/`
 
@@ -72,13 +75,16 @@ description: "Tareas del MVP de Hysteria Meter"
 ## Phase 7: User Story 4 - Historial (P3)
 
 - [X] T033 [US4] `EncounterRepository` (SQLite) + test en `src/HysteriaMeter.Storage/`
-- [ ] T034 [P] [US4] `HealDecoder` y `DeathDecoder` + tests
+- [X] T034a [P] [US4] `KillPacketDecoder` (muerte + nombre del que mata) + test
+- [ ] T034 [P] [US4] `HealDecoder` + test
 - [ ] T035 [US4] Vista de historial con los últimos encuentros
 
 ## Phase 8: Polish
 
 - [ ] T036 [P] Mostrar `DecoderStats` y segmentos descartados en una ventana de diagnóstico
 - [ ] T037 [P] Mensaje claro si Npcap no está instalado o no hay permisos
+- [X] T040 [P] Elegir automáticamente la placa con tráfico del juego en `LiveCaptureSource`
+- [X] T041 [P] `hysteria-rec replay` para correr el pipeline completo sobre un `.pcap`
 - [ ] T038 Medir CPU/RAM con party de 6 (SC-003)
 - [ ] T039 Decidir licencia (GPL-3.0 si se usan datos de A2Tools) y agregar `LICENSE`
 

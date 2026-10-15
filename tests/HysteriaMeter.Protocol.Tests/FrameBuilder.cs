@@ -3,15 +3,16 @@ using HysteriaMeter.Protocol.Framing;
 
 namespace HysteriaMeter.Protocol.Tests;
 
-/// <summary>Arma frames sintéticos con el formato por defecto: [varint largo][opcode BE][cuerpo].</summary>
+/// <summary>Arma frames con el formato real: [varint (len + 4)][opcode u16 LE][cuerpo].</summary>
 internal static class FrameBuilder
 {
     public static byte[] Frame(ushort opcode, params byte[] body)
     {
         var length = body.Length + 2;
-        var output = new byte[VarInt.SizeOf((ulong)length) + length];
-        var offset = VarInt.Write(output, (ulong)length);
-        BinaryPrimitives.WriteUInt16BigEndian(output.AsSpan(offset), opcode);
+        var declared = (ulong)(length + ProtocolOptions.Default.LengthBias);
+        var output = new byte[VarInt.SizeOf(declared) + length];
+        var offset = VarInt.Write(output, declared);
+        BinaryPrimitives.WriteUInt16LittleEndian(output.AsSpan(offset), opcode);
         body.CopyTo(output, offset + 2);
         return output;
     }
@@ -29,4 +30,7 @@ internal static class FrameBuilder
     }
 
     public static byte[] Concat(params byte[][] parts) => parts.SelectMany(p => p).ToArray();
+
+    // Ignora cualquier espacio en blanco, incluido el \r de los checkouts con CRLF en Windows.
+    public static byte[] Hex(string hex) => Convert.FromHexString(string.Concat(hex.Where(c => !char.IsWhiteSpace(c))));
 }

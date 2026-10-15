@@ -6,8 +6,12 @@ public abstract record CombatEvent(DateTimeOffset Timestamp);
 /// <summary>El servidor identificó a nuestro personaje.</summary>
 public sealed record LocalPlayerEvent(DateTimeOffset Timestamp, ulong EntityId, string? Name) : CombatEvent(Timestamp);
 
-/// <summary>Aparece una entidad. <paramref name="OwnerId"/> se completa para invocaciones / entidades de combate transitorias.</summary>
-public sealed record EntitySpawnEvent(DateTimeOffset Timestamp, ulong EntityId, ulong? OwnerId, uint? NpcId) : CombatEvent(Timestamp);
+/// <summary>
+/// Aparece una entidad. <paramref name="OwnerId"/> se completa para invocaciones / entidades de combate transitorias.
+/// Algunas invocaciones no traen el ID del dueño sino su nombre (<paramref name="OwnerName"/>); el motor lo
+/// resuelve contra los nombres de jugadores que conoce.
+/// </summary>
+public sealed record EntitySpawnEvent(DateTimeOffset Timestamp, ulong EntityId, ulong? OwnerId, uint? NpcId, string? OwnerName = null) : CombatEvent(Timestamp);
 
 /// <summary>Nombre / clase de un jugador. Puede llegar tarde o no llegar.</summary>
 public sealed record EntityInfoEvent(DateTimeOffset Timestamp, ulong EntityId, string Name, int? ClassId) : CombatEvent(Timestamp);

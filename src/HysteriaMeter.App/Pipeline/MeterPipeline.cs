@@ -36,7 +36,7 @@ public sealed partial class MeterPipeline(
         engine.EncounterFinished += OnEncounterFinished;
 
         var opcodes = LoadOpcodes();
-        IPacketDecoder[] decoders = [new DamagePacketDecoder()];
+        var decoders = PacketDecoders.All;
 
         using var ticker = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         var tickTask = TickLoopAsync(ticker.Token);
@@ -55,7 +55,7 @@ public sealed partial class MeterPipeline(
                     _sinceLastSegment.Restart();
 
                     var result = flows.Push(segment);
-                    if (result.Chunks.Count == 0 && !result.GapDetected)
+                    if (!segment.Flow.IsFromServer() || (result.Chunks.Count == 0 && !result.GapDetected))
                     {
                         continue;
                     }

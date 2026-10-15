@@ -12,6 +12,8 @@ public sealed class EntityRegistry
 
     private readonly Dictionary<ulong, ulong> _owners = [];
     private readonly Dictionary<ulong, EntityProfile> _profiles = [];
+    private readonly Dictionary<string, ulong> _idsByName = new(StringComparer.Ordinal);
+    private readonly Dictionary<ulong, string> _pendingOwnerNames = [];
 
     public ulong? LocalPlayerId { get; private set; }
 
@@ -23,7 +25,7 @@ public sealed class EntityRegistry
                 LocalPlayerId = local.EntityId;
                 if (local.Name is { } name)
                 {
-                    Update(local.EntityId, p => p with { Name = name });
+                    SetName(local.EntityId, name);
                 }
 
                 break;
@@ -31,6 +33,11 @@ public sealed class EntityRegistry
                 if (spawn.OwnerId is { } owner && owner != spawn.EntityId)
                 {
                     _owners[spawn.EntityId] = owner;
+                }
+                else if (spawn.OwnerName is { } ownerName)
+                {
+                    // El dueño puede aparecer después que la invocación: se resuelve en Canonical.
+                    _pendingOwnerNames[spawn.EntityId] = ownerName;
                 }
 
                 if (spawn.NpcId is { } npcId)
@@ -40,14 +47,19 @@ public sealed class EntityRegistry
 
                 break;
             case EntityInfoEvent info:
-                Update(info.EntityId, p => p with { Name = info.Name, ClassId = info.ClassId ?? p.ClassId });
+                SetName(info.EntityId, info.Name);
+                if (info.ClassId is { } classId)
+                {
+                    Update(info.EntityId, p => p with { ClassId = classId });
+                }
+
                 break;
         }
     }
 
     public ulong Canonical(ulong id)
     {
-        for (var depth = 0; depth < MaxOwnerDepth && _owners.TryGetValue(id, out var owner); depth++)
+        for (var depth = 0; depth < MaxOwnerDepth && TryGetOwner(id, out var owner); depth++)
         {
             id = owner;
         }
@@ -62,6 +74,29 @@ public sealed class EntityRegistry
 
     public string DisplayName(ulong canonicalId) =>
         Profile(canonicalId).Name ?? (canonicalId == LocalPlayerId ? "Yo" : $"#{canonicalId}");
+
+    private bool TryGetOwner(ulong id, out ulong owner)
+    {
+        if (_owners.TryGetValue(id, out owner))
+        {
+            return true;
+        }
+
+        if (_pendingOwnerNames.TryGetValue(id, out var name) && _idsByName.TryGetValue(name, out owner) && owner != id)
+        {
+            _owners[id] = owner;
+            _pendingOwnerNames.Remove(id);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void SetName(ulong id, string name)
+    {
+        Update(id, p => p with { Name = name });
+        _idsByName[name] = id;
+    }
 
     private void Update(ulong id, Func<EntityProfile, EntityProfile> change) =>
         _profiles[id] = change(Profile(id));

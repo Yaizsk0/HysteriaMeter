@@ -111,8 +111,8 @@ Como desarrollador, grabo una sesión de juego a `.pcap` y la inspecciono: qué 
 - **FR-011**: El sistema MUST poder reproducir un `.pcap` en lugar de capturar en vivo, a velocidad real o máxima.
 - **FR-012**: El sistema MUST exponer contadores de diagnóstico (opcodes vistos, desconocidos, errores de decodificación, desincronizaciones, segmentos descartados).
 - **FR-013**: La herramienta `hysteria-rec` MUST listar placas, grabar a `.pcap` y volcar histogramas y hex dumps por opcode.
-- **FR-014**: El layout real de los paquetes de daño, entidades, nombres, curación y muerte MUST confirmarse con capturas propias [NEEDS CLARIFICATION: depende del análisis de capturas; los proyectos GPL A2Tools/Aion2DPSMeter pueden usarse como referencia si se acepta la licencia GPL-3.0].
-- **FR-015**: El nombre del ejecutable del juego MUST confirmarse en una PC con el juego instalado [NEEDS CLARIFICATION: se asume `Aion2`].
+- **FR-014**: El layout real de los paquetes de daño, entidades, nombres, curación y muerte MUST confirmarse con capturas propias. Framing, daño, aparición de NPC y muerte confirmados el 2026-10-14 (ver `protocol-notes.md`); falta la escala del daño, curación y jugador local.
+- **FR-015**: El sistema MUST identificar el proceso del juego por nombre. Confirmado: `AION2`.
 
 ### Key Entities
 

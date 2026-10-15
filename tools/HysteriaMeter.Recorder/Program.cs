@@ -1,12 +1,15 @@
 // hysteria-rec: herramienta de descubrimiento del protocolo.
 //   hysteria-rec devices
-//   hysteria-rec record <salida.pcap> [--device <nombre>] [--process Aion2] [--port 1234]
+//   hysteria-rec record <salida.pcap> [--device <nombre>] [--process AION2] [--port 1234]
 //   hysteria-rec dump <entrada.pcap> [--opcodes data/opcodes.json] [--opcode 0x0638] [--samples 3]
+//   hysteria-rec replay <entrada.pcap> [--opcodes data/opcodes.json]
 using System.Globalization;
+using HysteriaMeter.Combat;
 using HysteriaMeter.Capture;
 using HysteriaMeter.Capture.Filtering;
 using HysteriaMeter.Capture.Reassembly;
 using HysteriaMeter.Capture.Sources;
+using HysteriaMeter.Protocol.Decoding;
 using HysteriaMeter.Protocol.Framing;
 using HysteriaMeter.Protocol.Opcodes;
 
@@ -15,6 +18,7 @@ return args switch
     ["devices", ..] => Devices(),
     ["record", var output, .. var rest] => await RecordAsync(output, Options.Parse(rest)),
     ["dump", var input, .. var rest] => await DumpAsync(input, Options.Parse(rest)),
+    ["replay", var input, .. var rest] => await ReplayAsync(input, Options.Parse(rest)),
     _ => Usage(),
 };
 
@@ -22,8 +26,9 @@ static int Usage()
 {
     Console.WriteLine("""
         hysteria-rec devices
-        hysteria-rec record <salida.pcap> [--device <nombre>] [--process Aion2] [--port <puerto>]
+        hysteria-rec record <salida.pcap> [--device <nombre>] [--process AION2] [--port <puerto>]
         hysteria-rec dump <entrada.pcap> [--opcodes data/opcodes.json] [--opcode 0x0638] [--samples 3]
+        hysteria-rec replay <entrada.pcap> [--opcodes data/opcodes.json]
         """);
     return 1;
 }
@@ -68,7 +73,7 @@ static async Task<int> RecordAsync(string output, Options options)
             }
         }
 
-        Console.WriteLine($"\nListo: {segments} segmentos, {bytes / 1024} KiB.");
+        Console.WriteLine($"\nListo: {segments} segmentos, {bytes / 1024} KiB. Placa: {source.SelectedDevice ?? "(sin tráfico del juego)"}.");
     }
 
     return 0;
@@ -125,6 +130,66 @@ static async Task<int> DumpAsync(string input, Options options)
     }
 
     Console.WriteLine($"\nDesincronizaciones del framer: {framers.Values.Sum(f => f.Desyncs)}");
+    return 0;
+}
+
+// Corre el pipeline completo (decoders + motor de combate) sobre una captura e imprime los encuentros.
+static async Task<int> ReplayAsync(string input, Options options)
+{
+    var opcodesPath = options.Get("opcodes") ?? Path.Combine(AppContext.BaseDirectory, "data", "opcodes.json");
+    var table = OpcodeTable.Load(opcodesPath);
+    var engine = new CombatEngine();
+    var encounters = new List<EncounterSnapshot>();
+    engine.EncounterFinished += encounters.Add;
+
+    var flows = new TcpFlowTracker();
+    var streams = new Dictionary<FlowKey, GameStreamDecoder>();
+    var stats = new DecoderStats();
+    var events = new Dictionary<string, int>();
+    DateTimeOffset last = default;
+
+    await using var source = new PcapFileSource(input);
+    await foreach (var segment in source.ReadAllAsync(CancellationToken.None))
+    {
+        last = segment.Timestamp;
+        var result = flows.Push(segment);
+        if (!segment.Flow.IsFromServer())
+        {
+            continue;
+        }
+        if (!streams.TryGetValue(segment.Flow, out var stream))
+        {
+            streams[segment.Flow] = stream = new GameStreamDecoder(table, PacketDecoders.All, stats: stats);
+        }
+
+        if (result.GapDetected)
+        {
+            stream.Resync();
+        }
+
+        foreach (var chunk in result.Chunks)
+        {
+            foreach (var e in stream.Push(chunk.Span, segment.Timestamp))
+            {
+                events[e.GetType().Name] = events.GetValueOrDefault(e.GetType().Name) + 1;
+                engine.Apply(e);
+            }
+        }
+    }
+
+    engine.Tick(last + TimeSpan.FromMinutes(1));
+
+    Console.WriteLine($"Eventos: {string.Join(", ", events.Select(kv => $"{kv.Key}={kv.Value}"))}");
+    Console.WriteLine($"Errores de decodificación: {stats.Errors}\n");
+    foreach (var encounter in encounters)
+    {
+        Console.WriteLine($"[{encounter.Start:HH:mm:ss}] {encounter.TargetName ?? "?"} · {encounter.Duration.TotalSeconds:0.0}s · {(encounter.TargetKilled ? "muerto" : "sin terminar")} · total {encounter.TotalDamage:N0}");
+        foreach (var actor in encounter.Actors)
+        {
+            Console.WriteLine($"    {actor.Name,-20} {actor.Damage,10:N0}  {actor.Dps,8:N0} dps  {actor.Share,6:P0}  {actor.Hits,4} golpes");
+        }
+    }
+
     return 0;
 }
 

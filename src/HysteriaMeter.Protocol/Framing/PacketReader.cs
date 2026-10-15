@@ -38,11 +38,11 @@ public ref struct PacketReader(ReadOnlySpan<byte> buffer)
 
     public ulong ReadUInt64() => BinaryPrimitives.ReadUInt64LittleEndian(Take(8));
 
-    /// <summary>String UTF-16LE con prefijo de longitud varint en caracteres (formato a confirmar con capturas).</summary>
-    public string ReadUtf16String()
+    /// <summary>String UTF-8 con prefijo de longitud varint en bytes (así vienen los nombres de personaje).</summary>
+    public string ReadUtf8String()
     {
-        var chars = checked((int)ReadVarUInt());
-        return Encoding.Unicode.GetString(Take(chars * 2));
+        var bytes = checked((int)ReadVarUInt());
+        return Encoding.UTF8.GetString(Take(bytes));
     }
 
     public ReadOnlySpan<byte> ReadBytes(int count) => Take(count);

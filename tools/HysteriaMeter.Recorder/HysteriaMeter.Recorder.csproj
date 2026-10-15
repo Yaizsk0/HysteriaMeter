@@ -6,6 +6,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\HysteriaMeter.Capture\HysteriaMeter.Capture.csproj" />
     <ProjectReference Include="..\..\src\HysteriaMeter.Protocol\HysteriaMeter.Protocol.csproj" />
+    <ProjectReference Include="..\..\src\HysteriaMeter.Combat\HysteriaMeter.Combat.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\data\opcodes.json" Link="data\opcodes.json" CopyToOutputDirectory="PreserveNewest" />

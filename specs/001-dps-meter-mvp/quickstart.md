@@ -32,7 +32,7 @@ Overlay: arrastrar desde el encabezado; 🔒 o **Ctrl+Shift+L** alterna el click
 1. Grabar una pelea simple (un solo monstruo, pocas skills distintas):
 
    ```powershell
-   dotnet run --project tools/HysteriaMeter.Recorder -- record pelea.pcap --process Aion2
+   dotnet run --project tools/HysteriaMeter.Recorder -- record pelea.pcap --process AION2
    ```
 
 2. Ver el histograma de opcodes y ejemplos:
