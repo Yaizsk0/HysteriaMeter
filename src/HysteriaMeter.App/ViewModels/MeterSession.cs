@@ -102,6 +102,8 @@ public sealed class MeterSession
         Preferences = preferences;
         ViewModels.Numbers.Style = preferences.Numbers;
         Engine.IdleTimeout = TimeSpan.FromSeconds(preferences.IdleSeconds);
+        Engine.Scope = preferences.Scope;
+        Engine.SplitEncounters = preferences.SplitEncounters;
         _save(preferences);
         PreferencesChanged?.Invoke(changed);
     }

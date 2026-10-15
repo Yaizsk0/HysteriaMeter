@@ -45,6 +45,9 @@ public sealed class WindowSmokeTests
             Assert.False(healing.ShowHealingColumn);
             Layout(new DetailWindow(viewModel.Detail));
             Assert.Equal(2, viewModel.Detail.Skills.Count);
+            viewModel.Detail.Nickname = "El Tanque";
+            viewModel.Detail.SaveNicknameCommand.Execute(null);
+            Assert.Equal("El Tanque", session.Preferences.Nicknames["Tester"]);
 
             // Modo demo y compacto: la pelea inventada llena las filas y el overlay chico carga igual.
             viewModel.ShowDemoCommand.Execute(null);
@@ -290,6 +293,32 @@ public sealed class WindowSmokeTests
         Assert.Equal("12 s", dead);
         Assert.Contains("6 s", hint);
         Assert.Equal("–", ActorDetailViewModel.DescribeActivity(FightActivity.Empty).Uptime);
+    }
+
+    [Fact]
+    public void Nicknames_change_only_the_shown_name()
+    {
+        var names = Nicknames.With(null, "Tester", "  El Tanque  ");
+        Assert.Equal("El Tanque", names["Tester"]);
+        var snapshot = new EncounterSnapshot(Guid.NewGuid(), DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddSeconds(10), "Boss", false, 3000, [Actor()]);
+        Assert.Equal("El Tanque", Nicknames.Apply(snapshot, names).Actors[0].Name);
+        Assert.Same(snapshot, Nicknames.Apply(snapshot, new Dictionary<string, string>()));
+        Assert.Empty(Nicknames.With(names, "Tester", ""));
+        Assert.Equal(Nicknames.MaxLength, Nicknames.With(null, "Tester", new string('x', 40))["Tester"].Length);
+    }
+
+    [Fact]
+    public void Profile_round_trips_without_the_webhook()
+    {
+        var mine = new MeterPreferences { DiscordWebhook = "https://discord.com/api/webhooks/1/abc", RefreshMs = 500, IdleSeconds = 15 };
+        var json = ProfileFile.ToJson(mine);
+        Assert.DoesNotContain("webhooks", json, StringComparison.Ordinal);
+
+        var other = new MeterPreferences { DiscordWebhook = "https://discord.com/api/webhooks/2/xyz" };
+        var imported = ProfileFile.FromJson(json, other);
+        Assert.NotNull(imported);
+        Assert.Equal((500, 15, other.DiscordWebhook), (imported.RefreshMs, imported.IdleSeconds, imported.DiscordWebhook));
+        Assert.Null(ProfileFile.FromJson("no es json", other));
     }
 
     [Fact]

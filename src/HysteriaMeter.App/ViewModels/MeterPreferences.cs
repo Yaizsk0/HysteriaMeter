@@ -61,6 +61,9 @@ public sealed record MeterPreferences
 
     public int PracticeSeconds { get; init; }
 
+    /// <summary>Apodos por nombre real de personaje; solo cambian lo que se muestra.</summary>
+    public IReadOnlyDictionary<string, string> Nicknames { get; init; } = new Dictionary<string, string>();
+
     // "TextFont" y no "Font": así las preferencias guardadas con la fuente vieja no pisan la nueva por defecto.
     public string TextFont { get; init; } = "Inter";
 }

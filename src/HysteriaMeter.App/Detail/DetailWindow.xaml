@@ -79,6 +79,19 @@
                 <Button DockPanel.Dock="Right" Content="Registro" Command="{Binding OpenLogCommand}" Cursor="Hand" Margin="0,0,8,0" VerticalAlignment="Center"
                         Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" FontSize="12"
                         ToolTip="Golpe a golpe de la pelea en curso o de la última, filtrable" />
+                <!-- Apodo: solo cambia cómo se ve el nombre en el meter (Enter para guardar, vacío para sacarlo) -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,10,0" VerticalAlignment="Center" Cursor="Arrow"
+                            ToolTip="{Binding RealName, StringFormat='Apodo para {0} (Enter para guardar, vacío para sacarlo)'}">
+                    <TextBlock Text="Apodo" FontSize="11" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBox Text="{Binding Nickname, UpdateSourceTrigger=PropertyChanged}" Width="110" FontSize="12" MaxLength="24" Padding="4,1"
+                             Background="#22FFFFFF" Foreground="{StaticResource TextBright}" BorderBrush="{StaticResource Rule}" CaretBrush="{StaticResource Gold}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding SaveNicknameCommand}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    <Button Content="✓" Command="{Binding SaveNicknameCommand}" Cursor="Hand" Margin="4,0,0,0" Background="Transparent" BorderThickness="0"
+                            Foreground="{StaticResource Gold}" FontSize="12" ToolTip="Guardar apodo" />
+                </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="12,6,0,6" VerticalAlignment="Center">
                     <Border Width="12" Height="12" BorderBrush="{Binding Accent}" BorderThickness="1" RenderTransformOrigin="0.5,0.5" VerticalAlignment="Center">
                         <Border.RenderTransform>
