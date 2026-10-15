@@ -175,7 +175,7 @@
 
     <!-- Margen para que entren las esquinas doradas, que sobresalen 2 px del marco. -->
     <!-- Ctrl + rueda del mouse cambia el zoom (escala de todo el overlay). -->
-    <Grid Margin="2" PreviewMouseWheel="OnPreviewMouseWheel">
+    <Grid x:Name="Root" Margin="2" PreviewMouseWheel="OnPreviewMouseWheel">
         <Grid.LayoutTransform>
             <ScaleTransform x:Name="Zoom" ScaleX="1" ScaleY="1" />
         </Grid.LayoutTransform>
@@ -558,6 +558,35 @@
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
+
+                            <TextBlock Text="EXPORTAR Y COMPARTIR" Style="{StaticResource SettingsHeader}" />
+                            <WrapPanel>
+                                <WrapPanel.Resources>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="BorderThickness" Value="0" />
+                                        <Setter Property="FontSize" Value="12" />
+                                        <Setter Property="Padding" Value="0,2,12,2" />
+                                        <Setter Property="Cursor" Value="Hand" />
+                                    </Style>
+                                </WrapPanel.Resources>
+                                <Button Content="Copiar imagen" Command="{Binding CopyImageCommand}" ToolTip="Copia el overlay como imagen, para pegar en Discord" />
+                                <Button Content="Guardar CSV" Command="{Binding ExportCsvCommand}" ToolTip="Una fila por jugador, para Excel o Google Sheets" />
+                                <Button Content="Guardar JSON" Command="{Binding ExportJsonCommand}" ToolTip="La pelea completa, con skills y línea de tiempo" />
+                                <Button Content="Abrir carpeta" Command="{Binding OpenExportsCommand}" />
+                            </WrapPanel>
+                            <CheckBox Style="{StaticResource Option}" Content="Ocultar los nombres de los demás" IsChecked="{Binding AnonymizeExports}"
+                                      ToolTip="En el resumen, el CSV, el JSON y Discord: vos quedás como &quot;Yo&quot; y el resto como &quot;Jugador 1&quot;, &quot;Jugador 2&quot;..." />
+                            <TextBlock Text="Webhook de Discord (opcional)" FontSize="11" Foreground="{StaticResource TextDim}" Margin="0,6,0,2" />
+                            <TextBox Style="{StaticResource Field}" Text="{Binding DiscordWebhookUrl, UpdateSourceTrigger=LostFocus}"
+                                     ToolTip="Configuración del canal → Integraciones → Webhooks → Copiar URL. Nada sale de tu PC si queda vacío." />
+                            <DockPanel Margin="0,2,0,0" IsEnabled="{Binding IsDiscordConfigured}">
+                                <Button DockPanel.Dock="Right" Content="Mandar ahora" Command="{Binding SendToDiscordCommand}" Cursor="Hand"
+                                        Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" FontSize="12" Padding="4,0" />
+                                <CheckBox Style="{StaticResource Option}" Content="Al derrotar un boss" IsChecked="{Binding DiscordOnKill}" />
+                            </DockPanel>
+                            <TextBlock Text="{Binding ExportMessage}" FontSize="11" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap" Margin="0,2,0,0" />
 
                             <TextBlock Text="PRUEBA" Style="{StaticResource SettingsHeader}" />
                             <Button Content="Ver barras de prueba" Command="{Binding ShowDemoCommand}" Cursor="Hand" HorizontalAlignment="Left"

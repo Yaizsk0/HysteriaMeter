@@ -31,6 +31,45 @@ public sealed class MeterSession
         engine.Scope = preferences.Scope;
         engine.SplitEncounters = preferences.SplitEncounters;
         ViewModels.Numbers.Style = preferences.Numbers;
+        engine.EncounterFinished += OnEncounterFinished;
+    }
+
+    /// <summary>Resultado del último envío a Discord, para mostrarlo en configuración.</summary>
+    public event Action<string>? DiscordResult;
+
+    /// <summary>El encuentro como se comparte: con nombres anónimos si así se eligió.</summary>
+    public EncounterSnapshot ForSharing(EncounterSnapshot snapshot) =>
+        Preferences.AnonymizeExports ? EncounterExport.Anonymize(snapshot) : snapshot;
+
+    /// <summary>Manda el resumen al webhook configurado y avisa el resultado.</summary>
+    public async Task SendToDiscordAsync(EncounterSnapshot snapshot)
+    {
+        var summary = MeterViewModel.BuildSummary(ForSharing(snapshot), MeterTab.Damage);
+        if (summary.Length == 0)
+        {
+            DiscordResult?.Invoke("No hay daño para mandar");
+            return;
+        }
+
+        var error = await DiscordWebhook.SendAsync(Preferences.DiscordWebhook, summary).ConfigureAwait(false);
+        DiscordResult?.Invoke(error ?? $"Enviado a Discord: {snapshot.TargetName ?? "Encuentro"}");
+    }
+
+    private async void OnEncounterFinished(EncounterSnapshot snapshot)
+    {
+        if (!Preferences.DiscordOnKill || !snapshot.TargetKilled || !DiscordWebhook.IsValidUrl(Preferences.DiscordWebhook))
+        {
+            return;
+        }
+
+        try
+        {
+            await SendToDiscordAsync(snapshot).ConfigureAwait(false);
+        }
+        catch (InvalidOperationException ex)
+        {
+            DiscordResult?.Invoke($"No se pudo mandar a Discord: {ex.Message}");
+        }
     }
 
     public CombatEngine Engine { get; }
