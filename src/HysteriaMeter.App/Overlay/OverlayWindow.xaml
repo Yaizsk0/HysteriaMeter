@@ -205,7 +205,7 @@
                     <StackPanel Orientation="Horizontal" Margin="10,6,0,6" VerticalAlignment="Center">
                         <Path Width="16" Height="16" Stretch="Uniform" Stroke="{StaticResource Gold}" StrokeThickness="1.6" StrokeLineJoin="Round"
                               Data="M12,2 L20,7 V17 L12,22 L4,17 V7 Z M12,7 V17 M8,9.5 L16,14.5 M16,9.5 L8,14.5" />
-                        <TextBlock Text="HYSTERIA" Margin="8,0,0,0" FontFamily="{StaticResource TitleFont}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource Gold}" VerticalAlignment="Center" />
+                        <TextBlock Text="HYSTERIA" Margin="8,0,0,0" FontFamily="{StaticResource TitleFont}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource Gold}" VerticalAlignment="Center" ToolTip="{Binding Version}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
                         <!-- Grabando a .pcap -->
@@ -456,6 +456,9 @@
                                 <Run Text="Ctrl+Shift+H" Foreground="{StaticResource Text}" /><Run Text="  ocultar / mostrar el overlay" /><LineBreak />
                                 <Run Text="Ctrl+rueda" Foreground="{StaticResource Text}" /><Run Text="  zoom" />
                             </TextBlock>
+
+                            <TextBlock Text="VERSIÓN" Style="{StaticResource SettingsHeader}" />
+                            <TextBlock Text="{Binding Version, Mode=OneTime}" FontSize="12" Foreground="{StaticResource TextMuted}" />
                         </StackPanel>
                     </ScrollViewer>
                 </Border>
