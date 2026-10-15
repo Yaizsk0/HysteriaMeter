@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
+using HysteriaMeter.App.Detail;
 using HysteriaMeter.App.Interop;
 using HysteriaMeter.App.ViewModels;
 
@@ -15,6 +16,7 @@ public partial class OverlayWindow : Window
     private const double ZoomStep = 0.1;
 
     private readonly MeterViewModel _viewModel;
+    private DetailWindow? _detail;
 
     public OverlayWindow(MeterViewModel viewModel)
     {
@@ -22,8 +24,32 @@ public partial class OverlayWindow : Window
         DataContext = _viewModel = viewModel;
         RestoreLayout();
         Loaded += (_, _) => _viewModel.Start();
-        Closing += (_, _) => OverlayLayout.Save(new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height));
+        Closing += (_, _) => SaveLayout();
         Closed += (_, _) => _viewModel.Stop();
+        _viewModel.DetailRequested += ShowDetail;
+    }
+
+    private void ShowDetail()
+    {
+        if (_detail is null)
+        {
+            _detail = new DetailWindow(_viewModel.Detail) { Owner = this };
+            _detail.Closed += (_, _) => _detail = null;
+            _detail.Show();
+        }
+
+        _detail.Activate();
+    }
+
+    private void SaveLayout()
+    {
+        // Una ventana que nunca se mostró no tiene posición (NaN), y JSON no admite NaN.
+        if (double.IsNaN(Left) || double.IsNaN(Top))
+        {
+            return;
+        }
+
+        OverlayLayout.Save(new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height));
     }
 
     private void RestoreLayout()
@@ -111,6 +137,16 @@ public partial class OverlayWindow : Window
             SetZoom(before + (Math.Sign(e.Delta) * ZoomStep));
             Width = Math.Clamp(Width * Zoom.ScaleX / before, MinWidth, MaxWidth);
             Height = Math.Clamp(Height * Zoom.ScaleY / before, MinHeight, MaxHeight);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>Clic en una fila: desglose por skill de ese jugador en otra ventana.</summary>
+    private void OnRowClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ActorRowViewModel row })
+        {
+            _viewModel.ShowDetailCommand.Execute(row);
             e.Handled = true;
         }
     }

@@ -25,6 +25,7 @@
     <SolidColorBrush x:Key="RowBorderLocal" Color="#8A7442" />
     <SolidColorBrush x:Key="NameLocal" Color="#F3D98F" />
     <SolidColorBrush x:Key="Healing" Color="#7FD08A" />
+    <BooleanToVisibilityConverter x:Key="Visible" />
     <!-- Vida del boss, colores del mock -->
     <SolidColorBrush x:Key="Health" Color="#C2463C" />
     <SolidColorBrush x:Key="HealthTrack" Color="#241C1C" />
