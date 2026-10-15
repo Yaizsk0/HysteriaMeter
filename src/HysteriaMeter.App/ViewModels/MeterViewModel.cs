@@ -58,18 +58,29 @@ public sealed partial class MeterViewModel : ObservableObject
         set => SetScope(value, ActorScope.Everyone);
     }
 
-    public bool ShowHealing
+    public bool HealingHidden
     {
-        get => _preferences.ShowHealing;
-        set
-        {
-            Update(_preferences with { ShowHealing = value }, nameof(ShowHealing));
-            if (!value)
-            {
-                Tab = MeterTab.Damage;
-            }
-        }
+        get => _preferences.Healing == HealingView.Hidden;
+        set => SetHealingView(value, HealingView.Hidden);
     }
+
+    public bool HealingInTab
+    {
+        get => _preferences.Healing == HealingView.Tab;
+        set => SetHealingView(value, HealingView.Tab);
+    }
+
+    public bool HealingCombined
+    {
+        get => _preferences.Healing == HealingView.Combined;
+        set => SetHealingView(value, HealingView.Combined);
+    }
+
+    /// <summary>La pestaña CURACIÓN solo existe con la curación en su propia pestaña.</summary>
+    public bool ShowHealingTab => _preferences.Healing == HealingView.Tab;
+
+    /// <summary>Columna HPS al lado del DPS, en la pestaña de daño.</summary>
+    public bool ShowHealingColumn => _preferences.Healing == HealingView.Combined && Tab == MeterTab.Damage;
 
     public bool SplitEncounters
     {
@@ -83,14 +94,13 @@ public sealed partial class MeterViewModel : ObservableObject
 
     public string FontName
     {
-        get => _preferences.Font;
-        set => Update(_preferences with { Font = value }, nameof(FontName), nameof(Font));
+        get => _preferences.TextFont;
+        set => Update(_preferences with { TextFont = value }, nameof(FontName), nameof(Font));
     }
 
-    /// <summary>La Barlow va embebida; las demás son fuentes de Windows.</summary>
-    public FontFamily Font => _preferences.Font == "Barlow Semi Condensed"
-        ? new FontFamily(new Uri("pack://application:,,,/"), "./Assets/Fonts/#Barlow Semi Condensed")
-        : new FontFamily(_preferences.Font);
+    public FontFamily Font => MeterPreferences.BundledFonts.Contains(_preferences.TextFont)
+        ? new FontFamily(new Uri("pack://application:,,,/"), $"./Assets/Fonts/#{_preferences.TextFont}")
+        : new FontFamily(_preferences.TextFont);
 
     public ObservableCollection<ActorRowViewModel> Actors { get; } = [];
 
@@ -124,7 +134,7 @@ public sealed partial class MeterViewModel : ObservableObject
     public partial bool IsClickThrough { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsDamageTab), nameof(IsHealingTab), nameof(ColumnsHeader), nameof(RateUnit))]
+    [NotifyPropertyChangedFor(nameof(IsDamageTab), nameof(IsHealingTab), nameof(ColumnsHeader), nameof(RateUnit), nameof(ShowHealingColumn))]
     public partial MeterTab Tab { get; set; }
 
     public bool IsDamageTab
@@ -153,7 +163,7 @@ public sealed partial class MeterViewModel : ObservableObject
 
     public string RateUnit => Tab == MeterTab.Healing ? "HPS" : "DPS";
 
-    public string ColumnsHeader => $"{RateUnit} · TOTAL · %";
+    public string ColumnsHeader => ShowHealingColumn ? "DPS · HPS · %" : $"{RateUnit} · TOTAL · %";
 
     public void Start() => _timer.Start();
 
@@ -175,6 +185,24 @@ public sealed partial class MeterViewModel : ObservableObject
         _engine.Scope = scope;
         Reset();
         Update(_preferences with { Scope = scope }, nameof(ScopeMe), nameof(ScopeParty), nameof(ScopeEveryone));
+    }
+
+    private void SetHealingView(bool selected, HealingView view)
+    {
+        if (!selected || _preferences.Healing == view)
+        {
+            return;
+        }
+
+        Update(
+            _preferences with { Healing = view },
+            nameof(HealingHidden), nameof(HealingInTab), nameof(HealingCombined), nameof(ShowHealingTab), nameof(ShowHealingColumn), nameof(ColumnsHeader));
+        if (view != HealingView.Tab)
+        {
+            Tab = MeterTab.Damage;
+        }
+
+        Refresh();
     }
 
     private void Update(MeterPreferences preferences, params string[] changed)
@@ -216,7 +244,12 @@ public sealed partial class MeterViewModel : ObservableObject
         Elapsed = snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
 
         Func<ActorSnapshot, long> metric = Tab == MeterTab.Healing ? a => a.Healing : a => a.Damage;
-        var rows = snapshot.Actors.Where(a => metric(a) > 0).OrderByDescending(metric).ToList();
+        var combined = ShowHealingColumn;
+        var rows = snapshot.Actors
+            .Where(a => metric(a) > 0 || (combined && a.Healing > 0))
+            .OrderByDescending(metric)
+            .ThenByDescending(a => a.Healing)
+            .ToList();
         var total = rows.Sum(metric);
         var top = rows.Count > 0 ? metric(rows[0]) : 0;
 
@@ -235,6 +268,9 @@ public sealed partial class MeterViewModel : ObservableObject
             }
 
             Actors[i].Update(i + 1, rows[i], Tab, top, total, snapshot.Duration);
+            Actors[i].HealingPerSecond = combined && rows[i].Healing > 0
+                ? ActorRowViewModel.Compact(rows[i].Healing / snapshot.Duration.TotalSeconds)
+                : "–";
         }
 
         while (Actors.Count > rows.Count)

@@ -188,7 +188,7 @@
                         <StackPanel Orientation="Horizontal">
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="DAÑO" IsChecked="{Binding IsDamageTab}" />
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="CURACIÓN" IsChecked="{Binding IsHealingTab}"
-                                         Visibility="{Binding ShowHealing, Converter={StaticResource Visible}}" />
+                                         Visibility="{Binding ShowHealingTab, Converter={StaticResource Visible}}" />
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="RECIBIDO" IsEnabled="False"
                                          ToolTip="Próximamente: falta decodificar el daño que reciben los jugadores" ToolTipService.ShowOnDisabled="True" />
                         </StackPanel>
@@ -226,7 +226,7 @@
                                     ToolTip="{Binding Breakdown}">
                                 <Grid>
                                     <!-- Barra proporcional al primero -->
-                                    <Rectangle x:Name="Bar" Fill="{StaticResource BarOther}" HorizontalAlignment="Stretch">
+                                    <Rectangle x:Name="Bar" Fill="{Binding BarFill}" HorizontalAlignment="Stretch">
                                         <Rectangle.RenderTransform>
                                             <ScaleTransform ScaleX="{Binding Bar}" />
                                         </Rectangle.RenderTransform>
@@ -243,29 +243,31 @@
                                         <TextBlock Grid.Column="0" Text="{Binding Rank}" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
                                         <!-- Rombo de clase: por ahora la inicial; el color de clase llega cuando decodifiquemos la clase. -->
                                         <Grid Grid.Column="1" Width="20" Height="20" HorizontalAlignment="Left">
-                                            <Border x:Name="Diamond" Width="14" Height="14" BorderBrush="{StaticResource ClassUnknown}" BorderThickness="1" RenderTransformOrigin="0.5,0.5">
+                                            <Border x:Name="Diamond" Width="14" Height="14" BorderBrush="{Binding Accent}" BorderThickness="1" RenderTransformOrigin="0.5,0.5">
                                                 <Border.RenderTransform>
                                                     <RotateTransform Angle="45" />
                                                 </Border.RenderTransform>
                                             </Border>
-                                            <TextBlock x:Name="InitialText" Text="{Binding Initial}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource ClassUnknown}"
+                                            <TextBlock x:Name="InitialText" Text="{Binding Initial}" FontSize="11" FontWeight="Bold" Foreground="{Binding Accent}"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                                         </Grid>
                                         <TextBlock x:Name="NameText" Grid.Column="2" Text="{Binding DisplayName}" FontSize="15" FontWeight="SemiBold"
                                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                         <TextBlock Grid.Column="3" Text="{Binding PerSecond}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource TextBright}"
                                                    HorizontalAlignment="Right" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="4" Text="{Binding Total}" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        <!-- Total, o HPS cuando daño y curación van juntos -->
+                                        <TextBlock x:Name="TotalText" Grid.Column="4" Text="{Binding Total}" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                         <TextBlock Grid.Column="5" Text="{Binding Share}" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                                     </Grid>
                                 </Grid>
                             </Border>
                             <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding DataContext.ShowHealingColumn, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                    <Setter TargetName="TotalText" Property="Text" Value="{Binding HealingPerSecond}" />
+                                    <Setter TargetName="TotalText" Property="Foreground" Value="{StaticResource Healing}" />
+                                </DataTrigger>
                                 <DataTrigger Binding="{Binding IsLocalPlayer}" Value="True">
                                     <Setter TargetName="Row" Property="BorderBrush" Value="{StaticResource RowBorderLocal}" />
-                                    <Setter TargetName="Bar" Property="Fill" Value="{StaticResource BarLocal}" />
-                                    <Setter TargetName="Diamond" Property="BorderBrush" Value="{StaticResource Gold}" />
-                                    <Setter TargetName="InitialText" Property="Foreground" Value="{StaticResource Gold}" />
                                     <Setter TargetName="NameText" Property="Foreground" Value="{StaticResource NameLocal}" />
                                 </DataTrigger>
                             </DataTemplate.Triggers>
@@ -283,10 +285,14 @@
                             <RadioButton Style="{StaticResource Option}" GroupName="Scope" Content="Yo y mi party" IsChecked="{Binding ScopeParty}" />
                             <RadioButton Style="{StaticResource Option}" GroupName="Scope" Content="Todos los jugadores cerca" IsChecked="{Binding ScopeEveryone}" />
 
-                            <TextBlock Text="MOSTRAR" Style="{StaticResource SettingsHeader}" />
-                            <CheckBox Style="{StaticResource Option}" Content="Pestaña de curación" IsChecked="{Binding ShowHealing}" />
+                            <TextBlock Text="PELEAS" Style="{StaticResource SettingsHeader}" />
                             <CheckBox Style="{StaticResource Option}" Content="Reiniciar en cada pelea nueva" IsChecked="{Binding SplitEncounters}"
                                       ToolTip="Apagado: el daño se acumula entre peleas hasta que reinicies a mano" />
+
+                            <TextBlock Text="CURACIÓN" Style="{StaticResource SettingsHeader}" />
+                            <RadioButton Style="{StaticResource Option}" GroupName="Healing" Content="Junto al daño (columna HPS)" IsChecked="{Binding HealingCombined}" />
+                            <RadioButton Style="{StaticResource Option}" GroupName="Healing" Content="En su propia pestaña" IsChecked="{Binding HealingInTab}" />
+                            <RadioButton Style="{StaticResource Option}" GroupName="Healing" Content="No mostrar" IsChecked="{Binding HealingHidden}" />
 
                             <TextBlock Text="FUENTE" Style="{StaticResource SettingsHeader}" />
                             <ListBox ItemsSource="{x:Static vm:MeterPreferences.Fonts}" SelectedItem="{Binding FontName}"

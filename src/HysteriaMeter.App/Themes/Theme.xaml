@@ -23,8 +23,6 @@
     <SolidColorBrush x:Key="Row" Color="#141922" />
     <SolidColorBrush x:Key="RowBorder" Color="#222A35" />
     <SolidColorBrush x:Key="RowBorderLocal" Color="#8A7442" />
-    <SolidColorBrush x:Key="BarOther" Color="#386E87A5" />
-    <SolidColorBrush x:Key="BarLocal" Color="#4DC9A25A" />
     <SolidColorBrush x:Key="NameLocal" Color="#F3D98F" />
-    <SolidColorBrush x:Key="ClassUnknown" Color="#8D96A0" />
+    <SolidColorBrush x:Key="Healing" Color="#7FD08A" />
 </ResourceDictionary>

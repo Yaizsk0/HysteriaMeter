@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using HysteriaMeter.Combat;
 using HysteriaMeter.Protocol.Events;
@@ -34,6 +35,17 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial string Total { get; set; } = string.Empty;
 
+    /// <summary>HPS para la vista de daño y curación juntos.</summary>
+    [ObservableProperty]
+    public partial string HealingPerSecond { get; set; } = string.Empty;
+
+    /// <summary>Color propio del jugador: rombo y barra. El local siempre es dorado.</summary>
+    [ObservableProperty]
+    public partial Brush Accent { get; set; } = PlayerColors.Local;
+
+    [ObservableProperty]
+    public partial Brush BarFill { get; set; } = PlayerColors.LocalBar;
+
     [ObservableProperty]
     public partial string Share { get; set; } = string.Empty;
 
@@ -54,6 +66,8 @@ public sealed partial class ActorRowViewModel : ObservableObject
         Name = actor.Name;
         DisplayName = actor.IsLocalPlayer ? $"{actor.Name} (vos)" : actor.Name;
         Initial = InitialOf(actor.Name);
+        Accent = actor.IsLocalPlayer ? PlayerColors.Local : PlayerColors.For(actor.Name);
+        BarFill = actor.IsLocalPlayer ? PlayerColors.LocalBar : PlayerColors.BarFor(actor.Name);
         IsLocalPlayer = actor.IsLocalPlayer;
         PerSecond = Compact(tab == MeterTab.Healing ? actor.Healing / duration.TotalSeconds : actor.Dps);
         Total = Compact(value);
