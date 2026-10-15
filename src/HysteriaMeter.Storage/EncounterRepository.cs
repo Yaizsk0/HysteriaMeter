@@ -48,6 +48,7 @@ public sealed class EncounterRepository(string databasePath)
         await AddColumnIfMissingAsync(connection, "encounter_actors", "periodic_damage", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounter_actors", "active_dps", "REAL NOT NULL DEFAULT 0").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounter_actors", "counts_json", "TEXT").ConfigureAwait(false);
+        await AddColumnIfMissingAsync(connection, "encounter_actors", "overkill", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
     }
 
     private static async Task AddColumnIfMissingAsync(SqliteConnection connection, string table, string column, string definition)
@@ -85,9 +86,9 @@ public sealed class EncounterRepository(string databasePath)
             """
             INSERT OR REPLACE INTO encounter_actors
                 (encounter_id, actor_id, name, class_id, is_local, damage, dps, hits, crits, max_hit, healing, skills_json,
-                 main_target_damage, main_target_dps, periodic_damage, active_dps, counts_json)
+                 main_target_damage, main_target_dps, periodic_damage, active_dps, counts_json, overkill)
             VALUES (@EncounterId, @ActorId, @Name, @ClassId, @IsLocal, @Damage, @Dps, @Hits, @Crits, @MaxHit, @Healing, @SkillsJson,
-                    @MainTargetDamage, @MainTargetDps, @PeriodicDamage, @ActiveDps, @CountsJson)
+                    @MainTargetDamage, @MainTargetDps, @PeriodicDamage, @ActiveDps, @CountsJson, @Overkill)
             """,
             encounter.Actors.Select(a => new
             {
@@ -108,6 +109,7 @@ public sealed class EncounterRepository(string databasePath)
                 a.PeriodicDamage,
                 a.ActiveDps,
                 CountsJson = a.Counts is null ? null : JsonSerializer.Serialize(a.Counts),
+                a.Overkill,
             }),
             transaction).ConfigureAwait(false);
 
@@ -127,6 +129,62 @@ public sealed class EncounterRepository(string databasePath)
         return [.. rows.Select(r => new EncounterSummary(r.Id, r.StartedAt, r.EndedAt, r.TargetName, r.TargetKilled != 0, r.TotalDamage))];
     }
 
+    /// <summary>Encuentro completo, con jugadores y skills, para volver a verlo en el overlay. <c>null</c> si no existe.</summary>
+    public async Task<EncounterSnapshot?> LoadAsync(string id, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var encounter = await connection.QuerySingleOrDefaultAsync<EncounterDetailRow>(
+            """
+            SELECT id AS Id, started_at AS StartedAt, ended_at AS EndedAt, target_name AS TargetName,
+                   target_killed AS TargetKilled, total_damage AS TotalDamage, main_target_seconds AS MainTargetSeconds
+            FROM encounters WHERE id = @id
+            """,
+            new { id }).ConfigureAwait(false);
+        if (encounter is null)
+        {
+            return null;
+        }
+
+        var actors = await connection.QueryAsync<ActorRow>(
+            """
+            SELECT actor_id AS ActorId, name AS Name, class_id AS ClassId, is_local AS IsLocal, damage AS Damage, dps AS Dps,
+                   hits AS Hits, crits AS Crits, max_hit AS MaxHit, healing AS Healing, skills_json AS SkillsJson,
+                   main_target_damage AS MainTargetDamage, main_target_dps AS MainTargetDps, periodic_damage AS PeriodicDamage,
+                   active_dps AS ActiveDps, counts_json AS CountsJson, overkill AS Overkill
+            FROM encounter_actors WHERE encounter_id = @id ORDER BY damage DESC
+            """,
+            new { id }).ConfigureAwait(false);
+
+        var total = encounter.TotalDamage;
+        return new EncounterSnapshot(
+            Guid.Parse(encounter.Id),
+            DateTimeOffset.Parse(encounter.StartedAt, CultureInfo.InvariantCulture),
+            DateTimeOffset.Parse(encounter.EndedAt, CultureInfo.InvariantCulture),
+            encounter.TargetName,
+            encounter.TargetKilled != 0,
+            total,
+            [.. actors.Select(a => new ActorSnapshot(
+                (ulong)a.ActorId,
+                a.Name,
+                a.ClassId is { } classId ? (int)classId : null,
+                a.IsLocal != 0,
+                a.Damage,
+                a.Dps,
+                total == 0 ? 0 : (double)a.Damage / total,
+                (int)a.Hits,
+                (int)a.Crits,
+                a.MaxHit,
+                a.Healing,
+                JsonSerializer.Deserialize<SkillSnapshot[]>(a.SkillsJson) ?? [],
+                a.CountsJson is null ? null : JsonSerializer.Deserialize<HitCounts>(a.CountsJson),
+                a.MainTargetDamage,
+                a.MainTargetDps,
+                a.PeriodicDamage,
+                a.ActiveDps,
+                a.Overkill))],
+            encounter.MainTargetSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null);
+    }
+
     private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken)
     {
         var connection = new SqliteConnection(_connectionString);
@@ -140,3 +198,9 @@ public sealed record EncounterSummary(string Id, string StartedAt, string EndedA
 
 /// <summary>SQLite no tiene booleanos: la fila cruda trae <c>target_killed</c> como entero.</summary>
 internal sealed record EncounterRow(string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage);
+
+internal sealed record EncounterDetailRow(string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage, double? MainTargetSeconds);
+
+internal sealed record ActorRow(
+    long ActorId, string Name, long? ClassId, long IsLocal, long Damage, double Dps, long Hits, long Crits, long MaxHit, long Healing,
+    string SkillsJson, long MainTargetDamage, double MainTargetDps, long PeriodicDamage, double ActiveDps, string? CountsJson, long Overkill);

@@ -146,6 +146,9 @@
                         <Button Style="{StaticResource IconButton}" Command="{Binding ResetCommand}" ToolTip="Reiniciar encuentro">
                             <Path Style="{StaticResource Icon}" Data="M3,12 A9,9 0 1 0 6,5.3 L3,8 M3,3 V8 H8" />
                         </Button>
+                        <Button Style="{StaticResource IconButton}" Command="{Binding ToggleHistoryCommand}" ToolTip="Historial de peleas">
+                            <Path Style="{StaticResource Icon}" Data="M12,3 A9,9 0 1 1 3,12 M3,12 A9,9 0 0 1 12,3 M12,7 V12 L15.5,14" />
+                        </Button>
                         <Button Style="{StaticResource IconButton}" Command="{Binding ToggleSettingsCommand}" ToolTip="Configuración">
                             <Path Style="{StaticResource Icon}" Data="M12,9 A3,3 0 1 0 12.01,9 Z M12,2 V5 M12,19 V22 M2,12 H5 M19,12 H22 M4.9,4.9 L7,7 M17,17 L19.1,19.1 M4.9,19.1 L7,17 M17,7 L19.1,4.9" />
                         </Button>
@@ -178,6 +181,16 @@
                         <TextBlock Text="{Binding Elapsed}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
                     </StackPanel>
                 </DockPanel>
+
+                <!-- Mirando un encuentro guardado -->
+                <Border DockPanel.Dock="Top" Background="#1FC9A25A" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,0,0,1" Padding="10,3"
+                        Visibility="{Binding IsViewingHistory, Converter={StaticResource Visible}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Volver al vivo" Command="{Binding BackToLiveCommand}" Cursor="Hand"
+                                Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" FontSize="11" Padding="4,0" />
+                        <TextBlock Text="{Binding HistoryLabel}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Gold}" VerticalAlignment="Center" />
+                    </DockPanel>
+                </Border>
 
                 <!-- Objetivo principal -->
                 <DockPanel DockPanel.Dock="Top" Margin="10,8,10,6">
@@ -290,6 +303,48 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
                 </ScrollViewer>
+
+                <!-- Historial: tapa las filas mientras está abierto; clic en un encuentro lo muestra en el overlay -->
+                <Border Background="{StaticResource PanelSolid}" Visibility="{Binding IsHistoryOpen, Converter={StaticResource Visible}}">
+                    <DockPanel Margin="12,10">
+                        <TextBlock DockPanel.Dock="Top" Text="PELEAS GUARDADAS" Style="{StaticResource SettingsHeader}" Margin="0,0,0,6" />
+                        <ScrollViewer VerticalScrollBarVisibility="Hidden">
+                            <ItemsControl ItemsSource="{Binding History}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:HistoryItem">
+                                        <Button Command="{Binding DataContext.OpenEncounterCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding}" Cursor="Hand" Margin="0,0,0,3" HorizontalContentAlignment="Stretch">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border x:Name="Frame" Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="1" Padding="8,4">
+                                                        <ContentPresenter />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource GoldDim}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding Total}" FontWeight="SemiBold" Foreground="{StaticResource TextBright}" VerticalAlignment="Center" />
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Target}" FontWeight="SemiBold" Foreground="{StaticResource Text}" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock FontSize="11" Foreground="{StaticResource TextDim}">
+                                                        <Run Text="{Binding When, Mode=OneWay}" />
+                                                        <Run Text="·" />
+                                                        <Run Text="{Binding Duration, Mode=OneWay}" />
+                                                        <Run Text="{Binding Result, Mode=OneWay}" />
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
 
                 <!-- Configuración: tapa las filas mientras está abierta -->
                 <Border Background="{StaticResource PanelSolid}" Visibility="{Binding IsSettingsOpen, Converter={StaticResource Visible}}">

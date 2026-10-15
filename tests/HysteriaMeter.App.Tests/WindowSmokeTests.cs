@@ -28,6 +28,9 @@ public sealed class WindowSmokeTests
             row.Update(1, Actor(), MeterTab.Damage, top: 3000, total: 3000, TimeSpan.FromSeconds(10));
             viewModel.Actors.Add(row);
             viewModel.Detail.Select(row);
+            viewModel.History.Add(new HistoryItem("x", "Boss", "15/10 21:42", "02:47", "3.0k", Killed: true));
+            viewModel.IsHistoryOpen = true;
+            viewModel.IsViewingHistory = true;
             viewModel.Detail.Update(new EncounterSnapshot(Guid.NewGuid(), DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddSeconds(10), "Boss", false, 3000, [Actor()]));
 
             Layout(new OverlayWindow(viewModel));

@@ -35,6 +35,41 @@ public sealed class EncounterRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task Loads_a_saved_encounter_back()
+    {
+        var repository = new EncounterRepository(_path);
+        await repository.InitializeAsync();
+
+        var start = new DateTimeOffset(2026, 10, 15, 13, 39, 40, TimeSpan.Zero);
+        var counts = new HitCounts(92, 51, 5, 5, 62, 25, 23);
+        var snapshot = new EncounterSnapshot(
+            Guid.NewGuid(),
+            start,
+            start.AddSeconds(28),
+            "Destroyer Tarka",
+            TargetKilled: true,
+            TotalDamage: 654_021,
+            [
+                new ActorSnapshot(1879, "Griffith", null, true, 654_021, 23_659, 1, 98, 51, 90_000, 1_200,
+                    [new SkillSnapshot(10, 654_021, 98, 51, 90_000, 1, counts, 70_000)],
+                    counts, 648_468, 23_458, 70_000, 24_000, Overkill: 3_500),
+            ],
+            TimeSpan.FromSeconds(27.64));
+        await repository.SaveAsync(snapshot);
+
+        var loaded = await repository.LoadAsync(snapshot.Id.ToString());
+
+        Assert.NotNull(loaded);
+        Assert.Equal(snapshot.Start, loaded.Start);
+        Assert.Equal(snapshot.Duration, loaded.Duration);
+        Assert.Equal(TimeSpan.FromSeconds(27.64), loaded.MainTargetDuration);
+        var actor = Assert.Single(loaded.Actors);
+        Assert.Equal(snapshot.Actors[0] with { Skills = [] }, actor with { Skills = [] });
+        Assert.Equal(snapshot.Actors[0].Skills, actor.Skills);
+        Assert.Null(await repository.LoadAsync(Guid.NewGuid().ToString()));
+    }
+
+    [Fact]
     public async Task Migrates_a_database_created_by_the_first_version()
     {
         await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_path}"))

@@ -44,7 +44,8 @@ public partial class App : Application
             sp.GetRequiredService<CaptureRecorder>(),
             SkillNames.Load(Path.Combine(AppContext.BaseDirectory, "data", "skills.json")),
             UserStore.Load<MeterPreferences>(PreferencesFile) ?? new MeterPreferences(),
-            preferences => UserStore.Save(PreferencesFile, preferences)));
+            preferences => UserStore.Save(PreferencesFile, preferences),
+            sp.GetRequiredService<EncounterRepository>()));
         builder.Services.AddSingleton<OverlayWindow>();
 
         _host = builder.Build();

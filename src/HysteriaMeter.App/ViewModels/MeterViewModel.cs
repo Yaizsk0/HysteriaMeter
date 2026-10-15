@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
 using System.Globalization;
@@ -8,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.Combat;
+using HysteriaMeter.Storage;
 
 namespace HysteriaMeter.App.ViewModels;
 
@@ -25,13 +27,24 @@ public sealed partial class MeterViewModel : ObservableObject
 
     private readonly CombatEngine _engine;
     private readonly CaptureRecorder _recorder;
+    private readonly EncounterRepository? _history;
     private readonly DispatcherTimer _timer;
     private readonly Action<MeterPreferences> _savePreferences;
     private MeterPreferences _preferences;
     private EncounterSnapshot? _lastFinished;
 
-    public MeterViewModel(CombatEngine engine, CaptureRecorder recorder, SkillNames skillNames, MeterPreferences preferences, Action<MeterPreferences> savePreferences)
+    // Encuentro del historial que se está mirando; mientras tanto el vivo sigue acumulando por detrás.
+    private EncounterSnapshot? _pinned;
+
+    public MeterViewModel(
+        CombatEngine engine,
+        CaptureRecorder recorder,
+        SkillNames skillNames,
+        MeterPreferences preferences,
+        Action<MeterPreferences> savePreferences,
+        EncounterRepository? history = null)
     {
+        _history = history;
         Detail = new ActorDetailViewModel(skillNames);
         _engine = engine;
         _recorder = recorder;
@@ -45,6 +58,19 @@ public sealed partial class MeterViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool IsSettingsOpen { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsHistoryOpen { get; set; }
+
+    /// <summary>Encuentros guardados, del más nuevo al más viejo. Se cargan al abrir el panel.</summary>
+    public ObservableCollection<HistoryItem> History { get; } = [];
+
+    /// <summary>Se está mirando un encuentro guardado en vez del vivo.</summary>
+    [ObservableProperty]
+    public partial bool IsViewingHistory { get; set; }
+
+    [ObservableProperty]
+    public partial string HistoryLabel { get; set; } = string.Empty;
 
     public bool ScopeMe
     {
@@ -244,7 +270,73 @@ public sealed partial class MeterViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ToggleSettings() => IsSettingsOpen = !IsSettingsOpen;
+    private void ToggleSettings()
+    {
+        IsSettingsOpen = !IsSettingsOpen;
+        IsHistoryOpen &= !IsSettingsOpen;
+    }
+
+    [RelayCommand]
+    private async Task ToggleHistoryAsync()
+    {
+        IsHistoryOpen = !IsHistoryOpen;
+        IsSettingsOpen &= !IsHistoryOpen;
+        if (!IsHistoryOpen || _history is null)
+        {
+            return;
+        }
+
+        History.Clear();
+        try
+        {
+            foreach (var summary in await _history.ListRecentAsync(40).ConfigureAwait(true))
+            {
+                History.Add(HistoryItem.From(summary));
+            }
+        }
+        catch (DbException)
+        {
+            // La base todavía no está lista (la inicializa el pipeline al arrancar): el panel queda vacío.
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenEncounterAsync(HistoryItem? item)
+    {
+        if (item is null || _history is null)
+        {
+            return;
+        }
+
+        EncounterSnapshot? snapshot;
+        try
+        {
+            snapshot = await _history.LoadAsync(item.Id).ConfigureAwait(true);
+        }
+        catch (DbException)
+        {
+            return;
+        }
+
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        _pinned = snapshot;
+        IsViewingHistory = true;
+        HistoryLabel = $"HISTORIAL · {item.When}";
+        IsHistoryOpen = false;
+        Refresh();
+    }
+
+    [RelayCommand]
+    private void BackToLive()
+    {
+        _pinned = null;
+        IsViewingHistory = false;
+        Refresh();
+    }
 
     private void SetScope(bool selected, ActorScope scope)
     {
@@ -292,6 +384,8 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         _engine.Reset();
         _lastFinished = null;
+        _pinned = null;
+        IsViewingHistory = false;
         Actors.Clear();
         Title = NoTarget;
         Elapsed = "00:00";
@@ -319,8 +413,8 @@ public sealed partial class MeterViewModel : ObservableObject
     private void Refresh()
     {
         var current = _engine.CurrentSnapshot();
-        IsLive = current is not null;
-        var snapshot = current ?? _lastFinished;
+        IsLive = _pinned is null && current is not null;
+        var snapshot = _pinned ?? current ?? _lastFinished;
         if (snapshot is null)
         {
             return;
