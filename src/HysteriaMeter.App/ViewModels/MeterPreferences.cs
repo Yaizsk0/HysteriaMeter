@@ -24,6 +24,15 @@ public sealed record MeterPreferences
 
     public int RefreshMs { get; init; } = 250;
 
+    /// <summary>Al exportar o compartir, los nombres de los demás pasan a "Jugador 1", "Jugador 2"...</summary>
+    public bool AnonymizeExports { get; init; }
+
+    /// <summary>Webhook de Discord para mandar el resumen; vacío = nunca se manda nada.</summary>
+    public string DiscordWebhook { get; init; } = string.Empty;
+
+    /// <summary>Mandar el resumen a Discord solo al derrotar un boss.</summary>
+    public bool DiscordOnKill { get; init; }
+
     /// <summary>Línea de DPS de los últimos 30 s detrás de cada fila.</summary>
     public bool Sparklines { get; init; } = true;
 

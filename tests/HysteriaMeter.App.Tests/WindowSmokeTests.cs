@@ -154,6 +154,29 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Only_discord_webhook_urls_are_accepted()
+    {
+        Assert.True(DiscordWebhook.IsValidUrl("https://discord.com/api/webhooks/123/abc"));
+        Assert.True(DiscordWebhook.IsValidUrl(" https://discordapp.com/api/webhooks/123/abc "));
+        Assert.False(DiscordWebhook.IsValidUrl("http://discord.com/api/webhooks/123/abc"));
+        Assert.False(DiscordWebhook.IsValidUrl("https://evil.example/api/webhooks/123/abc"));
+        Assert.False(DiscordWebhook.IsValidUrl("https://discord.com/channels/1/2"));
+        Assert.False(DiscordWebhook.IsValidUrl(string.Empty));
+    }
+
+    [Fact]
+    public void Sharing_hides_names_only_when_chosen()
+    {
+        var snapshot = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));
+        var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty, new MeterPreferences(), _ => { });
+        Assert.Same(snapshot, session.ForSharing(snapshot));
+
+        session.Update(session.Preferences with { AnonymizeExports = true });
+        Assert.Contains(session.ForSharing(snapshot).Actors, a => a.Name == "Yo");
+        Assert.DoesNotContain(session.ForSharing(snapshot).Actors, a => a.Name == "Kaelis");
+    }
+
+    [Fact]
     public void Demo_encounter_is_consistent()
     {
         var demo = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));

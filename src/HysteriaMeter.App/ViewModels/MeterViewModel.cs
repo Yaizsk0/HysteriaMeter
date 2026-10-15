@@ -78,6 +78,7 @@ public sealed partial class MeterViewModel : ObservableObject
             }
         };
         _session.ResetRequested += ClearRows;
+        _session.DiscordResult += message => dispatcher.InvokeAsync(() => ExportMessage = message);
         _recorder.Changed += _ =>
         {
             OnPropertyChanged(nameof(IsRecording));
@@ -421,7 +422,7 @@ public sealed partial class MeterViewModel : ObservableObject
     [RelayCommand]
     private void CopySummary()
     {
-        if (_shown is { } snapshot && BuildSummary(snapshot, Tab) is { Length: > 0 } text)
+        if (_shown is { } snapshot && BuildSummary(_session.ForSharing(snapshot), Tab) is { Length: > 0 } text)
         {
             try
             {
@@ -451,6 +452,97 @@ public sealed partial class MeterViewModel : ObservableObject
         var parts = rows.Select((a, i) =>
             $"{i + 1}. {a.Name} {ActorRowViewModel.Compact(metric(a) / seconds)} ({(metric(a) / total).ToString("P0", CultureInfo.InvariantCulture).Replace(" ", string.Empty, StringComparison.Ordinal)})");
         return string.Join(" · ", parts.Prepend(header));
+    }
+
+    /// <summary>Carpeta de los CSV y JSON exportados.</summary>
+    public static string ExportFolder { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HysteriaMeter", "Exportes");
+
+    /// <summary>Resultado de la última exportación o envío, en configuración.</summary>
+    [ObservableProperty]
+    public partial string ExportMessage { get; set; } = string.Empty;
+
+    public bool AnonymizeExports
+    {
+        get => Preferences.AnonymizeExports;
+        set => Update(Preferences with { AnonymizeExports = value }, nameof(AnonymizeExports));
+    }
+
+    public string DiscordWebhookUrl
+    {
+        get => Preferences.DiscordWebhook;
+        set => Update(Preferences with { DiscordWebhook = value?.Trim() ?? string.Empty }, nameof(DiscordWebhookUrl), nameof(IsDiscordConfigured));
+    }
+
+    public bool IsDiscordConfigured => DiscordWebhook.IsValidUrl(Preferences.DiscordWebhook);
+
+    public bool DiscordOnKill
+    {
+        get => Preferences.DiscordOnKill;
+        set => Update(Preferences with { DiscordOnKill = value }, nameof(DiscordOnKill));
+    }
+
+    /// <summary>La vista copia la imagen del overlay al portapapeles.</summary>
+    public event Action? CopyImageRequested;
+
+    [RelayCommand]
+    private void ExportCsv() => Export("csv", EncounterExport.ToCsv);
+
+    [RelayCommand]
+    private void ExportJson() => Export("json", EncounterExport.ToJson);
+
+    private void Export(string extension, Func<EncounterSnapshot, string> serialize)
+    {
+        if (_shown is not { } snapshot)
+        {
+            ExportMessage = "Todavía no hay una pelea para exportar";
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(ExportFolder);
+            var path = Path.Combine(ExportFolder, $"{EncounterExport.FileName(snapshot, snapshot.Start.ToLocalTime())}.{extension}");
+            File.WriteAllText(path, serialize(_session.ForSharing(snapshot)), new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            ExportMessage = $"Guardado {Path.GetFileName(path)}";
+        }
+        catch (IOException ex)
+        {
+            ExportMessage = $"No se pudo guardar: {ex.Message}";
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            ExportMessage = $"No se pudo guardar: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private static void OpenExports()
+    {
+        Directory.CreateDirectory(ExportFolder);
+        Process.Start(new ProcessStartInfo("explorer.exe", $"\"{ExportFolder}\"") { UseShellExecute = true });
+    }
+
+    /// <summary>Cierra los paneles para que la imagen muestre las filas y le pide a la vista que la copie.</summary>
+    [RelayCommand]
+    private void CopyImage()
+    {
+        IsSettingsOpen = false;
+        IsHistoryOpen = false;
+        CopyImageRequested?.Invoke();
+    }
+
+    [RelayCommand]
+    private async Task SendToDiscordAsync()
+    {
+        if (_shown is not { } snapshot)
+        {
+            ExportMessage = "Todavía no hay una pelea para mandar";
+            return;
+        }
+
+        ExportMessage = "Mandando a Discord…";
+        await _session.SendToDiscordAsync(snapshot).ConfigureAwait(true);
     }
 
     [RelayCommand]

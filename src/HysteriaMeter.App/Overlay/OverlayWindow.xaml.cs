@@ -2,6 +2,8 @@ using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using HysteriaMeter.App.Detail;
 using HysteriaMeter.App.Interop;
 using HysteriaMeter.App.ViewModels;
@@ -31,6 +33,7 @@ public partial class OverlayWindow : Window
         Loaded += (_, _) => _viewModel.Start();
         Closed += (_, _) => _viewModel.Stop();
         _viewModel.DetailRequested += ShowDetail;
+        _viewModel.CopyImageRequested += CopyImage;
     }
 
     /// <summary>La primera ventana registra los atajos globales (Windows no deja registrar el mismo dos veces).</summary>
@@ -41,6 +44,38 @@ public partial class OverlayWindow : Window
         double.IsNaN(Left) || double.IsNaN(Top)
             ? null
             : new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height, _viewModel.Tab, _viewModel.ShowHealing, _viewModel.IsCompact);
+
+    /// <summary>Copia el overlay como imagen (para pegar en Discord), al tamaño real en pantalla.</summary>
+    private void CopyImage()
+    {
+        Root.UpdateLayout();
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var width = (int)Math.Ceiling(Root.ActualWidth * Zoom.ScaleX * dpi.DpiScaleX);
+        var height = (int)Math.Ceiling(Root.ActualHeight * Zoom.ScaleY * dpi.DpiScaleY);
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        // VisualBrush dibuja el contenido sin el zoom propio del Grid: se escala a mano al tamaño en pantalla.
+        var drawing = new DrawingVisual();
+        using (var context = drawing.RenderOpen())
+        {
+            context.DrawRectangle(new VisualBrush(Root), null, new Rect(0, 0, Root.ActualWidth * Zoom.ScaleX, Root.ActualHeight * Zoom.ScaleY));
+        }
+
+        var bitmap = new RenderTargetBitmap(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
+        bitmap.Render(drawing);
+        try
+        {
+            Clipboard.SetImage(bitmap);
+            _viewModel.ExportMessage = "Imagen copiada: pegala en Discord con Ctrl+V";
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            _viewModel.ExportMessage = "Otro programa tiene el portapapeles abierto; probá de nuevo";
+        }
+    }
 
     private void ShowDetail()
     {
