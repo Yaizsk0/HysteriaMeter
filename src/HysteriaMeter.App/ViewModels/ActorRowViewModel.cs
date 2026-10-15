@@ -95,22 +95,30 @@ public sealed partial class ActorRowViewModel : ObservableObject
 
     public void Update(int rank, ActorSnapshot actor, MeterTab tab, long top, long total, TimeSpan duration)
     {
-        var value = tab == MeterTab.Healing ? actor.Healing : actor.Damage;
+        var value = tab.Metric(actor);
 
         Id = actor.Id;
         Rank = rank;
         Name = actor.Name;
-        DisplayName = actor.IsLocalPlayer ? $"{actor.Name} (vos)" : actor.Name;
+        DisplayName = (actor.IsLocalPlayer ? $"{actor.Name} (vos)" : actor.Name) + DeathMark(actor.Deaths);
         Initial = InitialOf(actor.Name);
         Accent = actor.IsLocalPlayer ? PlayerColors.Local : PlayerColors.For(actor.Name);
         BarFill = actor.IsLocalPlayer ? PlayerColors.LocalBar : PlayerColors.BarFor(actor.Name);
         IsLocalPlayer = actor.IsLocalPlayer;
-        PerSecond = Compact(tab == MeterTab.Healing ? actor.Healing / duration.TotalSeconds : actor.Dps);
+        PerSecond = Compact(tab == MeterTab.Damage ? actor.Dps : value / duration.TotalSeconds);
         Total = Compact(value);
         Share = FormatShare(total == 0 ? 0 : (double)value / total);
         Bar = top == 0 ? 0 : (double)value / top;
         Breakdown = BuildBreakdown(actor);
     }
+
+    /// <summary>" ✝" o " ✝3" detrás del nombre de quien murió en la pelea.</summary>
+    public static string DeathMark(int deaths) => deaths switch
+    {
+        <= 0 => string.Empty,
+        1 => " ✝",
+        _ => $" ✝{deaths}",
+    };
 
     /// <summary>"52%" sin decimales ni espacio: entra en la columna angosta del overlay.</summary>
     internal static string FormatShare(double share) =>
@@ -133,7 +141,8 @@ public sealed partial class ActorRowViewModel : ObservableObject
             $"Golpes al objetivo: {c.Hits.ToString("N0", culture)} · máximo {Compact(actor.MaxHit)}",
             $"Crítico {Rate(HitModifiers.Critical, c.Critical)} · Perfecto {Rate(HitModifiers.Perfect, c.Perfect)} · Doble {Rate(HitModifiers.DoubleHit, c.DoubleHit)}",
             $"Frente {Rate(HitModifiers.FrontAttack, c.Front)} · Espalda {Rate(HitModifiers.BackAttack, c.Back)} · Multi {Rate(HitModifiers.MultiHit, c.MultiHit)}",
-            $"Overkill: {Compact(actor.Overkill)} (daño que pasó la vida que le quedaba al objetivo)");
+            $"Overkill: {Compact(actor.Overkill)} (daño que pasó la vida que le quedaba al objetivo)",
+            $"Recibido: {Compact(actor.DamageTaken)} en {actor.HitsTaken.ToString("N0", culture)} golpes · Muertes: {actor.Deaths.ToString(culture)}");
     }
 
     internal static string Compact(double value) => Numbers.Format(value);

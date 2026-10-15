@@ -13,11 +13,32 @@ using HysteriaMeter.Storage;
 
 namespace HysteriaMeter.App.ViewModels;
 
-/// <summary>Pestañas del overlay. "Recibido" todavía no tiene datos: falta decodificar el daño a jugadores.</summary>
+/// <summary>Pestañas del overlay.</summary>
 public enum MeterTab
 {
     Damage,
     Healing,
+
+    /// <summary>Daño recibido de monstruos.</summary>
+    Taken,
+}
+
+public static class MeterTabs
+{
+    /// <summary>Lo que mide cada pestaña.</summary>
+    public static long Metric(this MeterTab tab, ActorSnapshot actor) => tab switch
+    {
+        MeterTab.Healing => actor.Healing,
+        MeterTab.Taken => actor.DamageTaken,
+        _ => actor.Damage,
+    };
+
+    public static string Unit(this MeterTab tab) => tab switch
+    {
+        MeterTab.Healing => "HPS",
+        MeterTab.Taken => "DTPS",
+        _ => "DPS",
+    };
 }
 
 /// <summary>Refresca el overlay leyendo snapshots del motor cada pocos milisegundos.</summary>
@@ -54,7 +75,7 @@ public sealed partial class MeterViewModel : ObservableObject
         _engine = session.Engine;
         _recorder = session.Recorder;
         _history = session.History;
-        Detail = new ActorDetailViewModel(session.SkillNames);
+        Detail = new ActorDetailViewModel(session.SkillNames) { LogSource = session.Engine.CombatLog };
         Tab = tab;
         _showHealing = showHealing;
         IsCompact = compact;
@@ -370,7 +391,7 @@ public sealed partial class MeterViewModel : ObservableObject
     public partial bool IsClickThrough { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsDamageTab), nameof(IsHealingTab), nameof(SecondColumnHeader), nameof(RateUnit), nameof(ShowHealingColumn))]
+    [NotifyPropertyChangedFor(nameof(IsDamageTab), nameof(IsHealingTab), nameof(IsTakenTab), nameof(SecondColumnHeader), nameof(RateUnit), nameof(ShowHealingColumn))]
     public partial MeterTab Tab { get; set; }
 
     public bool IsDamageTab
@@ -397,7 +418,19 @@ public sealed partial class MeterViewModel : ObservableObject
         }
     }
 
-    public string RateUnit => Tab == MeterTab.Healing ? "HPS" : "DPS";
+    public bool IsTakenTab
+    {
+        get => Tab == MeterTab.Taken;
+        set
+        {
+            if (value)
+            {
+                Tab = MeterTab.Taken;
+            }
+        }
+    }
+
+    public string RateUnit => Tab.Unit();
 
     /// <summary>Encabezado de la segunda columna numérica: HPS con daño y curación juntos, si no el total.</summary>
     public string SecondColumnHeader => ShowHealingColumn ? "HPS" : "TOTAL";
@@ -438,7 +471,7 @@ public sealed partial class MeterViewModel : ObservableObject
     /// <summary>"Boss 02:47 · 1. Ana 11.9k (52%) · 2. Beto 7.8k (34%)". Máximo 8 jugadores para que entre en el chat.</summary>
     public static string BuildSummary(EncounterSnapshot snapshot, MeterTab tab)
     {
-        Func<ActorSnapshot, long> metric = tab == MeterTab.Healing ? a => a.Healing : a => a.Damage;
+        Func<ActorSnapshot, long> metric = a => tab.Metric(a);
         var seconds = snapshot.Duration.TotalSeconds;
         var rows = snapshot.Actors.Where(a => metric(a) > 0).OrderByDescending(metric).Take(8).ToList();
         if (rows.Count == 0)
@@ -447,7 +480,7 @@ public sealed partial class MeterViewModel : ObservableObject
         }
 
         var total = (double)snapshot.Actors.Sum(metric);
-        var unit = tab == MeterTab.Healing ? "HPS" : "DPS";
+        var unit = tab.Unit();
         var header = $"{snapshot.TargetName ?? "Encuentro"} {snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture)} {unit}";
         var parts = rows.Select((a, i) =>
             $"{i + 1}. {a.Name} {ActorRowViewModel.Compact(metric(a) / seconds)} ({(metric(a) / total).ToString("P0", CultureInfo.InvariantCulture).Replace(" ", string.Empty, StringComparison.Ordinal)})");
@@ -860,7 +893,8 @@ public sealed partial class MeterViewModel : ObservableObject
             TargetHealthText += $" · muere en {ttk.ToString(@"m\:ss", CultureInfo.InvariantCulture)}";
         }
 
-        Func<ActorSnapshot, long> metric = Tab == MeterTab.Healing ? a => a.Healing : a => a.Damage;
+        var tab = Tab;
+        Func<ActorSnapshot, long> metric = a => tab.Metric(a);
         var combined = ShowHealingColumn;
         var rows = snapshot.Actors
             .Where(a => metric(a) > 0 || (combined && a.Healing > 0))

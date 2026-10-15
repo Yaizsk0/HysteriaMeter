@@ -51,6 +51,8 @@ Con la vida del boss a la vista, el overlay estima en cuánto muere al ritmo act
 
 En configuración, EXPORTAR Y COMPARTIR copia el overlay como imagen (para pegar en Discord) y guarda la pelea en CSV o JSON en `%LOCALAPPDATA%\HysteriaMeter\Exportes`. Con "Ocultar los nombres de los demás", el resumen y los archivos dicen "Yo", "Jugador 1", "Jugador 2". Si pegás la URL de un webhook de Discord, el resumen se puede mandar al canal a mano o solo al derrotar un boss. Es lo único que sale de tu PC, y solo si lo configurás.
 
+La pestaña RECIBIDO muestra el daño que le hicieron los monstruos a cada uno (todavía sin validar contra Combat Analysis). Quien murió lleva una ✝ junto al nombre; en el detalle del jugador se ve qué lo mató y cuánto recibió en los 10 segundos anteriores. El botón "Registro" del detalle abre el golpe a golpe de la pelea, con búsqueda por jugador, skill o modificador.
+
 Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: los nombres se cargan a mano en `data/skills.json`.
 
 Para grabar una pelea desde el overlay: engranaje → GRABACIÓN → "Grabar lo capturado (.pcap)". Mientras graba aparece `● REC` arriba; los archivos quedan en `%LOCALAPPDATA%\HysteriaMeter\Grabaciones` ("Abrir carpeta"). Esas grabaciones tienen nombres de personajes: no se suben al repo.

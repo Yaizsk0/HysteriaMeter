@@ -7,9 +7,40 @@ using HysteriaMeter.Combat;
 
 namespace HysteriaMeter.App.ViewModels;
 
+/// <summary>Una muerte del jugador elegido, para la sección MUERTES del detalle.</summary>
+public sealed record DeathItem(string When, string Summary, string LastHits);
+
 /// <summary>Desglose por skill de un jugador (referencia: mocks/Detalle.dc.html). Se refresca con el overlay.</summary>
 public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableObject
 {
+    /// <summary>De dónde sale el registro de la pelea (el motor); <c>null</c> en pruebas.</summary>
+    public Func<IReadOnlyList<CombatLogEntry>>? LogSource { get; set; }
+
+    public SkillNames Names => names;
+
+    /// <summary>La vista abre el registro filtrado por este jugador.</summary>
+    public event Action<LogViewModel>? LogRequested;
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void OpenLog()
+    {
+        if (LogSource is { } source)
+        {
+            LogRequested?.Invoke(new LogViewModel(source, names, ActorId, Name));
+        }
+    }
+
+    [ObservableProperty]
+    public partial string DamageTaken { get; set; } = "–";
+
+    [ObservableProperty]
+    public partial string DeathCount { get; set; } = "0";
+
+    public ObservableCollection<DeathItem> Deaths { get; } = [];
+
+    [ObservableProperty]
+    public partial bool HasDeaths { get; set; }
+
     /// <summary>Jugador elegido; <c>null</c> si no hay ninguno.</summary>
     public ulong? ActorId { get; private set; }
 
@@ -94,6 +125,9 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         Total = ActorRowViewModel.Compact(actor.Damage);
         Duration = duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
         Overkill = ActorRowViewModel.Compact(actor.Overkill);
+        DamageTaken = ActorRowViewModel.Compact(actor.DamageTaken);
+        DeathCount = actor.Deaths.ToString(culture);
+        UpdateDeaths(snapshot, actor.Id);
         UpdateChart(actor.Timeline ?? []);
 
         var skills = actor.Skills;
@@ -147,6 +181,39 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         points.Freeze();
         ChartPoints = points;
         PeakDps = ActorRowViewModel.Compact(peak);
+    }
+
+    private void UpdateDeaths(EncounterSnapshot snapshot, ulong actorId)
+    {
+        var deaths = (snapshot.Deaths ?? []).Where(d => d.ActorId == actorId).ToList();
+        HasDeaths = deaths.Count > 0;
+        if (deaths.Count == Deaths.Count)
+        {
+            return; // las muertes no cambian una vez registradas
+        }
+
+        Deaths.Clear();
+        foreach (var death in deaths)
+        {
+            Deaths.Add(Describe(death, snapshot.Start, names));
+        }
+    }
+
+    /// <summary>"01:23 · Lo mató Tarka con Skill 502 por 9.0k (crítico)" y el resumen de los golpes previos.</summary>
+    public static DeathItem Describe(DeathRecap death, DateTimeOffset start, SkillNames names)
+    {
+        var offset = death.Timestamp - start;
+        var when = $"{(int)offset.TotalMinutes:00}:{offset.Seconds:00}";
+        if (death.KillingBlow is not { } blow)
+        {
+            return new DeathItem(when, "Murió (sin golpes registrados antes)", string.Empty);
+        }
+
+        var flags = LogViewModel.Flags(blow.Modifiers);
+        var summary = $"Lo mató {blow.SourceName} con {names.Of(blow.SkillId)} por {ActorRowViewModel.Compact(blow.Amount)}{(flags.Length > 0 ? $" ({flags})" : string.Empty)}";
+        var total = death.LastHits.Sum(h => h.Amount);
+        var lastHits = $"{death.LastHits.Count} golpes por {ActorRowViewModel.Compact(total)} en los {DeathRecap.Window.TotalSeconds:0} s anteriores";
+        return new DeathItem(when, summary, lastHits);
     }
 
     /// <summary>Promedio móvil: el DPS del segundo t es el daño de los últimos <paramref name="window"/> segundos dividido por la ventana.</summary>

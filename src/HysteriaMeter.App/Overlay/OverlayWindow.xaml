@@ -292,8 +292,8 @@
                         <StackPanel Orientation="Horizontal">
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="DAÑO" IsChecked="{Binding IsDamageTab}" />
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="CURACIÓN" IsChecked="{Binding IsHealingTab}" />
-                            <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="RECIBIDO" IsEnabled="False"
-                                         ToolTip="Próximamente: falta decodificar el daño que reciben los jugadores" ToolTipService.ShowOnDisabled="True" />
+                            <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="RECIBIDO" IsChecked="{Binding IsTakenTab}"
+                                         ToolTip="Daño que le hicieron los monstruos a cada uno (sin validar contra Combat Analysis todavía)" />
                         </StackPanel>
                     </DockPanel>
                 </Border>
