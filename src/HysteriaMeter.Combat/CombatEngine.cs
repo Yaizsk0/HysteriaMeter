@@ -93,9 +93,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var encounter = EnsureEncounter(e.Timestamp);
-        encounter.Actor(source).AddHit(e.SkillId, e.Amount, e.Modifiers);
-        encounter.DamageTaken[e.TargetId] = encounter.DamageTaken.GetValueOrDefault(e.TargetId) + e.Amount;
-        encounter.LastActivity = e.Timestamp;
+        encounter.Actor(source).AddHit(e.SkillId, e.TargetId, e.Amount, e.Modifiers);
+        encounter.RegisterDamage(e.TargetId, e.Amount, e.Timestamp);
     }
 
     private void OnHeal(HealEvent e)
@@ -148,14 +147,20 @@ public sealed class CombatEngine(CombatEngineOptions options)
     {
         var total = encounter.Actors.Values.Sum(a => a.Damage);
         var seconds = Math.Max((encounter.LastActivity - encounter.Start).TotalSeconds, 1);
+        var target = encounter.MainTarget;
+        TimeSpan? targetDuration = target is { } mt && encounter.TargetWindows.TryGetValue(mt, out var window)
+            ? window.Last - window.First
+            : null;
+        var targetSeconds = Math.Max(targetDuration?.TotalSeconds ?? 0, 1);
 
         var actors = encounter.Actors
             .Select(kv =>
             {
                 var (id, stats) = (kv.Key, kv.Value);
                 var profile = Entities.Profile(id);
+                var targetDamage = target is { } t0 ? stats.DamageByTarget.GetValueOrDefault(t0) : 0;
                 var skills = stats.Skills
-                    .Select(s => new SkillSnapshot(s.Key, s.Value.Damage, s.Value.Hits, s.Value.Crits, s.Value.MaxHit, Share(s.Value.Damage, stats.Damage)))
+                    .Select(s => new SkillSnapshot(s.Key, s.Value.Damage, s.Value.Hits, s.Value.Crits, s.Value.MaxHit, Share(s.Value.Damage, stats.Damage), s.Value.Counts.Snapshot()))
                     .OrderByDescending(s => s.Damage)
                     .ToArray();
                 return new ActorSnapshot(
@@ -170,12 +175,14 @@ public sealed class CombatEngine(CombatEngineOptions options)
                     stats.Crits,
                     stats.MaxHit,
                     stats.Healing,
-                    skills);
+                    skills,
+                    stats.Counts.Snapshot(),
+                    targetDamage,
+                    targetDamage / targetSeconds);
             })
             .OrderByDescending(a => a.Damage)
             .ToArray();
 
-        var target = encounter.MainTarget;
         return new EncounterSnapshot(
             encounter.Id,
             encounter.Start,
@@ -183,7 +190,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
             target is { } t ? Entities.DisplayName(t) : null,
             encounter.TargetKilled,
             total,
-            actors);
+            actors,
+            targetDuration);
     }
 
     private static double Share(long part, long total) => total == 0 ? 0 : (double)part / total;
