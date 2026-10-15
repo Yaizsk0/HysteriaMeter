@@ -15,4 +15,5 @@ public enum PacketKind
     Heal,
     Death,
     Health,
+    LocalCombatPower,
 }

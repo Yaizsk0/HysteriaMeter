@@ -74,6 +74,8 @@ public sealed class EncounterRepository(string databasePath)
         await AddColumnIfMissingAsync(connection, "encounter_actors", "deaths", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounters", "zone_entered_at", "TEXT").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounters", "marks_json", "TEXT").ConfigureAwait(false);
+        await AddColumnIfMissingAsync(connection, "encounter_actors", "item_level", "INTEGER").ConfigureAwait(false);
+        await AddColumnIfMissingAsync(connection, "encounter_actors", "combat_power", "INTEGER").ConfigureAwait(false);
         await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS ix_encounters_target ON encounters(target_name, started_at)").ConfigureAwait(false);
     }
 
@@ -117,10 +119,10 @@ public sealed class EncounterRepository(string databasePath)
             INSERT OR REPLACE INTO encounter_actors
                 (encounter_id, actor_id, name, class_id, is_local, damage, dps, hits, crits, max_hit, healing, skills_json,
                  main_target_damage, main_target_dps, periodic_damage, active_dps, counts_json, overkill, timeline_json,
-                 damage_taken, hits_taken, deaths)
+                 damage_taken, hits_taken, deaths, item_level, combat_power)
             VALUES (@EncounterId, @ActorId, @Name, @ClassId, @IsLocal, @Damage, @Dps, @Hits, @Crits, @MaxHit, @Healing, @SkillsJson,
                     @MainTargetDamage, @MainTargetDps, @PeriodicDamage, @ActiveDps, @CountsJson, @Overkill, @TimelineJson,
-                    @DamageTaken, @HitsTaken, @Deaths)
+                    @DamageTaken, @HitsTaken, @Deaths, @ItemLevel, @CombatPower)
             """,
             encounter.Actors.Select(a => new
             {
@@ -143,6 +145,8 @@ public sealed class EncounterRepository(string databasePath)
                 CountsJson = a.Counts is null ? null : JsonSerializer.Serialize(a.Counts),
                 a.Overkill,
                 TimelineJson = a.Timeline is null ? null : JsonSerializer.Serialize(a.Timeline),
+                a.ItemLevel,
+                a.CombatPower,
                 a.DamageTaken,
                 a.HitsTaken,
                 a.Deaths,
@@ -254,7 +258,8 @@ public sealed class EncounterRepository(string databasePath)
                    hits AS Hits, crits AS Crits, max_hit AS MaxHit, healing AS Healing, skills_json AS SkillsJson,
                    main_target_damage AS MainTargetDamage, main_target_dps AS MainTargetDps, periodic_damage AS PeriodicDamage,
                    active_dps AS ActiveDps, counts_json AS CountsJson, overkill AS Overkill,
-                   timeline_json AS TimelineJson, damage_taken AS DamageTaken, hits_taken AS HitsTaken, deaths AS Deaths
+                   timeline_json AS TimelineJson, damage_taken AS DamageTaken, hits_taken AS HitsTaken, deaths AS Deaths,
+                   item_level AS ItemLevel, combat_power AS CombatPower
             FROM encounter_actors WHERE encounter_id = @id ORDER BY damage DESC
             """,
             new { id }).ConfigureAwait(false);
@@ -289,7 +294,9 @@ public sealed class EncounterRepository(string databasePath)
                 a.TimelineJson is null ? null : JsonSerializer.Deserialize<long[]>(a.TimelineJson),
                 a.DamageTaken,
                 (int)a.HitsTaken,
-                (int)a.Deaths))],
+                (int)a.Deaths,
+                a.ItemLevel is { } itemLevel ? (int)itemLevel : null,
+                a.CombatPower))],
             encounter.MainTargetSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null,
             Deaths: encounter.DeathsJson is null ? null : JsonSerializer.Deserialize<DeathRecap[]>(encounter.DeathsJson),
             Marks: encounter.MarksJson is null ? null : JsonSerializer.Deserialize<int[]>(encounter.MarksJson),
@@ -333,4 +340,4 @@ internal sealed record EncounterDetailRow(
 internal sealed record ActorRow(
     long ActorId, string Name, long? ClassId, long IsLocal, long Damage, double Dps, long Hits, long Crits, long MaxHit, long Healing,
     string SkillsJson, long MainTargetDamage, double MainTargetDps, long PeriodicDamage, double ActiveDps, string? CountsJson, long Overkill, string? TimelineJson,
-    long DamageTaken, long HitsTaken, long Deaths);
+    long DamageTaken, long HitsTaken, long Deaths, long? ItemLevel, long? CombatPower);

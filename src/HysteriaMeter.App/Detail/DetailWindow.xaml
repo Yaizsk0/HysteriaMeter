@@ -99,6 +99,7 @@
                         </Border.RenderTransform>
                     </Border>
                     <TextBlock Text="{Binding Name}" Margin="10,0,0,0" FontSize="15" FontWeight="Bold" Foreground="{Binding Accent}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Profile}" Margin="8,0,0,0" FontSize="11" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding Target, StringFormat='·  {0}'}" Margin="8,0,0,0" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
                     <TextBlock Text="(no está en el encuentro actual)" Margin="8,0,0,0" FontSize="11" Foreground="{StaticResource TextDim}" VerticalAlignment="Center"
                                Visibility="{Binding IsMissing, Converter={StaticResource Visible}}" />

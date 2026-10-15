@@ -67,6 +67,9 @@ public sealed record MeterPreferences
     /// <summary>Un sonido de Windows con las alertas: récord, prueba de DPS terminada y enrage que no se llega.</summary>
     public bool Sounds { get; init; }
 
+    /// <summary>Item level y power de cada jugador al lado de su nombre.</summary>
+    public bool ShowGear { get; init; } = true;
+
     /// <summary>Atajos globales, como "Ctrl+Shift+L"; vacío = sin atajo.</summary>
     public string HotkeyClickThrough { get; init; } = "Ctrl+Shift+L";
 

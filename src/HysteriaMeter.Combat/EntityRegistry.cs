@@ -21,6 +21,7 @@ public sealed class EntityRegistry
     private readonly Dictionary<ulong, Health> _health = [];
     private DateTimeOffset _now;
     private string? _localName;
+    private (int? ItemLevel, long? CombatPower)? _localGear;
 
     public ulong? LocalPlayerId { get; private set; }
 
@@ -46,6 +47,12 @@ public sealed class EntityRegistry
 
                 LocalPlayerId = local.EntityId;
                 _localName = local.Name ?? _localName;
+
+                // El item level y el power del local llegan una vez por conexión: pasan a la entidad nueva.
+                if (_localGear is { } localGear)
+                {
+                    Update(local.EntityId, p => p with { ItemLevel = p.ItemLevel ?? localGear.ItemLevel, CombatPower = p.CombatPower ?? localGear.CombatPower });
+                }
 
                 // Al cambiar de zona el local recibe otra entidad y el nombre llega segundos después:
                 // mientras tanto se usa el que ya conocíamos.
@@ -83,6 +90,22 @@ public sealed class EntityRegistry
                 if (spawn is { Hp: { } hp, MaxHp: { } maxHp })
                 {
                     _health[spawn.EntityId] = new Health(hp, maxHp);
+                }
+
+                break;
+            case PlayerGearEvent gear:
+                Update(gear.EntityId, p => p with { ItemLevel = gear.ItemLevel ?? p.ItemLevel, CombatPower = gear.CombatPower ?? p.CombatPower });
+                if (gear.EntityId == LocalPlayerId)
+                {
+                    RememberLocalGear();
+                }
+
+                break;
+            case LocalCombatPowerEvent power:
+                _localGear = (_localGear?.ItemLevel, power.CombatPower);
+                if (LocalPlayerId is { } localId)
+                {
+                    Update(localId, p => p with { CombatPower = power.CombatPower });
                 }
 
                 break;
@@ -129,6 +152,22 @@ public sealed class EntityRegistry
         return id;
     }
 
+    /// <summary>
+    /// Deduce la clase por las skills que usa: los IDs de skill de cada clase empiezan con su número
+    /// (11 a 18; por ejemplo 12010350). Los IDs de ítems y pociones (1 a 3 millones) no cuentan.
+    /// </summary>
+    public void ObserveSkill(ulong canonicalId, uint skillId)
+    {
+        // La clase del spawn puede venir en otra numeración: manda la de las skills.
+        if (ClassOfSkill(skillId) is { } classId && Profile(canonicalId) is { NpcId: null } profile && profile.ClassId != classId
+            && profile.ClassId is null or < 11 or > 18)
+        {
+            Update(canonicalId, p => p with { ClassId = classId });
+        }
+    }
+
+    public static int? ClassOfSkill(uint skillId) => (int)(skillId / 1_000_000) is var prefix and >= 11 and <= 18 ? prefix : null;
+
     public EntityProfile Profile(ulong id) => _profiles.GetValueOrDefault(id, EntityProfile.Empty);
 
     /// <summary>Un NPC/monstruo: no suma al ranking de DPS.</summary>
@@ -161,6 +200,15 @@ public sealed class EntityRegistry
         return false;
     }
 
+    private void RememberLocalGear()
+    {
+        if (LocalPlayerId is { } id)
+        {
+            var profile = Profile(id);
+            _localGear = (profile.ItemLevel, profile.CombatPower);
+        }
+    }
+
     private void SetName(ulong id, string name)
     {
         Update(id, p => p with { Name = name });
@@ -173,7 +221,9 @@ public sealed class EntityRegistry
 
 public sealed record Health(long Hp, long MaxHp);
 
-public sealed record EntityProfile(string? Name, int? ClassId, uint? NpcId)
+/// <param name="ItemLevel">Item level de un jugador, si llegó en su aparición.</param>
+/// <param name="CombatPower">Power (CP) de un jugador.</param>
+public sealed record EntityProfile(string? Name, int? ClassId, uint? NpcId, int? ItemLevel = null, long? CombatPower = null)
 {
     public static EntityProfile Empty { get; } = new(null, null, null);
 }

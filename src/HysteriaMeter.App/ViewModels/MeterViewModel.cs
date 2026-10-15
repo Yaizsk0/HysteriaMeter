@@ -100,7 +100,7 @@ public sealed partial class MeterViewModel : ObservableObject
             }
 
             _timer.Interval = TimeSpan.FromMilliseconds(Preferences.RefreshMs);
-            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)) || names.Contains(nameof(Preferences)) || names.Contains(string.Empty))
+            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)) || names.Contains(nameof(ShowGear)) || names.Contains(nameof(Preferences)) || names.Contains(string.Empty))
             {
                 Refresh();
             }
@@ -179,6 +179,13 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         get => Preferences.RefreshMs;
         set => Update(Preferences with { RefreshMs = value }, nameof(RefreshMs));
+    }
+
+    /// <summary>Item level y power al lado del nombre.</summary>
+    public bool ShowGear
+    {
+        get => Preferences.ShowGear;
+        set => Update(Preferences with { ShowGear = value }, nameof(ShowGear));
     }
 
     public bool Sounds
@@ -1357,7 +1364,7 @@ public sealed partial class MeterViewModel : ObservableObject
                 Actors.Add(new ActorRowViewModel());
             }
 
-            Actors[i].Update(i + 1, rows[i], Tab, top, total, snapshot.Duration, BossOnly);
+            Actors[i].Update(i + 1, rows[i], Tab, top, total, snapshot.Duration, BossOnly, Preferences.ShowGear);
             Actors[i].Spark = Preferences.Sparklines && Tab == MeterTab.Damage ? ActorRowViewModel.Sparkline(rows[i].Timeline) : null;
             Actors[i].HealingPerSecond = combined && rows[i].Healing > 0
                 ? ActorRowViewModel.Compact(rows[i].Healing / snapshot.Duration.TotalSeconds)

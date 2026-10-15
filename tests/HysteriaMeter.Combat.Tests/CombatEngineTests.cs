@@ -67,6 +67,27 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Players_get_class_from_skills_and_gear_from_their_spawn()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new PlayerGearEvent(T0, Ally, 2001, 93_571));
+        engine.Apply(new PlayerGearEvent(T0, Me, 2046, null));
+        engine.Apply(new LocalCombatPowerEvent(T0, 91_358));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 3000019, 100, HitModifiers.None)); // poción: no dice la clase
+        engine.Apply(new DamageEvent(At(1), Me, Boss, 12010350, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Ally, Boss, 15030340, 500, HitModifiers.None));
+
+        var actors = engine.CurrentSnapshot()!.Actors.ToDictionary(a => a.Name);
+        Assert.Equal((12, 2046, 91_358L), (actors["Mati"].ClassId, actors["Mati"].ItemLevel, actors["Mati"].CombatPower));
+        Assert.Equal((15, 2001, 93_571L), (actors["Aliado"].ClassId, actors["Aliado"].ItemLevel, actors["Aliado"].CombatPower));
+        Assert.Null(EntityRegistry.ClassOfSkill(1605143));
+
+        // Cambio de zona: otra entidad para el local, el equipo se mantiene hasta que llegue el nuevo.
+        engine.Apply(new LocalPlayerEvent(At(60), 999, "Mati"));
+        Assert.Equal((2046, 91_358L), (engine.Entities.Profile(999).ItemLevel, engine.Entities.Profile(999).CombatPower));
+    }
+
+    [Fact]
     public void Marks_moments_of_the_current_fight()
     {
         var engine = CreateEngine();

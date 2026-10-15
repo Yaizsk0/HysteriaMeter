@@ -25,6 +25,14 @@ public sealed record PartyMemberSeenEvent(DateTimeOffset Timestamp, ulong Entity
 /// <summary>Nombre / clase de un jugador. Puede llegar tarde o no llegar.</summary>
 public sealed record EntityInfoEvent(DateTimeOffset Timestamp, ulong EntityId, string Name, int? ClassId) : CombatEvent(Timestamp);
 
+/// <summary>
+/// Equipo de un jugador: item level y power (CP). Cada dato puede faltar: no todas las apariciones lo traen.
+/// </summary>
+public sealed record PlayerGearEvent(DateTimeOffset Timestamp, ulong EntityId, int? ItemLevel, long? CombatPower) : CombatEvent(Timestamp);
+
+/// <summary>Power (CP) del jugador local; el servidor lo manda al entrar a la zona y cuando cambia.</summary>
+public sealed record LocalCombatPowerEvent(DateTimeOffset Timestamp, long CombatPower) : CombatEvent(Timestamp);
+
 [Flags]
 public enum HitModifiers
 {

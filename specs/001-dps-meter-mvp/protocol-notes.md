@@ -107,6 +107,21 @@ varint entity | u8 | u16 ? | u8 | 07 | varint len + UTF-8 name | u32 ? (¿clase 
 - `0x5611` (lista de personajes) y `0x8D57`/`0x8A03`/`0x8A05` (nombre, legión y stats en JSON) traen el nombre sin entidad.
 - Si la captura arranca con el jugador quieto, `0x364A` puede tardar ~3 s (hasta 103 s en un caso). Respaldo posible: emisor de `0x3806` que no sea un NPC de `0x3641`.
 
+### Item level, power y clase (2026-10-15)
+
+Validado contra la lista de la legión (`0x8A05`, que trae nombre, item level y power de cada miembro) en las tres grabaciones.
+
+```text
+0x3645  ... u32 personaje | 00 00 | u16 servidor | u8 n | n × (u16 tag, i32) | u32 nivel | u32 0 | u32 item level ...
+        ... ?? f4 cb 1f | u32 | u32 | [u8 extra] | u64 power | 00        ← última aparición del marcador
+0x3633  ... nombre | u16 servidor | u32 | u8 | u32 nivel | u32 item level | u32 item level
+0x3656  u64 power actual | u64 ?                                         ← power del local, varias veces al cargar; vale el último
+```
+
+- Las secciones de `0x3645` tienen largo variable: `PlayerGear` las busca por su forma y descarta valores fuera de rango (item level < 10.000, power < 10 M). Algunas apariciones no traen el item level.
+- El power ronda 45–50 por punto de item level, útil para detectar falsos positivos.
+- **Clase**: el juego no la manda en un campo claro, pero los IDs de skill de cada clase empiezan con su número (`skillId / 1.000.000` entre 11 y 18; por ejemplo 12010350). Los ítems y pociones (1 a 3 millones) no cuentan. El nombre de cada número se asume en el orden clásico de AION y se corrige en `data/classes.json`.
+
 ## Pendiente
 
 1. ~~Escala del daño~~: resuelta con la dungeon (ver "Validación contra el juego"); el factor de la primera captura era un error de análisis.

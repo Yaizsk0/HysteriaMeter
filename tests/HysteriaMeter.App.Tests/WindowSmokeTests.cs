@@ -503,6 +503,27 @@ public sealed class WindowSmokeTests
         Assert.Equal("Tarka 01:40 DPS · 1. Ana 20 (67%) · 2. Beto 10 (33%)", summary);
     }
 
+    [Fact]
+    public void Gear_and_class_show_next_to_the_name()
+    {
+        Assert.Equal(string.Empty, ActorRowViewModel.GearText(null, null));
+        Assert.StartsWith("2130 · ", ActorRowViewModel.GearText(2130, 93_100), StringComparison.Ordinal);
+        Assert.Equal("Templario", PlayerClasses.Of(12)?.Name);
+        Assert.Null(PlayerClasses.Of(3));
+        Assert.StartsWith("Templario · iLvl 2130 · power ", ActorDetailViewModel.ProfileText(Actor() with { ClassId = 12, ItemLevel = 2130, CombatPower = 93_100 }), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Class_table_merges_json_over_defaults()
+    {
+        var table = PlayerClasses.Parse("""{ "classes": { "12": { "name": "Paladín", "icon": "cruz" }, "x": {}, "15": { "icon": "nada" } } }""");
+
+        Assert.Equal("Paladín", table[12].Name);
+        Assert.Same(PlayerClasses.Icons["cruz"], table[12].Icon);
+        Assert.Equal(PlayerClasses.Defaults[15], table[15]);
+        Assert.Equal(PlayerClasses.Defaults.Count, PlayerClasses.Parse("no es json").Count);
+    }
+
     private static ActorSnapshot Actor() => new(
         Id: 7, Name: "Tester", ClassId: null, IsLocalPlayer: true, Damage: 3000, Dps: 300, Share: 1, Hits: 3, Crits: 1, MaxHit: 1500, Healing: 0,
         Timeline: [1000, 0, 500, 1500, 0, 0],

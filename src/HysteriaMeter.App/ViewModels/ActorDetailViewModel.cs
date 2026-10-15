@@ -119,6 +119,18 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     [ObservableProperty]
     public partial string Name { get; set; } = string.Empty;
 
+    /// <summary>"Templario · iLvl 2130 · power 93.1k", con lo que se sepa.</summary>
+    [ObservableProperty]
+    public partial string Profile { get; set; } = string.Empty;
+
+    public static string ProfileText(ActorSnapshot actor) =>
+        string.Join(" · ", new[]
+        {
+            PlayerClasses.Of(actor.ClassId)?.Name,
+            actor.ItemLevel is { } level ? $"iLvl {level.ToString(CultureInfo.CurrentCulture)}" : null,
+            actor.CombatPower is { } power ? $"power {ActorRowViewModel.Compact(power)}" : null,
+        }.Where(part => part is not null));
+
     [ObservableProperty]
     public partial string Target { get; set; } = string.Empty;
 
@@ -212,6 +224,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         }
 
         Name = alias ?? actor.Name;
+        Profile = ProfileText(actor);
         Target = MeterViewModel.TitleOf(snapshot);
         Dps = ActorRowViewModel.Compact(actor.Dps);
         ActiveDps = ActorRowViewModel.Compact(actor.ActiveDps);

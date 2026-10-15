@@ -51,6 +51,27 @@ internal static class RealCapture
     /// </summary>
     public const string LocalPlayerInfoBody = "a2 0d 5f 91 c3 2b 3f 05 54 65 73 74 73 79 05 09 00 00 00 01 2d 00 00 00";
 
+    /// <summary>
+    /// Igual que <see cref="LocalPlayerInfoBody"/> pero sin recortar el item level (2046) que sigue al nivel (45).
+    /// </summary>
+    public const string LocalPlayerInfoWithItemLevelBody = "a2 0d 5f 91 c3 2b 3f 05 54 65 73 74 73 79 05 09 00 00 00 01 2d 00 00 00 fe 07 00 00 fe 07 00 00 2d 00";
+
+    /// <summary>Power del jugador local (0x3656, captura del login): 91.358 (u64) y 91.375.</summary>
+    public const string LocalCombatPowerBody = "de 64 01 00 00 00 00 00 ef 64 01 00 00 00 00 00";
+
+    /// <summary>
+    /// Secciones de equipo de una aparición de otro jugador (0x3645, mini boss), con el resto del paquete
+    /// recortado: personaje | 00 00 | servidor 0x0579 | 4 tags | nivel 45 | 0 | item level 2001, y al final
+    /// el marcador del power con 93.571 (u64) y un 00.
+    /// </summary>
+    public const string PlayerGearSections =
+        "03 0e 01 af 67 04 00 00 00 79 05 04 cd 00 c4 03 00 00 ce 00 60 f0 ff ff d0 00 73 01 00 00 27 02 48 f4 ff ff "
+        + "2d 00 00 00 00 00 00 00 d1 07 00 00 de 02 0c 50 64 64 "
+        + "00 00 00 01 24 f4 cb 1f e9 03 00 00 10 00 00 00 83 6d 01 00 00 00 00 00 00";
+
+    /// <summary>Cola del power con un byte extra antes del u64 (login): 161.964.</summary>
+    public const string PowerWithExtraByteTail = "03 24 f4 cb 1f 3f 05 00 00 0d 00 00 00 03 ac 78 02 00 00 00 00 00 00";
+
     /// <summary>HP/MP de un miembro de la party (0x921B, dungeon en party): entidad 15000, HP 16915/16915.</summary>
     public const string PartyMemberBody = "98 75 93 84 01 93 84 01 62 10 00 00 af 12 00 00 00 00 00 00 00 00 00 00 42 0e 00 00 f0 49 02 00 01";
 
