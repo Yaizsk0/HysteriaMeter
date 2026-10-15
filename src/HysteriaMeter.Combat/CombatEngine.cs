@@ -176,7 +176,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
                     stats.MaxHit,
                     stats.Healing,
                     skills,
-                    stats.Counts.Snapshot(),
+                    target is { } t1 && stats.CountsByTarget.TryGetValue(t1, out var counts) ? counts.Snapshot() : HitCounts.Empty,
                     targetDamage,
                     targetDamage / targetSeconds);
             })

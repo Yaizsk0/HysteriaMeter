@@ -56,14 +56,21 @@ internal sealed class ActorStats
 
     public Dictionary<uint, SkillStats> Skills { get; } = [];
 
-    public HitCounter Counts { get; } = new();
-
     public Dictionary<ulong, long> DamageByTarget { get; } = [];
+
+    /// <summary>Golpes por modificador separados por objetivo: Combat Analysis cuenta solo los del objetivo elegido.</summary>
+    public Dictionary<ulong, HitCounter> CountsByTarget { get; } = [];
 
     public void AddHit(uint skillId, ulong targetId, long amount, HitModifiers modifiers)
     {
         DamageByTarget[targetId] = DamageByTarget.GetValueOrDefault(targetId) + amount;
-        Counts.Add(modifiers);
+        if (!CountsByTarget.TryGetValue(targetId, out var counts))
+        {
+            counts = new HitCounter();
+            CountsByTarget[targetId] = counts;
+        }
+
+        counts.Add(modifiers);
         // Como Combat Analysis: los ticks de DoT suman daño pero no cuentan como golpe.
         var periodic = modifiers.HasFlag(HitModifiers.DamageOverTime);
         var hit = periodic ? 0 : 1;
