@@ -62,7 +62,7 @@ public sealed class WindowSmokeTests
             Assert.True(viewModel.Detail.HasDeaths);
             Layout(new DetailWindow(viewModel.Detail));
             var demo = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));
-            Layout(new HysteriaMeter.App.Log.LogWindow(new LogViewModel(() => demo.Deaths![0].LastHits, SkillNames.Empty, tharos.Id, "Tharos")));
+            Layout(new HysteriaMeter.App.Registro.LogWindow(new LogViewModel(() => demo.Deaths![0].LastHits, SkillNames.Empty, tharos.Id, "Tharos")));
         });
     }
 

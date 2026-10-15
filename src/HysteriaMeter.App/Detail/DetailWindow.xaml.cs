@@ -15,7 +15,7 @@ public partial class DetailWindow : Window
         Closed += (_, _) => viewModel.LogRequested -= ShowLog;
     }
 
-    private void ShowLog(LogViewModel log) => new Log.LogWindow(log) { Owner = this }.Show();
+    private void ShowLog(LogViewModel log) => new Registro.LogWindow(log) { Owner = this }.Show();
 
     private void OnHeaderMouseDown(object sender, MouseButtonEventArgs e)
     {
