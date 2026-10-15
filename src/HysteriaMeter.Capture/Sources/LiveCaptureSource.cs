@@ -18,8 +18,10 @@ public sealed class LiveCaptureSource(LiveCaptureOptions options, IConnectionFil
 {
     private readonly List<ILiveDevice> _devices = [];
     private readonly Lock _selectionGate = new();
+    private readonly Lock _writerGate = new();
     private ILiveDevice? _selected;
     private CaptureFileWriterDevice? _writer;
+    private string? _recordPath = options.RecordPath;
     private long _dropped;
 
     /// <summary>Segmentos descartados porque el consumidor no daba abasto.</summary>
@@ -27,6 +29,23 @@ public sealed class LiveCaptureSource(LiveCaptureOptions options, IConnectionFil
 
     /// <summary>Placa elegida (cuando ya apareció tráfico del juego).</summary>
     public string? SelectedDevice => _selected?.Description ?? _selected?.Name;
+
+    /// <summary>
+    /// Empieza a grabar en <paramref name="path"/> (o deja de grabar con <c>null</c>) sin cortar la captura.
+    /// Si todavía no se eligió placa, el archivo se abre cuando aparece el primer paquete del juego.
+    /// </summary>
+    public void SetRecordPath(string? path)
+    {
+        lock (_writerGate)
+        {
+            CloseWriter();
+            _recordPath = path;
+            if (path is not null && _selected is { } device)
+            {
+                OpenWriter(device);
+            }
+        }
+    }
 
     public static IReadOnlyList<(string Name, string Description)> ListDevices() =>
         [.. CaptureDeviceList.Instance.Select(d => (d.Name, d.Description ?? string.Empty))];
@@ -62,7 +81,11 @@ public sealed class LiveCaptureSource(LiveCaptureOptions options, IConnectionFil
             Stop(device);
         }
 
-        _writer?.Dispose();
+        lock (_writerGate)
+        {
+            CloseWriter();
+        }
+
         return ValueTask.CompletedTask;
     }
 
@@ -74,7 +97,11 @@ public sealed class LiveCaptureSource(LiveCaptureOptions options, IConnectionFil
             return;
         }
 
-        _writer?.Write(raw);
+        lock (_writerGate)
+        {
+            _writer?.Write(raw);
+        }
+
         if (!writer.TryWrite(segment))
         {
             Interlocked.Increment(ref _dropped);
@@ -96,13 +123,14 @@ public sealed class LiveCaptureSource(LiveCaptureOptions options, IConnectionFil
                 return ReferenceEquals(_selected, device);
             }
 
-            if (options.RecordPath is { } recordPath)
-            {
-                _writer = new CaptureFileWriterDevice(recordPath, FileMode.Create);
-                _writer.Open(new DeviceConfiguration { LinkLayerType = device.LinkType });
-            }
-
             _selected = device;
+            lock (_writerGate)
+            {
+                if (_recordPath is not null)
+                {
+                    OpenWriter(device);
+                }
+            }
         }
 
         // Detener las otras placas fuera del callback de captura.
@@ -114,6 +142,19 @@ public sealed class LiveCaptureSource(LiveCaptureOptions options, IConnectionFil
             }
         });
         return true;
+    }
+
+    private void OpenWriter(ILiveDevice device)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_recordPath!))!);
+        _writer = new CaptureFileWriterDevice(_recordPath!, FileMode.Create);
+        _writer.Open(new DeviceConfiguration { LinkLayerType = device.LinkType });
+    }
+
+    private void CloseWriter()
+    {
+        _writer?.Dispose();
+        _writer = null;
     }
 
     private IEnumerable<ILiveDevice> CandidateDevices()

@@ -21,6 +21,7 @@ namespace HysteriaMeter.App.Pipeline;
 public sealed partial class MeterPipeline(
     CombatEngine engine,
     EncounterRepository repository,
+    CaptureRecorder recorder,
     IOptions<CaptureSettings> captureOptions,
     ILogger<MeterPipeline> logger) : BackgroundService
 {
@@ -42,6 +43,17 @@ public sealed partial class MeterPipeline(
         var tickTask = TickLoopAsync(ticker.Token);
 
         var source = CreateSource();
+        Action<string?>? forwardRecording = null;
+        if (source is LiveCaptureSource live)
+        {
+            forwardRecording = live.SetRecordPath;
+            recorder.Changed += forwardRecording;
+            if (recorder.CurrentPath is { } path)
+            {
+                live.SetRecordPath(path);
+            }
+        }
+
         await using (source.ConfigureAwait(false))
         {
             var flows = new TcpFlowTracker();
@@ -88,6 +100,11 @@ public sealed partial class MeterPipeline(
             {
                 LogCaptureFailed(ex);
             }
+        }
+
+        if (forwardRecording is not null)
+        {
+            recorder.Changed -= forwardRecording;
         }
 
         await ticker.CancelAsync().ConfigureAwait(false);
