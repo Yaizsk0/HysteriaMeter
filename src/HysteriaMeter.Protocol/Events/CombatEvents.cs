@@ -26,6 +26,23 @@ public enum HitModifiers
     Blocked = 1 << 3,
     Evaded = 1 << 4,
     DamageOverTime = 1 << 5,
+    FrontAttack = 1 << 6,
+    MultiHit = 1 << 7,
+    Perfect = 1 << 8,
+    DoubleHit = 1 << 9,
+}
+
+/// <summary>
+/// Qué modificadores sabemos leer del protocolo. Un modificador fuera de <see cref="Identified"/> se
+/// muestra como "sin identificar" en vez de 0 %.
+/// </summary>
+public static class ModifierCoverage
+{
+    public const HitModifiers Identified =
+        HitModifiers.Critical | HitModifiers.BackAttack | HitModifiers.FrontAttack | HitModifiers.MultiHit
+        | HitModifiers.Perfect | HitModifiers.DoubleHit | HitModifiers.DamageOverTime;
+
+    public static bool IsIdentified(HitModifiers modifier) => (Identified & modifier) == modifier;
 }
 
 public sealed record DamageEvent(

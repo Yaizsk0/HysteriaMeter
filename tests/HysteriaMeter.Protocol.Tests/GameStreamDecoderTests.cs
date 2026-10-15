@@ -28,7 +28,36 @@ public class GameStreamDecoderTests
     {
         var events = CreateDecoder().Push(Frame(0x3804, Hex(RealCapture.DamageWithExtraBody)), T0);
 
-        Assert.Equal(2221, Assert.IsType<DamageEvent>(Assert.Single(events)).Amount);
+        var damage = Assert.IsType<DamageEvent>(Assert.Single(events));
+        Assert.Equal(2221, damage.Amount);
+        Assert.Equal(HitModifiers.MultiHit | HitModifiers.FrontAttack, damage.Modifiers);
+    }
+
+    [Theory]
+    [InlineData(12, 0x03, HitModifiers.Critical | HitModifiers.MultiHit | HitModifiers.FrontAttack)]
+    [InlineData(15, 0x01, HitModifiers.MultiHit | HitModifiers.BackAttack)]
+    [InlineData(13, 0x88, HitModifiers.MultiHit | HitModifiers.FrontAttack | HitModifiers.DoubleHit)]
+    [InlineData(13, 0x84, HitModifiers.MultiHit | HitModifiers.FrontAttack | HitModifiers.Perfect)]
+    public void Decodes_hit_modifiers(int offset, byte value, HitModifiers expected)
+    {
+        // Variantes del frame real: offset 12 = type, 13 = hitFlags, 15 = lado.
+        var body = Hex(RealCapture.DamageWithExtraBody);
+        body[offset] = value;
+
+        var damage = Assert.IsType<DamageEvent>(Assert.Single(CreateDecoder().Push(Frame(0x3804, body), T0)));
+        Assert.Equal(expected, damage.Modifiers);
+        Assert.Equal(2221, damage.Amount);
+    }
+
+    [Fact]
+    public void Hit_without_extra_block_has_no_side()
+    {
+        var body = Hex(RealCapture.DamageBody);
+        body[3] = 0x04; // sin bloque extra
+
+        var damage = Assert.IsType<DamageEvent>(Assert.Single(CreateDecoder().Push(Frame(0x3804, Concat(body[..13], body[16..])), T0)));
+        Assert.Equal(HitModifiers.None, damage.Modifiers);
+        Assert.Equal(672, damage.Amount);
     }
 
     [Fact]

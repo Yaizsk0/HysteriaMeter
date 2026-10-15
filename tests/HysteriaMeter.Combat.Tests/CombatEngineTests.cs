@@ -77,6 +77,19 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Dot_ticks_add_damage_but_not_hits()
+    {
+        // Punishment en Combat Analysis: 2 golpes y 191.141 de daño, contando el DoT.
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 7, 66_000, HitModifiers.MultiHit | HitModifiers.FrontAttack));
+        engine.Apply(new DamageEvent(At(1), Me, Boss, 7, 66_263, HitModifiers.Critical));
+        engine.Apply(new DamageEvent(At(2), Me, Boss, 7, 58_878, HitModifiers.DamageOverTime));
+
+        var skill = Assert.Single(Assert.Single(engine.CurrentSnapshot()!.Actors).Skills);
+        Assert.Equal((191_141L, 2, 1, 66_263L), (skill.Damage, skill.Hits, skill.Crits, skill.MaxHit));
+    }
+
+    [Fact]
     public void Npc_damage_is_not_ranked()
     {
         var engine = CreateEngine();
