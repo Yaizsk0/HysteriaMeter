@@ -39,6 +39,7 @@ public partial class App : Application
             AppPaths.Database(sp.GetRequiredService<IOptions<MeterSettings>>().Value.DatabasePath)));
         builder.Services.AddSingleton<CaptureRecorder>();
         builder.Services.AddSingleton<CaptureStatus>();
+        builder.Services.AddSingleton<HysteriaMeter.Protocol.Decoding.DecoderStats>();
         builder.Services.AddHostedService<MeterPipeline>();
         builder.Services.AddSingleton(sp => new MeterSession(
             sp.GetRequiredService<CombatEngine>(),
@@ -47,7 +48,8 @@ public partial class App : Application
             UserStore.Load<MeterPreferences>(PreferencesFile) ?? new MeterPreferences(),
             preferences => UserStore.Save(PreferencesFile, preferences),
             sp.GetRequiredService<EncounterRepository>(),
-            sp.GetRequiredService<CaptureStatus>()));
+            sp.GetRequiredService<CaptureStatus>(),
+            sp.GetRequiredService<HysteriaMeter.Protocol.Decoding.DecoderStats>()));
         builder.Services.AddSingleton<OverlayWindows>();
 
         _host = builder.Build();

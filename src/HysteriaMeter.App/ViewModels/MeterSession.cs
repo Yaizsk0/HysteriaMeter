@@ -1,5 +1,6 @@
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.Combat;
+using HysteriaMeter.Protocol.Decoding;
 using HysteriaMeter.Storage;
 
 namespace HysteriaMeter.App.ViewModels;
@@ -19,13 +20,15 @@ public sealed class MeterSession
         MeterPreferences preferences,
         Action<MeterPreferences> save,
         EncounterRepository? history = null,
-        CaptureStatus? status = null)
+        CaptureStatus? status = null,
+        DecoderStats? decoder = null)
     {
         Engine = engine;
         Recorder = recorder;
         SkillNames = skillNames;
         History = history;
         Status = status ?? new CaptureStatus();
+        Decoder = decoder ?? new DecoderStats();
         Preferences = preferences;
         _save = save;
         engine.Scope = preferences.Scope;
@@ -82,6 +85,9 @@ public sealed class MeterSession
     public EncounterRepository? History { get; }
 
     public CaptureStatus Status { get; }
+
+    /// <summary>Contadores del decodificador, para el diagnóstico y el aviso de parche.</summary>
+    public DecoderStats Decoder { get; }
 
     public MeterPreferences Preferences { get; private set; }
 

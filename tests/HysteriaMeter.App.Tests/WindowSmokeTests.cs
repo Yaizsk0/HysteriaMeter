@@ -245,6 +245,25 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Health_check_compares_counted_damage_with_lost_health()
+    {
+        Assert.Null(MeterViewModel.HealthCheck(null, 100));
+        Assert.Null(MeterViewModel.HealthCheck(new Health(1000, 1000), 100));
+        var text = MeterViewModel.HealthCheck(new Health(600, 1000), 400);
+        Assert.NotNull(text);
+        Assert.Contains("100", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Patch_is_suspected_only_with_traffic_and_nothing_known()
+    {
+        Assert.False(MeterViewModel.PatchSuspected(frames: 500, unknown: 500, errors: 0));
+        Assert.True(MeterViewModel.PatchSuspected(frames: 5_000, unknown: 5_000, errors: 0));
+        Assert.False(MeterViewModel.PatchSuspected(frames: 5_000, unknown: 4_000, errors: 3));
+        Assert.True(MeterViewModel.PatchSuspected(frames: 5_000, unknown: 4_800, errors: 60));
+    }
+
+    [Fact]
     public void Demo_encounter_is_consistent()
     {
         var demo = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));
