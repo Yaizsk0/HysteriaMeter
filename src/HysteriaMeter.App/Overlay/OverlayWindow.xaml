@@ -160,6 +160,9 @@
                         <TextBlock Text="HYSTERIA" Margin="8,0,0,0" FontFamily="{StaticResource TitleFont}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource Gold}" VerticalAlignment="Center" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
+                        <!-- Grabando a .pcap -->
+                        <TextBlock Text="● REC" FontSize="10" FontWeight="Bold" Foreground="#E0524A" Margin="0,0,8,0" VerticalAlignment="Center"
+                                   Visibility="{Binding IsRecording, Converter={StaticResource Visible}}" ToolTip="{Binding RecordingHint}" />
                         <!-- Verde mientras hay combate; gris con el último encuentro terminado. -->
                         <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center">
                             <Ellipse.Style>
@@ -301,6 +304,15 @@
                             <TextBlock Text="PELEAS" Style="{StaticResource SettingsHeader}" />
                             <CheckBox Style="{StaticResource Option}" Content="Reiniciar en cada pelea nueva" IsChecked="{Binding SplitEncounters}"
                                       ToolTip="Apagado: el daño se acumula entre peleas hasta que reinicies a mano" />
+
+                            <TextBlock Text="GRABACIÓN" Style="{StaticResource SettingsHeader}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Grabar lo capturado (.pcap)" IsChecked="{Binding IsRecording}"
+                                      ToolTip="Guarda el tráfico del juego para revisar una pelea. Arrancá antes de entrar a la dungeon." />
+                            <DockPanel Margin="0,2,0,0">
+                                <Button DockPanel.Dock="Right" Content="Abrir carpeta" Command="{Binding OpenRecordingsCommand}" Cursor="Hand"
+                                        Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" FontSize="11" Padding="4,0" />
+                                <TextBlock Text="{Binding RecordingHint}" FontSize="11" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            </DockPanel>
 
                             <TextBlock Text="CURACIÓN" Style="{StaticResource SettingsHeader}" />
                             <RadioButton Style="{StaticResource Option}" GroupName="Healing" Content="Junto al daño (columna HPS)" IsChecked="{Binding HealingCombined}" />

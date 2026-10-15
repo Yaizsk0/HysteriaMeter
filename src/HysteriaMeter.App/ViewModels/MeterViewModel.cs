@@ -1,9 +1,12 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Globalization;
 using System.Windows.Media;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.Combat;
 
 namespace HysteriaMeter.App.ViewModels;
@@ -21,14 +24,16 @@ public sealed partial class MeterViewModel : ObservableObject
     private const string NoTarget = "Esperando combate";
 
     private readonly CombatEngine _engine;
+    private readonly CaptureRecorder _recorder;
     private readonly DispatcherTimer _timer;
     private readonly Action<MeterPreferences> _savePreferences;
     private MeterPreferences _preferences;
     private EncounterSnapshot? _lastFinished;
 
-    public MeterViewModel(CombatEngine engine, MeterPreferences preferences, Action<MeterPreferences> savePreferences)
+    public MeterViewModel(CombatEngine engine, CaptureRecorder recorder, MeterPreferences preferences, Action<MeterPreferences> savePreferences)
     {
         _engine = engine;
+        _recorder = recorder;
         _preferences = preferences;
         _savePreferences = savePreferences;
         _engine.Scope = preferences.Scope;
@@ -91,6 +96,35 @@ public sealed partial class MeterViewModel : ObservableObject
             Update(_preferences with { SplitEncounters = value }, nameof(SplitEncounters));
         }
     }
+
+    /// <summary>Graba lo capturado en un .pcap. No se guarda entre sesiones: cada vez arranca apagado.</summary>
+    public bool IsRecording
+    {
+        get => _recorder.CurrentPath is not null;
+        set
+        {
+            if (value == IsRecording)
+            {
+                return;
+            }
+
+            if (value)
+            {
+                _recorder.Start(DateTime.Now);
+            }
+            else
+            {
+                _recorder.Stop();
+            }
+
+            OnPropertyChanged(nameof(IsRecording));
+            OnPropertyChanged(nameof(RecordingHint));
+        }
+    }
+
+    public string RecordingHint => _recorder.CurrentPath is { } path
+        ? $"Grabando en {Path.GetFileName(path)}"
+        : "Para comparar una pelea con Combat Analysis";
 
     public string FontName
     {
@@ -181,6 +215,13 @@ public sealed partial class MeterViewModel : ObservableObject
     public void Stop() => _timer.Stop();
 
     partial void OnTabChanged(MeterTab value) => Refresh();
+
+    [RelayCommand]
+    private static void OpenRecordings()
+    {
+        Directory.CreateDirectory(CaptureRecorder.Folder);
+        Process.Start(new ProcessStartInfo("explorer.exe", $"\"{CaptureRecorder.Folder}\"") { UseShellExecute = true });
+    }
 
     [RelayCommand]
     private void ToggleSettings() => IsSettingsOpen = !IsSettingsOpen;

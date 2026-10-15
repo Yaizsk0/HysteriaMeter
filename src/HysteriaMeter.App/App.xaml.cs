@@ -37,9 +37,11 @@ public partial class App : Application
         }));
         builder.Services.AddSingleton(sp => new EncounterRepository(
             Path.Combine(AppContext.BaseDirectory, sp.GetRequiredService<IOptions<MeterSettings>>().Value.DatabasePath)));
+        builder.Services.AddSingleton<CaptureRecorder>();
         builder.Services.AddHostedService<MeterPipeline>();
         builder.Services.AddSingleton(sp => new MeterViewModel(
             sp.GetRequiredService<CombatEngine>(),
+            sp.GetRequiredService<CaptureRecorder>(),
             UserStore.Load<MeterPreferences>(PreferencesFile) ?? new MeterPreferences(),
             preferences => UserStore.Save(PreferencesFile, preferences)));
         builder.Services.AddSingleton<OverlayWindow>();
