@@ -21,6 +21,9 @@ public enum MeterTab
 }
 
 /// <summary>Refresca el overlay leyendo snapshots del motor cada pocos milisegundos.</summary>
+/// <summary>Una opción del selector de formato de números: "2.04M", "2.0M" o "2.040.321".</summary>
+public sealed record NumberStyleOption(NumberStyle Style, string Example);
+
 public sealed partial class MeterViewModel : ObservableObject
 {
     private const string NoTarget = "Esperando combate";
@@ -47,6 +50,7 @@ public sealed partial class MeterViewModel : ObservableObject
     public MeterViewModel(MeterSession session, MeterTab tab = MeterTab.Damage, bool showHealing = true, bool compact = false)
     {
         _session = session;
+        _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(session.Preferences.RefreshMs), DispatcherPriority.Background, (_, _) => Refresh(), Dispatcher.CurrentDispatcher);
         _engine = session.Engine;
         _recorder = session.Recorder;
         _history = session.History;
@@ -66,6 +70,12 @@ public sealed partial class MeterViewModel : ObservableObject
             {
                 OnPropertyChanged(name);
             }
+
+            _timer.Interval = TimeSpan.FromMilliseconds(Preferences.RefreshMs);
+            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)))
+            {
+                Refresh();
+            }
         };
         _session.ResetRequested += ClearRows;
         _recorder.Changed += _ =>
@@ -73,7 +83,6 @@ public sealed partial class MeterViewModel : ObservableObject
             OnPropertyChanged(nameof(IsRecording));
             OnPropertyChanged(nameof(RecordingHint));
         };
-        _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, (_, _) => Refresh(), Dispatcher.CurrentDispatcher);
     }
 
     private MeterPreferences Preferences => _session.Preferences;
@@ -126,6 +135,28 @@ public sealed partial class MeterViewModel : ObservableObject
 
     /// <summary>Cuánto queda visible el aviso de récord.</summary>
     public static readonly TimeSpan RecordNoticeDuration = TimeSpan.FromSeconds(15);
+
+    /// <summary>Opciones del selector de formato, con un ejemplo de cada una.</summary>
+    public static IReadOnlyList<NumberStyleOption> NumberStyleOptions { get; } =
+        [.. Enum.GetValues<NumberStyle>().Select(style => new NumberStyleOption(style, Numbers.Example(style)))];
+
+    public NumberStyleOption SelectedNumberStyle
+    {
+        get => NumberStyleOptions.First(o => o.Style == Preferences.Numbers);
+        set => Update(Preferences with { Numbers = value.Style }, nameof(SelectedNumberStyle));
+    }
+
+    public int RefreshMs
+    {
+        get => Preferences.RefreshMs;
+        set => Update(Preferences with { RefreshMs = value }, nameof(RefreshMs));
+    }
+
+    public bool ShowSparklines
+    {
+        get => Preferences.Sparklines;
+        set => Update(Preferences with { Sparklines = value }, nameof(ShowSparklines));
+    }
 
     public int RetentionDays
     {
@@ -689,6 +720,21 @@ public sealed partial class MeterViewModel : ObservableObject
         OnPropertyChanged(nameof(EffectiveOpacity));
     }
 
+    /// <summary>
+    /// Tiempo estimado para matar al objetivo al ritmo actual de la party contra él.
+    /// <c>null</c> si no hay daño todavía o si tardaría más de una hora (la estimación no sirve).
+    /// </summary>
+    public static TimeSpan? EstimateTimeToKill(long hp, double partyDpsOnTarget)
+    {
+        if (hp <= 0 || partyDpsOnTarget <= 0)
+        {
+            return null;
+        }
+
+        var seconds = hp / partyDpsOnTarget;
+        return seconds > 3600 ? null : TimeSpan.FromSeconds(Math.Ceiling(seconds));
+    }
+
     private void UpdateTargetHealth(Health? health)
     {
         HasTargetHealth = health is { MaxHp: > 0 };
@@ -717,6 +763,10 @@ public sealed partial class MeterViewModel : ObservableObject
         Title = snapshot.TargetName ?? "Encuentro";
         Elapsed = snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
         UpdateTargetHealth(snapshot.TargetHealth);
+        if (IsLive && HasTargetHealth && EstimateTimeToKill(snapshot.TargetHealth!.Hp, snapshot.Actors.Sum(a => a.MainTargetDps)) is { } ttk)
+        {
+            TargetHealthText += $" · muere en {ttk.ToString(@"m\:ss", CultureInfo.InvariantCulture)}";
+        }
 
         Func<ActorSnapshot, long> metric = Tab == MeterTab.Healing ? a => a.Healing : a => a.Damage;
         var combined = ShowHealingColumn;
@@ -743,6 +793,7 @@ public sealed partial class MeterViewModel : ObservableObject
             }
 
             Actors[i].Update(i + 1, rows[i], Tab, top, total, snapshot.Duration);
+            Actors[i].Spark = Preferences.Sparklines && Tab == MeterTab.Damage ? ActorRowViewModel.Sparkline(rows[i].Timeline) : null;
             Actors[i].HealingPerSecond = combined && rows[i].Healing > 0
                 ? ActorRowViewModel.Compact(rows[i].Healing / snapshot.Duration.TotalSeconds)
                 : "–";

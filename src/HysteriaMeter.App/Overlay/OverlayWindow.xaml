@@ -349,6 +349,9 @@
                                             <ScaleTransform ScaleX="{Binding Bar}" />
                                         </Rectangle.RenderTransform>
                                     </Rectangle>
+                                    <!-- DPS de los últimos 30 s, tenue detrás del texto -->
+                                    <Polyline Points="{Binding Spark}" Stretch="Fill" Stroke="{Binding Accent}" StrokeThickness="1" Opacity="0.35"
+                                              Margin="0,5" IsHitTestVisible="False" />
                                     <Grid Margin="8,0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="18" />
@@ -499,6 +502,26 @@
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding}" FontFamily="{Binding}" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock Text="NÚMEROS" Style="{StaticResource SettingsHeader}" />
+                            <ListBox ItemsSource="{x:Static vm:MeterViewModel.NumberStyleOptions}" SelectedItem="{Binding SelectedNumberStyle}" Style="{StaticResource Chips}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Example}" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <CheckBox Style="{StaticResource Option}" Content="Línea de DPS de los últimos 30 s en cada fila" IsChecked="{Binding ShowSparklines}" />
+
+                            <TextBlock Text="REFRESCO" Style="{StaticResource SettingsHeader}" />
+                            <ListBox ItemsSource="{x:Static vm:MeterPreferences.RefreshOptions}" SelectedItem="{Binding RefreshMs}" Style="{StaticResource Chips}"
+                                     ToolTip="Más rápido se ve más fluido; más lento usa menos CPU">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding StringFormat='{}{0} ms'}" />
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
