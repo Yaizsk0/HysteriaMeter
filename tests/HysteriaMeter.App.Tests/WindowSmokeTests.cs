@@ -40,6 +40,13 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Rolling_dps_averages_the_last_seconds()
+    {
+        Assert.Equal([2d, 2, 4], ActorDetailViewModel.RollingDps([10, 0, 10], 5));
+        Assert.Equal([5d, 5, 5], ActorDetailViewModel.RollingDps([10, 0, 10], 2));
+    }
+
+    [Fact]
     public void Summary_lists_players_by_dps_for_the_game_chat()
     {
         var start = DateTimeOffset.UnixEpoch;
@@ -57,6 +64,7 @@ public sealed class WindowSmokeTests
 
     private static ActorSnapshot Actor() => new(
         Id: 7, Name: "Tester", ClassId: null, IsLocalPlayer: true, Damage: 3000, Dps: 300, Share: 1, Hits: 3, Crits: 1, MaxHit: 1500, Healing: 0,
+        Timeline: [1000, 0, 500, 1500, 0, 0],
         Skills:
         [
             new SkillSnapshot(100, 2000, 2, 1, 1500, 0.667),

@@ -52,7 +52,7 @@ public sealed class EncounterRepositoryTests : IDisposable
             [
                 new ActorSnapshot(1879, "Griffith", null, true, 654_021, 23_659, 1, 98, 51, 90_000, 1_200,
                     [new SkillSnapshot(10, 654_021, 98, 51, 90_000, 1, counts, 70_000)],
-                    counts, 648_468, 23_458, 70_000, 24_000, Overkill: 3_500),
+                    counts, 648_468, 23_458, 70_000, 24_000, Overkill: 3_500, Timeline: [100, 0, 250]),
             ],
             TimeSpan.FromSeconds(27.64));
         await repository.SaveAsync(snapshot);
@@ -64,7 +64,8 @@ public sealed class EncounterRepositoryTests : IDisposable
         Assert.Equal(snapshot.Duration, loaded.Duration);
         Assert.Equal(TimeSpan.FromSeconds(27.64), loaded.MainTargetDuration);
         var actor = Assert.Single(loaded.Actors);
-        Assert.Equal(snapshot.Actors[0] with { Skills = [] }, actor with { Skills = [] });
+        Assert.Equal(snapshot.Actors[0] with { Skills = [], Timeline = null }, actor with { Skills = [], Timeline = null });
+        Assert.Equal(snapshot.Actors[0].Timeline, actor.Timeline);
         Assert.Equal(snapshot.Actors[0].Skills, actor.Skills);
         Assert.Null(await repository.LoadAsync(Guid.NewGuid().ToString()));
     }

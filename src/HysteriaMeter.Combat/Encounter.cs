@@ -68,6 +68,19 @@ internal sealed class ActorStats
 
     public Dictionary<uint, SkillStats> Skills { get; } = [];
 
+    /// <summary>Daño en cada segundo desde el inicio del encuentro (índice = segundo).</summary>
+    public List<long> DamageBySecond { get; } = [];
+
+    public void AddToTimeline(int second, long amount)
+    {
+        while (DamageBySecond.Count <= second)
+        {
+            DamageBySecond.Add(0);
+        }
+
+        DamageBySecond[second] += amount;
+    }
+
     public Dictionary<ulong, long> DamageByTarget { get; } = [];
 
     /// <summary>Golpes por modificador separados por objetivo: Combat Analysis cuenta solo los del objetivo elegido.</summary>

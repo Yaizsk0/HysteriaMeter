@@ -126,6 +126,18 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Timeline_keeps_damage_per_second_since_the_start()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(0.5), Me, Boss, 1, 500, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(3), Me, Boss, 1, 2000, HitModifiers.None));
+
+        var me = Assert.Single(engine.CurrentSnapshot()!.Actors);
+        Assert.Equal([1500L, 0, 0, 2000], me.Timeline);
+    }
+
+    [Fact]
     public void Npc_damage_is_not_ranked()
     {
         var engine = CreateEngine();

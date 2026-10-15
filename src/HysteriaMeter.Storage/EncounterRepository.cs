@@ -49,6 +49,7 @@ public sealed class EncounterRepository(string databasePath)
         await AddColumnIfMissingAsync(connection, "encounter_actors", "active_dps", "REAL NOT NULL DEFAULT 0").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounter_actors", "counts_json", "TEXT").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounter_actors", "overkill", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
+        await AddColumnIfMissingAsync(connection, "encounter_actors", "timeline_json", "TEXT").ConfigureAwait(false);
     }
 
     private static async Task AddColumnIfMissingAsync(SqliteConnection connection, string table, string column, string definition)
@@ -86,9 +87,9 @@ public sealed class EncounterRepository(string databasePath)
             """
             INSERT OR REPLACE INTO encounter_actors
                 (encounter_id, actor_id, name, class_id, is_local, damage, dps, hits, crits, max_hit, healing, skills_json,
-                 main_target_damage, main_target_dps, periodic_damage, active_dps, counts_json, overkill)
+                 main_target_damage, main_target_dps, periodic_damage, active_dps, counts_json, overkill, timeline_json)
             VALUES (@EncounterId, @ActorId, @Name, @ClassId, @IsLocal, @Damage, @Dps, @Hits, @Crits, @MaxHit, @Healing, @SkillsJson,
-                    @MainTargetDamage, @MainTargetDps, @PeriodicDamage, @ActiveDps, @CountsJson, @Overkill)
+                    @MainTargetDamage, @MainTargetDps, @PeriodicDamage, @ActiveDps, @CountsJson, @Overkill, @TimelineJson)
             """,
             encounter.Actors.Select(a => new
             {
@@ -110,6 +111,7 @@ public sealed class EncounterRepository(string databasePath)
                 a.ActiveDps,
                 CountsJson = a.Counts is null ? null : JsonSerializer.Serialize(a.Counts),
                 a.Overkill,
+                TimelineJson = a.Timeline is null ? null : JsonSerializer.Serialize(a.Timeline),
             }),
             transaction).ConfigureAwait(false);
 
@@ -150,7 +152,8 @@ public sealed class EncounterRepository(string databasePath)
             SELECT actor_id AS ActorId, name AS Name, class_id AS ClassId, is_local AS IsLocal, damage AS Damage, dps AS Dps,
                    hits AS Hits, crits AS Crits, max_hit AS MaxHit, healing AS Healing, skills_json AS SkillsJson,
                    main_target_damage AS MainTargetDamage, main_target_dps AS MainTargetDps, periodic_damage AS PeriodicDamage,
-                   active_dps AS ActiveDps, counts_json AS CountsJson, overkill AS Overkill
+                   active_dps AS ActiveDps, counts_json AS CountsJson, overkill AS Overkill,
+                   timeline_json AS TimelineJson
             FROM encounter_actors WHERE encounter_id = @id ORDER BY damage DESC
             """,
             new { id }).ConfigureAwait(false);
@@ -181,7 +184,8 @@ public sealed class EncounterRepository(string databasePath)
                 a.MainTargetDps,
                 a.PeriodicDamage,
                 a.ActiveDps,
-                a.Overkill))],
+                a.Overkill,
+                a.TimelineJson is null ? null : JsonSerializer.Deserialize<long[]>(a.TimelineJson)))],
             encounter.MainTargetSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null);
     }
 
@@ -203,4 +207,4 @@ internal sealed record EncounterDetailRow(string Id, string StartedAt, string En
 
 internal sealed record ActorRow(
     long ActorId, string Name, long? ClassId, long IsLocal, long Damage, double Dps, long Hits, long Crits, long MaxHit, long Healing,
-    string SkillsJson, long MainTargetDamage, double MainTargetDps, long PeriodicDamage, double ActiveDps, string? CountsJson, long Overkill);
+    string SkillsJson, long MainTargetDamage, double MainTargetDps, long PeriodicDamage, double ActiveDps, string? CountsJson, long Overkill, string? TimelineJson);

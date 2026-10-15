@@ -37,7 +37,9 @@ public sealed record ActorSnapshot(
     long PeriodicDamage = 0,
     // DPS sin tiempo muerto: los huecos de más de 3 s entre golpes cuentan como 3 s.
     double ActiveDps = 0,
-    long Overkill = 0)
+    long Overkill = 0,
+    // Daño por segundo desde el inicio del encuentro, para el gráfico de DPS en el tiempo.
+    IReadOnlyList<long>? Timeline = null)
 {
     public double CritRate => Hits == 0 ? 0 : (double)Crits / Hits;
 }
