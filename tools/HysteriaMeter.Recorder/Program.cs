@@ -190,7 +190,7 @@ static async Task<int> ReplayAsync(string input, Options options)
             var c = actor.Counts ?? HitCounts.Empty;
             Console.WriteLine($"    {actor.Name,-20} {actor.Damage,10:N0}  {actor.Dps,8:N0} dps  {actor.Share,6:P0}  {actor.Hits,4} golpes"
                 + $"  | objetivo {actor.MainTargetDamage,10:N0} {actor.MainTargetDps,8:N0} dps"
-                + $"  | CRI {c.Critical} PERF {c.Perfect} DOUB {c.DoubleHit} FRNT {c.Front} BACK {c.Back} MULT {c.MultiHit}");
+                + $"  | golpes {c.Hits} CRI {c.Critical} PERF {c.Perfect} DOUB {c.DoubleHit} FRNT {c.Front} BACK {c.Back} MULT {c.MultiHit}");
         }
     }
 

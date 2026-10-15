@@ -28,6 +28,7 @@ public sealed record ActorSnapshot(
     long MaxHit,
     long Healing,
     IReadOnlyList<SkillSnapshot> Skills,
+    // Golpes por modificador contra el objetivo principal, como Combat Analysis.
     HitCounts? Counts = null,
     long MainTargetDamage = 0,
     double MainTargetDps = 0)

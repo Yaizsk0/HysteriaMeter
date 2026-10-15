@@ -105,7 +105,7 @@ public class CombatEngineTests
         var me = Assert.Single(snapshot.Actors);
         Assert.Equal(TimeSpan.FromSeconds(5), snapshot.MainTargetDuration);
         Assert.Equal((21_000L, 20_000L, 4_000d), (me.Damage, me.MainTargetDamage, me.MainTargetDps));
-        Assert.Equal(new HitCounts(4, 1, 0, 0, 1, 1, 1), me.Counts);
+        Assert.Equal(new HitCounts(2, 1, 0, 0, 1, 1, 1), me.Counts);
     }
 
     [Fact]
