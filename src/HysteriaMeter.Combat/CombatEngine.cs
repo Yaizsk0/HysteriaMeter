@@ -239,7 +239,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
             encounter.Id,
             encounter.Start,
             encounter.LastActivity,
-            target is { } t ? Entities.DisplayName(t) : null,
+            // Los monstruos no traen nombre en el paquete: sin nombre conocido queda null, no "#entidad".
+            target is { } t ? Entities.Profile(t).Name : null,
             encounter.TargetKilled,
             total,
             actors,
