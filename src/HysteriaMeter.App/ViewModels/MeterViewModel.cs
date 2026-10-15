@@ -364,6 +364,50 @@ public sealed partial class MeterViewModel : ObservableObject
         set => Update(Preferences with { IdleSeconds = value }, nameof(IdleSeconds));
     }
 
+    public int PracticeSeconds
+    {
+        get => Preferences.PracticeSeconds;
+        set => Update(Preferences with { PracticeSeconds = value }, nameof(PracticeSeconds));
+    }
+
+    // Pelea cuya prueba de DPS ya terminó, para no volver a congelarla al salir del resultado.
+    private Guid? _practiceDoneId;
+
+    /// <summary>
+    /// Prueba de DPS: con la pelea en vivo, cuenta hacia atrás y al llegar al tiempo la congela como resultado.
+    /// Devuelve <c>true</c> si la congeló.
+    /// </summary>
+    private bool CheckPractice(EncounterSnapshot? current)
+    {
+        var limit = Preferences.PracticeSeconds;
+        if (limit <= 0 || current is null || _pinned is not null || IsSessionView || current.Id == _practiceDoneId)
+        {
+            return false;
+        }
+
+        if (PracticeRemaining(current.End - current.Start, limit) is { } remaining)
+        {
+            StatusText = $"Prueba de DPS · quedan {remaining.ToString(@"m\:ss", CultureInfo.InvariantCulture)}";
+            return false;
+        }
+
+        _practiceDoneId = current.Id;
+        _pinned = current;
+        _pinnedId = null;
+        _pinnedAt = DateTimeOffset.Now;
+        CanEditNote = false;
+        IsViewingHistory = true;
+        HistoryLabel = $"PRUEBA DE {TimeSpan.FromSeconds(limit).ToString(@"m\:ss", CultureInfo.InvariantCulture)} · TERMINADA";
+        return true;
+    }
+
+    /// <summary>Lo que falta para terminar la prueba, o <c>null</c> si ya terminó.</summary>
+    public static TimeSpan? PracticeRemaining(TimeSpan elapsed, int limitSeconds)
+    {
+        var remaining = TimeSpan.FromSeconds(limitSeconds) - elapsed;
+        return remaining > TimeSpan.Zero ? TimeSpan.FromSeconds(Math.Ceiling(remaining.TotalSeconds)) : null;
+    }
+
     public bool AutoBackToLive
     {
         get => Preferences.AutoBackToLive;
@@ -716,7 +760,7 @@ public sealed partial class MeterViewModel : ObservableObject
 
         try
         {
-            _allHistory = [.. (await _history.ListRecentAsync(200).ConfigureAwait(true)).Select(HistoryItem.From)];
+            _allHistory = [.. HistoryItem.WithComparisons([.. (await _history.ListRecentAsync(200).ConfigureAwait(true)).Select(HistoryItem.From)])];
         }
         catch (DbException)
         {
@@ -1002,8 +1046,9 @@ public sealed partial class MeterViewModel : ObservableObject
             return;
         }
 
-        IsLive = _pinned is null && current is not null;
         UpdateStatus(current is not null);
+        CheckPractice(current);
+        IsLive = _pinned is null && current is not null;
         if (_pinned is null && IsSessionView)
         {
             current = _engine.SessionSnapshot();

@@ -14,8 +14,31 @@ public sealed record HistoryItem(
     string? Note = null,
     string MyDps = "",
     int Attempt = 0,
-    bool IsRecord = false)
+    bool IsRecord = false,
+    double? LocalDps = null,
+    string VsBest = "")
 {
+    /// <summary>
+    /// Compara mi DPS de cada pelea con mi mejor DPS contra el mismo objetivo dentro de la lista:
+    /// "−12% vs récord" o "récord" en la mejor. Solo cuando hay más de una pelea contra ese objetivo.
+    /// </summary>
+    public static IReadOnlyList<HistoryItem> WithComparisons(IReadOnlyList<HistoryItem> items)
+    {
+        var best = items
+            .Where(i => i.LocalDps is > 0 && i.Target != "Encuentro")
+            .GroupBy(i => i.Target)
+            .Where(g => g.Count() > 1)
+            .ToDictionary(g => g.Key, g => g.Max(i => i.LocalDps!.Value));
+
+        return [.. items.Select(i => i.LocalDps is { } dps && dps > 0 && best.TryGetValue(i.Target, out var top)
+            ? i with { VsBest = Compare(dps, top) }
+            : i)];
+    }
+
+    /// <summary>"récord" si es el mejor; si no, cuánto le faltó en porcentaje.</summary>
+    public static string Compare(double dps, double best) =>
+        dps >= best ? "· mejor intento" : $"· {((dps / best) - 1).ToString("+0%;−0%", CultureInfo.CurrentCulture)} vs mejor";
+
     public string Result => Killed ? "· derrotado" : string.Empty;
 
     /// <summary>"intento 3" desde la segunda vez contra el mismo objetivo.</summary>
@@ -45,6 +68,7 @@ public sealed record HistoryItem(
             summary.Note,
             summary.LocalDps is { } dps ? $"mi DPS {ActorRowViewModel.Compact(dps)}" : string.Empty,
             summary.Attempt,
-            summary.IsRecord && summary.Attempt > 1);
+            summary.IsRecord && summary.Attempt > 1,
+            summary.LocalDps);
     }
 }
