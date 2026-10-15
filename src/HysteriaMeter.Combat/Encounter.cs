@@ -28,6 +28,9 @@ internal sealed class Encounter(DateTimeOffset start)
 
     public List<DeathRecap> Deaths { get; } = [];
 
+    /// <summary>Momentos marcados con el atajo, en segundos desde el inicio.</summary>
+    public List<int> Marks { get; } = [];
+
     public void AddLog(CombatLogEntry entry)
     {
         if (Log.Count >= LogCapacity)

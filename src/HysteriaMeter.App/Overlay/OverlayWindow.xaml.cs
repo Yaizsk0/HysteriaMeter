@@ -16,6 +16,7 @@ public partial class OverlayWindow : Window
     private const int ToggleClickThroughHotKey = 1;
     private const int ResetHotKey = 2;
     private const int ToggleVisibilityHotKey = 3;
+    private const int MarkHotKey = 4;
     private const double MinZoom = 0.7;
     private const double MaxZoom = 2.0;
     private const double ZoomStep = 0.1;
@@ -138,17 +139,83 @@ public partial class OverlayWindow : Window
         }
 
         HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WndProc);
-        OverlayInterop.RegisterHotKey(this, ToggleClickThroughHotKey, OverlayInterop.ModControl | OverlayInterop.ModShift, Key.L);
-        OverlayInterop.RegisterHotKey(this, ResetHotKey, OverlayInterop.ModControl | OverlayInterop.ModShift, Key.R);
-        OverlayInterop.RegisterHotKey(this, ToggleVisibilityHotKey, OverlayInterop.ModControl | OverlayInterop.ModShift, Key.H);
+        RegisterHotKeys();
+        _viewModel.PropertyChanged += OnHotkeysChanged;
     }
 
     protected override void OnClosed(EventArgs e)
     {
-        OverlayInterop.UnregisterHotKey(this, ToggleClickThroughHotKey);
-        OverlayInterop.UnregisterHotKey(this, ResetHotKey);
-        OverlayInterop.UnregisterHotKey(this, ToggleVisibilityHotKey);
+        _viewModel.PropertyChanged -= OnHotkeysChanged;
+        foreach (var (id, _) in HotKeys())
+        {
+            OverlayInterop.UnregisterHotKey(this, id);
+        }
+
         base.OnClosed(e);
+    }
+
+    private (int Id, string Text)[] HotKeys() =>
+    [
+        (ToggleClickThroughHotKey, _viewModel.HotkeyClickThrough),
+        (ResetHotKey, _viewModel.HotkeyReset),
+        (ToggleVisibilityHotKey, _viewModel.HotkeyVisibility),
+        (MarkHotKey, _viewModel.HotkeyMark),
+    ];
+
+    private void OnHotkeysChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(MeterViewModel.HotkeyClickThrough) or nameof(MeterViewModel.HotkeyReset)
+            or nameof(MeterViewModel.HotkeyVisibility) or nameof(MeterViewModel.HotkeyMark) or "Preferences" or "" or null)
+        {
+            RegisterHotKeys();
+        }
+    }
+
+    /// <summary>(Re)registra los atajos globales y avisa cuáles ya usa otro programa.</summary>
+    private void RegisterHotKeys()
+    {
+        var taken = new List<string>();
+        foreach (var (id, text) in HotKeys())
+        {
+            OverlayInterop.UnregisterHotKey(this, id);
+            // ModifierKeys (Alt=1, Control=2, Shift=4) coincide con los MOD_* de Win32.
+            if (HotkeyGesture.Parse(text) is { } gesture && !OverlayInterop.RegisterHotKey(this, id, (uint)gesture.Modifiers, gesture.Key))
+            {
+                taken.Add(gesture.ToString());
+            }
+        }
+
+        if (taken.Count > 0)
+        {
+            _viewModel.HotkeyMessage = $"{string.Join(", ", taken)}: lo usa otro programa, elegí otra combinación";
+        }
+    }
+
+    /// <summary>Captura la combinación apretada en la caja del atajo; Borrar o Supr lo saca.</summary>
+    private void OnHotkeyKeyDown(object sender, KeyEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.TextBox box)
+        {
+            return;
+        }
+
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key is Key.Tab or Key.Escape)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        string? text = key is Key.Back or Key.Delete && Keyboard.Modifiers == ModifierKeys.None
+            ? string.Empty
+            : HotkeyGesture.From(Keyboard.Modifiers, key)?.ToString();
+        if (text is null)
+        {
+            return;
+        }
+
+        box.Text = text;
+        box.GetBindingExpression(System.Windows.Controls.TextBox.TextProperty)?.UpdateSource();
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -166,6 +233,10 @@ public partial class OverlayWindow : Window
                 break;
             case ResetHotKey:
                 _viewModel.ResetCommand.Execute(null);
+                handled = true;
+                break;
+            case MarkHotKey:
+                _viewModel.MarkMomentCommand.Execute(null);
                 handled = true;
                 break;
             case ToggleVisibilityHotKey:

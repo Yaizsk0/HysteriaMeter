@@ -47,6 +47,19 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Marks_moments_of_the_current_fight()
+    {
+        var engine = CreateEngine();
+        Assert.Null(engine.Mark(At(0)));
+
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 10, 1000, HitModifiers.None));
+        Assert.Equal(42, engine.Mark(At(42.7)));
+        Assert.Equal(0, engine.Mark(At(-3)));
+
+        Assert.Equal([42, 0], engine.CurrentSnapshot()!.Marks!);
+    }
+
+    [Fact]
     public void Computes_dps_and_share_per_actor()
     {
         var engine = CreateEngine();

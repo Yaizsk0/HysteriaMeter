@@ -15,8 +15,6 @@ internal static partial class OverlayInterop
     private const int WsExToolWindow = 0x00000080;
     private const int WsExLayered = 0x00080000;
 
-    public const uint ModControl = 0x0002;
-    public const uint ModShift = 0x0004;
     public const uint ModNoRepeat = 0x4000;
 
     public static void SetClickThrough(Window window, bool enabled)

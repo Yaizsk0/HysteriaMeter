@@ -16,7 +16,9 @@ public sealed record EncounterSnapshot(
     IReadOnlyList<DeathRecap>? Deaths = null,
     // ID de plantilla del objetivo principal (para ponerle nombre en data/npcs.json) y si la tabla lo marca como boss.
     uint? TargetNpcId = null,
-    bool TargetIsBoss = false)
+    bool TargetIsBoss = false,
+    // Momentos marcados por el jugador con el atajo, en segundos desde el inicio.
+    IReadOnlyList<int>? Marks = null)
 {
     /// <summary>Duración mínima de 1 s para que un único golpe no dé un DPS absurdo.</summary>
     public TimeSpan Duration => TimeSpan.FromTicks(Math.Max((End - Start).Ticks, TimeSpan.TicksPerSecond));
