@@ -53,6 +53,42 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial string Breakdown { get; set; } = string.Empty;
 
+    /// <summary>DPS de los últimos segundos como línea tenue detrás de la fila; <c>null</c> sin datos o apagado.</summary>
+    [ObservableProperty]
+    public partial PointCollection? Spark { get; set; }
+
+    /// <summary>Segundos que muestra la línea de cada fila.</summary>
+    public const int SparkSeconds = 30;
+
+    /// <summary>
+    /// Puntos de la línea de DPS: promedio de 3 s de los últimos <see cref="SparkSeconds"/> segundos, con el máximo arriba.
+    /// La vista la estira al ancho de la fila.
+    /// </summary>
+    public static PointCollection? Sparkline(IReadOnlyList<long>? timeline)
+    {
+        if (timeline is not { Count: >= 3 })
+        {
+            return null;
+        }
+
+        var dps = ActorDetailViewModel.RollingDps(timeline, 3);
+        var recent = dps.Skip(Math.Max(0, dps.Count - SparkSeconds)).ToList();
+        var peak = recent.Max();
+        if (peak <= 0)
+        {
+            return null;
+        }
+
+        var points = new PointCollection(recent.Count);
+        for (var i = 0; i < recent.Count; i++)
+        {
+            points.Add(new System.Windows.Point(i, peak - recent[i]));
+        }
+
+        points.Freeze();
+        return points;
+    }
+
     /// <summary>Largo de la barra: proporción respecto del primero (0..1).</summary>
     [ObservableProperty]
     public partial double Bar { get; set; }
@@ -100,11 +136,5 @@ public sealed partial class ActorRowViewModel : ObservableObject
             $"Overkill: {Compact(actor.Overkill)} (daño que pasó la vida que le quedaba al objetivo)");
     }
 
-    internal static string Compact(double value) => value switch
-    {
-        >= 1_000_000_000 => (value / 1_000_000_000).ToString("0.00", CultureInfo.CurrentCulture) + "B",
-        >= 1_000_000 => (value / 1_000_000).ToString("0.00", CultureInfo.CurrentCulture) + "M",
-        >= 1_000 => (value / 1_000).ToString("0.0", CultureInfo.CurrentCulture) + "k",
-        _ => value.ToString("N0", CultureInfo.CurrentCulture),
-    };
+    internal static string Compact(double value) => Numbers.Format(value);
 }

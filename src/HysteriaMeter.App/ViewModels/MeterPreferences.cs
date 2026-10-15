@@ -17,6 +17,16 @@ public sealed record MeterPreferences
 
     public int RetentionDays { get; init; }
 
+    public NumberStyle Numbers { get; init; } = NumberStyle.Compact;
+
+    /// <summary>Cada cuánto se redibuja el overlay, en milisegundos.</summary>
+    public static IReadOnlyList<int> RefreshOptions { get; } = [100, 250, 500, 1000];
+
+    public int RefreshMs { get; init; } = 250;
+
+    /// <summary>Línea de DPS de los últimos 30 s detrás de cada fila.</summary>
+    public bool Sparklines { get; init; } = true;
+
     public double Opacity { get; init; } = 1.0;
 
     /// <summary>Opaco del todo mientras el mouse está encima, aunque la opacidad sea baja.</summary>

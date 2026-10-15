@@ -30,6 +30,7 @@ public sealed class MeterSession
         _save = save;
         engine.Scope = preferences.Scope;
         engine.SplitEncounters = preferences.SplitEncounters;
+        ViewModels.Numbers.Style = preferences.Numbers;
     }
 
     public CombatEngine Engine { get; }
@@ -53,6 +54,7 @@ public sealed class MeterSession
     public void Update(MeterPreferences preferences, params string[] changed)
     {
         Preferences = preferences;
+        ViewModels.Numbers.Style = preferences.Numbers;
         _save(preferences);
         PreferencesChanged?.Invoke(changed);
     }

@@ -47,6 +47,8 @@ Doble clic en el encabezado alterna el modo compacto (solo filas y reloj). El ov
 
 El historial (botón del reloj) se puede buscar por boss o por nota y filtrar por derrotados. Cada pelea muestra tu DPS, el número de intento contra ese boss y una ★ si es tu récord; al batir un récord aparece un aviso dorado. Al abrir una pelea guardada se le puede escribir una nota o borrarla. En configuración se elige cuánto guardar: los bosses derrotados y las peleas con nota no se borran nunca.
 
+Con la vida del boss a la vista, el overlay estima en cuánto muere al ritmo actual de la party ("muere en 0:42"). Cada fila tiene detrás una línea tenue con el DPS de los últimos 30 segundos. En configuración se elige el formato de los números (2.04M, 2.0M o 2.040.321) y cada cuánto se refresca el overlay.
+
 Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: los nombres se cargan a mano en `data/skills.json`.
 
 Para grabar una pelea desde el overlay: engranaje → GRABACIÓN → "Grabar lo capturado (.pcap)". Mientras graba aparece `● REC` arriba; los archivos quedan en `%LOCALAPPDATA%\HysteriaMeter\Grabaciones` ("Abrir carpeta"). Esas grabaciones tienen nombres de personajes: no se suben al repo.

@@ -118,6 +118,42 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Time_to_kill_uses_the_party_dps_on_the_target()
+    {
+        Assert.Equal(TimeSpan.FromSeconds(42), MeterViewModel.EstimateTimeToKill(420_000, 10_000));
+        Assert.Equal(TimeSpan.FromSeconds(43), MeterViewModel.EstimateTimeToKill(420_001, 10_000));
+        Assert.Null(MeterViewModel.EstimateTimeToKill(420_000, 0));
+        Assert.Null(MeterViewModel.EstimateTimeToKill(0, 10_000));
+        Assert.Null(MeterViewModel.EstimateTimeToKill(100_000_000, 10));
+    }
+
+    [Fact]
+    public void Numbers_follow_the_chosen_style()
+    {
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        Assert.Equal("2.04M", Numbers.Format(2_040_321, NumberStyle.Compact, culture));
+        Assert.Equal("2.0M", Numbers.Format(2_040_321, NumberStyle.Brief, culture));
+        Assert.Equal("2,040,321", Numbers.Format(2_040_321, NumberStyle.Full, culture));
+        Assert.Equal("12k", Numbers.Format(11_900, NumberStyle.Brief, culture));
+        Assert.Equal("950", Numbers.Format(950, NumberStyle.Compact, culture));
+    }
+
+    [Fact]
+    public void Sparkline_keeps_the_last_30_seconds()
+    {
+        Assert.Null(ActorRowViewModel.Sparkline(null));
+        Assert.Null(ActorRowViewModel.Sparkline([0, 0, 0, 0]));
+
+        RunOnSta(() =>
+        {
+            var points = ActorRowViewModel.Sparkline([.. Enumerable.Range(0, 50).Select(i => (long)i * 100)]);
+            Assert.NotNull(points);
+            Assert.Equal(ActorRowViewModel.SparkSeconds, points.Count);
+            Assert.Equal(0, points[^1].Y); // el último segundo es el pico: arriba de todo
+        });
+    }
+
+    [Fact]
     public void Demo_encounter_is_consistent()
     {
         var demo = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));
