@@ -146,6 +146,9 @@
                         <Button Style="{StaticResource IconButton}" Command="{Binding ResetCommand}" ToolTip="Reiniciar encuentro">
                             <Path Style="{StaticResource Icon}" Data="M3,12 A9,9 0 1 0 6,5.3 L3,8 M3,3 V8 H8" />
                         </Button>
+                        <Button Style="{StaticResource IconButton}" Command="{Binding CopySummaryCommand}" ToolTip="Copiar resumen (para pegar en el chat)">
+                            <Path Style="{StaticResource Icon}" Data="M9,9 H20 V20 H9 Z M5,15 H4 V4 H15 V5" />
+                        </Button>
                         <Button Style="{StaticResource IconButton}" Command="{Binding ToggleHistoryCommand}" ToolTip="Historial de peleas">
                             <Path Style="{StaticResource Icon}" Data="M12,3 A9,9 0 1 1 3,12 M3,12 A9,9 0 0 1 12,3 M12,7 V12 L15.5,14" />
                         </Button>
