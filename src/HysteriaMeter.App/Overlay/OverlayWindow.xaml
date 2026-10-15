@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MeterViewModel}"
         Title="Hysteria Meter"
-        Width="356" SizeToContent="Height" MinHeight="60"
+        Width="356" MinWidth="260" MaxWidth="900" SizeToContent="Height" MinHeight="60"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="NoResize" ShowInTaskbar="True"
         FontFamily="{StaticResource BodyFont}" FontSize="13" Foreground="{StaticResource Text}"
@@ -88,7 +88,11 @@
     </Window.Resources>
 
     <!-- Margen para que entren las esquinas doradas, que sobresalen 2 px del marco. -->
-    <Grid Margin="2">
+    <!-- Ctrl + rueda del mouse cambia el zoom (escala de todo el overlay). -->
+    <Grid Margin="2" PreviewMouseWheel="OnPreviewMouseWheel">
+        <Grid.LayoutTransform>
+            <ScaleTransform x:Name="Zoom" ScaleX="1" ScaleY="1" />
+        </Grid.LayoutTransform>
         <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource GoldDim}" BorderThickness="1" CornerRadius="2">
             <StackPanel>
                 <!-- Encabezado: se arrastra la ventana desde acá -->
@@ -228,6 +232,18 @@
                 </Border>
             </StackPanel>
         </Border>
+
+        <!-- Agarradera para cambiar el ancho; el alto se ajusta solo a la cantidad de filas. -->
+        <Thumb HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="14" Height="14" Margin="0,0,1,1"
+               Cursor="SizeWE" DragDelta="OnResizeDragDelta" ToolTip="Arrastrá para cambiar el ancho · Ctrl + rueda para el zoom">
+            <Thumb.Template>
+                <ControlTemplate TargetType="Thumb">
+                    <Grid Background="Transparent">
+                        <Path Data="M13,3 L3,13 M13,8 L8,13 M13,12 L12,13" Stroke="{StaticResource GoldDim}" StrokeThickness="1.2" />
+                    </Grid>
+                </ControlTemplate>
+            </Thumb.Template>
+        </Thumb>
 
         <!-- Esquinas doradas -->
         <Border Style="{StaticResource Corner}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-2,-2,0,0" BorderThickness="2,2,0,0" />
