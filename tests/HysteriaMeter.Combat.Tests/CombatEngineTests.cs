@@ -87,6 +87,7 @@ public class CombatEngineTests
 
         var skill = Assert.Single(Assert.Single(engine.CurrentSnapshot()!.Actors).Skills);
         Assert.Equal((191_141L, 2, 1, 66_263L), (skill.Damage, skill.Hits, skill.Crits, skill.MaxHit));
+        Assert.Equal((132_263L, 58_878L), (skill.DirectDamage, skill.PeriodicDamage));
     }
 
     [Fact]
@@ -106,6 +107,20 @@ public class CombatEngineTests
         Assert.Equal(TimeSpan.FromSeconds(5), snapshot.MainTargetDuration);
         Assert.Equal((21_000L, 20_000L, 4_000d), (me.Damage, me.MainTargetDamage, me.MainTargetDps));
         Assert.Equal(new HitCounts(2, 1, 0, 0, 1, 1, 1), me.Counts);
+    }
+
+    [Fact]
+    public void Active_dps_caps_idle_gaps()
+    {
+        // Golpes en 0, 1 y 7 s: tiempo activo = 1 + 3 (el hueco de 6 s cuenta como 3).
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), Me, Boss, 1, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(7), Me, Boss, 1, 2000, HitModifiers.None));
+
+        var me = Assert.Single(engine.CurrentSnapshot()!.Actors);
+        Assert.Equal(1000d, me.ActiveDps);
+        Assert.Equal(4000d / 7, me.Dps, 3);
     }
 
     [Fact]

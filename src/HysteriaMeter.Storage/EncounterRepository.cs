@@ -40,6 +40,23 @@ public sealed class EncounterRepository(string databasePath)
             );
             CREATE INDEX IF NOT EXISTS ix_encounters_started ON encounters(started_at DESC);
             """).ConfigureAwait(false);
+
+        // Migraciones: columnas agregadas después de la primera versión. Las bases viejas las reciben vacías.
+        await AddColumnIfMissingAsync(connection, "encounters", "main_target_seconds", "REAL").ConfigureAwait(false);
+        await AddColumnIfMissingAsync(connection, "encounter_actors", "main_target_damage", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
+        await AddColumnIfMissingAsync(connection, "encounter_actors", "main_target_dps", "REAL NOT NULL DEFAULT 0").ConfigureAwait(false);
+        await AddColumnIfMissingAsync(connection, "encounter_actors", "periodic_damage", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
+        await AddColumnIfMissingAsync(connection, "encounter_actors", "active_dps", "REAL NOT NULL DEFAULT 0").ConfigureAwait(false);
+        await AddColumnIfMissingAsync(connection, "encounter_actors", "counts_json", "TEXT").ConfigureAwait(false);
+    }
+
+    private static async Task AddColumnIfMissingAsync(SqliteConnection connection, string table, string column, string definition)
+    {
+        var columns = await connection.QueryAsync<string>($"SELECT name FROM pragma_table_info('{table}')").ConfigureAwait(false);
+        if (!columns.Contains(column, StringComparer.Ordinal))
+        {
+            await connection.ExecuteAsync($"ALTER TABLE {table} ADD COLUMN {column} {definition}").ConfigureAwait(false);
+        }
     }
 
     public async Task SaveAsync(EncounterSnapshot encounter, CancellationToken cancellationToken = default)
@@ -49,8 +66,8 @@ public sealed class EncounterRepository(string databasePath)
 
         await connection.ExecuteAsync(
             """
-            INSERT OR REPLACE INTO encounters (id, started_at, ended_at, target_name, target_killed, total_damage)
-            VALUES (@Id, @Start, @End, @TargetName, @TargetKilled, @TotalDamage)
+            INSERT OR REPLACE INTO encounters (id, started_at, ended_at, target_name, target_killed, total_damage, main_target_seconds)
+            VALUES (@Id, @Start, @End, @TargetName, @TargetKilled, @TotalDamage, @MainTargetSeconds)
             """,
             new
             {
@@ -60,14 +77,17 @@ public sealed class EncounterRepository(string databasePath)
                 encounter.TargetName,
                 encounter.TargetKilled,
                 encounter.TotalDamage,
+                MainTargetSeconds = encounter.MainTargetDuration?.TotalSeconds,
             },
             transaction).ConfigureAwait(false);
 
         await connection.ExecuteAsync(
             """
             INSERT OR REPLACE INTO encounter_actors
-                (encounter_id, actor_id, name, class_id, is_local, damage, dps, hits, crits, max_hit, healing, skills_json)
-            VALUES (@EncounterId, @ActorId, @Name, @ClassId, @IsLocal, @Damage, @Dps, @Hits, @Crits, @MaxHit, @Healing, @SkillsJson)
+                (encounter_id, actor_id, name, class_id, is_local, damage, dps, hits, crits, max_hit, healing, skills_json,
+                 main_target_damage, main_target_dps, periodic_damage, active_dps, counts_json)
+            VALUES (@EncounterId, @ActorId, @Name, @ClassId, @IsLocal, @Damage, @Dps, @Hits, @Crits, @MaxHit, @Healing, @SkillsJson,
+                    @MainTargetDamage, @MainTargetDps, @PeriodicDamage, @ActiveDps, @CountsJson)
             """,
             encounter.Actors.Select(a => new
             {
@@ -83,6 +103,11 @@ public sealed class EncounterRepository(string databasePath)
                 a.MaxHit,
                 a.Healing,
                 SkillsJson = JsonSerializer.Serialize(a.Skills),
+                a.MainTargetDamage,
+                a.MainTargetDps,
+                a.PeriodicDamage,
+                a.ActiveDps,
+                CountsJson = a.Counts is null ? null : JsonSerializer.Serialize(a.Counts),
             }),
             transaction).ConfigureAwait(false);
 

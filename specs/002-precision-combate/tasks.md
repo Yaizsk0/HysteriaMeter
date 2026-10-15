@@ -24,7 +24,7 @@ description: "Tareas de la feature 002: precisión del combate"
 
 - [X] T003 [P] `HitModifiers` con `Perfect`, `Double`, `Front`, `MultiHit` y `ModifierCoverage` en `src/HysteriaMeter.Protocol/Events/CombatEvents.cs`
 - [X] T004 [P] Contadores por modificador y estado "sin identificar" en `ActorSnapshot` y `SkillSnapshot` en `src/HysteriaMeter.Combat/Snapshots.cs`
-- [ ] T005 Migración de SQLite con las columnas nuevas en `src/HysteriaMeter.Storage/EncounterRepository.cs` + test
+- [X] T005 Migración de SQLite con las columnas nuevas en `src/HysteriaMeter.Storage/EncounterRepository.cs` + test
 
 **Checkpoint**: modelo listo para recibir los datos nuevos sin cambiar resultados actuales.
 
@@ -40,7 +40,7 @@ description: "Tareas de la feature 002: precisión del combate"
 - [X] T010 [US2] Research: explicar el ~8 % faltante (`0x3806`, `0x364A`) y documentarlo (resuelto: era el DoT `0x3805`, no `0x3806`)
 - [X] T011 [US2] Decoder para la fuente faltante + entrada en `data/opcodes.json` + test
 - [ ] T012 [P] [US2] Overkill por golpe usando el HP conocido del objetivo en `CombatEngine` + test
-- [ ] T013 [P] [US2] Daño directo y periódico separados por skill en `CombatEngine` y `SkillSnapshot` + test
+- [X] T013 [P] [US2] Daño directo y periódico separados por skill en `CombatEngine` y `SkillSnapshot` + test
 - [ ] T014 [US2] Validar SC-001 en las 10 peleas y registrar resultados en `specs/002-precision-combate/validation.md`
 
 ## Phase 5: User Story 3 - Party con nombre (P1)
@@ -65,7 +65,7 @@ description: "Tareas de la feature 002: precisión del combate"
 
 ## Phase 8: User Story 6 - DPS activo y verificación (P3)
 
-- [ ] T026 [P] [US6] DPS activo (sin tiempo muerto ni sin objetivo) en `CombatEngine` + test
+- [X] T026 [P] [US6] DPS activo (sin tiempo muerto ni sin objetivo) en `CombatEngine` + test
 - [ ] T027 [P] [US6] `TargetVerification` por objetivo con HP conocido, guardada en el encuentro + test sintético que no cierra
 - [ ] T028 [US6] Mostrar el resultado de la verificación en el diagnóstico
 

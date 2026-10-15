@@ -93,7 +93,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var encounter = EnsureEncounter(e.Timestamp);
-        encounter.Actor(source).AddHit(e.SkillId, e.TargetId, e.Amount, e.Modifiers);
+        encounter.Actor(source).AddHit(e.SkillId, e.TargetId, e.Amount, e.Modifiers, e.Timestamp);
         encounter.RegisterDamage(e.TargetId, e.Amount, e.Timestamp);
     }
 
@@ -160,7 +160,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
                 var profile = Entities.Profile(id);
                 var targetDamage = target is { } t0 ? stats.DamageByTarget.GetValueOrDefault(t0) : 0;
                 var skills = stats.Skills
-                    .Select(s => new SkillSnapshot(s.Key, s.Value.Damage, s.Value.Hits, s.Value.Crits, s.Value.MaxHit, Share(s.Value.Damage, stats.Damage), s.Value.Counts.Snapshot()))
+                    .Select(s => new SkillSnapshot(s.Key, s.Value.Damage, s.Value.Hits, s.Value.Crits, s.Value.MaxHit, Share(s.Value.Damage, stats.Damage), s.Value.Counts.Snapshot(), s.Value.PeriodicDamage))
                     .OrderByDescending(s => s.Damage)
                     .ToArray();
                 return new ActorSnapshot(
@@ -178,7 +178,9 @@ public sealed class CombatEngine(CombatEngineOptions options)
                     skills,
                     target is { } t1 && stats.CountsByTarget.TryGetValue(t1, out var counts) ? counts.Snapshot() : HitCounts.Empty,
                     targetDamage,
-                    targetDamage / targetSeconds);
+                    targetDamage / targetSeconds,
+                    stats.PeriodicDamage,
+                    stats.Damage / Math.Max(stats.ActiveTime.TotalSeconds, 1));
             })
             .OrderByDescending(a => a.Damage)
             .ToArray();
