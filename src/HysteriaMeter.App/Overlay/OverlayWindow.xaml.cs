@@ -168,6 +168,17 @@ public partial class OverlayWindow : Window
         }
     }
 
+    private void OnNoteLostFocus(object sender, RoutedEventArgs e) => _viewModel.SaveNoteCommand.Execute(null);
+
+    private void OnNoteKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            _viewModel.SaveNoteCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
     private void OnMouseEnterWindow(object sender, MouseEventArgs e) => _viewModel.IsHovered = true;
 
     private void OnMouseLeaveWindow(object sender, MouseEventArgs e) => _viewModel.IsHovered = false;

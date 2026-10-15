@@ -11,7 +11,24 @@ public sealed class EncounterRepository(string databasePath)
 {
     private readonly string _connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString();
 
-    public async Task InitializeAsync(CancellationToken cancellationToken = default)
+    // El pipeline y la limpieza del historial pueden inicializar a la vez: las migraciones corren una sola vez.
+    private readonly Lock _initLock = new();
+    private Task? _init;
+
+    public Task InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        lock (_initLock)
+        {
+            if (_init is null || _init.IsFaulted || _init.IsCanceled)
+            {
+                _init = MigrateAsync(cancellationToken);
+            }
+
+            return _init;
+        }
+    }
+
+    private async Task MigrateAsync(CancellationToken cancellationToken)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         await connection.ExecuteAsync("""
@@ -50,6 +67,8 @@ public sealed class EncounterRepository(string databasePath)
         await AddColumnIfMissingAsync(connection, "encounter_actors", "counts_json", "TEXT").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounter_actors", "overkill", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounter_actors", "timeline_json", "TEXT").ConfigureAwait(false);
+        await AddColumnIfMissingAsync(connection, "encounters", "note", "TEXT").ConfigureAwait(false);
+        await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS ix_encounters_target ON encounters(target_name, started_at)").ConfigureAwait(false);
     }
 
     private static async Task AddColumnIfMissingAsync(SqliteConnection connection, string table, string column, string definition)
@@ -121,14 +140,78 @@ public sealed class EncounterRepository(string databasePath)
     public async Task<IReadOnlyList<EncounterSummary>> ListRecentAsync(int limit = 50, CancellationToken cancellationToken = default)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+
+        // Intento: cuántas veces se peleó contra ese objetivo hasta esta pelea. Récord: el mejor DPS propio contra ese objetivo.
         var rows = await connection.QueryAsync<EncounterRow>(
             """
-            SELECT id AS Id, started_at AS StartedAt, ended_at AS EndedAt, target_name AS TargetName,
-                   target_killed AS TargetKilled, total_damage AS TotalDamage
-            FROM encounters ORDER BY started_at DESC LIMIT @limit
+            SELECT e.id AS Id, e.started_at AS StartedAt, e.ended_at AS EndedAt, e.target_name AS TargetName,
+                   e.target_killed AS TargetKilled, e.total_damage AS TotalDamage, e.note AS Note,
+                   (SELECT MAX(a.dps) FROM encounter_actors a WHERE a.encounter_id = e.id AND a.is_local = 1) AS LocalDps,
+                   (SELECT MAX(a.dps) FROM encounter_actors a JOIN encounters o ON o.id = a.encounter_id
+                     WHERE a.is_local = 1 AND o.target_name = e.target_name) AS BestLocalDps,
+                   (SELECT COUNT(*) FROM encounters o WHERE o.target_name = e.target_name AND o.started_at <= e.started_at) AS Attempt
+            FROM encounters e ORDER BY e.started_at DESC LIMIT @limit
             """,
             new { limit }).ConfigureAwait(false);
-        return [.. rows.Select(r => new EncounterSummary(r.Id, r.StartedAt, r.EndedAt, r.TargetName, r.TargetKilled != 0, r.TotalDamage))];
+        return [.. rows.Select(r => new EncounterSummary(
+            r.Id,
+            r.StartedAt,
+            r.EndedAt,
+            r.TargetName,
+            r.TargetKilled != 0,
+            r.TotalDamage,
+            r.Note,
+            r.LocalDps,
+            r.TargetName is null ? 0 : (int)r.Attempt,
+            r.LocalDps is { } dps && r.BestLocalDps is { } best && dps >= best))];
+    }
+
+    /// <summary>Mejor DPS propio contra ese objetivo, sin contar la pelea <paramref name="excludeId"/>. <c>null</c> si no hay otra.</summary>
+    public async Task<double?> BestLocalDpsAsync(string targetName, string excludeId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await connection.ExecuteScalarAsync<double?>(
+            """
+            SELECT MAX(a.dps) FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
+            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId
+            """,
+            new { targetName, excludeId }).ConfigureAwait(false);
+    }
+
+    /// <summary>Guarda (o borra, con texto vacío) la nota de una pelea.</summary>
+    public async Task SetNoteAsync(string id, string? note, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        await connection.ExecuteAsync(
+            "UPDATE encounters SET note = @note WHERE id = @id",
+            new { id, note = string.IsNullOrWhiteSpace(note) ? null : note.Trim() }).ConfigureAwait(false);
+    }
+
+    public async Task<string?> GetNoteAsync(string id, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await connection.ExecuteScalarAsync<string?>("SELECT note FROM encounters WHERE id = @id", new { id }).ConfigureAwait(false);
+    }
+
+    public async Task DeleteAsync(string id, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        await connection.ExecuteAsync("DELETE FROM encounters WHERE id = @id", new { id }).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Limpieza: borra las peleas anteriores a <paramref name="before"/>. Las de objetivo derrotado y las que tienen nota
+    /// se conservan si <paramref name="keepKillsAndNotes"/> es <c>true</c>. Devuelve cuántas borró.
+    /// </summary>
+    public async Task<int> DeleteOlderThanAsync(DateTimeOffset before, bool keepKillsAndNotes = true, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await connection.ExecuteAsync(
+            """
+            DELETE FROM encounters
+            WHERE started_at < @before AND (@keep = 0 OR (target_killed = 0 AND note IS NULL))
+            """,
+            new { before = before.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture), keep = keepKillsAndNotes }).ConfigureAwait(false);
     }
 
     /// <summary>Encuentro completo, con jugadores y skills, para volver a verlo en el overlay. <c>null</c> si no existe.</summary>
@@ -198,10 +281,25 @@ public sealed class EncounterRepository(string databasePath)
     }
 }
 
-public sealed record EncounterSummary(string Id, string StartedAt, string EndedAt, string? TargetName, bool TargetKilled, long TotalDamage);
+/// <param name="LocalDps">DPS del jugador local en esa pelea, si estuvo.</param>
+/// <param name="Attempt">Número de intento contra ese objetivo (1 = la primera vez); 0 sin objetivo con nombre.</param>
+/// <param name="IsRecord">Es el mejor DPS propio contra ese objetivo.</param>
+public sealed record EncounterSummary(
+    string Id,
+    string StartedAt,
+    string EndedAt,
+    string? TargetName,
+    bool TargetKilled,
+    long TotalDamage,
+    string? Note = null,
+    double? LocalDps = null,
+    int Attempt = 0,
+    bool IsRecord = false);
 
 /// <summary>SQLite no tiene booleanos: la fila cruda trae <c>target_killed</c> como entero.</summary>
-internal sealed record EncounterRow(string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage);
+internal sealed record EncounterRow(
+    string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage, string? Note,
+    double? LocalDps, double? BestLocalDps, long Attempt);
 
 internal sealed record EncounterDetailRow(string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage, double? MainTargetSeconds);
 

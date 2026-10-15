@@ -30,7 +30,7 @@ public sealed class WindowSmokeTests
             row.Update(1, Actor(), MeterTab.Damage, top: 3000, total: 3000, TimeSpan.FromSeconds(10));
             viewModel.Actors.Add(row);
             viewModel.Detail.Select(row);
-            viewModel.History.Add(new HistoryItem("x", "Boss", "15/10 21:42", "02:47", "3.0k", Killed: true));
+            viewModel.History.Add(new HistoryItem("x", "Boss", "15/10 21:42", "02:47", "3.0k", Killed: true, "rotación nueva", "mi DPS 1.2k", 3, IsRecord: true));
             viewModel.IsHistoryOpen = true;
             viewModel.IsViewingHistory = true;
             viewModel.Detail.Update(new EncounterSnapshot(Guid.NewGuid(), DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddSeconds(10), "Boss", false, 3000, [Actor()]));
@@ -91,6 +91,30 @@ public sealed class WindowSmokeTests
         status.Fail("Npcap no está instalado");
         Assert.Equal(CaptureState.Failed, status.Current(start.AddSeconds(41)));
         Assert.Contains("Npcap", status.Describe(start.AddSeconds(41)), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Record_notice_only_when_the_previous_best_is_beaten()
+    {
+        Assert.Null(MeterViewModel.RecordText("Tarka", 1000, previousBest: null));
+        Assert.Null(MeterViewModel.RecordText("Tarka", 1000, previousBest: 1200));
+        var text = MeterViewModel.RecordText("Tarka", 1500, 1200);
+        Assert.NotNull(text);
+        Assert.StartsWith("¡Récord en Tarka! ", text, StringComparison.Ordinal);
+        Assert.Contains(" DPS (antes ", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void History_search_matches_target_or_note()
+    {
+        var item = new HistoryItem("x", "Destroyer Tarka", "15/10 21:42", "02:47", "3.0k", Killed: false, Note: "Piedra nueva");
+
+        Assert.True(item.Matches("tarka", onlyKills: false));
+        Assert.True(item.Matches(" piedra ", onlyKills: false));
+        Assert.False(item.Matches("otro", onlyKills: false));
+        Assert.False(item.Matches(string.Empty, onlyKills: true));
+        Assert.Equal(string.Empty, item.AttemptText);
+        Assert.Equal("· intento 2", (item with { Attempt = 2 }).AttemptText);
     }
 
     [Fact]

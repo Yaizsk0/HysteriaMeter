@@ -54,7 +54,12 @@ public sealed partial class MeterViewModel : ObservableObject
         Tab = tab;
         _showHealing = showHealing;
         IsCompact = compact;
-        _engine.EncounterFinished += snapshot => _lastFinished = snapshot;
+        var dispatcher = Dispatcher.CurrentDispatcher;
+        _engine.EncounterFinished += snapshot =>
+        {
+            _lastFinished = snapshot;
+            dispatcher.InvokeAsync(() => CheckRecordAsync(snapshot));
+        };
         _session.PreferencesChanged += names =>
         {
             foreach (var name in names)
@@ -84,8 +89,53 @@ public sealed partial class MeterViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsHistoryOpen { get; set; }
 
-    /// <summary>Encuentros guardados, del más nuevo al más viejo. Se cargan al abrir el panel.</summary>
+    /// <summary>Encuentros guardados que pasan el filtro, del más nuevo al más viejo. Se cargan al abrir el panel.</summary>
     public ObservableCollection<HistoryItem> History { get; } = [];
+
+    private List<HistoryItem> _allHistory = [];
+
+    /// <summary>Búsqueda del panel de historial: objetivo o nota.</summary>
+    [ObservableProperty]
+    public partial string HistorySearch { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool OnlyKills { get; set; }
+
+    partial void OnHistorySearchChanged(string value) => ApplyHistoryFilter();
+
+    partial void OnOnlyKillsChanged(bool value) => ApplyHistoryFilter();
+
+    // Pelea guardada que se está mirando (para la nota y para borrarla).
+    private string? _pinnedId;
+
+    /// <summary>Nota de la pelea guardada que se está mirando; se guarda al salir del cuadro de texto.</summary>
+    [ObservableProperty]
+    public partial string CurrentNote { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool CanEditNote { get; set; }
+
+    /// <summary>Aviso de récord personal al terminar una pelea.</summary>
+    [ObservableProperty]
+    public partial string RecordMessage { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool HasRecordMessage { get; set; }
+
+    private DateTime _recordUntilUtc;
+
+    /// <summary>Cuánto queda visible el aviso de récord.</summary>
+    public static readonly TimeSpan RecordNoticeDuration = TimeSpan.FromSeconds(15);
+
+    public int RetentionDays
+    {
+        get => Preferences.RetentionDays;
+        set
+        {
+            Update(Preferences with { RetentionDays = value }, nameof(RetentionDays));
+            _ = CleanupHistoryAsync();
+        }
+    }
 
     /// <summary>Se está mirando un encuentro guardado en vez del vivo.</summary>
     [ObservableProperty]
@@ -402,19 +452,115 @@ public sealed partial class MeterViewModel : ObservableObject
             return;
         }
 
-        History.Clear();
         try
         {
-            foreach (var summary in await _history.ListRecentAsync(40).ConfigureAwait(true))
-            {
-                History.Add(HistoryItem.From(summary));
-            }
+            _allHistory = [.. (await _history.ListRecentAsync(200).ConfigureAwait(true)).Select(HistoryItem.From)];
         }
         catch (DbException)
         {
             // La base todavía no está lista (la inicializa el pipeline al arrancar): el panel queda vacío.
+            _allHistory = [];
+        }
+
+        ApplyHistoryFilter();
+    }
+
+    private void ApplyHistoryFilter()
+    {
+        History.Clear();
+        foreach (var item in _allHistory.Where(i => i.Matches(HistorySearch, OnlyKills)).Take(60))
+        {
+            History.Add(item);
         }
     }
+
+    [RelayCommand]
+    private async Task SaveNoteAsync()
+    {
+        if (_pinnedId is null || _history is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _history.SetNoteAsync(_pinnedId, CurrentNote).ConfigureAwait(true);
+            var index = _allHistory.FindIndex(i => i.Id == _pinnedId);
+            if (index >= 0)
+            {
+                _allHistory[index] = _allHistory[index] with { Note = string.IsNullOrWhiteSpace(CurrentNote) ? null : CurrentNote.Trim() };
+            }
+        }
+        catch (DbException)
+        {
+        }
+    }
+
+    /// <summary>Borra la pelea guardada que se está mirando y vuelve al vivo.</summary>
+    [RelayCommand]
+    private async Task DeleteEncounterAsync()
+    {
+        if (_pinnedId is null || _history is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _history.DeleteAsync(_pinnedId).ConfigureAwait(true);
+            _allHistory.RemoveAll(i => i.Id == _pinnedId);
+        }
+        catch (DbException)
+        {
+            return;
+        }
+
+        BackToLive();
+    }
+
+    private async Task CleanupHistoryAsync()
+    {
+        try
+        {
+            await _session.CleanupHistoryAsync(DateTimeOffset.UtcNow).ConfigureAwait(true);
+        }
+        catch (DbException)
+        {
+        }
+    }
+
+    /// <summary>Al terminar una pelea, avisa si el DPS propio superó el mejor contra ese objetivo.</summary>
+    private async Task CheckRecordAsync(EncounterSnapshot snapshot)
+    {
+        var local = snapshot.Actors.FirstOrDefault(a => a.IsLocalPlayer);
+        if (_history is null || local is null || snapshot.TargetName is not { Length: > 0 } target)
+        {
+            return;
+        }
+
+        double? best;
+        try
+        {
+            best = await _history.BestLocalDpsAsync(target, snapshot.Id.ToString()).ConfigureAwait(true);
+        }
+        catch (DbException)
+        {
+            return;
+        }
+
+        if (RecordText(target, local.Dps, best) is { } message)
+        {
+            RecordMessage = message;
+            HasRecordMessage = true;
+            _recordUntilUtc = DateTime.UtcNow + RecordNoticeDuration;
+        }
+    }
+
+    /// <summary>"¡Récord en Tarka! 12.4k DPS (antes 11.0k)", o <c>null</c> si no lo superó o es la primera vez.</summary>
+    public static string? RecordText(string target, double dps, double? previousBest) =>
+        previousBest is { } best && dps > best
+            ? $"¡Récord en {target}! {ActorRowViewModel.Compact(dps)} DPS (antes {ActorRowViewModel.Compact(best)})"
+            : null;
 
     [RelayCommand]
     private async Task OpenEncounterAsync(HistoryItem? item)
@@ -440,6 +586,9 @@ public sealed partial class MeterViewModel : ObservableObject
         }
 
         _pinned = snapshot;
+        _pinnedId = item.Id;
+        CurrentNote = item.Note ?? string.Empty;
+        CanEditNote = true;
         IsViewingHistory = true;
         HistoryLabel = $"HISTORIAL · {item.When}";
         IsHistoryOpen = false;
@@ -451,6 +600,8 @@ public sealed partial class MeterViewModel : ObservableObject
     private void ShowDemo()
     {
         _pinned = DemoEncounter.Create(DateTimeOffset.Now);
+        _pinnedId = null;
+        CanEditNote = false;
         IsViewingHistory = true;
         HistoryLabel = "DEMO · datos de prueba";
         IsSettingsOpen = false;
@@ -465,6 +616,8 @@ public sealed partial class MeterViewModel : ObservableObject
     private void BackToLive()
     {
         _pinned = null;
+        _pinnedId = null;
+        CanEditNote = false;
         IsViewingHistory = false;
         Refresh();
     }
@@ -495,6 +648,8 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         _lastFinished = null;
         _pinned = null;
+        _pinnedId = null;
+        CanEditNote = false;
         _shown = null;
         IsViewingHistory = false;
         Actors.Clear();
@@ -514,6 +669,11 @@ public sealed partial class MeterViewModel : ObservableObject
         if (inCombat)
         {
             _lastCombatUtc = now;
+        }
+
+        if (HasRecordMessage && now > _recordUntilUtc)
+        {
+            HasRecordMessage = false;
         }
 
         var state = _session.Status.Current(now);

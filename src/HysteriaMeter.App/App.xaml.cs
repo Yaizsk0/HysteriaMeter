@@ -54,6 +54,15 @@ public partial class App : Application
         await _host.StartAsync().ConfigureAwait(true);
 
         MainWindow = _host.Services.GetRequiredService<OverlayWindows>().OpenSaved();
+
+        // Limpieza del historial según lo elegido en configuración; si la base falla, se intenta en la próxima sesión.
+        try
+        {
+            await _host.Services.GetRequiredService<MeterSession>().CleanupHistoryAsync(DateTimeOffset.UtcNow).ConfigureAwait(true);
+        }
+        catch (System.Data.Common.DbException)
+        {
+        }
     }
 
     protected override async void OnExit(ExitEventArgs e)

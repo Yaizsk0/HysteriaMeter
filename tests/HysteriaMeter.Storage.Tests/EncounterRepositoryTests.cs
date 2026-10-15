@@ -109,6 +109,69 @@ public sealed class EncounterRepositoryTests : IDisposable
         Assert.Single(await repository.ListRecentAsync());
     }
 
+    [Fact]
+    public async Task Lists_attempts_records_and_notes_per_target()
+    {
+        var repository = new EncounterRepository(_path);
+        await repository.InitializeAsync();
+        var start = new DateTimeOffset(2026, 10, 15, 21, 0, 0, TimeSpan.Zero);
+
+        var first = Fight(start, "Tarka", localDps: 1000);
+        var second = Fight(start.AddMinutes(10), "Tarka", localDps: 1500);
+        var third = Fight(start.AddMinutes(20), "Tarka", localDps: 1200);
+        var other = Fight(start.AddMinutes(30), "Otro", localDps: 50);
+        foreach (var fight in new[] { first, second, third, other })
+        {
+            await repository.SaveAsync(fight);
+        }
+
+        await repository.SetNoteAsync(third.Id.ToString(), "  con piedra nueva ");
+        var list = (await repository.ListRecentAsync()).ToDictionary(e => e.Id);
+
+        Assert.Equal(3, list[third.Id.ToString()].Attempt);
+        Assert.Equal(1, list[other.Id.ToString()].Attempt);
+        Assert.True(list[second.Id.ToString()].IsRecord);
+        Assert.False(list[third.Id.ToString()].IsRecord);
+        Assert.Equal(1200, list[third.Id.ToString()].LocalDps);
+        Assert.Equal("con piedra nueva", list[third.Id.ToString()].Note);
+        Assert.Equal(1500, await repository.BestLocalDpsAsync("Tarka", third.Id.ToString()));
+        Assert.Null(await repository.BestLocalDpsAsync("Otro", other.Id.ToString()));
+    }
+
+    [Fact]
+    public async Task Cleanup_keeps_kills_and_notes()
+    {
+        var repository = new EncounterRepository(_path);
+        await repository.InitializeAsync();
+        var start = new DateTimeOffset(2026, 9, 1, 21, 0, 0, TimeSpan.Zero);
+
+        var trash = Fight(start, "Trash", localDps: 10);
+        var kill = Fight(start.AddMinutes(1), "Boss", localDps: 10) with { TargetKilled = true };
+        var noted = Fight(start.AddMinutes(2), "Trash", localDps: 10);
+        var recent = Fight(start.AddDays(40), "Trash", localDps: 10);
+        foreach (var fight in new[] { trash, kill, noted, recent })
+        {
+            await repository.SaveAsync(fight);
+        }
+
+        await repository.SetNoteAsync(noted.Id.ToString(), "importante");
+
+        Assert.Equal(1, await repository.DeleteOlderThanAsync(start.AddDays(30)));
+        Assert.Equal(3, (await repository.ListRecentAsync()).Count);
+
+        await repository.DeleteAsync(kill.Id.ToString());
+        Assert.Null(await repository.LoadAsync(kill.Id.ToString()));
+    }
+
+    private static EncounterSnapshot Fight(DateTimeOffset start, string target, double localDps) => new(
+        Guid.NewGuid(),
+        start,
+        start.AddSeconds(60),
+        target,
+        TargetKilled: false,
+        TotalDamage: (long)(localDps * 60),
+        [new ActorSnapshot(1, "Mati", null, true, (long)(localDps * 60), localDps, 1, 10, 2, 100, 0, [])]);
+
     public void Dispose()
     {
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();

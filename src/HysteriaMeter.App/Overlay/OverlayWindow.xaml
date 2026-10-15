@@ -125,6 +125,17 @@
             </Setter>
         </Style>
 
+        <!-- Cuadros de texto del overlay: búsqueda del historial y nota de la pelea. -->
+        <Style x:Key="Field" TargetType="TextBox">
+            <Setter Property="Background" Value="#33000000" />
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="CaretBrush" Value="{StaticResource Gold}" />
+            <Setter Property="BorderBrush" Value="{StaticResource RuleDim}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
         <Style x:Key="SettingsHeader" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -235,10 +246,23 @@
                     </StackPanel>
                 </DockPanel>
 
+                <!-- Récord personal al terminar una pelea -->
+                <Border DockPanel.Dock="Top" Background="#33C9A25A" BorderBrush="{StaticResource GoldDim}" BorderThickness="0,0,0,1" Padding="10,4"
+                        Visibility="{Binding HasRecordMessage, Converter={StaticResource Visible}}">
+                    <TextBlock Text="{Binding RecordMessage}" FontSize="12" FontWeight="Bold" Foreground="{StaticResource Gold}" TextTrimming="CharacterEllipsis" />
+                </Border>
+
                 <!-- Mirando un encuentro guardado -->
                 <Border DockPanel.Dock="Top" Background="#1FC9A25A" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,0,0,1" Padding="10,3"
                         Visibility="{Binding IsViewingHistory, Converter={StaticResource Visible}}">
                     <DockPanel>
+                        <!-- Nota de la pelea guardada: se guarda al salir del cuadro (o con Enter) -->
+                        <DockPanel DockPanel.Dock="Bottom" Margin="0,3,0,1" Visibility="{Binding CanEditNote, Converter={StaticResource Visible}}">
+                            <Button DockPanel.Dock="Right" Content="Borrar pelea" Command="{Binding DeleteEncounterCommand}" Cursor="Hand"
+                                    Foreground="#E0524A" Background="Transparent" BorderThickness="0" FontSize="11" Padding="6,0,0,0" />
+                            <TextBox Style="{StaticResource Field}" Text="{Binding CurrentNote, UpdateSourceTrigger=PropertyChanged}" LostFocus="OnNoteLostFocus" KeyDown="OnNoteKeyDown"
+                                     ToolTip="Nota de esta pelea (por ejemplo: rotación nueva, con piedra X). Se puede buscar en el historial." />
+                        </DockPanel>
                         <Button DockPanel.Dock="Right" Content="Volver al vivo" Command="{Binding BackToLiveCommand}" Cursor="Hand"
                                 Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" FontSize="11" Padding="4,0" />
                         <TextBlock Text="{Binding HistoryLabel}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Gold}" VerticalAlignment="Center" />
@@ -381,6 +405,10 @@
                 <Border Background="{StaticResource PanelSolid}" Visibility="{Binding IsHistoryOpen, Converter={StaticResource Visible}}">
                     <DockPanel Margin="12,10">
                         <TextBlock DockPanel.Dock="Top" Text="PELEAS GUARDADAS" Style="{StaticResource SettingsHeader}" Margin="0,0,0,6" />
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <CheckBox DockPanel.Dock="Right" Style="{StaticResource Option}" Content="Derrotados" IsChecked="{Binding OnlyKills}" Margin="8,0,0,0" />
+                            <TextBox Style="{StaticResource Field}" Text="{Binding HistorySearch, UpdateSourceTrigger=PropertyChanged}" ToolTip="Buscar por boss o por nota" />
+                        </DockPanel>
                         <ScrollViewer VerticalScrollBarVisibility="Hidden">
                             <ItemsControl ItemsSource="{Binding History}">
                                 <ItemsControl.ItemTemplate>
@@ -400,15 +428,34 @@
                                                 </ControlTemplate>
                                             </Button.Template>
                                             <DockPanel>
-                                                <TextBlock DockPanel.Dock="Right" Text="{Binding Total}" FontWeight="SemiBold" Foreground="{StaticResource TextBright}" VerticalAlignment="Center" />
+                                                <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Total}" FontWeight="SemiBold" Foreground="{StaticResource TextBright}" HorizontalAlignment="Right" />
+                                                    <TextBlock Text="{Binding MyDps}" FontSize="11" Foreground="{StaticResource TextDim}" HorizontalAlignment="Right" />
+                                                </StackPanel>
                                                 <StackPanel>
-                                                    <TextBlock Text="{Binding Target}" FontWeight="SemiBold" Foreground="{StaticResource Text}" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock FontWeight="SemiBold" Foreground="{StaticResource Text}" TextTrimming="CharacterEllipsis">
+                                                        <Run Foreground="{StaticResource Gold}">
+                                                            <Run.Style>
+                                                                <Style TargetType="Run">
+                                                                    <Setter Property="Text" Value="" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsRecord}" Value="True">
+                                                                            <Setter Property="Text" Value="★ " />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </Run.Style>
+                                                        </Run><Run Text="{Binding Target, Mode=OneWay}" />
+                                                    </TextBlock>
                                                     <TextBlock FontSize="11" Foreground="{StaticResource TextDim}">
                                                         <Run Text="{Binding When, Mode=OneWay}" />
                                                         <Run Text="·" />
                                                         <Run Text="{Binding Duration, Mode=OneWay}" />
                                                         <Run Text="{Binding Result, Mode=OneWay}" />
+                                                        <Run Text="{Binding AttemptText, Mode=OneWay}" />
                                                     </TextBlock>
+                                                    <TextBlock Text="{Binding Note}" FontSize="11" FontStyle="Italic" Foreground="{StaticResource TextMuted}" TextTrimming="CharacterEllipsis"
+                                                               Visibility="{Binding HasNote, Converter={StaticResource Visible}}" />
                                                 </StackPanel>
                                             </DockPanel>
                                         </Button>
@@ -464,6 +511,27 @@
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding StringFormat={}{0:P0}}" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock Text="HISTORIAL" Style="{StaticResource SettingsHeader}" />
+                            <ListBox ItemsSource="{x:Static vm:MeterPreferences.RetentionOptions}" SelectedItem="{Binding RetentionDays}" Style="{StaticResource Chips}"
+                                     ToolTip="Las peleas de boss derrotado y las que tienen nota no se borran nunca">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock>
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="{Binding StringFormat='Borrar a los {0} días'}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding}" Value="0">
+                                                            <Setter Property="Text" Value="Guardar todo" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>

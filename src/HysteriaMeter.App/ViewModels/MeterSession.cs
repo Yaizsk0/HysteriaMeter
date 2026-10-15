@@ -57,6 +57,18 @@ public sealed class MeterSession
         PreferencesChanged?.Invoke(changed);
     }
 
+    /// <summary>Borra las peleas comunes más viejas que lo elegido en configuración. Devuelve cuántas borró.</summary>
+    public async Task<int> CleanupHistoryAsync(DateTimeOffset now)
+    {
+        if (History is null || Preferences.RetentionDays <= 0)
+        {
+            return 0;
+        }
+
+        await History.InitializeAsync().ConfigureAwait(false);
+        return await History.DeleteOlderThanAsync(now.AddDays(-Preferences.RetentionDays)).ConfigureAwait(false);
+    }
+
     public void Reset()
     {
         Engine.Reset();
