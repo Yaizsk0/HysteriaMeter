@@ -51,11 +51,14 @@ public partial class App : Application
             sp.GetRequiredService<CaptureStatus>(),
             sp.GetRequiredService<HysteriaMeter.Protocol.Decoding.DecoderStats>()));
         builder.Services.AddSingleton<OverlayWindows>();
+        builder.Services.AddSingleton<TrayIcon>();
 
         _host = builder.Build();
         await _host.StartAsync().ConfigureAwait(true);
 
         MainWindow = _host.Services.GetRequiredService<OverlayWindows>().OpenSaved();
+        // El host lo desecha al salir (saca el icono de la bandeja).
+        _host.Services.GetRequiredService<TrayIcon>();
 
         // Limpieza del historial según lo elegido en configuración; si la base falla, se intenta en la próxima sesión.
         try
