@@ -321,13 +321,33 @@ public sealed partial class MeterViewModel : ObservableObject
 
     /// <summary>Esta ventana muestra la sesión (todas las peleas desde el reinicio), como el "Overall" de Details!.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsFightView))]
+    [NotifyPropertyChangedFor(nameof(IsFightView), nameof(IsSessionChip))]
     public partial bool IsSessionView { get; set; }
 
+    // Los chips PELEA/SESIÓN son RadioButtons: al destildarse uno escribe false, y si eso cambiara la vista
+    // los dos se pisarían en un bucle infinito. Como en las pestañas, solo cuenta el que se tilda.
     public bool IsFightView
     {
         get => !IsSessionView;
-        set => IsSessionView = !value;
+        set
+        {
+            if (value)
+            {
+                IsSessionView = false;
+            }
+        }
+    }
+
+    public bool IsSessionChip
+    {
+        get => IsSessionView;
+        set
+        {
+            if (value)
+            {
+                IsSessionView = true;
+            }
+        }
     }
 
     partial void OnIsSessionViewChanged(bool value) => Refresh();
