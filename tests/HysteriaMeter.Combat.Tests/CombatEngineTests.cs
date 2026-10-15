@@ -261,4 +261,21 @@ public class CombatEngineTests
 
         Assert.Equal([Me], engine.CurrentSnapshot()!.Actors.Select(a => a.Id));
     }
+
+    [Fact]
+    public void Tracks_target_health_and_overkill_of_the_last_hit()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345, Hp: 1000, MaxHp: 1000));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 400, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(1), Boss, 600));
+        engine.Apply(new DamageEvent(At(2), Ally, Boss, 1, 450, HitModifiers.None));
+
+        var snapshot = engine.CurrentSnapshot()!;
+        Assert.Equal(new Health(150, 1000), snapshot.TargetHealth);
+
+        engine.Apply(new DamageEvent(At(3), Me, Boss, 1, 500, HitModifiers.None));
+        var me = engine.CurrentSnapshot()!.Actors.Single(a => a.Id == Me);
+        Assert.Equal((900L, 350L), (me.Damage, me.Overkill));
+    }
 }

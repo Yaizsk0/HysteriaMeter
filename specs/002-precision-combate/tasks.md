@@ -39,7 +39,7 @@ description: "Tareas de la feature 002: precisión del combate"
 
 - [X] T010 [US2] Research: explicar el ~8 % faltante (`0x3806`, `0x364A`) y documentarlo (resuelto: era el DoT `0x3805`, no `0x3806`)
 - [X] T011 [US2] Decoder para la fuente faltante + entrada en `data/opcodes.json` + test
-- [ ] T012 [P] [US2] Overkill por golpe usando el HP conocido del objetivo en `CombatEngine` + test
+- [X] T012 [P] [US2] Overkill por golpe usando el HP conocido del objetivo en `CombatEngine` + test
 - [X] T013 [P] [US2] Daño directo y periódico separados por skill en `CombatEngine` y `SkillSnapshot` + test
 - [ ] T014 [US2] Validar SC-001 en las 10 peleas y registrar resultados en `specs/002-precision-combate/validation.md`
 

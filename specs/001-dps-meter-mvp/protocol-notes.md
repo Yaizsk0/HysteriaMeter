@@ -32,7 +32,7 @@ Segunda captura: 2026-10-14, dungeon en party de 5 (7 min, 3,7 MB, Wi-Fi). Serve
 | `0x3645` | Aparición de otro jugador (1,5–2 KB) con su nombre | Alta para el nombre | `PlayerSpawnDecoder` |
 | `0x8D04` | Muerte: víctima, skill, quien mató, nombre y legión (en dungeons llega con killer 0 y sin nombre) | Alta | `KillPacketDecoder` |
 | `0x3802` | Lanzamiento de skill (fuente, skill u32, seq, objetivo, posición) | Media | — |
-| `0x8D00` | Actualización de recurso: `varint entidad \| 02 01 00 \| u32 HP` para HP | Alta | — |
+| `0x8D00` | Actualización de recurso: `varint entidad \| 02 01 00 \| u32 HP` para HP (otros recursos como `02 02 00` se ignoran) | Alta | `HealthDecoder` |
 | `0x364A` | Solo del jugador local (¿stats o buffs?): el primer varint es su entidad. 0 falsos positivos en 3 capturas | Alta | `LocalPlayerDecoder` |
 | `0x3633` | Datos del jugador local al entrar a una zona (~2,3 KB): entidad y nombre | Alta | `LocalPlayerInfoDecoder` |
 | `0x3620` | Una vez por conexión: entidad local e ID de personaje persistente, más un bloque zlib | Media | — |
@@ -83,6 +83,7 @@ varint entity | u8 tipo | u8 | u8 hasOwnerName | [varint len + UTF-8 ownerName] 
 
 - Monstruos: `hasOwnerName = 0`. Invocaciones de jugadores (tipos `0x5F`, `0x1C`): a veces traen el nombre del dueño; el motor lo resuelve contra los nombres conocidos.
 - Hay invocaciones sin nombre de dueño y sin ID de dueño en el spawn: su daño todavía no se atribuye.
+- HP y HPmax son los dos últimos varints del cuerpo (validado: 119.700/119.700). Lo que hay entre la posición y el HP no es un solo varint (`9a 38 01` antes del HP), por eso se leen desde el final. El motor toma el máximo visto en `0x8D00` como HPmax y calcula el overkill del golpe final con el HP restante.
 
 ### Layout de `0x3645` (parcial)
 

@@ -11,7 +11,10 @@ public sealed record LocalPlayerEvent(DateTimeOffset Timestamp, ulong EntityId, 
 /// Algunas invocaciones no traen el ID del dueño sino su nombre (<paramref name="OwnerName"/>); el motor lo
 /// resuelve contra los nombres de jugadores que conoce.
 /// </summary>
-public sealed record EntitySpawnEvent(DateTimeOffset Timestamp, ulong EntityId, ulong? OwnerId, uint? NpcId, string? OwnerName = null) : CombatEvent(Timestamp);
+public sealed record EntitySpawnEvent(DateTimeOffset Timestamp, ulong EntityId, ulong? OwnerId, uint? NpcId, string? OwnerName = null, long? Hp = null, long? MaxHp = null) : CombatEvent(Timestamp);
+
+/// <summary>Vida actual de una entidad (el servidor la manda después de cada cambio).</summary>
+public sealed record HealthEvent(DateTimeOffset Timestamp, ulong EntityId, long Hp) : CombatEvent(Timestamp);
 
 /// <summary>
 /// Llegó un dato de un miembro de la party (HP/MP, cerca de una vez por segundo). El servidor solo los manda

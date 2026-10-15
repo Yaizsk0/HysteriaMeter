@@ -73,6 +73,28 @@ public class GameStreamDecoderTests
 
         var spawn = Assert.IsType<EntitySpawnEvent>(Assert.Single(events));
         Assert.Equal((20402UL, (uint?)0x00203430), (spawn.EntityId, spawn.NpcId));
+        Assert.Equal(((long?)119700, (long?)119700), (spawn.Hp, spawn.MaxHp));
+    }
+
+    [Fact]
+    public void Spawn_without_health_fields_still_decodes()
+    {
+        var events = CreateDecoder().Push(Frame(0x3641, Hex(RealCapture.SummonWithOwnerBody)), T0);
+
+        var spawn = Assert.IsType<EntitySpawnEvent>(Assert.Single(events));
+        Assert.Equal(((long?)null, (long?)null), (spawn.Hp, spawn.MaxHp));
+    }
+
+    [Fact]
+    public void Decodes_health_update_and_ignores_other_resources()
+    {
+        // Armados con el layout de 0x8D00: entidad 20402, prefijo 02 01 00 (vida) o 02 02 00 (otro recurso).
+        var hp = CreateDecoder().Push(Frame(0x8D00, Hex("b2 9f 01 02 01 00 a0 86 01 00")), T0);
+        var other = CreateDecoder().Push(Frame(0x8D00, Hex("b2 9f 01 02 02 00 a0 86 01 00")), T0);
+
+        var health = Assert.IsType<HealthEvent>(Assert.Single(hp));
+        Assert.Equal((20402UL, 100000L), (health.EntityId, health.Hp));
+        Assert.Empty(other);
     }
 
     [Fact]
