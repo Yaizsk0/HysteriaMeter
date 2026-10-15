@@ -12,6 +12,11 @@ public sealed record MeterPreferences
 
     public static IReadOnlyList<double> Opacities { get; } = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5];
 
+    /// <summary>Días que se guardan las peleas comunes (0 = siempre). Los bosses derrotados y las peleas con nota no se borran.</summary>
+    public static IReadOnlyList<int> RetentionOptions { get; } = [0, 30, 90];
+
+    public int RetentionDays { get; init; }
+
     public double Opacity { get; init; } = 1.0;
 
     /// <summary>Opaco del todo mientras el mouse está encima, aunque la opacidad sea baja.</summary>
