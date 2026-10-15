@@ -36,6 +36,8 @@ Segunda captura: 2026-10-14, dungeon en party de 5 (7 min, 3,7 MB, Wi-Fi). Serve
 | `0x364A` | Solo del jugador local (¿stats o buffs?): el primer varint es su entidad. 0 falsos positivos en 3 capturas | Alta | `LocalPlayerDecoder` |
 | `0x3633` | Datos del jugador local al entrar a una zona (~2,3 KB): entidad y nombre | Alta | `LocalPlayerInfoDecoder` |
 | `0x3620` | Una vez por conexión: entidad local e ID de personaje persistente, más un bloque zlib | Media | — |
+| `0x921B` | HP/MP de un miembro de la party (~1/s por miembro, desde el primer segundo de la conexión); solo compañeros, nunca randoms ni el local | Alta (dungeon en party: los 4; mini boss con 12 ajenos: 0) | `PartyMemberDecoder` |
+| `0x9200` | Lista completa de la party (entidad, GUID, ID de personaje, nombre, HP, legión); llegó al irse miembros, falta ver si llega al armarla | Media | — |
 | `0x3806` | Estado de entidades: del jugador local y de NPCs, nunca de otros jugadores | Media | — |
 | `0x371A`–`0x371D`, `0x3600` | Movimiento / posición de entidades | Media | — |
 
@@ -85,8 +87,10 @@ varint entity | u8 tipo | u8 | u8 hasOwnerName | [varint len + UTF-8 ownerName] 
 ### Layout de `0x3645` (parcial)
 
 ```text
-varint entity | u8 | varint ? | u8 | varint len + UTF-8 name | u32 ? (¿clase o nivel?) | ... posición, legión
+varint entity | u8 | u16 ? | u8 | 07 | varint len + UTF-8 name | u32 ? (¿clase o nivel?) | ... posición, legión
 ```
+
+- El campo tras la entidad es un u16 fijo: leído como varint, más de la mitad de los nombres del mini boss salían como `\x07`.
 
 - El jugador local no aparece: su nombre llega por `0x3633`.
 

@@ -8,6 +8,7 @@ public class CombatEngineTests
     private const ulong Ally = 2;
     private const ulong MySummon = 50;
     private const ulong Boss = 900;
+    private const ulong Stranger = 7;
 
     private static readonly DateTimeOffset T0 = new(2026, 10, 14, 21, 0, 0, TimeSpan.Zero);
 
@@ -18,6 +19,7 @@ public class CombatEngineTests
         var engine = new CombatEngine();
         engine.Apply(new LocalPlayerEvent(T0, Me, "Mati"));
         engine.Apply(new EntityInfoEvent(T0, Ally, "Aliado", 3));
+        engine.Apply(new PartyMemberSeenEvent(T0, Ally));
         engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345));
         engine.Apply(new EntityInfoEvent(T0, Boss, "Boss", null));
         return engine;
@@ -207,5 +209,56 @@ public class CombatEngineTests
 
         var me = engine.CurrentSnapshot()!.Actors.Single();
         Assert.Equal(("Alt", true), (me.Name, me.IsLocalPlayer));
+    }
+
+    [Fact]
+    public void Party_scope_ignores_players_outside_the_party()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(0), Stranger, Boss, 1, 5000, HitModifiers.None));
+        Assert.Null(engine.CurrentSnapshot()); // un random no abre encuentro
+
+        engine.Apply(new DamageEvent(At(1), Me, Boss, 1, 100, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Ally, Boss, 1, 50, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(3), Stranger, Boss, 1, 5000, HitModifiers.None));
+
+        Assert.Equal([Me, Ally], engine.CurrentSnapshot()!.Actors.Select(a => a.Id));
+    }
+
+    [Theory]
+    [InlineData(ActorScope.Me, 1)]
+    [InlineData(ActorScope.Party, 2)]
+    [InlineData(ActorScope.Everyone, 3)]
+    public void Scope_decides_who_is_counted(ActorScope scope, int expectedActors)
+    {
+        var engine = CreateEngine();
+        engine.Scope = scope;
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 100, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), Ally, Boss, 1, 100, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Stranger, Boss, 1, 100, HitModifiers.None));
+
+        Assert.Equal(expectedActors, engine.CurrentSnapshot()!.Actors.Count);
+    }
+
+    [Fact]
+    public void Without_split_damage_accumulates_across_idle_gaps()
+    {
+        var engine = CreateEngine();
+        engine.SplitEncounters = false;
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 100, HitModifiers.None));
+        engine.Tick(At(60));
+        engine.Apply(new DamageEvent(At(60), Me, Boss, 1, 100, HitModifiers.None));
+
+        Assert.Equal(200, engine.CurrentSnapshot()!.TotalDamage);
+    }
+
+    [Fact]
+    public void Member_that_stops_reporting_leaves_the_party()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(30), Me, Boss, 1, 100, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(31), Ally, Boss, 1, 100, HitModifiers.None)); // sin HP/MP hace 31 s
+
+        Assert.Equal([Me], engine.CurrentSnapshot()!.Actors.Select(a => a.Id));
     }
 }

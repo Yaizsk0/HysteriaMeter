@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using HysteriaMeter.App.Interop;
@@ -9,6 +10,9 @@ namespace HysteriaMeter.App.Overlay;
 public partial class OverlayWindow : Window
 {
     private const int ToggleClickThroughHotKey = 1;
+    private const double MinZoom = 0.7;
+    private const double MaxZoom = 2.0;
+    private const double ZoomStep = 0.1;
 
     private readonly MeterViewModel _viewModel;
 
@@ -16,8 +20,42 @@ public partial class OverlayWindow : Window
     {
         InitializeComponent();
         DataContext = _viewModel = viewModel;
+        RestoreLayout();
         Loaded += (_, _) => _viewModel.Start();
+        Closing += (_, _) => OverlayLayout.Save(new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height));
         Closed += (_, _) => _viewModel.Stop();
+    }
+
+    private void RestoreLayout()
+    {
+        if (OverlayLayout.Load() is not { } layout)
+        {
+            return;
+        }
+
+        Width = Math.Clamp(layout.Width, MinWidth, MaxWidth);
+        if (layout.Height > 0)
+        {
+            Height = Math.Clamp(layout.Height, MinHeight, MaxHeight);
+        }
+
+        SetZoom(layout.Zoom);
+
+        // Si la posición guardada quedó fuera de pantalla (otro monitor), se usa la de Windows.
+        var screen = new Rect(SystemParameters.VirtualScreenLeft, SystemParameters.VirtualScreenTop, SystemParameters.VirtualScreenWidth, SystemParameters.VirtualScreenHeight);
+        if (screen.Contains(new Point(layout.Left + 40, layout.Top + 10)))
+        {
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Left = layout.Left;
+            Top = layout.Top;
+        }
+    }
+
+    private void SetZoom(double zoom)
+    {
+        zoom = Math.Round(Math.Clamp(zoom, MinZoom, MaxZoom), 2);
+        Zoom.ScaleX = zoom;
+        Zoom.ScaleY = zoom;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -55,6 +93,25 @@ public partial class OverlayWindow : Window
         if (e.ButtonState == MouseButtonState.Pressed)
         {
             DragMove();
+        }
+    }
+
+    private void OnResizeDragDelta(object sender, DragDeltaEventArgs e)
+    {
+        Width = Math.Clamp(Width + (e.HorizontalChange * Zoom.ScaleX), MinWidth, MaxWidth);
+        Height = Math.Clamp(Height + (e.VerticalChange * Zoom.ScaleY), MinHeight, MaxHeight);
+    }
+
+    private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            // El tamaño acompaña al zoom para que las columnas no se aprieten.
+            var before = Zoom.ScaleX;
+            SetZoom(before + (Math.Sign(e.Delta) * ZoomStep));
+            Width = Math.Clamp(Width * Zoom.ScaleX / before, MinWidth, MaxWidth);
+            Height = Math.Clamp(Height * Zoom.ScaleY / before, MinHeight, MaxHeight);
+            e.Handled = true;
         }
     }
 

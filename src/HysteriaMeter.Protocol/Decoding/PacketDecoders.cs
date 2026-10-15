@@ -9,6 +9,7 @@ public static class PacketDecoders
         new PeriodicEffectDecoder(),
         new PlayerSpawnDecoder(),
         new LocalPlayerDecoder(),
+        new PartyMemberDecoder(),
         new LocalPlayerInfoDecoder(),
         new NpcSpawnDecoder(),
         new KillPacketDecoder(),

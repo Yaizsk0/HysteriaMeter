@@ -7,95 +7,350 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MeterViewModel}"
         Title="Hysteria Meter"
-        Width="340" SizeToContent="Height" MinHeight="60"
+        Width="356" Height="300" MinWidth="260" MaxWidth="900" MinHeight="150" MaxHeight="1400"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="NoResize" ShowInTaskbar="True"
-        FontFamily="Segoe UI" FontSize="12" Foreground="#EEE">
+        FontFamily="{Binding Font}" FontSize="13" Foreground="{StaticResource Text}"
+        TextOptions.TextFormattingMode="Display">
 
+    <!-- Referencia visual: mocks/Main.dc.html (aprobado por Mati el 2026-10-15). -->
     <Window.Resources>
-        <SolidColorBrush x:Key="Panel" Color="#D0141821" />
-        <SolidColorBrush x:Key="Accent" Color="#B05B8CFF" />
-        <SolidColorBrush x:Key="AccentLocal" Color="#C0F2A33A" />
-        <Style x:Key="HeaderButton" TargetType="Button">
-            <Setter Property="Width" Value="22" />
-            <Setter Property="Height" Value="20" />
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="26" />
             <Setter Property="Margin" Value="2,0,0,0" />
-            <Setter Property="Foreground" Value="#CCC" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
             <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Frame" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource GoldDim}" />
+                                <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Icon" TargetType="Path">
+            <Setter Property="Width" Value="14" />
+            <Setter Property="Height" Value="14" />
+            <Setter Property="Stretch" Value="Uniform" />
+            <Setter Property="StrokeThickness" Value="1.8" />
+            <Setter Property="StrokeLineJoin" Value="Round" />
+            <Setter Property="StrokeStartLineCap" Value="Round" />
+            <Setter Property="StrokeEndLineCap" Value="Round" />
+            <Setter Property="Stroke" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+        </Style>
+
+        <Style x:Key="Tab" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource TextDim}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0,0,2,0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Underline" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,2" Padding="8,6">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Underline" Property="BorderBrush" Value="{StaticResource Gold}" />
+                                <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Corner" TargetType="Border">
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Height" Value="10" />
+            <Setter Property="BorderBrush" Value="{StaticResource Gold}" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
+
+        <BooleanToVisibilityConverter x:Key="Visible" />
+
+        <Style x:Key="SettingsHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextDim}" />
+            <Setter Property="Margin" Value="0,8,0,4" />
+        </Style>
+
+        <!-- Casilla y opción con el estilo del overlay; sirve para CheckBox y RadioButton. -->
+        <Style x:Key="Option" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Grid Width="14" Height="14" Margin="0,0,8,0" VerticalAlignment="Center">
+                                <Border x:Name="Box" BorderBrush="{StaticResource GoldDim}" BorderThickness="1" Background="{StaticResource Row}" />
+                                <Border x:Name="Mark" Margin="3" Background="{StaticResource Gold}" Visibility="Collapsed" />
+                            </Grid>
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Mark" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource Gold}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource Gold}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
-    <Border Background="{StaticResource Panel}" CornerRadius="6" Padding="8,6">
-        <StackPanel>
-            <!-- Encabezado: se arrastra la ventana desde acá -->
-            <DockPanel x:Name="Header" MouseLeftButtonDown="OnHeaderMouseDown" Background="Transparent">
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button Style="{StaticResource HeaderButton}" Content="⟲" ToolTip="Reiniciar encuentro" Command="{Binding ResetCommand}" />
-                    <Button Style="{StaticResource HeaderButton}" Content="🔒" ToolTip="Bloquear (click-through). Ctrl+Shift+L para desbloquear" Click="OnLockClick" />
-                    <Button Style="{StaticResource HeaderButton}" Content="✕" ToolTip="Cerrar" Click="OnCloseClick" />
-                </StackPanel>
-                <Ellipse Width="7" Height="7" Margin="0,0,6,0" VerticalAlignment="Center">
-                    <Ellipse.Style>
-                        <Style TargetType="Ellipse">
-                            <Setter Property="Fill" Value="#666" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsLive}" Value="True">
-                                    <Setter Property="Fill" Value="#4CD964" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Ellipse.Style>
-                </Ellipse>
-                <TextBlock FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
-                    <Run Text="{Binding Title, Mode=OneWay}" />
-                    <Run Text=" · " Foreground="#888" />
-                    <Run Text="{Binding Elapsed, Mode=OneWay}" Foreground="#AAA" />
-                    <Run Text=" · " Foreground="#888" />
-                    <Run Text="{Binding TotalDps, Mode=OneWay}" Foreground="#AAA" />
-                    <Run Text="dps" Foreground="#888" />
-                </TextBlock>
-            </DockPanel>
+    <!-- Margen para que entren las esquinas doradas, que sobresalen 2 px del marco. -->
+    <!-- Ctrl + rueda del mouse cambia el zoom (escala de todo el overlay). -->
+    <Grid Margin="2" PreviewMouseWheel="OnPreviewMouseWheel">
+        <Grid.LayoutTransform>
+            <ScaleTransform x:Name="Zoom" ScaleX="1" ScaleY="1" />
+        </Grid.LayoutTransform>
+        <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource GoldDim}" BorderThickness="1" CornerRadius="2">
+            <DockPanel>
+                <!-- Encabezado: se arrastra la ventana desde acá -->
+                <DockPanel DockPanel.Dock="Top" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="SizeAll">
+                    <DockPanel.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#24C9A25A" Offset="0" />
+                            <GradientStop Color="#00C9A25A" Offset="1" />
+                        </LinearGradientBrush>
+                    </DockPanel.Background>
+                    <Border DockPanel.Dock="Bottom" Height="1" Background="{StaticResource Rule}" />
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,6,6,6">
+                        <Button Style="{StaticResource IconButton}" Click="OnLockClick" ToolTip="Bloquear overlay (Ctrl+Shift+L para desbloquear)">
+                            <Path Style="{StaticResource Icon}" Data="M5,11 H19 V21 H5 Z M8,11 V7 A4,4 0 0 1 16,7 V11" />
+                        </Button>
+                        <Button Style="{StaticResource IconButton}" Command="{Binding ResetCommand}" ToolTip="Reiniciar encuentro">
+                            <Path Style="{StaticResource Icon}" Data="M3,12 A9,9 0 1 0 6,5.3 L3,8 M3,3 V8 H8" />
+                        </Button>
+                        <Button Style="{StaticResource IconButton}" Command="{Binding ToggleSettingsCommand}" ToolTip="Configuración">
+                            <Path Style="{StaticResource Icon}" Data="M12,9 A3,3 0 1 0 12.01,9 Z M12,2 V5 M12,19 V22 M2,12 H5 M19,12 H22 M4.9,4.9 L7,7 M17,17 L19.1,19.1 M4.9,19.1 L7,17 M17,7 L19.1,4.9" />
+                        </Button>
+                        <Button Style="{StaticResource IconButton}" Click="OnCloseClick" ToolTip="Cerrar">
+                            <Path Style="{StaticResource Icon}" Data="M6,6 L18,18 M18,6 L6,18" />
+                        </Button>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="10,6,0,6" VerticalAlignment="Center">
+                        <Path Width="16" Height="16" Stretch="Uniform" Stroke="{StaticResource Gold}" StrokeThickness="1.6" StrokeLineJoin="Round"
+                              Data="M12,2 L20,7 V17 L12,22 L4,17 V7 Z M12,7 V17 M8,9.5 L16,14.5 M16,9.5 L8,14.5" />
+                        <TextBlock Text="HYSTERIA" Margin="8,0,0,0" FontFamily="{StaticResource TitleFont}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource Gold}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
+                        <!-- Verde mientras hay combate; gris con el último encuentro terminado. -->
+                        <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="#5C6774" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsLive}" Value="True">
+                                            <Setter Property="Fill" Value="#4CD964" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="{Binding Elapsed}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </StackPanel>
+                </DockPanel>
 
-            <ItemsControl ItemsSource="{Binding Actors}" Margin="0,6,0,0">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="vm:ActorRowViewModel">
-                        <Grid Height="22" Margin="0,1" ToolTip="{Binding Breakdown}">
-                            <!-- Barra proporcional al primero -->
-                            <Rectangle HorizontalAlignment="Stretch" RadiusX="3" RadiusY="3" RenderTransformOrigin="0,0.5">
-                                <Rectangle.Style>
-                                    <Style TargetType="Rectangle">
-                                        <Setter Property="Fill" Value="{StaticResource Accent}" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsLocalPlayer}" Value="True">
-                                                <Setter Property="Fill" Value="{StaticResource AccentLocal}" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
+                <!-- Objetivo principal -->
+                <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" Margin="10,8,10,6" FontWeight="Bold" FontSize="14"
+                           Foreground="{StaticResource TextBright}" TextTrimming="CharacterEllipsis" />
+
+                <!-- Pestañas -->
+                <Border DockPanel.Dock="Top" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,0,0,1" Padding="10,0">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding ColumnsHeader}" FontSize="12" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="DAÑO" IsChecked="{Binding IsDamageTab}" />
+                            <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="CURACIÓN" IsChecked="{Binding IsHealingTab}"
+                                         Visibility="{Binding ShowHealingTab, Converter={StaticResource Visible}}" />
+                            <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="RECIBIDO" IsEnabled="False"
+                                         ToolTip="Próximamente: falta decodificar el daño que reciben los jugadores" ToolTipService.ShowOnDisabled="True" />
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <!-- Pie -->
+                <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,1,0,0" Padding="10,6,18,6">
+                    <DockPanel TextElement.FontSize="12" TextElement.Foreground="{StaticResource TextDim}">
+                        <TextBlock DockPanel.Dock="Right">
+                            <Run Text="Crít." />
+                            <Run Text="{Binding CritRate, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
+                            <Run Text="· Máx." />
+                            <Run Text="{Binding MaxHit, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
+                        </TextBlock>
+                        <TextBlock>
+                            <Run Text="Party" />
+                            <Run Text="{Binding PartyPerSecond, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
+                            <Run Text="{Binding RateUnit, Mode=OneWay}" />
+                            <Run Text="·" />
+                            <Run Text="{Binding PartyTotal, Mode=OneWay}" />
+                        </TextBlock>
+                    </DockPanel>
+                </Border>
+
+                <!-- Filas: ocupan el resto del alto; si no entran, se desplazan con la rueda. -->
+                <Grid>
+                <TextBlock Text="Esperando el primer golpe…" Margin="10,10" VerticalAlignment="Top" Foreground="{StaticResource TextDim}"
+                           Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
+                <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding Actors}" Margin="6,6,6,8">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:ActorRowViewModel">
+                            <Border x:Name="Row" Height="30" Margin="0,0,0,3" Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="1"
+                                    ToolTip="{Binding Breakdown}">
+                                <Grid>
+                                    <!-- Barra proporcional al primero -->
+                                    <Rectangle x:Name="Bar" Fill="{Binding BarFill}" HorizontalAlignment="Stretch">
+                                        <Rectangle.RenderTransform>
+                                            <ScaleTransform ScaleX="{Binding Bar}" />
+                                        </Rectangle.RenderTransform>
+                                    </Rectangle>
+                                    <Grid Margin="8,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="18" />
+                                            <ColumnDefinition Width="28" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="52" />
+                                            <ColumnDefinition Width="50" />
+                                            <ColumnDefinition Width="46" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Rank}" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
+                                        <!-- Rombo de clase: por ahora la inicial; el color de clase llega cuando decodifiquemos la clase. -->
+                                        <Grid Grid.Column="1" Width="20" Height="20" HorizontalAlignment="Left">
+                                            <Border x:Name="Diamond" Width="14" Height="14" BorderBrush="{Binding Accent}" BorderThickness="1" RenderTransformOrigin="0.5,0.5">
+                                                <Border.RenderTransform>
+                                                    <RotateTransform Angle="45" />
+                                                </Border.RenderTransform>
+                                            </Border>
+                                            <TextBlock x:Name="InitialText" Text="{Binding Initial}" FontSize="11" FontWeight="Bold" Foreground="{Binding Accent}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Grid>
+                                        <TextBlock x:Name="NameText" Grid.Column="2" Text="{Binding DisplayName}" FontSize="15" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="3" Text="{Binding PerSecond}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource TextBright}"
+                                                   HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        <!-- Total, o HPS cuando daño y curación van juntos -->
+                                        <TextBlock x:Name="TotalText" Grid.Column="4" Text="{Binding Total}" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="5" Text="{Binding Share}" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding DataContext.ShowHealingColumn, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                    <Setter TargetName="TotalText" Property="Text" Value="{Binding HealingPerSecond}" />
+                                    <Setter TargetName="TotalText" Property="Foreground" Value="{StaticResource Healing}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsLocalPlayer}" Value="True">
+                                    <Setter TargetName="Row" Property="BorderBrush" Value="{StaticResource RowBorderLocal}" />
+                                    <Setter TargetName="NameText" Property="Foreground" Value="{StaticResource NameLocal}" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                </ScrollViewer>
+
+                <!-- Configuración: tapa las filas mientras está abierta -->
+                <Border Background="{StaticResource PanelSolid}" Visibility="{Binding IsSettingsOpen, Converter={StaticResource Visible}}">
+                    <ScrollViewer VerticalScrollBarVisibility="Hidden">
+                        <StackPanel Margin="12,10">
+                            <TextBlock Text="CONTAR DAÑO DE" Style="{StaticResource SettingsHeader}" />
+                            <RadioButton Style="{StaticResource Option}" GroupName="Scope" Content="Solo yo" IsChecked="{Binding ScopeMe}" />
+                            <RadioButton Style="{StaticResource Option}" GroupName="Scope" Content="Yo y mi party" IsChecked="{Binding ScopeParty}" />
+                            <RadioButton Style="{StaticResource Option}" GroupName="Scope" Content="Todos los jugadores cerca" IsChecked="{Binding ScopeEveryone}" />
+
+                            <TextBlock Text="PELEAS" Style="{StaticResource SettingsHeader}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Reiniciar en cada pelea nueva" IsChecked="{Binding SplitEncounters}"
+                                      ToolTip="Apagado: el daño se acumula entre peleas hasta que reinicies a mano" />
+
+                            <TextBlock Text="CURACIÓN" Style="{StaticResource SettingsHeader}" />
+                            <RadioButton Style="{StaticResource Option}" GroupName="Healing" Content="Junto al daño (columna HPS)" IsChecked="{Binding HealingCombined}" />
+                            <RadioButton Style="{StaticResource Option}" GroupName="Healing" Content="En su propia pestaña" IsChecked="{Binding HealingInTab}" />
+                            <RadioButton Style="{StaticResource Option}" GroupName="Healing" Content="No mostrar" IsChecked="{Binding HealingHidden}" />
+
+                            <TextBlock Text="FUENTE" Style="{StaticResource SettingsHeader}" />
+                            <ListBox ItemsSource="{x:Static vm:MeterPreferences.Fonts}" SelectedItem="{Binding FontName}"
+                                     Background="Transparent" BorderThickness="0" Padding="0">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+                                        <Setter Property="Cursor" Value="Hand" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="Chip" Margin="0,0,6,6" Padding="8,3" BorderBrush="{StaticResource RowBorder}" BorderThickness="1" Background="{StaticResource Row}">
+                                                        <TextBlock Text="{Binding}" FontFamily="{Binding}" />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource Gold}" />
+                                                            <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource GoldDim}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
                                     </Style>
-                                </Rectangle.Style>
-                                <Rectangle.RenderTransform>
-                                    <ScaleTransform ScaleX="{Binding Bar}" />
-                                </Rectangle.RenderTransform>
-                            </Rectangle>
-                            <Grid Margin="6,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="18" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="56" />
-                                    <ColumnDefinition Width="40" />
-                                    <ColumnDefinition Width="40" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Rank}" Foreground="#BBB" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Grid.Column="2" Text="{Binding Dps}" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="3" Text="{Binding Share}" Foreground="#CCC" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="4" Text="{Binding CritRate}" Foreground="#CCC" HorizontalAlignment="Right" VerticalAlignment="Center" ToolTip="% de críticos" />
-                            </Grid>
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </StackPanel>
-    </Border>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+                </Grid>
+
+            </DockPanel>
+        </Border>
+
+        <!-- Agarradera para cambiar ancho y alto. -->
+        <Thumb HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="14" Height="14" Margin="0,0,1,1"
+               Cursor="SizeNWSE" DragDelta="OnResizeDragDelta" ToolTip="Arrastrá para cambiar el tamaño · Ctrl + rueda para el zoom">
+            <Thumb.Template>
+                <ControlTemplate TargetType="Thumb">
+                    <Grid Background="Transparent">
+                        <Path Data="M13,3 L3,13 M13,8 L8,13 M13,12 L12,13" Stroke="{StaticResource GoldDim}" StrokeThickness="1.2" />
+                    </Grid>
+                </ControlTemplate>
+            </Thumb.Template>
+        </Thumb>
+
+        <!-- Esquinas doradas -->
+        <Border Style="{StaticResource Corner}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-2,-2,0,0" BorderThickness="2,2,0,0" />
+        <Border Style="{StaticResource Corner}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-2,-2,0" BorderThickness="0,2,2,0" />
+        <Border Style="{StaticResource Corner}" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="-2,0,0,-2" BorderThickness="2,0,0,2" />
+        <Border Style="{StaticResource Corner}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-2,-2" BorderThickness="0,0,2,2" />
+    </Grid>
 </Window>

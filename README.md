@@ -32,7 +32,13 @@ Requisitos: Windows 10/11, [Npcap](https://npcap.com/) en modo compatible WinPca
 ```powershell
 dotnet build
 dotnet test
-dotnet run --project src/HysteriaMeter.App
+dotnet run --project src/HysteriaMeter.App -c Release
+```
+
+El overlay arranca en vivo y toma solo el tráfico del proceso `AION2`. Para probarlo sin jugar, reproducí una grabación a velocidad real (o más rápido con `ReplaySpeed`):
+
+```powershell
+dotnet run --project src/HysteriaMeter.App -c Release -- --Capture:Mode=Replay --Capture:ReplayPath=C:\ruta\a\captura.pcap --Capture:ReplaySpeed=4
 ```
 
 ## Spec Kit
