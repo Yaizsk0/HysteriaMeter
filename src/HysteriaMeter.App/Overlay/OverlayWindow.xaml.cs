@@ -24,7 +24,7 @@ public partial class OverlayWindow : Window
         DataContext = _viewModel = viewModel;
         RestoreLayout();
         Loaded += (_, _) => _viewModel.Start();
-        Closing += (_, _) => OverlayLayout.Save(new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height));
+        Closing += (_, _) => SaveLayout();
         Closed += (_, _) => _viewModel.Stop();
         _viewModel.DetailRequested += ShowDetail;
     }
@@ -39,6 +39,17 @@ public partial class OverlayWindow : Window
         }
 
         _detail.Activate();
+    }
+
+    private void SaveLayout()
+    {
+        // Una ventana que nunca se mostró no tiene posición (NaN), y JSON no admite NaN.
+        if (double.IsNaN(Left) || double.IsNaN(Top))
+        {
+            return;
+        }
+
+        OverlayLayout.Save(new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height));
     }
 
     private void RestoreLayout()
