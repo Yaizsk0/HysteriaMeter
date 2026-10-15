@@ -175,7 +175,7 @@
 
     <!-- Margen para que entren las esquinas doradas, que sobresalen 2 px del marco. -->
     <!-- Ctrl + rueda del mouse cambia el zoom (escala de todo el overlay). -->
-    <Grid x:Name="Root" Margin="2" PreviewMouseWheel="OnPreviewMouseWheel">
+    <Grid x:Name="Root" Margin="2" PreviewMouseWheel="OnPreviewMouseWheel" AllowDrop="True" DragOver="OnRootDragOver" Drop="OnRootDrop">
         <Grid.LayoutTransform>
             <ScaleTransform x:Name="Zoom" ScaleX="1" ScaleY="1" />
         </Grid.LayoutTransform>
@@ -626,6 +626,8 @@
                                 <Button Content="Guardar CSV" Command="{Binding ExportCsvCommand}" ToolTip="Una fila por jugador, para Excel o Google Sheets" />
                                 <Button Content="Guardar JSON" Command="{Binding ExportJsonCommand}" ToolTip="La pelea completa, con skills y línea de tiempo" />
                                 <Button Content="Abrir carpeta" Command="{Binding OpenExportsCommand}" />
+                                <Button Content="Abrir pelea…" Click="OnOpenFightClick"
+                                        ToolTip="Abre un JSON guardado con &quot;Guardar JSON&quot; (tuyo o de otro de la legión). También podés arrastrarlo al overlay." />
                                 <Button Content="Exportar perfil" Command="{Binding ExportProfileCommand}"
                                         ToolTip="Guarda esta configuración (sin el webhook) en Exportes\perfil-hysteria.json para otra PC o la legión" />
                                 <Button Content="Cargar perfil" Command="{Binding ImportProfileCommand}"

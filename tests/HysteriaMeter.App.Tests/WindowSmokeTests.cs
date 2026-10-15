@@ -1,3 +1,4 @@
+using System.IO;
 using System.Runtime.ExceptionServices;
 using System.Windows;
 using HysteriaMeter.App.Detail;
@@ -73,6 +74,24 @@ public sealed class WindowSmokeTests
             Layout(new DetailWindow(viewModel.Detail));
             var demo = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));
             Layout(new HysteriaMeter.App.Registro.LogWindow(new LogViewModel(() => demo.Deaths![0].LastHits, SkillNames.Empty, tharos.Id, "Tharos")));
+
+            // Abrir una pelea compartida (JSON de otro Hysteria Meter) la fija en el overlay; un archivo que no es pelea no.
+            var shared = Path.Combine(Path.GetTempPath(), $"hysteria-{Guid.NewGuid():N}.json");
+            try
+            {
+                File.WriteAllText(shared, HysteriaMeter.Storage.EncounterExport.ToJson(demo));
+                viewModel.BackToLiveCommand.Execute(null);
+                Assert.True(viewModel.OpenSharedFile(shared));
+                Assert.StartsWith("ARCHIVO · ", viewModel.HistoryLabel, StringComparison.Ordinal);
+                Assert.True(viewModel.IsViewingHistory);
+                File.WriteAllText(shared, "no es una pelea");
+                Assert.False(viewModel.OpenSharedFile(shared));
+                Assert.Contains("no es una pelea exportada", viewModel.ExportMessage, StringComparison.Ordinal);
+            }
+            finally
+            {
+                File.Delete(shared);
+            }
         });
     }
 

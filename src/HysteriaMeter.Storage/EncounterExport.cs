@@ -66,6 +66,34 @@ public static class EncounterExport
     /// <summary>El encuentro completo (jugadores, skills, línea de tiempo) en JSON indentado.</summary>
     public static string ToJson(EncounterSnapshot encounter) => JsonSerializer.Serialize(encounter, JsonOptions);
 
+    /// <summary>
+    /// Lee un encuentro exportado con <see cref="ToJson"/> (propio o de otro Hysteria Meter), o <c>null</c> si el
+    /// texto no es un encuentro válido. Las listas que falten quedan vacías.
+    /// </summary>
+    public static EncounterSnapshot? FromJson(string json)
+    {
+        try
+        {
+            if (JsonSerializer.Deserialize<EncounterSnapshot>(json, JsonOptions) is not { } encounter || encounter.Start == default || encounter.End < encounter.Start)
+            {
+                return null;
+            }
+
+            var actors = (encounter.Actors ?? []).Where(a => a is not null)
+                .Select(a => a with { Name = a.Name ?? "?", Skills = a.Skills ?? [] })
+                .ToArray();
+            return actors.Length == 0 ? null : encounter with { Actors = actors };
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+        catch (NotSupportedException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>"Destroyer Tarka 2026-10-15 21-42": nombre de archivo sin caracteres prohibidos en Windows.</summary>
     public static string FileName(EncounterSnapshot encounter, DateTimeOffset localStart)
     {
