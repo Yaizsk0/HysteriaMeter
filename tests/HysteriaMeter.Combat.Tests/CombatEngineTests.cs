@@ -70,6 +70,41 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Session_adds_every_fight_using_only_combat_time()
+    {
+        var engine = CreateEngine();
+        Assert.Null(engine.SessionSnapshot());
+
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 10, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(5), Me, Boss, 10, 1000, HitModifiers.None));
+        engine.Tick(At(30)); // cierra la primera pelea por inactividad
+        engine.Apply(new DamageEvent(At(100), Me, Boss, 20, 500, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(105), Me, Boss, 10, 500, HitModifiers.None));
+
+        var session = engine.SessionSnapshot()!;
+        Assert.Equal("Sesión · 2 peleas", session.TargetName);
+        Assert.Equal(TimeSpan.FromSeconds(10), session.Duration); // 5 s + 5 s, sin los 95 s entre peleas
+        Assert.Equal(3000, session.Actors.Single(a => a.Id == Me).Damage);
+        Assert.Equal(300, session.Actors.Single(a => a.Id == Me).Dps);
+        Assert.Equal(1000, engine.CurrentSnapshot()!.Actors.Single(a => a.Id == Me).Damage);
+
+        engine.Reset();
+        Assert.Null(engine.SessionSnapshot());
+    }
+
+    [Fact]
+    public void Idle_timeout_can_change_while_running()
+    {
+        var engine = CreateEngine();
+        engine.IdleTimeout = TimeSpan.FromSeconds(30);
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 10, 1000, HitModifiers.None));
+        engine.Tick(At(20));
+        Assert.NotNull(engine.CurrentSnapshot());
+        engine.Tick(At(31));
+        Assert.Null(engine.CurrentSnapshot());
+    }
+
+    [Fact]
     public void Keeps_a_log_of_the_fight_with_names()
     {
         var engine = CreateEngine();

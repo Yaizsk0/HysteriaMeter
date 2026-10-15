@@ -11,7 +11,9 @@ public sealed record OverlayLayout(
     double Height = 0,
     MeterTab Tab = MeterTab.Damage,
     bool ShowHealing = true,
-    bool Compact = false)
+    bool Compact = false,
+    bool Session = false,
+    bool BossOnly = false)
 {
     private const string FileName = "ventanas.json";
 

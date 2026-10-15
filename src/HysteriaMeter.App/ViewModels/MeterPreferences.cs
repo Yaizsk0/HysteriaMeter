@@ -48,6 +48,14 @@ public sealed record MeterPreferences
 
     public bool SplitEncounters { get; init; } = true;
 
+    /// <summary>Segundos sin daño para dar una pelea por terminada.</summary>
+    public static IReadOnlyList<int> IdleOptions { get; } = [5, 8, 15, 30];
+
+    public int IdleSeconds { get; init; } = 8;
+
+    /// <summary>Si se está mirando una pelea guardada y empieza otra, volver solo al vivo.</summary>
+    public bool AutoBackToLive { get; init; } = true;
+
     // "TextFont" y no "Font": así las preferencias guardadas con la fuente vieja no pisan la nueva por defecto.
     public string TextFont { get; init; } = "Inter";
 }

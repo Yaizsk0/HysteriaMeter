@@ -52,6 +52,11 @@ public sealed class WindowSmokeTests
             Assert.True(viewModel.IsViewingHistory);
             viewModel.IsCompact = true;
             Layout(new OverlayWindow(viewModel));
+            viewModel.BackToLiveCommand.Execute(null);
+            viewModel.IsSessionView = true;
+            viewModel.BossOnly = true;
+            Assert.False(viewModel.IsFightView);
+            viewModel.ShowDemoCommand.Execute(null);
 
             // Pestaña de daño recibido, detalle con muertes y registro.
             viewModel.IsTakenTab = true;
@@ -219,6 +224,24 @@ public sealed class WindowSmokeTests
         Assert.StartsWith("2 golpes por ", item.LastHits, StringComparison.Ordinal);
         Assert.Equal(string.Empty, ActorRowViewModel.DeathMark(0));
         Assert.Equal(" ✝3", ActorRowViewModel.DeathMark(3));
+    }
+
+    [Fact]
+    public void Data_folder_is_next_to_the_exe_in_portable_mode()
+    {
+        Assert.Equal(System.IO.Path.Combine("C:/Juegos/Hysteria", "datos"), AppPaths.Resolve("C:/Juegos/Hysteria", portable: true, "C:/Users/X/AppData/Local"));
+        Assert.Equal(System.IO.Path.Combine("C:/Users/X/AppData/Local", "HysteriaMeter"), AppPaths.Resolve("C:/Juegos/Hysteria", portable: false, "C:/Users/X/AppData/Local"));
+    }
+
+    [Fact]
+    public void Boss_only_counts_damage_to_the_main_target()
+    {
+        var actor = Actor() with { Damage = 3000, MainTargetDamage = 2000, DamageTaken = 700, Healing = 50 };
+
+        Assert.Equal(3000, MeterTab.Damage.Metric(actor));
+        Assert.Equal(2000, MeterTab.Damage.Metric(actor, bossOnly: true));
+        Assert.Equal(700, MeterTab.Taken.Metric(actor, bossOnly: true));
+        Assert.Equal(50, MeterTab.Healing.Metric(actor));
     }
 
     [Fact]

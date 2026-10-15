@@ -289,6 +289,13 @@
                 <!-- Pestañas -->
                 <Border DockPanel.Dock="Top" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,0,0,1" Padding="10,0" Visibility="{Binding IsExpanded, Converter={StaticResource Visible}}">
                     <DockPanel>
+                        <!-- Segmento: la pelea actual o la sesión entera (como Current/Overall de Details!) -->
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" TextElement.FontSize="11">
+                            <RadioButton Style="{StaticResource Tab}" GroupName="Segment" Content="PELEA" IsChecked="{Binding IsFightView}"
+                                         ToolTip="La pelea actual (o la última que terminó)" />
+                            <RadioButton Style="{StaticResource Tab}" GroupName="Segment" Content="SESIÓN" IsChecked="{Binding IsSessionChip}"
+                                         ToolTip="Todas las peleas desde el último reinicio, con el DPS sobre el tiempo en combate" />
+                        </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="DAÑO" IsChecked="{Binding IsDamageTab}" />
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="CURACIÓN" IsChecked="{Binding IsHealingTab}" />
@@ -481,6 +488,17 @@
                             <TextBlock Text="PELEAS" Style="{StaticResource SettingsHeader}" />
                             <CheckBox Style="{StaticResource Option}" Content="Reiniciar en cada pelea nueva" IsChecked="{Binding SplitEncounters}"
                                       ToolTip="Apagado: el daño se acumula entre peleas hasta que reinicies a mano" />
+                            <TextBlock Text="Termina tras estos segundos sin daño" FontSize="11" Foreground="{StaticResource TextDim}" Margin="0,4,0,2" />
+                            <ListBox ItemsSource="{x:Static vm:MeterPreferences.IdleOptions}" SelectedItem="{Binding IdleSeconds}" Style="{StaticResource Chips}"
+                                     ToolTip="Más alto para bosses con fases sin daño; más bajo para separar el trash">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding StringFormat='{}{0} s'}" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <CheckBox Style="{StaticResource Option}" Content="Volver al vivo cuando empieza una pelea" IsChecked="{Binding AutoBackToLive}"
+                                      ToolTip="Si estás mirando una pelea guardada y arranca otra, el overlay vuelve solo a la actual" />
 
                             <TextBlock Text="GRABACIÓN" Style="{StaticResource SettingsHeader}" />
                             <CheckBox Style="{StaticResource Option}" Content="Grabar lo capturado (.pcap)" IsChecked="{Binding IsRecording}"
@@ -494,6 +512,8 @@
                             <TextBlock Text="ESTA VENTANA" Style="{StaticResource SettingsHeader}" />
                             <CheckBox Style="{StaticResource Option}" Content="Mostrar HPS junto al daño" IsChecked="{Binding ShowHealing}"
                                       ToolTip="Apagado: cada ventana muestra solo lo de su pestaña. Con + abrís otra ventana, por ejemplo una de curación." />
+                            <CheckBox Style="{StaticResource Option}" Content="Solo el daño al boss" IsChecked="{Binding BossOnly}"
+                                      ToolTip="Cuenta solo el daño al objetivo principal, sin adds ni trash" />
                             <CheckBox Style="{StaticResource Option}" Content="Modo compacto" IsChecked="{Binding IsCompact}"
                                       ToolTip="Solo las filas y el reloj. También se cambia con doble clic en el encabezado." />
 
@@ -604,6 +624,8 @@
 
                             <TextBlock Text="VERSIÓN" Style="{StaticResource SettingsHeader}" />
                             <TextBlock Text="{Binding Version, Mode=OneTime}" FontSize="12" Foreground="{StaticResource TextMuted}" />
+                            <TextBlock Text="{Binding DataFolderHint, Mode=OneTime}" FontSize="11" Foreground="{StaticResource TextDim}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                       ToolTip="Para el modo portable, creá un archivo portable.txt junto a HysteriaMeter.exe" />
                         </StackPanel>
                     </ScrollViewer>
                 </Border>

@@ -36,7 +36,7 @@ public partial class App : Application
             IdleTimeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<MeterSettings>>().Value.IdleTimeoutSeconds),
         }));
         builder.Services.AddSingleton(sp => new EncounterRepository(
-            Path.Combine(AppContext.BaseDirectory, sp.GetRequiredService<IOptions<MeterSettings>>().Value.DatabasePath)));
+            AppPaths.Database(sp.GetRequiredService<IOptions<MeterSettings>>().Value.DatabasePath)));
         builder.Services.AddSingleton<CaptureRecorder>();
         builder.Services.AddSingleton<CaptureStatus>();
         builder.Services.AddHostedService<MeterPipeline>();

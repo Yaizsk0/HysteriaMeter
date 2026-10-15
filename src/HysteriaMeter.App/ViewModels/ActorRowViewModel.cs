@@ -93,9 +93,9 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial double Bar { get; set; }
 
-    public void Update(int rank, ActorSnapshot actor, MeterTab tab, long top, long total, TimeSpan duration)
+    public void Update(int rank, ActorSnapshot actor, MeterTab tab, long top, long total, TimeSpan duration, bool bossOnly = false)
     {
-        var value = tab.Metric(actor);
+        var value = tab.Metric(actor, bossOnly);
 
         Id = actor.Id;
         Rank = rank;
@@ -105,7 +105,12 @@ public sealed partial class ActorRowViewModel : ObservableObject
         Accent = actor.IsLocalPlayer ? PlayerColors.Local : PlayerColors.For(actor.Name);
         BarFill = actor.IsLocalPlayer ? PlayerColors.LocalBar : PlayerColors.BarFor(actor.Name);
         IsLocalPlayer = actor.IsLocalPlayer;
-        PerSecond = Compact(tab == MeterTab.Damage ? actor.Dps : value / duration.TotalSeconds);
+        PerSecond = Compact(tab switch
+        {
+            MeterTab.Damage when bossOnly => actor.MainTargetDps,
+            MeterTab.Damage => actor.Dps,
+            _ => value / duration.TotalSeconds,
+        });
         Total = Compact(value);
         Share = FormatShare(total == 0 ? 0 : (double)value / total);
         Bar = top == 0 ? 0 : (double)value / top;
