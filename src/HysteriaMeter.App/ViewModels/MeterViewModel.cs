@@ -943,6 +943,12 @@ public sealed partial class MeterViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// El nombre del objetivo; si el juego no lo mandó y no está en data/npcs.json, "NPC 12345" para poder agregarlo.
+    /// </summary>
+    public static string TitleOf(EncounterSnapshot snapshot) =>
+        snapshot.TargetName ?? (snapshot.TargetNpcId is { } npc ? $"NPC {npc.ToString(CultureInfo.InvariantCulture)}" : "Encuentro");
+
     /// <summary>"¡Récord en Tarka! 12.4k DPS (antes 11.0k)", o <c>null</c> si no lo superó o es la primera vez.</summary>
     public static string? RecordText(string target, double dps, double? previousBest) =>
         previousBest is { } best && dps > best
@@ -1144,7 +1150,7 @@ public sealed partial class MeterViewModel : ObservableObject
         var real = snapshot;
         snapshot = ViewModels.Nicknames.Apply(snapshot, Preferences.Nicknames);
         _shown = snapshot;
-        Title = snapshot.TargetName ?? "Encuentro";
+        Title = TitleOf(snapshot);
         Elapsed = snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
         UpdateTargetHealth(snapshot.TargetHealth);
         TargetHealthCheck = HealthCheck(snapshot.TargetHealth, snapshot.Actors.Sum(a => a.MainTargetDamage));

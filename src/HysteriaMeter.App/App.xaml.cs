@@ -34,7 +34,10 @@ public partial class App : Application
         builder.Services.AddSingleton(sp => new CombatEngine(new CombatEngineOptions
         {
             IdleTimeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<MeterSettings>>().Value.IdleTimeoutSeconds),
-        }));
+        })
+        {
+            Entities = { Npcs = NpcTable.Load(Path.Combine(AppContext.BaseDirectory, "data", "npcs.json")) },
+        });
         builder.Services.AddSingleton(sp => new EncounterRepository(
             AppPaths.Database(sp.GetRequiredService<IOptions<MeterSettings>>().Value.DatabasePath)));
         builder.Services.AddSingleton<CaptureRecorder>();

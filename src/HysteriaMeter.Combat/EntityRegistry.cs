@@ -24,6 +24,9 @@ public sealed class EntityRegistry
 
     public ulong? LocalPlayerId { get; private set; }
 
+    /// <summary>Nombres de NPCs por ID de plantilla; el juego no los manda.</summary>
+    public NpcCatalog Npcs { get; set; } = NpcCatalog.Empty;
+
     public void Apply(CombatEvent e)
     {
         _now = e.Timestamp > _now ? e.Timestamp : _now;
@@ -121,7 +124,14 @@ public sealed class EntityRegistry
     public bool IsNpc(ulong canonicalId) => Profile(canonicalId).NpcId is not null;
 
     public string DisplayName(ulong canonicalId) =>
-        Profile(canonicalId).Name ?? (canonicalId == LocalPlayerId ? "Yo" : $"#{canonicalId}");
+        NameOf(canonicalId) ?? (canonicalId == LocalPlayerId ? "Yo" : $"#{canonicalId}");
+
+    /// <summary>El nombre que mandó el juego o, para un NPC, el de la tabla; <c>null</c> si no se conoce.</summary>
+    public string? NameOf(ulong canonicalId)
+    {
+        var profile = Profile(canonicalId);
+        return profile.Name ?? (profile.NpcId is { } npcId ? Npcs.Of(npcId)?.Name : null);
+    }
 
     private bool TryGetOwner(ulong id, out ulong owner)
     {

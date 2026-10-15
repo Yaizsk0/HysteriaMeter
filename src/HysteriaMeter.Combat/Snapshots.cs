@@ -13,7 +13,10 @@ public sealed record EncounterSnapshot(
     // Vida del objetivo principal, si la conocemos (spawn 0x3641 y actualizaciones 0x8D00).
     Health? TargetHealth = null,
     // Muertes de jugadores durante la pelea, con los últimos golpes recibidos.
-    IReadOnlyList<DeathRecap>? Deaths = null)
+    IReadOnlyList<DeathRecap>? Deaths = null,
+    // ID de plantilla del objetivo principal (para ponerle nombre en data/npcs.json) y si la tabla lo marca como boss.
+    uint? TargetNpcId = null,
+    bool TargetIsBoss = false)
 {
     /// <summary>Duración mínima de 1 s para que un único golpe no dé un DPS absurdo.</summary>
     public TimeSpan Duration => TimeSpan.FromTicks(Math.Max((End - Start).Ticks, TimeSpan.TicksPerSecond));

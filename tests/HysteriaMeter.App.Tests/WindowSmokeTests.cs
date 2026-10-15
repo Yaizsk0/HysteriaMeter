@@ -364,6 +364,33 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Npc_table_reads_full_and_short_entries()
+    {
+        var table = NpcTable.Parse("""
+            {
+              // comentario
+              "npcs": {
+                "12345": { "name": " Destroyer Tarka ", "dungeon": "Fortaleza", "boss": true },
+                "777": "Esqueleto",
+                "abc": "no es un ID",
+                "888": { "dungeon": "sin nombre" },
+              }
+            }
+            """);
+
+        Assert.Equal(2, table.Count);
+        Assert.Equal(new NpcInfo("Destroyer Tarka", "Fortaleza", IsBoss: true), table.Of(12345));
+        Assert.Equal(new NpcInfo("Esqueleto"), table.Of(777));
+        Assert.Equal(0, NpcTable.Parse("{ roto").Count);
+        Assert.Equal(0, NpcTable.Parse("[]").Count);
+
+        var fight = new EncounterSnapshot(Guid.NewGuid(), DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddSeconds(5), null, false, 0, []);
+        Assert.Equal("Encuentro", MeterViewModel.TitleOf(fight));
+        Assert.Equal("NPC 12345", MeterViewModel.TitleOf(fight with { TargetNpcId = 12345 }));
+        Assert.Equal("Tarka", MeterViewModel.TitleOf(fight with { TargetName = "Tarka", TargetNpcId = 12345 }));
+    }
+
+    [Fact]
     public void Demo_encounter_is_consistent()
     {
         var demo = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));

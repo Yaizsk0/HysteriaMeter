@@ -26,6 +26,27 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Unnamed_monster_takes_its_name_from_the_npc_table()
+    {
+        var engine = new CombatEngine();
+        engine.Apply(new LocalPlayerEvent(T0, Me, "Mati"));
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 10, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), Boss, Me, 500, 300, HitModifiers.None));
+
+        var unnamed = engine.CurrentSnapshot()!;
+        Assert.Null(unnamed.TargetName);
+        Assert.Equal(12345U, unnamed.TargetNpcId);
+        Assert.False(unnamed.TargetIsBoss);
+
+        engine.Entities.Npcs = new NpcCatalog(new Dictionary<uint, NpcInfo> { [12345] = new("Destroyer Tarka", "Fortaleza", IsBoss: true) });
+        var named = engine.CurrentSnapshot()!;
+        Assert.Equal("Destroyer Tarka", named.TargetName);
+        Assert.True(named.TargetIsBoss);
+        Assert.Equal("Destroyer Tarka", engine.Entities.DisplayName(Boss));
+    }
+
+    [Fact]
     public void Computes_dps_and_share_per_actor()
     {
         var engine = CreateEngine();
