@@ -22,7 +22,7 @@ description: "Tareas de la feature 002: precisión del combate"
 
 ## Phase 2: Foundational
 
-- [ ] T003 [P] `HitModifiers` con `Perfect`, `Double`, `Front`, `MultiHit` y `ModifierCoverage` en `src/HysteriaMeter.Protocol/Events/CombatEvents.cs`
+- [X] T003 [P] `HitModifiers` con `Perfect`, `Double`, `Front`, `MultiHit` y `ModifierCoverage` en `src/HysteriaMeter.Protocol/Events/CombatEvents.cs`
 - [ ] T004 [P] Contadores por modificador y estado "sin identificar" en `ActorSnapshot` y `SkillSnapshot` en `src/HysteriaMeter.Combat/Snapshots.cs`
 - [ ] T005 Migración de SQLite con las columnas nuevas en `src/HysteriaMeter.Storage/EncounterRepository.cs` + test
 
@@ -30,15 +30,15 @@ description: "Tareas de la feature 002: precisión del combate"
 
 ## Phase 3: User Story 1 - Tipos de golpe (P1)
 
-- [ ] T006 [US1] Research: correlacionar flags de `0x3804` con CRI/PERF/DOUB/FRNT/BACK/MULT y documentarlo en `protocol-notes.md`
-- [ ] T007 [US1] Decodificar los modificadores en `src/HysteriaMeter.Protocol/Decoding/DamagePacketDecoder.cs` + test con bytes reales
-- [ ] T008 [US1] Contar multi-golpe como un solo golpe con su daño total en `CombatEngine` + test
+- [X] T006 [US1] Research: correlacionar flags de `0x3804` con CRI/PERF/DOUB/FRNT/BACK/MULT y documentarlo en `protocol-notes.md`
+- [X] T007 [US1] Decodificar los modificadores en `src/HysteriaMeter.Protocol/Decoding/DamagePacketDecoder.cs` + test con bytes reales
+- [X] T008 [US1] Contar multi-golpe como un solo golpe con su daño total en `CombatEngine` + test
 - [ ] T009 [US1] Mostrar crit % y "sin identificar" en las filas del overlay en `src/HysteriaMeter.App/ViewModels/ActorRowViewModel.cs`
 
 ## Phase 4: User Story 2 - Daño completo del local (P1)
 
-- [ ] T010 [US2] Research: explicar el ~8 % faltante (`0x3806`, `0x364A`) y documentarlo
-- [ ] T011 [US2] Decoder para la fuente faltante + entrada en `data/opcodes.json` + test
+- [X] T010 [US2] Research: explicar el ~8 % faltante (`0x3806`, `0x364A`) y documentarlo (resuelto: era el DoT `0x3805`, no `0x3806`)
+- [X] T011 [US2] Decoder para la fuente faltante + entrada en `data/opcodes.json` + test
 - [ ] T012 [P] [US2] Overkill por golpe usando el HP conocido del objetivo en `CombatEngine` + test
 - [ ] T013 [P] [US2] Daño directo y periódico separados por skill en `CombatEngine` y `SkillSnapshot` + test
 - [ ] T014 [US2] Validar SC-001 en las 10 peleas y registrar resultados en `specs/002-precision-combate/validation.md`

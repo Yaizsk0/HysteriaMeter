@@ -48,11 +48,14 @@ internal sealed class ActorStats
 
     public void AddHit(uint skillId, long amount, HitModifiers modifiers)
     {
+        // Como Combat Analysis: los ticks de DoT suman daño pero no cuentan como golpe.
+        var periodic = modifiers.HasFlag(HitModifiers.DamageOverTime);
+        var hit = periodic ? 0 : 1;
         var critical = modifiers.HasFlag(HitModifiers.Critical);
         Damage += amount;
-        Hits++;
+        Hits += hit;
         Crits += critical ? 1 : 0;
-        MaxHit = Math.Max(MaxHit, amount);
+        MaxHit = periodic ? MaxHit : Math.Max(MaxHit, amount);
 
         if (!Skills.TryGetValue(skillId, out var skill))
         {
@@ -61,9 +64,9 @@ internal sealed class ActorStats
         }
 
         skill.Damage += amount;
-        skill.Hits++;
+        skill.Hits += hit;
         skill.Crits += critical ? 1 : 0;
-        skill.MaxHit = Math.Max(skill.MaxHit, amount);
+        skill.MaxHit = periodic ? skill.MaxHit : Math.Max(skill.MaxHit, amount);
     }
 }
 

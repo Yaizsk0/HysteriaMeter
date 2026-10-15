@@ -43,10 +43,23 @@ varint target | u8 flags | u8 flags2 | varint source | u32 skillId | u8 seq | u8
 | [3 bytes si flags & 0x02] | u32 instance | u32 count | varint ? | varint value | ...
 ```
 
-- `flags & 0x04`: lleva daño. `flags = 0x00`: aplicación/tick de buff sin valor.
-- `flags & 0x20`: agrega al final una lista corta (p. ej. `03 33 33 33`); ¿multi-golpe?
-- `flags2 & 0x04`: agrega 1–2 bytes al final.
-- Bit de crítico: **sin identificar**.
+- `flags & 0x04`: lleva daño. `flags = 0x00`: aplicación/tick de buff sin valor. Cada frame con daño es **un golpe** para Combat Analysis; los ticks de `0x3805` suman daño pero no golpes.
+- `value` es el daño exacto del juego.
+
+Modificadores, validados contra el detalle de Combat Analysis de Destroyer Tarka (2026-10-15: 92 golpes, 648.468 de daño; las 19 skills cierran exacto en golpes, daño y cada columna):
+
+| Columna del juego | Dónde está | Total en la pelea |
+|---|---|---|
+| CRI | `type = 0x03` (normal `0x02`) | 51 |
+| MULT | `flags & 0x20`; la cola trae `[n]` y n varints iguales que **no** suman daño | 23 |
+| FRNT / BACK | 3.er byte del bloque extra: `0x02` frente, `0x01` espalda; sin bloque extra, ninguno | 62 / 25 (+5 sin lado) |
+| PERF | 1.er byte del bloque extra `& 0x04` | 5 |
+| DOUB | 1.er byte del bloque extra `& 0x08` (el valor sale ~2x) | 5 |
+
+- `flags & 0x10` con 1.er byte del extra `0x80`: aparece en todas las skills activas; las pasivas/procs no lo traen.
+- `flags2 & 0x04`: agrega al final un varint (~1.100 por golpe en Punishing Strike). ¿Robo de vida? Sin confirmar.
+- `varint unknown` vale 11660 para el jugador local y 10000 para invocaciones.
+- Duración del juego: del primer al último golpe de la pelea (27,65 s ⇒ 23.453 DPS).
 
 ### Layout de `0x3805`
 
