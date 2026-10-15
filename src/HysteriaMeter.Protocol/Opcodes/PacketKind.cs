@@ -9,6 +9,7 @@ public enum PacketKind
     LocalPlayerInfo,
     EntitySpawn,
     EntityInfo,
+    PartyMember,
     Damage,
     PeriodicEffect,
     Heal,

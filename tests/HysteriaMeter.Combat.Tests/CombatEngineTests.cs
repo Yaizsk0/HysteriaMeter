@@ -19,7 +19,7 @@ public class CombatEngineTests
         var engine = new CombatEngine();
         engine.Apply(new LocalPlayerEvent(T0, Me, "Mati"));
         engine.Apply(new EntityInfoEvent(T0, Ally, "Aliado", 3));
-        engine.Apply(new PartyMembersEvent(T0, [Ally]));
+        engine.Apply(new PartyMemberSeenEvent(T0, Ally));
         engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345));
         engine.Apply(new EntityInfoEvent(T0, Boss, "Boss", null));
         return engine;
@@ -250,5 +250,15 @@ public class CombatEngineTests
         engine.Apply(new DamageEvent(At(60), Me, Boss, 1, 100, HitModifiers.None));
 
         Assert.Equal(200, engine.CurrentSnapshot()!.TotalDamage);
+    }
+
+    [Fact]
+    public void Member_that_stops_reporting_leaves_the_party()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(30), Me, Boss, 1, 100, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(31), Ally, Boss, 1, 100, HitModifiers.None)); // sin HP/MP hace 31 s
+
+        Assert.Equal([Me], engine.CurrentSnapshot()!.Actors.Select(a => a.Id));
     }
 }

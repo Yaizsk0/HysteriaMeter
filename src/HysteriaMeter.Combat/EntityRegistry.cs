@@ -10,17 +10,22 @@ public sealed class EntityRegistry
 {
     private const int MaxOwnerDepth = 4;
 
+    /// <summary>Un miembro que deja de mandar HP/MP este tiempo se considera fuera de la party.</summary>
+    private static readonly TimeSpan PartyMemberTimeout = TimeSpan.FromSeconds(10);
+
     private readonly Dictionary<ulong, ulong> _owners = [];
     private readonly Dictionary<ulong, EntityProfile> _profiles = [];
     private readonly Dictionary<string, ulong> _idsByName = new(StringComparer.Ordinal);
     private readonly Dictionary<ulong, string> _pendingOwnerNames = [];
-    private readonly HashSet<ulong> _partyMembers = [];
+    private readonly Dictionary<ulong, DateTimeOffset> _partySeenAt = [];
+    private DateTimeOffset _now;
     private string? _localName;
 
     public ulong? LocalPlayerId { get; private set; }
 
     public void Apply(CombatEvent e)
     {
+        _now = e.Timestamp > _now ? e.Timestamp : _now;
         switch (e)
         {
             case LocalPlayerEvent local:
@@ -35,9 +40,8 @@ public sealed class EntityRegistry
                 }
 
                 break;
-            case PartyMembersEvent party:
-                _partyMembers.Clear();
-                _partyMembers.UnionWith(party.EntityIds);
+            case PartyMemberSeenEvent member:
+                _partySeenAt[member.EntityId] = member.Timestamp;
                 break;
             case EntitySpawnEvent spawn:
                 if (spawn.OwnerId is { } owner && owner != spawn.EntityId)
@@ -67,7 +71,8 @@ public sealed class EntityRegistry
         }
     }
 
-    public bool IsPartyMember(ulong canonicalId) => _partyMembers.Contains(canonicalId);
+    public bool IsPartyMember(ulong canonicalId) =>
+        _partySeenAt.TryGetValue(canonicalId, out var seenAt) && _now - seenAt <= PartyMemberTimeout;
 
     public ulong Canonical(ulong id)
     {

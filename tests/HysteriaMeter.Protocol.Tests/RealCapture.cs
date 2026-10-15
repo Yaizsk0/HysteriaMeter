@@ -51,6 +51,15 @@ internal static class RealCapture
     /// </summary>
     public const string LocalPlayerInfoBody = "a2 0d 5f 91 c3 2b 3f 05 54 65 73 74 73 79 05 09 00 00 00 01 2d 00 00 00";
 
+    /// <summary>HP/MP de un miembro de la party (0x921B, dungeon en party): entidad 15000, HP 16915/16915.</summary>
+    public const string PartyMemberBody = "98 75 93 84 01 93 84 01 62 10 00 00 af 12 00 00 00 00 00 00 00 00 00 00 42 0e 00 00 f0 49 02 00 01";
+
+    /// <summary>
+    /// Aparición de otro jugador (0x3645, mini boss) cuyo u16 tras la entidad empieza con un byte &lt; 0x80:
+    /// entidad 14895, nombre reemplazado por "Tests". Recortado.
+    /// </summary>
+    public const string PlayerSpawnLowByteBody = "af 74 0f 38 a0 01 07 05 54 65 73 74 73 1a 00 00 00";
+
     /// <summary>Frame bundle (0xFFFF) completo: 431 bytes con LZ4 adentro.</summary>
     public const string BundleFrame = """
         b103ffff20020000f30e970401910000f203000018018f9506003e07c7006d0ec70058b8457f000100f301018b950600feb7c7000f2ac700383c4617

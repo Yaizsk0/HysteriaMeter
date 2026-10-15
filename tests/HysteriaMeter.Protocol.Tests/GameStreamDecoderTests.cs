@@ -159,6 +159,23 @@ public class GameStreamDecoderTests
     }
 
     [Fact]
+    public void Decodes_player_spawn_when_field_after_entity_starts_below_0x80()
+    {
+        var events = CreateDecoder().Push(Frame(0x3645, Hex(RealCapture.PlayerSpawnLowByteBody)), T0);
+
+        var info = Assert.IsType<EntityInfoEvent>(Assert.Single(events));
+        Assert.Equal((14895UL, "Tests"), (info.EntityId, info.Name));
+    }
+
+    [Fact]
+    public void Decodes_party_member_entity()
+    {
+        var events = CreateDecoder().Push(Frame(0x921B, Hex(RealCapture.PartyMemberBody)), T0);
+
+        Assert.Equal(15000UL, Assert.IsType<PartyMemberSeenEvent>(Assert.Single(events)).EntityId);
+    }
+
+    [Fact]
     public void Decodes_kill_with_killer_name()
     {
         var events = CreateDecoder().Push(Frame(0x8D04, Hex(RealCapture.KillBody)), T0);
