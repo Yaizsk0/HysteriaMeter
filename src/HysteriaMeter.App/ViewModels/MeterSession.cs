@@ -1,0 +1,61 @@
+using HysteriaMeter.App.Pipeline;
+using HysteriaMeter.Combat;
+using HysteriaMeter.Storage;
+
+namespace HysteriaMeter.App.ViewModels;
+
+/// <summary>
+/// Lo que comparten todas las ventanas del overlay: el motor, la grabación, el historial y las
+/// preferencias generales. Cada ventana elige además qué muestra (daño, curación o ambos).
+/// </summary>
+public sealed class MeterSession
+{
+    private readonly Action<MeterPreferences> _save;
+
+    public MeterSession(
+        CombatEngine engine,
+        CaptureRecorder recorder,
+        SkillNames skillNames,
+        MeterPreferences preferences,
+        Action<MeterPreferences> save,
+        EncounterRepository? history = null)
+    {
+        Engine = engine;
+        Recorder = recorder;
+        SkillNames = skillNames;
+        History = history;
+        Preferences = preferences;
+        _save = save;
+        engine.Scope = preferences.Scope;
+        engine.SplitEncounters = preferences.SplitEncounters;
+    }
+
+    public CombatEngine Engine { get; }
+
+    public CaptureRecorder Recorder { get; }
+
+    public SkillNames SkillNames { get; }
+
+    public EncounterRepository? History { get; }
+
+    public MeterPreferences Preferences { get; private set; }
+
+    /// <summary>Nombres de las propiedades de <see cref="MeterViewModel"/> que hay que refrescar en todas las ventanas.</summary>
+    public event Action<IReadOnlyList<string>>? PreferencesChanged;
+
+    /// <summary>Se reinició el encuentro: todas las ventanas vacían sus filas.</summary>
+    public event Action? ResetRequested;
+
+    public void Update(MeterPreferences preferences, params string[] changed)
+    {
+        Preferences = preferences;
+        _save(preferences);
+        PreferencesChanged?.Invoke(changed);
+    }
+
+    public void Reset()
+    {
+        Engine.Reset();
+        ResetRequested?.Invoke();
+    }
+}

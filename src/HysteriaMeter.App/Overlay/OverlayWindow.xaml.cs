@@ -18,18 +18,29 @@ public partial class OverlayWindow : Window
     private const double ZoomStep = 0.1;
 
     private readonly MeterViewModel _viewModel;
+    private readonly OverlayWindows? _windows;
     private DetailWindow? _detail;
 
-    public OverlayWindow(MeterViewModel viewModel)
+    /// <param name="windows">Gestor de ventanas; <c>null</c> en pruebas, sin atajos globales.</param>
+    public OverlayWindow(MeterViewModel viewModel, OverlayLayout? layout = null, OverlayWindows? windows = null)
     {
         InitializeComponent();
         DataContext = _viewModel = viewModel;
-        RestoreLayout();
+        _windows = windows;
+        RestoreLayout(layout);
         Loaded += (_, _) => _viewModel.Start();
-        Closing += (_, _) => SaveLayout();
         Closed += (_, _) => _viewModel.Stop();
         _viewModel.DetailRequested += ShowDetail;
     }
+
+    /// <summary>La primera ventana registra los atajos globales (Windows no deja registrar el mismo dos veces).</summary>
+    private bool IsMain => _windows is { All.Count: > 0 } w && ReferenceEquals(w.All[0], this);
+
+    /// <summary>Posición y vista actuales; <c>null</c> si la ventana nunca se mostró (no tiene posición).</summary>
+    public OverlayLayout? CurrentLayout() =>
+        double.IsNaN(Left) || double.IsNaN(Top)
+            ? null
+            : new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height, _viewModel.Tab, _viewModel.ShowHealing);
 
     private void ShowDetail()
     {
@@ -43,20 +54,9 @@ public partial class OverlayWindow : Window
         _detail.Activate();
     }
 
-    private void SaveLayout()
+    private void RestoreLayout(OverlayLayout? layout)
     {
-        // Una ventana que nunca se mostró no tiene posición (NaN), y JSON no admite NaN.
-        if (double.IsNaN(Left) || double.IsNaN(Top))
-        {
-            return;
-        }
-
-        OverlayLayout.Save(new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height));
-    }
-
-    private void RestoreLayout()
-    {
-        if (OverlayLayout.Load() is not { } layout)
+        if (layout is null)
         {
             return;
         }
@@ -89,6 +89,11 @@ public partial class OverlayWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
+        if (!IsMain)
+        {
+            return;
+        }
+
         HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WndProc);
         OverlayInterop.RegisterHotKey(this, ToggleClickThroughHotKey, OverlayInterop.ModControl | OverlayInterop.ModShift, Key.L);
         OverlayInterop.RegisterHotKey(this, ResetHotKey, OverlayInterop.ModControl | OverlayInterop.ModShift, Key.R);
@@ -113,7 +118,7 @@ public partial class OverlayWindow : Window
         switch (wParam.ToInt32())
         {
             case ToggleClickThroughHotKey:
-                ToggleClickThrough();
+                ForAllWindows(w => w.ToggleClickThrough());
                 handled = true;
                 break;
             case ResetHotKey:
@@ -122,12 +127,24 @@ public partial class OverlayWindow : Window
                 break;
             case ToggleVisibilityHotKey:
                 // Hide conserva la ventana nativa, así que el atajo sigue llegando para volver a mostrarla.
-                Visibility = IsVisible ? Visibility.Hidden : Visibility.Visible;
+                var show = !IsVisible;
+                ForAllWindows(w => w.Visibility = show ? Visibility.Visible : Visibility.Hidden);
                 handled = true;
                 break;
         }
 
         return IntPtr.Zero;
+    }
+
+    private void ForAllWindows(Action<OverlayWindow> action)
+    {
+        if (_windows is null)
+        {
+            action(this);
+            return;
+        }
+
+        _windows.ForEach(action);
     }
 
     private void ToggleClickThrough()
@@ -173,7 +190,7 @@ public partial class OverlayWindow : Window
         }
     }
 
-    private void OnLockClick(object sender, RoutedEventArgs e) => ToggleClickThrough();
+    private void OnLockClick(object sender, RoutedEventArgs e) => ForAllWindows(w => w.ToggleClickThrough());
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
 }

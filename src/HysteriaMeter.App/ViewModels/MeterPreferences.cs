@@ -2,19 +2,6 @@ using HysteriaMeter.Combat;
 
 namespace HysteriaMeter.App.ViewModels;
 
-/// <summary>Cómo se muestra la curación.</summary>
-public enum HealingView
-{
-    /// <summary>Solo daño.</summary>
-    Hidden,
-
-    /// <summary>En su propia pestaña.</summary>
-    Tab,
-
-    /// <summary>Al lado del daño, en la misma fila (columna HPS).</summary>
-    Combined,
-}
-
 /// <summary>Opciones que el usuario cambia desde el panel de configuración del overlay.</summary>
 public sealed record MeterPreferences
 {
@@ -28,8 +15,6 @@ public sealed record MeterPreferences
     public double Opacity { get; init; } = 1.0;
 
     public ActorScope Scope { get; init; } = ActorScope.Party;
-
-    public HealingView Healing { get; init; } = HealingView.Combined;
 
     public bool SplitEncounters { get; init; } = true;
 

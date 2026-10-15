@@ -39,20 +39,19 @@ public partial class App : Application
             Path.Combine(AppContext.BaseDirectory, sp.GetRequiredService<IOptions<MeterSettings>>().Value.DatabasePath)));
         builder.Services.AddSingleton<CaptureRecorder>();
         builder.Services.AddHostedService<MeterPipeline>();
-        builder.Services.AddSingleton(sp => new MeterViewModel(
+        builder.Services.AddSingleton(sp => new MeterSession(
             sp.GetRequiredService<CombatEngine>(),
             sp.GetRequiredService<CaptureRecorder>(),
             SkillNames.Load(Path.Combine(AppContext.BaseDirectory, "data", "skills.json")),
             UserStore.Load<MeterPreferences>(PreferencesFile) ?? new MeterPreferences(),
             preferences => UserStore.Save(PreferencesFile, preferences),
             sp.GetRequiredService<EncounterRepository>()));
-        builder.Services.AddSingleton<OverlayWindow>();
+        builder.Services.AddSingleton<OverlayWindows>();
 
         _host = builder.Build();
         await _host.StartAsync().ConfigureAwait(true);
 
-        MainWindow = _host.Services.GetRequiredService<OverlayWindow>();
-        MainWindow.Show();
+        MainWindow = _host.Services.GetRequiredService<OverlayWindows>().OpenSaved();
     }
 
     protected override async void OnExit(ExitEventArgs e)
