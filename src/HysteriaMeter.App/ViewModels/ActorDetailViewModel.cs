@@ -18,6 +18,29 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
 
     public SkillNames Names => names;
 
+    /// <summary>Apodo puesto a un nombre real, o <c>null</c>.</summary>
+    public Func<string, string?>? NicknameOf { get; set; }
+
+    /// <summary>El usuario cambió el apodo (nombre real, apodo; vacío para sacarlo).</summary>
+    public event Action<string, string>? NicknameChanged;
+
+    /// <summary>Nombre del personaje en el juego, sin apodo.</summary>
+    [ObservableProperty]
+    public partial string RealName { get; set; } = string.Empty;
+
+    /// <summary>Lo que se escribe en el cuadro de apodo; se guarda con <see cref="SaveNicknameCommand"/>.</summary>
+    [ObservableProperty]
+    public partial string Nickname { get; set; } = string.Empty;
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void SaveNickname()
+    {
+        if (RealName.Length > 0 && Nickname.Trim() != (NicknameOf?.Invoke(RealName) ?? string.Empty))
+        {
+            NicknameChanged?.Invoke(RealName, Nickname);
+        }
+    }
+
     /// <summary>La vista abre el registro filtrado por este jugador.</summary>
     public event Action<LogViewModel>? LogRequested;
 
@@ -128,7 +151,14 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
 
         var duration = snapshot.Duration;
         var culture = CultureInfo.CurrentCulture;
-        Name = actor.Name;
+        var alias = NicknameOf?.Invoke(actor.Name);
+        if (RealName != actor.Name)
+        {
+            RealName = actor.Name;
+            Nickname = alias ?? string.Empty;
+        }
+
+        Name = alias ?? actor.Name;
         Target = snapshot.TargetName ?? "Encuentro";
         Dps = ActorRowViewModel.Compact(actor.Dps);
         ActiveDps = ActorRowViewModel.Compact(actor.ActiveDps);

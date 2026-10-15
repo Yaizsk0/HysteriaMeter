@@ -78,7 +78,9 @@ public sealed partial class MeterViewModel : ObservableObject
         _engine = session.Engine;
         _recorder = session.Recorder;
         _history = session.History;
-        Detail = new ActorDetailViewModel(session.SkillNames) { LogSource = session.Engine.CombatLog };
+        Detail = new ActorDetailViewModel(session.SkillNames) { LogSource = session.Engine.CombatLog, NicknameOf = name => Preferences.Nicknames.GetValueOrDefault(name) };
+        Detail.NicknameChanged += (realName, alias) =>
+            Update(Preferences with { Nicknames = ViewModels.Nicknames.With(Preferences.Nicknames, realName, alias) }, nameof(Preferences));
         Tab = tab;
         _showHealing = showHealing;
         IsCompact = compact;
@@ -98,7 +100,7 @@ public sealed partial class MeterViewModel : ObservableObject
             }
 
             _timer.Interval = TimeSpan.FromMilliseconds(Preferences.RefreshMs);
-            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)))
+            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)) || names.Contains(nameof(Preferences)) || names.Contains(string.Empty))
             {
                 Refresh();
             }
@@ -674,6 +676,49 @@ public sealed partial class MeterViewModel : ObservableObject
     [RelayCommand]
     private void ExportJson() => Export("json", EncounterExport.ToJson);
 
+    /// <summary>Ruta del perfil de configuración que se exporta y se importa.</summary>
+    public static string ProfilePath => Path.Combine(ExportFolder, ProfileFile.FileName);
+
+    [RelayCommand]
+    private void ExportProfile()
+    {
+        try
+        {
+            Directory.CreateDirectory(ExportFolder);
+            File.WriteAllText(ProfilePath, ProfileFile.ToJson(Preferences));
+            ExportMessage = $"Perfil guardado en Exportes\\{ProfileFile.FileName} (sin el webhook)";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ExportMessage = $"No se pudo guardar el perfil: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void ImportProfile()
+    {
+        string json;
+        try
+        {
+            json = File.ReadAllText(ProfilePath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ExportMessage = $"Poné el perfil en Exportes\\{ProfileFile.FileName} para cargarlo";
+            return;
+        }
+
+        if (ProfileFile.FromJson(json, Preferences) is not { } imported)
+        {
+            ExportMessage = $"{ProfileFile.FileName} no es un perfil válido";
+            return;
+        }
+
+        // Cadena vacía: todas las propiedades cambiaron.
+        Update(imported, string.Empty);
+        ExportMessage = "Perfil cargado";
+    }
+
     private void Export(string extension, Func<EncounterSnapshot, string> serialize)
     {
         if (_shown is not { } snapshot)
@@ -1060,6 +1105,8 @@ public sealed partial class MeterViewModel : ObservableObject
             return;
         }
 
+        var real = snapshot;
+        snapshot = ViewModels.Nicknames.Apply(snapshot, Preferences.Nicknames);
         _shown = snapshot;
         Title = snapshot.TargetName ?? "Encuentro";
         Elapsed = snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
@@ -1111,7 +1158,7 @@ public sealed partial class MeterViewModel : ObservableObject
         IsEmpty = Actors.Count == 0;
         if (Detail.ActorId is not null)
         {
-            Detail.Update(snapshot);
+            Detail.Update(real);
         }
     }
 }

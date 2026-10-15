@@ -618,6 +618,10 @@
                                 <Button Content="Guardar CSV" Command="{Binding ExportCsvCommand}" ToolTip="Una fila por jugador, para Excel o Google Sheets" />
                                 <Button Content="Guardar JSON" Command="{Binding ExportJsonCommand}" ToolTip="La pelea completa, con skills y línea de tiempo" />
                                 <Button Content="Abrir carpeta" Command="{Binding OpenExportsCommand}" />
+                                <Button Content="Exportar perfil" Command="{Binding ExportProfileCommand}"
+                                        ToolTip="Guarda esta configuración (sin el webhook) en Exportes\perfil-hysteria.json para otra PC o la legión" />
+                                <Button Content="Cargar perfil" Command="{Binding ImportProfileCommand}"
+                                        ToolTip="Carga Exportes\perfil-hysteria.json; tu webhook de Discord se mantiene" />
                             </WrapPanel>
                             <CheckBox Style="{StaticResource Option}" Content="Ocultar los nombres de los demás" IsChecked="{Binding AnonymizeExports}"
                                       ToolTip="En el resumen, el CSV, el JSON y Discord: vos quedás como &quot;Yo&quot; y el resto como &quot;Jugador 1&quot;, &quot;Jugador 2&quot;..." />
