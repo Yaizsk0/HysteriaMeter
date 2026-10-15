@@ -71,10 +71,14 @@ public sealed partial class ActorRowViewModel : ObservableObject
         IsLocalPlayer = actor.IsLocalPlayer;
         PerSecond = Compact(tab == MeterTab.Healing ? actor.Healing / duration.TotalSeconds : actor.Dps);
         Total = Compact(value);
-        Share = (total == 0 ? 0 : (double)value / total).ToString("P1", CultureInfo.CurrentCulture);
+        Share = FormatShare(total == 0 ? 0 : (double)value / total);
         Bar = top == 0 ? 0 : (double)value / top;
         Breakdown = BuildBreakdown(actor);
     }
+
+    /// <summary>"52%" sin decimales ni espacio: entra en la columna angosta del overlay.</summary>
+    internal static string FormatShare(double share) =>
+        (share * 100).ToString("0", CultureInfo.CurrentCulture) + "%";
 
     internal static string InitialOf(string name) =>
         name.Length > 0 && char.IsLetter(name[0]) ? char.ToUpper(name[0], CultureInfo.CurrentCulture).ToString() : "?";

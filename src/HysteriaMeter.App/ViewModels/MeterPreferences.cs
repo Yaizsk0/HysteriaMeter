@@ -23,6 +23,10 @@ public sealed record MeterPreferences
 
     public static IReadOnlyList<string> Fonts { get; } = ["Inter", "Segoe UI", "Bahnschrift", "Barlow Semi Condensed"];
 
+    public static IReadOnlyList<double> Opacities { get; } = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5];
+
+    public double Opacity { get; init; } = 1.0;
+
     public ActorScope Scope { get; init; } = ActorScope.Party;
 
     public HealingView Healing { get; init; } = HealingView.Combined;

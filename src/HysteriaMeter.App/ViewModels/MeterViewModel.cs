@@ -153,6 +153,13 @@ public sealed partial class MeterViewModel : ObservableObject
         ? $"Grabando en {Path.GetFileName(path)}"
         : "Para comparar una pelea con Combat Analysis";
 
+    /// <summary>Opacidad del overlay entero (una de <see cref="MeterPreferences.Opacities"/>).</summary>
+    public double OverlayOpacity
+    {
+        get => _preferences.Opacity;
+        set => Update(_preferences with { Opacity = Math.Clamp(value, 0.3, 1) }, nameof(OverlayOpacity));
+    }
+
     public string FontName
     {
         get => _preferences.TextFont;
@@ -212,7 +219,7 @@ public sealed partial class MeterViewModel : ObservableObject
     public partial bool IsClickThrough { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsDamageTab), nameof(IsHealingTab), nameof(ColumnsHeader), nameof(RateUnit), nameof(ShowHealingColumn))]
+    [NotifyPropertyChangedFor(nameof(IsDamageTab), nameof(IsHealingTab), nameof(SecondColumnHeader), nameof(RateUnit), nameof(ShowHealingColumn))]
     public partial MeterTab Tab { get; set; }
 
     public bool IsDamageTab
@@ -241,7 +248,8 @@ public sealed partial class MeterViewModel : ObservableObject
 
     public string RateUnit => Tab == MeterTab.Healing ? "HPS" : "DPS";
 
-    public string ColumnsHeader => ShowHealingColumn ? "DPS · HPS · %" : $"{RateUnit} · TOTAL · %";
+    /// <summary>Encabezado de la segunda columna numérica: HPS con daño y curación juntos, si no el total.</summary>
+    public string SecondColumnHeader => ShowHealingColumn ? "HPS" : "TOTAL";
 
     public void Start() => _timer.Start();
 
@@ -399,7 +407,7 @@ public sealed partial class MeterViewModel : ObservableObject
 
         Update(
             _preferences with { Healing = view },
-            nameof(HealingHidden), nameof(HealingInTab), nameof(HealingCombined), nameof(ShowHealingTab), nameof(ShowHealingColumn), nameof(ColumnsHeader));
+            nameof(HealingHidden), nameof(HealingInTab), nameof(HealingCombined), nameof(ShowHealingTab), nameof(ShowHealingColumn), nameof(SecondColumnHeader));
         if (view != HealingView.Tab)
         {
             Tab = MeterTab.Damage;

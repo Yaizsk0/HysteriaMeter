@@ -11,6 +11,8 @@ namespace HysteriaMeter.App.Overlay;
 public partial class OverlayWindow : Window
 {
     private const int ToggleClickThroughHotKey = 1;
+    private const int ResetHotKey = 2;
+    private const int ToggleVisibilityHotKey = 3;
     private const double MinZoom = 0.7;
     private const double MaxZoom = 2.0;
     private const double ZoomStep = 0.1;
@@ -89,20 +91,40 @@ public partial class OverlayWindow : Window
         base.OnSourceInitialized(e);
         HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WndProc);
         OverlayInterop.RegisterHotKey(this, ToggleClickThroughHotKey, OverlayInterop.ModControl | OverlayInterop.ModShift, Key.L);
+        OverlayInterop.RegisterHotKey(this, ResetHotKey, OverlayInterop.ModControl | OverlayInterop.ModShift, Key.R);
+        OverlayInterop.RegisterHotKey(this, ToggleVisibilityHotKey, OverlayInterop.ModControl | OverlayInterop.ModShift, Key.H);
     }
 
     protected override void OnClosed(EventArgs e)
     {
         OverlayInterop.UnregisterHotKey(this, ToggleClickThroughHotKey);
+        OverlayInterop.UnregisterHotKey(this, ResetHotKey);
+        OverlayInterop.UnregisterHotKey(this, ToggleVisibilityHotKey);
         base.OnClosed(e);
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == OverlayInterop.HotKeyMessage && wParam.ToInt32() == ToggleClickThroughHotKey)
+        if (msg != OverlayInterop.HotKeyMessage)
         {
-            ToggleClickThrough();
-            handled = true;
+            return IntPtr.Zero;
+        }
+
+        switch (wParam.ToInt32())
+        {
+            case ToggleClickThroughHotKey:
+                ToggleClickThrough();
+                handled = true;
+                break;
+            case ResetHotKey:
+                _viewModel.ResetCommand.Execute(null);
+                handled = true;
+                break;
+            case ToggleVisibilityHotKey:
+                // Hide conserva la ventana nativa, así que el atajo sigue llegando para volver a mostrarla.
+                Visibility = IsVisible ? Visibility.Hidden : Visibility.Visible;
+                handled = true;
+                break;
         }
 
         return IntPtr.Zero;

@@ -10,7 +10,7 @@
         Width="356" Height="300" MinWidth="260" MaxWidth="900" MinHeight="150" MaxHeight="1400"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="NoResize" ShowInTaskbar="True"
-        FontFamily="{Binding Font}" FontSize="13" Foreground="{StaticResource Text}"
+        FontFamily="{Binding Font}" FontSize="13" Opacity="{Binding OverlayOpacity}" Foreground="{StaticResource Text}"
         TextOptions.TextFormattingMode="Display">
 
     <!-- Referencia visual: mocks/Main.dc.html (aprobado por Mati el 2026-10-15). -->
@@ -84,6 +84,46 @@
             <Setter Property="IsHitTestVisible" Value="False" />
         </Style>
 
+
+        <!-- Lista de opciones como chips (fuente, opacidad) -->
+        <Style x:Key="Chips" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+                        <Setter Property="Cursor" Value="Hand" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="Chip" Margin="0,0,6,6" Padding="8,3" BorderBrush="{StaticResource RowBorder}" BorderThickness="1" Background="{StaticResource Row}">
+                                        <ContentPresenter />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource Gold}" />
+                                            <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                                        </Trigger>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource GoldDim}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <Style x:Key="SettingsHeader" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
@@ -215,7 +255,6 @@
                 <!-- Pestañas -->
                 <Border DockPanel.Dock="Top" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,0,0,1" Padding="10,0">
                     <DockPanel>
-                        <TextBlock DockPanel.Dock="Right" Text="{Binding ColumnsHeader}" FontSize="12" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
                         <StackPanel Orientation="Horizontal">
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="DAÑO" IsChecked="{Binding IsDamageTab}" />
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="CURACIÓN" IsChecked="{Binding IsHealingTab}"
@@ -245,12 +284,27 @@
                     </DockPanel>
                 </Border>
 
+                <!-- Encabezado de columnas, alineado con las filas (margen 6 + borde 1 + 8) -->
+                <Grid DockPanel.Dock="Top" Margin="15,5,15,0" TextElement.FontSize="11" TextElement.Foreground="{StaticResource TextDim}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="46" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="58" />
+                        <ColumnDefinition Width="58" />
+                        <ColumnDefinition Width="42" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="1" Text="JUGADOR" />
+                    <TextBlock Grid.Column="2" Text="{Binding RateUnit}" HorizontalAlignment="Right" />
+                    <TextBlock Grid.Column="3" Text="{Binding SecondColumnHeader}" HorizontalAlignment="Right" />
+                    <TextBlock Grid.Column="4" Text="%" HorizontalAlignment="Right" />
+                </Grid>
+
                 <!-- Filas: ocupan el resto del alto; si no entran, se desplazan con la rueda. -->
                 <Grid>
                 <TextBlock Text="Esperando el primer golpe…" Margin="10,10" VerticalAlignment="Top" Foreground="{StaticResource TextDim}"
                            Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
                 <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding Actors}" Margin="6,6,6,8">
+                <ItemsControl ItemsSource="{Binding Actors}" Margin="6,3,6,8">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="vm:ActorRowViewModel">
                             <Border x:Name="Row" Height="30" Margin="0,0,0,3" Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="1"
@@ -267,9 +321,9 @@
                                             <ColumnDefinition Width="18" />
                                             <ColumnDefinition Width="28" />
                                             <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="52" />
-                                            <ColumnDefinition Width="50" />
-                                            <ColumnDefinition Width="46" />
+                                            <ColumnDefinition Width="58" />
+                                            <ColumnDefinition Width="58" />
+                                            <ColumnDefinition Width="42" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding Rank}" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
                                         <!-- Rombo de clase: por ahora la inicial; el color de clase llega cuando decodifiquemos la clase. -->
@@ -377,38 +431,30 @@
                             <RadioButton Style="{StaticResource Option}" GroupName="Healing" Content="No mostrar" IsChecked="{Binding HealingHidden}" />
 
                             <TextBlock Text="FUENTE" Style="{StaticResource SettingsHeader}" />
-                            <ListBox ItemsSource="{x:Static vm:MeterPreferences.Fonts}" SelectedItem="{Binding FontName}"
-                                     Background="Transparent" BorderThickness="0" Padding="0">
-                                <ListBox.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel />
-                                    </ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                                <ListBox.ItemContainerStyle>
-                                    <Style TargetType="ListBoxItem">
-                                        <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
-                                        <Setter Property="Cursor" Value="Hand" />
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="ListBoxItem">
-                                                    <Border x:Name="Chip" Margin="0,0,6,6" Padding="8,3" BorderBrush="{StaticResource RowBorder}" BorderThickness="1" Background="{StaticResource Row}">
-                                                        <TextBlock Text="{Binding}" FontFamily="{Binding}" />
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsSelected" Value="True">
-                                                            <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource Gold}" />
-                                                            <Setter Property="Foreground" Value="{StaticResource Gold}" />
-                                                        </Trigger>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource GoldDim}" />
-                                                        </Trigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Style>
-                                </ListBox.ItemContainerStyle>
+                            <ListBox ItemsSource="{x:Static vm:MeterPreferences.Fonts}" SelectedItem="{Binding FontName}" Style="{StaticResource Chips}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" FontFamily="{Binding}" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
                             </ListBox>
+
+                            <TextBlock Text="OPACIDAD" Style="{StaticResource SettingsHeader}" />
+                            <ListBox ItemsSource="{x:Static vm:MeterPreferences.Opacities}" SelectedItem="{Binding OverlayOpacity}" Style="{StaticResource Chips}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding StringFormat={}{0:P0}}" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock Text="ATAJOS" Style="{StaticResource SettingsHeader}" />
+                            <TextBlock FontSize="12" Foreground="{StaticResource TextMuted}" LineHeight="18">
+                                <Run Text="Ctrl+Shift+L" Foreground="{StaticResource Text}" /><Run Text="  bloquear / desbloquear clics" /><LineBreak />
+                                <Run Text="Ctrl+Shift+R" Foreground="{StaticResource Text}" /><Run Text="  reiniciar el encuentro" /><LineBreak />
+                                <Run Text="Ctrl+Shift+H" Foreground="{StaticResource Text}" /><Run Text="  ocultar / mostrar el overlay" /><LineBreak />
+                                <Run Text="Ctrl+rueda" Foreground="{StaticResource Text}" /><Run Text="  zoom" />
+                            </TextBlock>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>
