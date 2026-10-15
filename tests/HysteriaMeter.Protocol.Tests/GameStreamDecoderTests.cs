@@ -141,6 +141,24 @@ public class GameStreamDecoderTests
     }
 
     [Fact]
+    public void Decodes_local_player_entity()
+    {
+        var events = CreateDecoder().Push(Frame(0x364A, Hex(RealCapture.LocalPlayerBody)), T0);
+
+        var local = Assert.IsType<LocalPlayerEvent>(Assert.Single(events));
+        Assert.Equal((1879UL, (string?)null), (local.EntityId, local.Name));
+    }
+
+    [Fact]
+    public void Decodes_local_player_name()
+    {
+        var events = CreateDecoder().Push(Frame(0x3633, Hex(RealCapture.LocalPlayerInfoBody)), T0);
+
+        var local = Assert.IsType<LocalPlayerEvent>(Assert.Single(events));
+        Assert.Equal((1698UL, "Tests"), (local.EntityId, local.Name));
+    }
+
+    [Fact]
     public void Decodes_kill_with_killer_name()
     {
         var events = CreateDecoder().Push(Frame(0x8D04, Hex(RealCapture.KillBody)), T0);

@@ -45,10 +45,10 @@ description: "Tareas de la feature 002: precisión del combate"
 
 ## Phase 5: User Story 3 - Party con nombre (P1)
 
-- [ ] T015 [US3] `LocalPlayerDecoder` (heurística de movimiento + `0x8D00`, o paquete explícito si aparece) en `src/HysteriaMeter.Protocol/Decoding/` + test
+- [X] T015 [US3] `LocalPlayerDecoder` (heurística de movimiento + `0x8D00`, o paquete explícito si aparece) en `src/HysteriaMeter.Protocol/Decoding/` + test
 - [ ] T016 [US3] Research: paquete de party o legión con nombres
 - [ ] T017 [US3] Fuentes secundarias de nombre (dueño de invocación, party) y prioridad entre fuentes en `src/HysteriaMeter.Combat/EntityRegistry.cs` + test
-- [ ] T018 [US3] Detectar cambio de personaje local sin reiniciar el meter + test
+- [X] T018 [US3] Detectar cambio de personaje local sin reiniciar el meter + test
 
 ## Phase 6: User Story 4 - Invocaciones (P2)
 

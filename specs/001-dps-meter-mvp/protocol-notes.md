@@ -33,7 +33,10 @@ Segunda captura: 2026-10-14, dungeon en party de 5 (7 min, 3,7 MB, Wi-Fi). Serve
 | `0x8D04` | Muerte: víctima, skill, quien mató, nombre y legión (en dungeons llega con killer 0 y sin nombre) | Alta | `KillPacketDecoder` |
 | `0x3802` | Lanzamiento de skill (fuente, skill u32, seq, objetivo, posición) | Media | — |
 | `0x8D00` | Actualización de recurso: `varint entidad \| 02 01 00 \| u32 HP` para HP | Alta | — |
-| `0x3806`, `0x364A` | Solo del jugador local (y algunas invocaciones); sin daño. ¿Estado? | Baja | — |
+| `0x364A` | Solo del jugador local (¿stats o buffs?): el primer varint es su entidad. 0 falsos positivos en 3 capturas | Alta | `LocalPlayerDecoder` |
+| `0x3633` | Datos del jugador local al entrar a una zona (~2,3 KB): entidad y nombre | Alta | `LocalPlayerInfoDecoder` |
+| `0x3620` | Una vez por conexión: entidad local e ID de personaje persistente, más un bloque zlib | Media | — |
+| `0x3806` | Estado de entidades: del jugador local y de NPCs, nunca de otros jugadores | Media | — |
 | `0x371A`–`0x371D`, `0x3600` | Movimiento / posición de entidades | Media | — |
 
 ### Layout de `0x3804`
@@ -58,7 +61,7 @@ Modificadores, validados contra el detalle de Combat Analysis de Destroyer Tarka
 
 - `flags & 0x10` con 1.er byte del extra `0x80`: aparece en todas las skills activas; las pasivas/procs no lo traen.
 - `flags2 & 0x04`: agrega al final un varint (~1.100 por golpe en Punishing Strike). ¿Robo de vida? Sin confirmar.
-- `varint unknown` vale 11660 para el jugador local y 10000 para invocaciones.
+- `varint unknown` es un valor propio de cada personaje (11660 para el de las capturas, otros valores para cada jugador de la party) y 10000 o 0 para NPCs e invocaciones. No marca al jugador local.
 - Duración del juego: del primer al último golpe de la pelea (27,65 s ⇒ 23.453 DPS).
 
 ### Layout de `0x3805`
@@ -85,11 +88,23 @@ varint entity | u8 tipo | u8 | u8 hasOwnerName | [varint len + UTF-8 ownerName] 
 varint entity | u8 | varint ? | u8 | varint len + UTF-8 name | u32 ? (¿clase o nivel?) | ... posición, legión
 ```
 
-- El jugador local no aparece: su `0x3645` llega al loguear o al entrar a la zona.
+- El jugador local no aparece: su nombre llega por `0x3633`.
+
+### Jugador local (captura de login, 2026-10-15)
+
+```text
+0x364A  varint entity | u8 count | (u16 id, u32 valor)...   ← primer bundle de cada conexión, cada 7–18 s después
+0x3633  varint entity | 4 bytes | u8 | varint len + UTF-8 name | u16 | ...   ← 6–10 s después de abrir la conexión
+0x3620  u16 0 | varint entity | u32 0 | u32 ID de personaje | u16 0 | u16 | bloque zlib (78 9C)
+```
+
+- **Cada cambio de zona, login o relog abre una conexión TCP nueva** y el local recibe otra entidad (por ejemplo 850 → 1879, 1244 → 14338). `EntityRegistry` toma la última entidad de `0x364A` como local y le pasa el nombre que ya conocía hasta que llega el `0x3633`.
+- `0x5611` (lista de personajes) y `0x8D57`/`0x8A03`/`0x8A05` (nombre, legión y stats en JSON) traen el nombre sin entidad.
+- Si la captura arranca con el jugador quieto, `0x364A` puede tardar ~3 s (hasta 103 s en un caso). Respaldo posible: emisor de `0x3806` que no sea un NPC de `0x3641`.
 
 ## Pendiente
 
 1. ~~Escala del daño~~: resuelta con la dungeon (ver "Validación contra el juego"); el factor de la primera captura era un error de análisis.
-2. Identificar el jugador local. Heurística que funcionó en la dungeon: es la única entidad sin paquetes de movimiento (`0x371B`–`0x371D`) y la que recibe casi todos los `0x8D00`. El nombre propio sale del dueño de sus invocaciones o de una captura desde el login.
+2. ~~Identificar el jugador local~~: resuelto con `0x364A` y `0x3633` (ver "Jugador local").
 3. Crítico, golpes por espalda, validar curaciones contra el juego, dueño de invocaciones sin nombre.
 4. Nombres de NPC: el ID de NPC está, falta una tabla ID → nombre.

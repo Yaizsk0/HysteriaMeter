@@ -8,6 +8,8 @@ public static class PacketDecoders
         new DamagePacketDecoder(),
         new PeriodicEffectDecoder(),
         new PlayerSpawnDecoder(),
+        new LocalPlayerDecoder(),
+        new LocalPlayerInfoDecoder(),
         new NpcSpawnDecoder(),
         new KillPacketDecoder(),
     ];
