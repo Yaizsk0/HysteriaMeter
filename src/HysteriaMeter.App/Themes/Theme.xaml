@@ -1,0 +1,29 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Paleta y fuentes de los mocks aprobados (hysteria-meter/mocks): paneles oscuros translúcidos,
+        filetes dorados, títulos en Cinzel y números en Barlow Semi Condensed. Las fuentes son OFL
+        y van embebidas (Assets/Fonts, con su licencia al lado).
+    -->
+    <FontFamily x:Key="TitleFont">pack://application:,,,/Assets/Fonts/#Cinzel</FontFamily>
+    <FontFamily x:Key="BodyFont">pack://application:,,,/Assets/Fonts/#Barlow Semi Condensed</FontFamily>
+
+    <SolidColorBrush x:Key="Panel" Color="#E60A0D14" />
+    <SolidColorBrush x:Key="Gold" Color="#E8CF8F" />
+    <SolidColorBrush x:Key="GoldDim" Color="#6B5A35" />
+    <SolidColorBrush x:Key="Rule" Color="#3A3222" />
+    <SolidColorBrush x:Key="RuleDim" Color="#2A2418" />
+
+    <SolidColorBrush x:Key="Text" Color="#E6E1D3" />
+    <SolidColorBrush x:Key="TextBright" Color="#F0E6CC" />
+    <SolidColorBrush x:Key="TextMuted" Color="#B9B19D" />
+    <SolidColorBrush x:Key="TextDim" Color="#A39C8A" />
+
+    <SolidColorBrush x:Key="Row" Color="#141922" />
+    <SolidColorBrush x:Key="RowBorder" Color="#222A35" />
+    <SolidColorBrush x:Key="RowBorderLocal" Color="#8A7442" />
+    <SolidColorBrush x:Key="BarOther" Color="#386E87A5" />
+    <SolidColorBrush x:Key="BarLocal" Color="#4DC9A25A" />
+    <SolidColorBrush x:Key="NameLocal" Color="#F3D98F" />
+    <SolidColorBrush x:Key="ClassUnknown" Color="#8D96A0" />
+</ResourceDictionary>

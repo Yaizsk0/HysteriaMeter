@@ -18,6 +18,7 @@
     <ProjectReference Include="..\HysteriaMeter.Storage\HysteriaMeter.Storage.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="Assets\Fonts\*.ttf" />
     <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\data\opcodes.json" Link="data\opcodes.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

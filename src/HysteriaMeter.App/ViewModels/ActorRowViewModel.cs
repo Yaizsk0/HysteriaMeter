@@ -16,20 +16,26 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial string Name { get; set; } = string.Empty;
 
+    /// <summary>Nombre con la marca "(vos)" para el jugador local, como en el mock.</summary>
+    [ObservableProperty]
+    public partial string DisplayName { get; set; } = string.Empty;
+
+    /// <summary>Letra del rombo de clase. Mientras no decodifiquemos la clase, es la inicial del nombre.</summary>
+    [ObservableProperty]
+    public partial string Initial { get; set; } = string.Empty;
+
     [ObservableProperty]
     public partial bool IsLocalPlayer { get; set; }
 
+    /// <summary>DPS o HPS según la pestaña.</summary>
     [ObservableProperty]
-    public partial string Dps { get; set; } = string.Empty;
+    public partial string PerSecond { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string Damage { get; set; } = string.Empty;
+    public partial string Total { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string Share { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial string CritRate { get; set; } = string.Empty;
 
     /// <summary>Detalle del golpe a golpe, como las columnas de Combat Analysis (tooltip de la fila).</summary>
     [ObservableProperty]
@@ -39,19 +45,25 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial double Bar { get; set; }
 
-    public void Update(int rank, ActorSnapshot actor, long topDamage)
+    public void Update(int rank, ActorSnapshot actor, MeterTab tab, long top, long total, TimeSpan duration)
     {
+        var value = tab == MeterTab.Healing ? actor.Healing : actor.Damage;
+
         Id = actor.Id;
         Rank = rank;
         Name = actor.Name;
+        DisplayName = actor.IsLocalPlayer ? $"{actor.Name} (vos)" : actor.Name;
+        Initial = InitialOf(actor.Name);
         IsLocalPlayer = actor.IsLocalPlayer;
-        Dps = Compact(actor.Dps);
-        Damage = Compact(actor.Damage);
-        Share = actor.Share.ToString("P0", CultureInfo.CurrentCulture);
-        CritRate = actor.CritRate.ToString("P0", CultureInfo.CurrentCulture);
-        Bar = topDamage == 0 ? 0 : (double)actor.Damage / topDamage;
+        PerSecond = Compact(tab == MeterTab.Healing ? actor.Healing / duration.TotalSeconds : actor.Dps);
+        Total = Compact(value);
+        Share = (total == 0 ? 0 : (double)value / total).ToString("P1", CultureInfo.CurrentCulture);
+        Bar = top == 0 ? 0 : (double)value / top;
         Breakdown = BuildBreakdown(actor);
     }
+
+    internal static string InitialOf(string name) =>
+        name.Length > 0 && char.IsLetter(name[0]) ? char.ToUpper(name[0], CultureInfo.CurrentCulture).ToString() : "?";
 
     internal static string BuildBreakdown(ActorSnapshot actor)
     {
@@ -73,7 +85,7 @@ public sealed partial class ActorRowViewModel : ObservableObject
     {
         >= 1_000_000_000 => (value / 1_000_000_000).ToString("0.00", CultureInfo.CurrentCulture) + "B",
         >= 1_000_000 => (value / 1_000_000).ToString("0.00", CultureInfo.CurrentCulture) + "M",
-        >= 10_000 => (value / 1_000).ToString("0.0", CultureInfo.CurrentCulture) + "K",
+        >= 1_000 => (value / 1_000).ToString("0.0", CultureInfo.CurrentCulture) + "k",
         _ => value.ToString("N0", CultureInfo.CurrentCulture),
     };
 }
