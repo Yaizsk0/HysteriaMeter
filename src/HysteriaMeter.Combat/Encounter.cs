@@ -54,6 +54,15 @@ internal sealed class ActorStats
 
     public long Healing { get; set; }
 
+    public long PeriodicDamage { get; private set; }
+
+    /// <summary>Tiempo con actividad: suma de los huecos entre golpes, cada uno topeado en <see cref="ActiveGap"/>.</summary>
+    public TimeSpan ActiveTime { get; private set; }
+
+    private DateTimeOffset? _lastHitAt;
+
+    internal static readonly TimeSpan ActiveGap = TimeSpan.FromSeconds(3);
+
     public Dictionary<uint, SkillStats> Skills { get; } = [];
 
     public Dictionary<ulong, long> DamageByTarget { get; } = [];
@@ -61,8 +70,15 @@ internal sealed class ActorStats
     /// <summary>Golpes por modificador separados por objetivo: Combat Analysis cuenta solo los del objetivo elegido.</summary>
     public Dictionary<ulong, HitCounter> CountsByTarget { get; } = [];
 
-    public void AddHit(uint skillId, ulong targetId, long amount, HitModifiers modifiers)
+    public void AddHit(uint skillId, ulong targetId, long amount, HitModifiers modifiers, DateTimeOffset at)
     {
+        if (_lastHitAt is { } last && at > last)
+        {
+            var gap = at - last;
+            ActiveTime += gap < ActiveGap ? gap : ActiveGap;
+        }
+
+        _lastHitAt = at;
         DamageByTarget[targetId] = DamageByTarget.GetValueOrDefault(targetId) + amount;
         if (!CountsByTarget.TryGetValue(targetId, out var counts))
         {
@@ -76,6 +92,7 @@ internal sealed class ActorStats
         var hit = periodic ? 0 : 1;
         var critical = modifiers.HasFlag(HitModifiers.Critical);
         Damage += amount;
+        PeriodicDamage += periodic ? amount : 0;
         Hits += hit;
         Crits += critical ? 1 : 0;
         MaxHit = periodic ? MaxHit : Math.Max(MaxHit, amount);
@@ -88,6 +105,7 @@ internal sealed class ActorStats
 
         skill.Counts.Add(modifiers);
         skill.Damage += amount;
+        skill.PeriodicDamage += periodic ? amount : 0;
         skill.Hits += hit;
         skill.Crits += critical ? 1 : 0;
         skill.MaxHit = periodic ? skill.MaxHit : Math.Max(skill.MaxHit, amount);
@@ -97,6 +115,8 @@ internal sealed class ActorStats
 internal sealed class SkillStats
 {
     public long Damage { get; set; }
+
+    public long PeriodicDamage { get; set; }
 
     public int Hits { get; set; }
 
