@@ -925,7 +925,8 @@ public sealed partial class MeterViewModel : ObservableObject
     private void ApplyHistoryFilter()
     {
         History.Clear();
-        foreach (var item in _allHistory.Where(i => i.Matches(HistorySearch, OnlyKills)).Take(60))
+        var visible = _allHistory.Where(i => i.Matches(HistorySearch, OnlyKills)).Take(60).ToList();
+        foreach (var item in HistoryItem.WithRuns(visible, _allHistory))
         {
             History.Add(item);
         }

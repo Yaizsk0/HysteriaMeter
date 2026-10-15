@@ -47,6 +47,24 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Fights_remember_the_zone_entry_they_started_in()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 10, 1000, HitModifiers.None));
+        Assert.Equal(T0, engine.CurrentSnapshot()!.ZoneEnteredAt);
+
+        // Mismo jugador, misma entidad: sigue siendo la misma zona.
+        engine.Apply(new LocalPlayerEvent(At(5), Me, "Mati"));
+        Assert.Equal(T0, engine.Entities.ZoneEnteredAt);
+
+        // Cambio de zona: otra entidad para el jugador local.
+        engine.Reset();
+        engine.Apply(new LocalPlayerEvent(At(60), 999, "Mati"));
+        engine.Apply(new DamageEvent(At(61), 999, Boss, 10, 1000, HitModifiers.None));
+        Assert.Equal(At(60), engine.CurrentSnapshot()!.ZoneEnteredAt);
+    }
+
+    [Fact]
     public void Marks_moments_of_the_current_fight()
     {
         var engine = CreateEngine();

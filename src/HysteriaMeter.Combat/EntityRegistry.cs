@@ -27,12 +27,23 @@ public sealed class EntityRegistry
     /// <summary>Nombres de NPCs por ID de plantilla; el juego no los manda.</summary>
     public NpcCatalog Npcs { get; set; } = NpcCatalog.Empty;
 
+    /// <summary>
+    /// Cuándo entramos a la zona actual: cada cambio de zona abre otra conexión y el jugador local recibe otra entidad.
+    /// Las peleas con la misma entrada son una misma "run" de dungeon.
+    /// </summary>
+    public DateTimeOffset? ZoneEnteredAt { get; private set; }
+
     public void Apply(CombatEvent e)
     {
         _now = e.Timestamp > _now ? e.Timestamp : _now;
         switch (e)
         {
             case LocalPlayerEvent local:
+                if (LocalPlayerId != local.EntityId)
+                {
+                    ZoneEnteredAt = local.Timestamp;
+                }
+
                 LocalPlayerId = local.EntityId;
                 _localName = local.Name ?? _localName;
 

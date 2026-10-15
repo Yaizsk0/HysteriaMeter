@@ -16,8 +16,57 @@ public sealed record HistoryItem(
     int Attempt = 0,
     bool IsRecord = false,
     double? LocalDps = null,
-    string VsBest = "")
+    string VsBest = "",
+    // Entrada a la zona (ISO 8601) y fin de la pelea: las peleas con la misma entrada son una "run".
+    string? Run = null,
+    DateTimeOffset? Ended = null,
+    string RunHeader = "")
 {
+    public bool HasRunHeader => RunHeader.Length > 0;
+
+    /// <summary>
+    /// Agrupa por entrada a dungeon: la primera pelea visible de cada run con 2 o más peleas lleva el encabezado
+    /// "ENTRADA 21:30 · 4 peleas · 2 bosses · 24:10", contado sobre todas las peleas de esa run (aunque el filtro oculte alguna).
+    /// </summary>
+    public static IReadOnlyList<HistoryItem> WithRuns(IReadOnlyList<HistoryItem> visible, IReadOnlyList<HistoryItem> all)
+    {
+        var runs = all.Where(i => i.Run is not null).GroupBy(i => i.Run!, StringComparer.Ordinal)
+            .Where(g => g.Count() >= 2)
+            .ToDictionary(g => g.Key, g => RunText(g.Key, [.. g]), StringComparer.Ordinal);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        return [.. visible.Select(i => i with
+        {
+            RunHeader = i.Run is { } run && runs.TryGetValue(run, out var header) && seen.Add(run) ? header : string.Empty,
+        })];
+    }
+
+    private static string RunText(string run, IReadOnlyList<HistoryItem> fights)
+    {
+        if (!DateTimeOffset.TryParse(run, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var entered))
+        {
+            return string.Empty;
+        }
+
+        var bosses = fights.Count(f => f.Killed);
+        var text = $"ENTRADA {entered.ToLocalTime().ToString("dd/MM HH:mm", CultureInfo.InvariantCulture)} · {fights.Count} peleas";
+        if (bosses > 0)
+        {
+            text += bosses == 1 ? " · 1 boss" : $" · {bosses} bosses";
+        }
+
+        if (fights.Max(f => f.Ended) is { } last && last > entered)
+        {
+            text += $" · {FormatLength(last - entered)}";
+        }
+
+        return text;
+    }
+
+    private static string FormatLength(TimeSpan length) =>
+        length.TotalHours >= 1
+            ? $"{(int)length.TotalHours}:{length.Minutes:00}:{length.Seconds:00}"
+            : length.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
+
     /// <summary>
     /// Compara mi DPS de cada pelea con mi mejor DPS contra el mismo objetivo dentro de la lista:
     /// "−12% vs récord" o "récord" en la mejor. Solo cuando hay más de una pelea contra ese objetivo.
@@ -85,6 +134,8 @@ public sealed record HistoryItem(
             summary.LocalDps is { } dps ? $"mi DPS {ActorRowViewModel.Compact(dps)}" : string.Empty,
             summary.Attempt,
             summary.IsRecord && summary.Attempt > 1,
-            summary.LocalDps);
+            summary.LocalDps,
+            Run: summary.ZoneEnteredAt,
+            Ended: end);
     }
 }

@@ -60,7 +60,9 @@ public sealed class EncounterRepositoryTests : IDisposable
             [
                 new DeathRecap(start.AddSeconds(20), 1879, "Griffith",
                     [new CombatLogEntry(start.AddSeconds(19), LogKind.Damage, 900, "Tarka", 1879, "Griffith", 502, 9_000, HitModifiers.Critical)]),
-            ]);
+            ],
+            Marks: [12, 20],
+            ZoneEnteredAt: start.AddMinutes(-5));
         await repository.SaveAsync(snapshot);
 
         var loaded = await repository.LoadAsync(snapshot.Id.ToString());
@@ -76,6 +78,9 @@ public sealed class EncounterRepositoryTests : IDisposable
         var death = Assert.Single(loaded.Deaths!);
         Assert.Equal(snapshot.Deaths![0] with { LastHits = [] }, death with { LastHits = [] });
         Assert.Equal(snapshot.Deaths[0].LastHits, death.LastHits);
+        Assert.Equal([12, 20], loaded.Marks!);
+        Assert.Equal(start.AddMinutes(-5), loaded.ZoneEnteredAt);
+        Assert.Equal(start.AddMinutes(-5).ToString("O", System.Globalization.CultureInfo.InvariantCulture), Assert.Single(await repository.ListRecentAsync()).ZoneEnteredAt);
         Assert.Null(await repository.LoadAsync(Guid.NewGuid().ToString()));
     }
 

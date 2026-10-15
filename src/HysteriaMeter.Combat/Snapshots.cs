@@ -18,7 +18,9 @@ public sealed record EncounterSnapshot(
     uint? TargetNpcId = null,
     bool TargetIsBoss = false,
     // Momentos marcados por el jugador con el atajo, en segundos desde el inicio.
-    IReadOnlyList<int>? Marks = null)
+    IReadOnlyList<int>? Marks = null,
+    // Entrada a la zona donde empezó la pelea: las peleas con la misma entrada son una "run" de dungeon.
+    DateTimeOffset? ZoneEnteredAt = null)
 {
     /// <summary>Duración mínima de 1 s para que un único golpe no dé un DPS absurdo.</summary>
     public TimeSpan Duration => TimeSpan.FromTicks(Math.Max((End - Start).Ticks, TimeSpan.TicksPerSecond));

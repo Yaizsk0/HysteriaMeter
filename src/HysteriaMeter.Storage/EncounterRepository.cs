@@ -72,6 +72,8 @@ public sealed class EncounterRepository(string databasePath)
         await AddColumnIfMissingAsync(connection, "encounter_actors", "damage_taken", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounter_actors", "hits_taken", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounter_actors", "deaths", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
+        await AddColumnIfMissingAsync(connection, "encounters", "zone_entered_at", "TEXT").ConfigureAwait(false);
+        await AddColumnIfMissingAsync(connection, "encounters", "marks_json", "TEXT").ConfigureAwait(false);
         await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS ix_encounters_target ON encounters(target_name, started_at)").ConfigureAwait(false);
     }
 
@@ -91,8 +93,9 @@ public sealed class EncounterRepository(string databasePath)
 
         await connection.ExecuteAsync(
             """
-            INSERT OR REPLACE INTO encounters (id, started_at, ended_at, target_name, target_killed, total_damage, main_target_seconds, deaths_json)
-            VALUES (@Id, @Start, @End, @TargetName, @TargetKilled, @TotalDamage, @MainTargetSeconds, @DeathsJson)
+            INSERT OR REPLACE INTO encounters (id, started_at, ended_at, target_name, target_killed, total_damage, main_target_seconds, deaths_json,
+                                               zone_entered_at, marks_json)
+            VALUES (@Id, @Start, @End, @TargetName, @TargetKilled, @TotalDamage, @MainTargetSeconds, @DeathsJson, @ZoneEnteredAt, @MarksJson)
             """,
             new
             {
@@ -104,6 +107,8 @@ public sealed class EncounterRepository(string databasePath)
                 encounter.TotalDamage,
                 MainTargetSeconds = encounter.MainTargetDuration?.TotalSeconds,
                 DeathsJson = encounter.Deaths is { Count: > 0 } deaths ? JsonSerializer.Serialize(deaths) : null,
+                ZoneEnteredAt = encounter.ZoneEnteredAt?.ToString("O", CultureInfo.InvariantCulture),
+                MarksJson = encounter.Marks is { Count: > 0 } marks ? JsonSerializer.Serialize(marks) : null,
             },
             transaction).ConfigureAwait(false);
 
@@ -159,7 +164,8 @@ public sealed class EncounterRepository(string databasePath)
                    (SELECT MAX(a.dps) FROM encounter_actors a WHERE a.encounter_id = e.id AND a.is_local = 1) AS LocalDps,
                    (SELECT MAX(a.dps) FROM encounter_actors a JOIN encounters o ON o.id = a.encounter_id
                      WHERE a.is_local = 1 AND o.target_name = e.target_name) AS BestLocalDps,
-                   (SELECT COUNT(*) FROM encounters o WHERE o.target_name = e.target_name AND o.started_at <= e.started_at) AS Attempt
+                   (SELECT COUNT(*) FROM encounters o WHERE o.target_name = e.target_name AND o.started_at <= e.started_at) AS Attempt,
+                   e.zone_entered_at AS ZoneEnteredAt
             FROM encounters e ORDER BY e.started_at DESC LIMIT @limit
             """,
             new { limit }).ConfigureAwait(false);
@@ -173,7 +179,8 @@ public sealed class EncounterRepository(string databasePath)
             r.Note,
             r.LocalDps,
             r.TargetName is null ? 0 : (int)r.Attempt,
-            r.LocalDps is { } dps && r.BestLocalDps is { } best && dps >= best))];
+            r.LocalDps is { } dps && r.BestLocalDps is { } best && dps >= best,
+            r.ZoneEnteredAt))];
     }
 
     /// <summary>Mejor DPS propio contra ese objetivo, sin contar la pelea <paramref name="excludeId"/>. <c>null</c> si no hay otra.</summary>
@@ -232,7 +239,7 @@ public sealed class EncounterRepository(string databasePath)
             """
             SELECT id AS Id, started_at AS StartedAt, ended_at AS EndedAt, target_name AS TargetName,
                    target_killed AS TargetKilled, total_damage AS TotalDamage, main_target_seconds AS MainTargetSeconds,
-                   deaths_json AS DeathsJson
+                   deaths_json AS DeathsJson, zone_entered_at AS ZoneEnteredAt, marks_json AS MarksJson
             FROM encounters WHERE id = @id
             """,
             new { id }).ConfigureAwait(false);
@@ -284,7 +291,9 @@ public sealed class EncounterRepository(string databasePath)
                 (int)a.HitsTaken,
                 (int)a.Deaths))],
             encounter.MainTargetSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null,
-            Deaths: encounter.DeathsJson is null ? null : JsonSerializer.Deserialize<DeathRecap[]>(encounter.DeathsJson));
+            Deaths: encounter.DeathsJson is null ? null : JsonSerializer.Deserialize<DeathRecap[]>(encounter.DeathsJson),
+            Marks: encounter.MarksJson is null ? null : JsonSerializer.Deserialize<int[]>(encounter.MarksJson),
+            ZoneEnteredAt: encounter.ZoneEnteredAt is null ? null : DateTimeOffset.Parse(encounter.ZoneEnteredAt, CultureInfo.InvariantCulture));
     }
 
     private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken)
@@ -309,15 +318,17 @@ public sealed record EncounterSummary(
     string? Note = null,
     double? LocalDps = null,
     int Attempt = 0,
-    bool IsRecord = false);
+    bool IsRecord = false,
+    string? ZoneEnteredAt = null);
 
 /// <summary>SQLite no tiene booleanos: la fila cruda trae <c>target_killed</c> como entero.</summary>
 internal sealed record EncounterRow(
     string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage, string? Note,
-    double? LocalDps, double? BestLocalDps, long Attempt);
+    double? LocalDps, double? BestLocalDps, long Attempt, string? ZoneEnteredAt);
 
 internal sealed record EncounterDetailRow(
-    string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage, double? MainTargetSeconds, string? DeathsJson);
+    string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage, double? MainTargetSeconds, string? DeathsJson,
+    string? ZoneEnteredAt, string? MarksJson);
 
 internal sealed record ActorRow(
     long ActorId, string Name, long? ClassId, long IsLocal, long Damage, double Dps, long Hits, long Crits, long MaxHit, long Healing,
