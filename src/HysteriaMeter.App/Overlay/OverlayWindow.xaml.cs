@@ -31,9 +31,16 @@ public partial class OverlayWindow : Window
         _windows = windows;
         RestoreLayout(layout);
         Loaded += (_, _) => _viewModel.Start();
-        Closed += (_, _) => _viewModel.Stop();
         _viewModel.DetailRequested += ShowDetail;
         _viewModel.CopyImageRequested += CopyImage;
+
+        // Una ventana cerrada no puede ser dueña de otra: se suelta del view model al cerrarse.
+        Closed += (_, _) =>
+        {
+            _viewModel.Stop();
+            _viewModel.DetailRequested -= ShowDetail;
+            _viewModel.CopyImageRequested -= CopyImage;
+        };
     }
 
     /// <summary>La primera ventana registra los atajos globales (Windows no deja registrar el mismo dos veces).</summary>

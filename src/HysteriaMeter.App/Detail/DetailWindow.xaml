@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:ActorDetailViewModel}"
         Title="{Binding Name, StringFormat='Detalle · {0}'}"
-        Width="640" Height="420" MinWidth="460" MinHeight="220"
+        Width="700" Height="440" MinWidth="520" MinHeight="220"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="CanResizeWithGrip" ShowInTaskbar="False"
         FontSize="13" Foreground="{StaticResource Text}"
@@ -76,6 +76,9 @@
                     <Path Width="12" Height="12" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.6"
                           Data="M6,6 L18,18 M18,6 L6,18" />
                 </Button>
+                <Button DockPanel.Dock="Right" Content="Registro" Command="{Binding OpenLogCommand}" Cursor="Hand" Margin="0,0,8,0" VerticalAlignment="Center"
+                        Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" FontSize="12"
+                        ToolTip="Golpe a golpe de la pelea en curso o de la última, filtrable" />
                 <StackPanel Orientation="Horizontal" Margin="12,6,0,6" VerticalAlignment="Center">
                     <Border Width="12" Height="12" BorderBrush="{Binding Accent}" BorderThickness="1" RenderTransformOrigin="0.5,0.5" VerticalAlignment="Center">
                         <Border.RenderTransform>
@@ -111,7 +114,33 @@
                     <TextBlock Text="OVERKILL" Style="{StaticResource StatLabel}" />
                     <TextBlock Text="{Binding Overkill}" Style="{StaticResource StatValue}" />
                 </StackPanel>
+                <StackPanel Style="{StaticResource Stat}" ToolTip="Daño que le hicieron los monstruos">
+                    <TextBlock Text="RECIBIDO" Style="{StaticResource StatLabel}" />
+                    <TextBlock Text="{Binding DamageTaken}" Style="{StaticResource StatValue}" />
+                </StackPanel>
+                <StackPanel Style="{StaticResource Stat}">
+                    <TextBlock Text="MUERTES" Style="{StaticResource StatLabel}" />
+                    <TextBlock Text="{Binding DeathCount}" Style="{StaticResource StatValue}" />
+                </StackPanel>
             </StackPanel>
+
+            <!-- Muertes: qué lo mató y cuánto recibió antes -->
+            <Border DockPanel.Dock="Top" Margin="10,0,10,6" Padding="8,4" Background="#1FE0524A" BorderBrush="#55E0524A" BorderThickness="1"
+                    Visibility="{Binding HasDeaths, Converter={StaticResource Visible}}">
+                <ItemsControl ItemsSource="{Binding Deaths}" MaxHeight="90">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:DeathItem">
+                            <TextBlock Margin="0,1" TextTrimming="CharacterEllipsis" ToolTip="{Binding LastHits}">
+                                <Run Text="✝" Foreground="#E0524A" />
+                                <Run Text="{Binding When, Mode=OneWay}" Foreground="{StaticResource TextDim}" />
+                                <Run Text="{Binding Summary, Mode=OneWay}" Foreground="{StaticResource TextBright}" />
+                                <Run Text="·" Foreground="{StaticResource TextDim}" />
+                                <Run Text="{Binding LastHits, Mode=OneWay}" Foreground="{StaticResource TextMuted}" />
+                            </TextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
 
             <!-- DPS en el tiempo (promedio móvil de 5 s) -->
             <Border DockPanel.Dock="Top" Margin="10,2,10,6" Height="92" Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="1"

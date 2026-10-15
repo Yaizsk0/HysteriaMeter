@@ -33,6 +33,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
 {
     private readonly Lock _gate = new();
     private Encounter? _current;
+    private IReadOnlyList<CombatLogEntry> _lastLog = [];
     private ActorScope _scope = ActorScope.Party;
     private bool _splitEncounters = true;
 
@@ -114,6 +115,15 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
     }
 
+    /// <summary>Registro del encuentro en curso o, si no hay, del último que terminó.</summary>
+    public IReadOnlyList<CombatLogEntry> CombatLog()
+    {
+        lock (_gate)
+        {
+            return _current is null ? _lastLog : [.. _current.Log];
+        }
+    }
+
     private void OnDamage(DamageEvent e)
     {
         if (e.Amount <= 0)
@@ -122,9 +132,15 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var source = Entities.Canonical(e.SourceId);
-        if (Entities.IsNpc(source) || !InScope(source))
+        if (Entities.IsNpc(source))
         {
-            return; // monstruos y jugadores fuera del filtro no cuentan ni abren encuentros
+            OnDamageTaken(e, source);
+            return;
+        }
+
+        if (!InScope(source))
+        {
+            return; // jugadores fuera del filtro no cuentan ni abren encuentros
         }
 
         var encounter = EnsureEncounter(e.Timestamp);
@@ -133,7 +149,26 @@ public sealed class CombatEngine(CombatEngineOptions options)
         actor.AddToTimeline((int)Math.Max((e.Timestamp - encounter.Start).TotalSeconds, 0), e.Amount);
         actor.Overkill += Entities.ApplyDamage(e.TargetId, e.Amount);
         encounter.RegisterDamage(e.TargetId, e.Amount, e.Timestamp);
+        encounter.AddLog(Entry(e, LogKind.Damage, source, Entities.Canonical(e.TargetId), e.SkillId, e.Amount, e.Modifiers));
     }
+
+    /// <summary>Un monstruo le pega a un jugador: cuenta como daño recibido si hay pelea y el jugador entra en el filtro.</summary>
+    private void OnDamageTaken(DamageEvent e, ulong npc)
+    {
+        var target = Entities.Canonical(e.TargetId);
+        if (_current is null || Entities.IsNpc(target) || !InScope(target))
+        {
+            return;
+        }
+
+        var actor = _current.Actor(target);
+        actor.DamageTaken += e.Amount;
+        actor.HitsTaken++;
+        _current.AddLog(Entry(e, LogKind.Damage, npc, target, e.SkillId, e.Amount, e.Modifiers));
+    }
+
+    private CombatLogEntry Entry(CombatEvent e, LogKind kind, ulong source, ulong target, uint skill, long amount, HitModifiers modifiers = HitModifiers.None) =>
+        new(e.Timestamp, kind, source, Entities.DisplayName(source), target, Entities.DisplayName(target), skill, amount, modifiers);
 
     private void OnHeal(HealEvent e)
     {
@@ -146,11 +181,25 @@ public sealed class CombatEngine(CombatEngineOptions options)
         if (!Entities.IsNpc(source) && InScope(source))
         {
             _current.Actor(source).Healing += e.Amount;
+            _current.AddLog(Entry(e, LogKind.Heal, source, Entities.Canonical(e.TargetId), e.SkillId, e.Amount));
         }
     }
 
     private void OnDeath(DeathEvent e)
     {
+        var dead = Entities.Canonical(e.EntityId);
+        if (_current is not null && !Entities.IsNpc(dead) && InScope(dead))
+        {
+            // Los golpes que recibió en los últimos segundos: el último es el que lo mató.
+            var since = e.Timestamp - DeathRecap.Window;
+            var lastHits = _current.Log
+                .Where(l => l.TargetId == dead && l.Kind == LogKind.Damage && l.Timestamp >= since)
+                .ToArray();
+            _current.Actor(dead).Deaths++;
+            _current.Deaths.Add(new DeathRecap(e.Timestamp, dead, Entities.DisplayName(dead), lastHits));
+            _current.AddLog(Entry(e, LogKind.Death, dead, dead, 0, 0));
+        }
+
         if (_current is not null && _splitEncounters && options.EndOnMainTargetDeath && _current.MainTarget == e.EntityId && Entities.IsNpc(e.EntityId))
         {
             _current.TargetKilled = true;
@@ -187,6 +236,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var snapshot = BuildSnapshot(_current);
+        _lastLog = _current.Log;
         _current = null;
         EncounterFinished?.Invoke(snapshot);
     }
@@ -230,7 +280,10 @@ public sealed class CombatEngine(CombatEngineOptions options)
                     stats.PeriodicDamage,
                     stats.Damage / Math.Max(stats.ActiveTime.TotalSeconds, 1),
                     stats.Overkill,
-                    [.. stats.DamageBySecond]);
+                    [.. stats.DamageBySecond],
+                    stats.DamageTaken,
+                    stats.HitsTaken,
+                    stats.Deaths);
             })
             .OrderByDescending(a => a.Damage)
             .ToArray();
@@ -245,7 +298,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
             total,
             actors,
             targetDuration,
-            target is { } th ? Entities.HealthOf(th) : null);
+            target is { } th ? Entities.HealthOf(th) : null,
+            [.. encounter.Deaths]);
     }
 
     private static double Share(long part, long total) => total == 0 ? 0 : (double)part / total;

@@ -11,7 +11,11 @@ public partial class DetailWindow : Window
     {
         InitializeComponent();
         DataContext = viewModel;
+        viewModel.LogRequested += ShowLog;
+        Closed += (_, _) => viewModel.LogRequested -= ShowLog;
     }
+
+    private void ShowLog(LogViewModel log) => new Registro.LogWindow(log) { Owner = this }.Show();
 
     private void OnHeaderMouseDown(object sender, MouseButtonEventArgs e)
     {

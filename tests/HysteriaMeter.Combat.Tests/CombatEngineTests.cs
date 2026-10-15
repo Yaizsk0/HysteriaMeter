@@ -46,6 +46,49 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Counts_damage_taken_from_monsters_and_deaths_with_last_hits()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 10, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), Boss, Me, 500, 300, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Boss, Ally, 501, 200, HitModifiers.Critical));
+        engine.Apply(new DamageEvent(At(3), Boss, Stranger, 501, 999, HitModifiers.None)); // fuera de la party
+        engine.Apply(new DamageEvent(At(20), Boss, Me, 502, 4000, HitModifiers.Critical));
+        engine.Apply(new DeathEvent(At(20.5), Me));
+
+        var snapshot = engine.CurrentSnapshot()!;
+        var me = snapshot.Actors.Single(a => a.Id == Me);
+        Assert.Equal((4300L, 2, 1), (me.DamageTaken, me.HitsTaken, me.Deaths));
+        Assert.Equal(200, snapshot.Actors.Single(a => a.Id == Ally).DamageTaken);
+        Assert.DoesNotContain(snapshot.Actors, a => a.Id == Stranger);
+        Assert.Equal(1000, snapshot.TotalDamage); // el daño recibido no suma al daño hecho
+
+        var death = Assert.Single(snapshot.Deaths!);
+        Assert.Equal("Mati", death.Name);
+        Assert.Equal(502U, death.KillingBlow!.SkillId); // el golpe de los 1 s quedó fuera de la ventana de 10 s
+        Assert.Single(death.LastHits);
+    }
+
+    [Fact]
+    public void Keeps_a_log_of_the_fight_with_names()
+    {
+        var engine = CreateEngine();
+        Assert.Empty(engine.CombatLog());
+
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 10, 1000, HitModifiers.Critical));
+        engine.Apply(new HealEvent(At(1), Ally, Me, 30, 250));
+        engine.Apply(new DamageEvent(At(2), Boss, Ally, 500, 100, HitModifiers.None));
+
+        var log = engine.CombatLog();
+        Assert.Equal([LogKind.Damage, LogKind.Heal, LogKind.Damage], log.Select(l => l.Kind));
+        Assert.Equal(("Mati", "Boss", HitModifiers.Critical), (log[0].SourceName, log[0].TargetName, log[0].Modifiers));
+        Assert.Equal(("Aliado", "Mati", 250L), (log[1].SourceName, log[1].TargetName, log[1].Amount));
+
+        engine.Reset();
+        Assert.Equal(3, engine.CombatLog().Count); // queda el de la última pelea
+    }
+
+    [Fact]
     public void Summon_damage_is_attributed_to_owner()
     {
         var engine = CreateEngine();

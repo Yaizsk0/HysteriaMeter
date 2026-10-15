@@ -52,6 +52,17 @@ public sealed class WindowSmokeTests
             Assert.True(viewModel.IsViewingHistory);
             viewModel.IsCompact = true;
             Layout(new OverlayWindow(viewModel));
+
+            // Pestaña de daño recibido, detalle con muertes y registro.
+            viewModel.IsTakenTab = true;
+            Assert.Equal("DTPS", viewModel.RateUnit);
+            var tharos = viewModel.Actors.Single(a => a.Name == "Tharos");
+            Assert.EndsWith("✝", tharos.DisplayName, StringComparison.Ordinal);
+            viewModel.ShowDetailCommand.Execute(tharos);
+            Assert.True(viewModel.Detail.HasDeaths);
+            Layout(new DetailWindow(viewModel.Detail));
+            var demo = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));
+            Layout(new HysteriaMeter.App.Registro.LogWindow(new LogViewModel(() => demo.Deaths![0].LastHits, SkillNames.Empty, tharos.Id, "Tharos")));
         });
     }
 
@@ -174,6 +185,40 @@ public sealed class WindowSmokeTests
         session.Update(session.Preferences with { AnonymizeExports = true });
         Assert.Contains(session.ForSharing(snapshot).Actors, a => a.Name == "Yo");
         Assert.DoesNotContain(session.ForSharing(snapshot).Actors, a => a.Name == "Kaelis");
+    }
+
+    [Fact]
+    public void Log_filters_by_player_and_text()
+    {
+        var t0 = DateTimeOffset.UnixEpoch;
+        CombatLogEntry[] entries =
+        [
+            new(t0, LogKind.Damage, 1, "Mati", 9, "Tarka", 10, 1500, HysteriaMeter.Protocol.Events.HitModifiers.Critical | HysteriaMeter.Protocol.Events.HitModifiers.BackAttack),
+            new(t0.AddSeconds(1.25), LogKind.Heal, 2, "Ana", 1, "Mati", 20, 300),
+            new(t0.AddSeconds(2), LogKind.Damage, 9, "Tarka", 2, "Ana", 30, 800),
+            new(t0.AddSeconds(3), LogKind.Death, 2, "Ana", 2, "Ana", 0, 0),
+        ];
+
+        Assert.Equal(4, LogViewModel.Filter(entries, SkillNames.Empty, null, null).Count);
+        Assert.Equal(2, LogViewModel.Filter(entries, SkillNames.Empty, null, actorId: 1).Count);
+        var crit = Assert.Single(LogViewModel.Filter(entries, SkillNames.Empty, "espalda", null));
+        Assert.Equal(("00:00.0", "Mati", "Tarka", "Skill 10", "crítico, espalda"), (crit.Time, crit.Source, crit.Target, crit.Skill, crit.Flags));
+        Assert.Equal("00:01.2", LogViewModel.Filter(entries, SkillNames.Empty, "Ana", null)[0].Time);
+        Assert.Equal("murió", LogViewModel.Filter(entries, SkillNames.Empty, null, actorId: 2)[^1].Skill);
+    }
+
+    [Fact]
+    public void Death_is_described_with_the_killing_blow()
+    {
+        var demo = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));
+        var item = ActorDetailViewModel.Describe(demo.Deaths![0], demo.Start, SkillNames.Empty);
+
+        Assert.Equal("01:11", item.When);
+        Assert.StartsWith("Lo mató Muñeco de prueba con Skill 9102 por ", item.Summary, StringComparison.Ordinal);
+        Assert.EndsWith("(crítico)", item.Summary, StringComparison.Ordinal);
+        Assert.StartsWith("2 golpes por ", item.LastHits, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, ActorRowViewModel.DeathMark(0));
+        Assert.Equal(" ✝3", ActorRowViewModel.DeathMark(3));
     }
 
     [Fact]

@@ -57,9 +57,21 @@ public static class DemoEncounter
                     p.Damage / 10,
                     p.Damage / (seconds * 0.92),
                     p.Damage / 200,
-                    timeline);
+                    timeline,
+                    DamageTaken: 180_000 + (i * 95_000),
+                    HitsTaken: 20 + (i * 6),
+                    Deaths: p.Name == "Tharos" ? 1 : 0);
             })
             .ToArray();
+
+        var boss = 9_999UL;
+        var tharos = actors.First(a => a.Name == "Tharos");
+        var deathAt = start.AddSeconds(71);
+        var lastHits = new[]
+        {
+            new CombatLogEntry(deathAt.AddSeconds(-6), LogKind.Damage, boss, "Muñeco de prueba", tharos.Id, tharos.Name, 9_101, 41_000),
+            new CombatLogEntry(deathAt.AddSeconds(-2), LogKind.Damage, boss, "Muñeco de prueba", tharos.Id, tharos.Name, 9_102, 88_000, Protocol.Events.HitModifiers.Critical),
+        };
 
         return new EncounterSnapshot(
             Guid.Empty,
@@ -70,6 +82,7 @@ public static class DemoEncounter
             total,
             actors,
             TimeSpan.FromSeconds(seconds),
-            new Health(3_620_000, 13_740_000));
+            new Health(3_620_000, 13_740_000),
+            [new DeathRecap(deathAt, tharos.Id, tharos.Name, lastHits)]);
     }
 }

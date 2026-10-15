@@ -18,6 +18,26 @@ internal sealed class Encounter(DateTimeOffset start)
 
     public bool TargetKilled { get; set; }
 
+    /// <summary>Registro de la pelea (daño, curación y muertes de lo que cuenta el filtro), con tope para peleas largas.</summary>
+    public List<CombatLogEntry> Log { get; } = [];
+
+    /// <summary>Más que esto, se descartan las líneas más viejas de a <see cref="LogTrim"/>.</summary>
+    internal const int LogCapacity = 50_000;
+
+    private const int LogTrim = 5_000;
+
+    public List<DeathRecap> Deaths { get; } = [];
+
+    public void AddLog(CombatLogEntry entry)
+    {
+        if (Log.Count >= LogCapacity)
+        {
+            Log.RemoveRange(0, LogTrim);
+        }
+
+        Log.Add(entry);
+    }
+
     public ulong? MainTarget => DamageTaken.Count == 0 ? null : DamageTaken.MaxBy(kv => kv.Value).Key;
 
     /// <summary>Primer y último golpe a cada objetivo: Combat Analysis mide la pelea así.</summary>
@@ -53,6 +73,13 @@ internal sealed class ActorStats
     public long MaxHit { get; private set; }
 
     public long Healing { get; set; }
+
+    /// <summary>Daño recibido de monstruos y golpes recibidos.</summary>
+    public long DamageTaken { get; set; }
+
+    public int HitsTaken { get; set; }
+
+    public int Deaths { get; set; }
 
     /// <summary>Daño que pasó de la vida que le quedaba al objetivo. Se informa aparte; no se descuenta del daño.</summary>
     public long Overkill { get; set; }

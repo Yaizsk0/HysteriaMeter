@@ -11,7 +11,9 @@ public sealed record EncounterSnapshot(
     IReadOnlyList<ActorSnapshot> Actors,
     TimeSpan? MainTargetDuration = null,
     // Vida del objetivo principal, si la conocemos (spawn 0x3641 y actualizaciones 0x8D00).
-    Health? TargetHealth = null)
+    Health? TargetHealth = null,
+    // Muertes de jugadores durante la pelea, con los últimos golpes recibidos.
+    IReadOnlyList<DeathRecap>? Deaths = null)
 {
     /// <summary>Duración mínima de 1 s para que un único golpe no dé un DPS absurdo.</summary>
     public TimeSpan Duration => TimeSpan.FromTicks(Math.Max((End - Start).Ticks, TimeSpan.TicksPerSecond));
@@ -39,7 +41,10 @@ public sealed record ActorSnapshot(
     double ActiveDps = 0,
     long Overkill = 0,
     // Daño por segundo desde el inicio del encuentro, para el gráfico de DPS en el tiempo.
-    IReadOnlyList<long>? Timeline = null)
+    IReadOnlyList<long>? Timeline = null,
+    long DamageTaken = 0,
+    int HitsTaken = 0,
+    int Deaths = 0)
 {
     public double CritRate => Hits == 0 ? 0 : (double)Crits / Hits;
 }
