@@ -256,6 +256,45 @@ public sealed partial class MeterViewModel : ObservableObject
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{CaptureRecorder.Folder}\"") { UseShellExecute = true });
     }
 
+    /// <summary>Último encuentro mostrado, para copiar el resumen.</summary>
+    private EncounterSnapshot? _shown;
+
+    /// <summary>Copia un resumen corto, apto para pegar en el chat del juego.</summary>
+    [RelayCommand]
+    private void CopySummary()
+    {
+        if (_shown is { } snapshot && BuildSummary(snapshot, Tab) is { Length: > 0 } text)
+        {
+            try
+            {
+                System.Windows.Clipboard.SetText(text);
+            }
+            catch (System.Runtime.InteropServices.ExternalException)
+            {
+                // Otro programa tiene el portapapeles abierto: se puede volver a intentar.
+            }
+        }
+    }
+
+    /// <summary>"Boss 02:47 · 1. Ana 11.9k (52%) · 2. Beto 7.8k (34%)". Máximo 8 jugadores para que entre en el chat.</summary>
+    public static string BuildSummary(EncounterSnapshot snapshot, MeterTab tab)
+    {
+        Func<ActorSnapshot, long> metric = tab == MeterTab.Healing ? a => a.Healing : a => a.Damage;
+        var seconds = snapshot.Duration.TotalSeconds;
+        var rows = snapshot.Actors.Where(a => metric(a) > 0).OrderByDescending(metric).Take(8).ToList();
+        if (rows.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var total = (double)snapshot.Actors.Sum(metric);
+        var unit = tab == MeterTab.Healing ? "HPS" : "DPS";
+        var header = $"{snapshot.TargetName ?? "Encuentro"} {snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture)} {unit}";
+        var parts = rows.Select((a, i) =>
+            $"{i + 1}. {a.Name} {ActorRowViewModel.Compact(metric(a) / seconds)} ({(metric(a) / total).ToString("P0", CultureInfo.InvariantCulture).Replace(" ", string.Empty, StringComparison.Ordinal)})");
+        return string.Join(" · ", parts.Prepend(header));
+    }
+
     [RelayCommand]
     private void ShowDetail(ActorRowViewModel? row)
     {
@@ -385,6 +424,7 @@ public sealed partial class MeterViewModel : ObservableObject
         _engine.Reset();
         _lastFinished = null;
         _pinned = null;
+        _shown = null;
         IsViewingHistory = false;
         Actors.Clear();
         Title = NoTarget;
@@ -420,6 +460,7 @@ public sealed partial class MeterViewModel : ObservableObject
             return;
         }
 
+        _shown = snapshot;
         Title = snapshot.TargetName ?? "Encuentro";
         Elapsed = snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
         UpdateTargetHealth(snapshot.TargetHealth);

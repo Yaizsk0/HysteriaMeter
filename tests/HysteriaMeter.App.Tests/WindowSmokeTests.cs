@@ -39,6 +39,22 @@ public sealed class WindowSmokeTests
         });
     }
 
+    [Fact]
+    public void Summary_lists_players_by_dps_for_the_game_chat()
+    {
+        var start = DateTimeOffset.UnixEpoch;
+        var snapshot = new EncounterSnapshot(Guid.NewGuid(), start, start.AddSeconds(100), "Tarka", true, 3000,
+        [
+            Actor() with { Name = "Beto", Damage = 1000 },
+            Actor() with { Name = "Ana", Damage = 2000 },
+            Actor() with { Name = "Curandera", Damage = 0, Healing = 500 },
+        ]);
+
+        var summary = MeterViewModel.BuildSummary(snapshot, MeterTab.Damage);
+
+        Assert.Equal("Tarka 01:40 DPS · 1. Ana 20 (67%) · 2. Beto 10 (33%)", summary);
+    }
+
     private static ActorSnapshot Actor() => new(
         Id: 7, Name: "Tester", ClassId: null, IsLocalPlayer: true, Damage: 3000, Dps: 300, Share: 1, Hits: 3, Crits: 1, MaxHit: 1500, Healing: 0,
         Skills:
