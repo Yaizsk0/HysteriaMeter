@@ -53,7 +53,10 @@ public sealed record ActorSnapshot(
     IReadOnlyList<long>? Timeline = null,
     long DamageTaken = 0,
     int HitsTaken = 0,
-    int Deaths = 0)
+    int Deaths = 0,
+    // Item level y power (CP) del jugador, si llegaron en su aparición.
+    int? ItemLevel = null,
+    long? CombatPower = null)
 {
     public double CritRate => Hits == 0 ? 0 : (double)Crits / Hits;
 }

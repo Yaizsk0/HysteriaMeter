@@ -194,6 +194,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
             return;
         }
 
+        Entities.ObserveSkill(source, e.SkillId);
         if (!InScope(source))
         {
             return; // jugadores fuera del filtro no cuentan ni abren encuentros
@@ -259,6 +260,11 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var source = Entities.Canonical(e.SourceId);
+        if (!Entities.IsNpc(source))
+        {
+            Entities.ObserveSkill(source, e.SkillId);
+        }
+
         if (!Entities.IsNpc(source) && InScope(source))
         {
             foreach (var encounter in Running())
@@ -383,7 +389,9 @@ public sealed class CombatEngine(CombatEngineOptions options)
                     [.. stats.DamageBySecond],
                     stats.DamageTaken,
                     stats.HitsTaken,
-                    stats.Deaths);
+                    stats.Deaths,
+                    profile.ItemLevel,
+                    profile.CombatPower);
             })
             .OrderByDescending(a => a.Damage)
             .ToArray();

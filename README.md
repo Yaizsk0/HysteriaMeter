@@ -73,6 +73,8 @@ En tu propio detalle aparecen CONSEJOS de la pelea, sacados de reglas simples so
 
 En el detalle de un jugador se le puede poner un apodo (Enter para guardar, vacío para sacarlo): cambia solo cómo se ve en el meter. En EXPORTAR Y COMPARTIR, "Exportar perfil" guarda tu configuración en `Exportes\perfil-hysteria.json` para llevarla a otra PC o pasársela a la legión, y "Cargar perfil" la lee de ahí; el webhook de Discord nunca va en el perfil.
 
+A la izquierda de cada nombre va el símbolo de su clase, deducido de las skills que usa, y a la derecha su item level y power ("2130 · 93.1k"), leídos de cuando el jugador aparece cerca (los tuyos, al entrar a la zona). Se ocultan en configuración con "Item level y power al lado del nombre". Si alguna clase sale con el nombre equivocado, se corrige en `data/classes.json`.
+
 Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: los nombres se cargan a mano en `data/skills.json`.
 
 Los monstruos tampoco traen nombre: si una pelea sale como "NPC 2001234", agregá ese ID a `data/npcs.json` con su nombre, la dungeon y si es boss (`"2001234": { "name": "Destroyer Tarka", "dungeon": "...", "boss": true }`) y la próxima vez se ve con nombre, también en el historial y en el progreso por boss.

@@ -14,5 +14,6 @@ public static class PacketDecoders
         new NpcSpawnDecoder(),
         new KillPacketDecoder(),
         new HealthDecoder(),
+        new LocalCombatPowerDecoder(),
     ];
 }

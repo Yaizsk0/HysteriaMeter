@@ -391,9 +391,18 @@
                                             </Border>
                                             <TextBlock x:Name="InitialText" Text="{Binding Initial}" FontSize="11" FontWeight="Bold" Foreground="{Binding Accent}"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <!-- Símbolo de la clase (deducida por sus skills); tapa la inicial cuando se sabe -->
+                                            <Path Data="{Binding ClassIcon}" Fill="{Binding Accent}" Width="10" Height="10" Stretch="Uniform"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="{Binding ClassName}"
+                                                  Visibility="{Binding HasClassIcon, Converter={StaticResource Visible}}" />
                                         </Grid>
-                                        <TextBlock x:Name="NameText" Grid.Column="2" Text="{Binding DisplayName}" FontSize="15" FontWeight="SemiBold"
-                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        <DockPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Gear}" FontSize="11" Margin="6,0,4,0" Foreground="{StaticResource TextDim}"
+                                                       VerticalAlignment="Center" ToolTip="Item level · power"
+                                                       Visibility="{Binding HasGear, Converter={StaticResource Visible}}" />
+                                            <TextBlock x:Name="NameText" Text="{Binding DisplayName}" FontSize="15" FontWeight="SemiBold"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        </DockPanel>
                                         <TextBlock x:Name="PerSecondText" Grid.Column="3" Text="{Binding PerSecond}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource TextBright}"
                                                    HorizontalAlignment="Right" VerticalAlignment="Center" />
                                         <!-- Total, o HPS cuando daño y curación van juntos -->
@@ -413,6 +422,9 @@
                                     <Setter TargetName="Row" Property="Margin" Value="0,0,0,2" />
                                     <Setter TargetName="NameText" Property="FontSize" Value="13" />
                                     <Setter TargetName="PerSecondText" Property="FontSize" Value="13" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding HasClassIcon}" Value="True">
+                                    <Setter TargetName="InitialText" Property="Visibility" Value="Collapsed" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding IsLocalPlayer}" Value="True">
                                     <Setter TargetName="Row" Property="BorderBrush" Value="{StaticResource RowBorderLocal}" />
@@ -583,6 +595,7 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
                             <CheckBox Style="{StaticResource Option}" Content="Línea de DPS de los últimos 30 s en cada fila" IsChecked="{Binding ShowSparklines}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Item level y power al lado del nombre" IsChecked="{Binding ShowGear}" />
                             <CheckBox Style="{StaticResource Option}" Content="Sonido en las alertas" IsChecked="{Binding Sounds}"
                                       ToolTip="Récord, prueba de DPS terminada y enrage al que no se llega (el enrage sale de data/npcs.json)" />
 

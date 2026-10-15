@@ -21,9 +21,26 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial string DisplayName { get; set; } = string.Empty;
 
-    /// <summary>Letra del rombo de clase. Mientras no decodifiquemos la clase, es la inicial del nombre.</summary>
+    /// <summary>Letra del rombo cuando todavía no se sabe la clase: la inicial del nombre.</summary>
     [ObservableProperty]
     public partial string Initial { get; set; } = string.Empty;
+
+    /// <summary>Símbolo de la clase dentro del rombo; <c>null</c> hasta que use una skill de su clase.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasClassIcon))]
+    public partial Geometry? ClassIcon { get; set; }
+
+    public bool HasClassIcon => ClassIcon is not null;
+
+    [ObservableProperty]
+    public partial string ClassName { get; set; } = string.Empty;
+
+    /// <summary>"2130 · 93.1k": item level y power, o vacío si no llegaron (o se ocultaron).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasGear))]
+    public partial string Gear { get; set; } = string.Empty;
+
+    public bool HasGear => Gear.Length > 0;
 
     [ObservableProperty]
     public partial bool IsLocalPlayer { get; set; }
@@ -93,8 +110,12 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial double Bar { get; set; }
 
-    public void Update(int rank, ActorSnapshot actor, MeterTab tab, long top, long total, TimeSpan duration, bool bossOnly = false)
+    public void Update(int rank, ActorSnapshot actor, MeterTab tab, long top, long total, TimeSpan duration, bool bossOnly = false, bool showGear = true)
     {
+        var playerClass = PlayerClasses.Of(actor.ClassId);
+        ClassIcon = playerClass?.Icon;
+        ClassName = playerClass?.Name ?? string.Empty;
+        Gear = showGear ? GearText(actor.ItemLevel, actor.CombatPower) : string.Empty;
         var value = tab.Metric(actor, bossOnly);
 
         Id = actor.Id;
@@ -116,6 +137,16 @@ public sealed partial class ActorRowViewModel : ObservableObject
         Bar = top == 0 ? 0 : (double)value / top;
         Breakdown = BuildBreakdown(actor);
     }
+
+    /// <summary>"2130 · 93.1k" (item level · power); solo lo que se sepa.</summary>
+    public static string GearText(int? itemLevel, long? combatPower) =>
+        (itemLevel, combatPower) switch
+        {
+            ({ } level, { } power) => $"{level.ToString(CultureInfo.CurrentCulture)} · {Compact(power)}",
+            ({ } level, null) => level.ToString(CultureInfo.CurrentCulture),
+            (null, { } power) => Compact(power),
+            _ => string.Empty,
+        };
 
     /// <summary>" ✝" o " ✝3" detrás del nombre de quien murió en la pelea.</summary>
     public static string DeathMark(int deaths) => deaths switch

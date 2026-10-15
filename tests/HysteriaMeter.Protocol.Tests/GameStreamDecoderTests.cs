@@ -181,6 +181,33 @@ public class GameStreamDecoderTests
     }
 
     [Fact]
+    public void Decodes_item_level_and_power_of_other_players()
+    {
+        var body = Hex(RealCapture.PlayerSpawnBody).Concat(Hex(RealCapture.PlayerGearSections)).ToArray();
+
+        var events = CreateDecoder().Push(Frame(0x3645, body), T0);
+
+        Assert.IsType<EntityInfoEvent>(events[0]);
+        var gear = Assert.IsType<PlayerGearEvent>(events[1]);
+        Assert.Equal((16028UL, (int?)2001, (long?)93_571), (gear.EntityId, gear.ItemLevel, gear.CombatPower));
+        Assert.Equal(161_964, PlayerGear.FindCombatPower(Hex(RealCapture.PowerWithExtraByteTail)));
+        Assert.Null(PlayerGear.FindItemLevel(Hex(RealCapture.PowerWithExtraByteTail)));
+    }
+
+    [Fact]
+    public void Decodes_local_item_level_and_power()
+    {
+        var decoder = CreateDecoder();
+
+        var info = decoder.Push(Frame(0x3633, Hex(RealCapture.LocalPlayerInfoWithItemLevelBody)), T0);
+        var power = decoder.Push(Frame(0x3656, Hex(RealCapture.LocalCombatPowerBody)), T0);
+
+        Assert.Equal(2, info.Count);
+        Assert.Equal((1698UL, (int?)2046), (Assert.IsType<PlayerGearEvent>(info[1]).EntityId, ((PlayerGearEvent)info[1]).ItemLevel));
+        Assert.Equal(91_358, Assert.IsType<LocalCombatPowerEvent>(Assert.Single(power)).CombatPower);
+    }
+
+    [Fact]
     public void Decodes_player_spawn_when_field_after_entity_starts_below_0x80()
     {
         var events = CreateDecoder().Push(Frame(0x3645, Hex(RealCapture.PlayerSpawnLowByteBody)), T0);

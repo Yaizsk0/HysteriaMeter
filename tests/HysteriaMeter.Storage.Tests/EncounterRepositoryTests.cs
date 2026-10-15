@@ -53,7 +53,7 @@ public sealed class EncounterRepositoryTests : IDisposable
             [
                 new ActorSnapshot(1879, "Griffith", null, true, 654_021, 23_659, 1, 98, 51, 90_000, 1_200,
                     [new SkillSnapshot(10, 654_021, 98, 51, 90_000, 1, counts, 70_000)],
-                    counts, 648_468, 23_458, 70_000, 24_000, Overkill: 3_500, Timeline: [100, 0, 250], DamageTaken: 12_000, HitsTaken: 7, Deaths: 1),
+                    counts, 648_468, 23_458, 70_000, 24_000, Overkill: 3_500, Timeline: [100, 0, 250], DamageTaken: 12_000, HitsTaken: 7, Deaths: 1, ItemLevel: 2130, CombatPower: 93_100),
             ],
             TimeSpan.FromSeconds(27.64),
             Deaths:

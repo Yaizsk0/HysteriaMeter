@@ -31,6 +31,7 @@ public partial class App : Application
         builder.Services.Configure<CaptureSettings>(builder.Configuration.GetSection("Capture"));
         builder.Services.Configure<MeterSettings>(builder.Configuration.GetSection("Meter"));
 
+        PlayerClasses.Load(Path.Combine(AppContext.BaseDirectory, "data", "classes.json"));
         builder.Services.AddSingleton(sp => new CombatEngine(new CombatEngineOptions
         {
             IdleTimeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<MeterSettings>>().Value.IdleTimeoutSeconds),
