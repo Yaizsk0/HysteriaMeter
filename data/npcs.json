@@ -1,7 +1,8 @@
 {
   // Nombres de NPCs por ID de plantilla (el npcId del spawn 0x3641). El juego no manda el nombre de los monstruos.
   // Cuando una pelea sale como "NPC 2001234", agregá ese ID acá y reiniciá el meter.
-  // Formato: "ID decimal": { "name": "Nombre", "dungeon": "Dungeon", "boss": true }, o solo "ID": "Nombre".
+  // Formato: "ID decimal": { "name": "Nombre", "dungeon": "Dungeon", "boss": true, "enrage": 480 }, o solo "ID": "Nombre".
+  // "enrage" (opcional) son los segundos de pelea hasta el enrage: el overlay avisa si al ritmo actual no llegan.
   "npcs": {
   }
 }

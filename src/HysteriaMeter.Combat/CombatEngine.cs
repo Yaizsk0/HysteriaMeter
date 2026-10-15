@@ -403,7 +403,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
             targetNpc,
             targetNpc is { } npc && Entities.Npcs.Of(npc) is { IsBoss: true },
             [.. encounter.Marks],
-            encounter.ZoneEnteredAt);
+            encounter.ZoneEnteredAt,
+            targetNpc is { } enrageNpc ? Entities.Npcs.Of(enrageNpc)?.EnrageSeconds : null);
     }
 
     private static double Share(long part, long total) => total == 0 ? 0 : (double)part / total;

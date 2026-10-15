@@ -1,7 +1,8 @@
 namespace HysteriaMeter.Combat;
 
 /// <summary>Lo que sabemos de un NPC por su ID de plantilla (el <c>npcId</c> del spawn 0x3641).</summary>
-public sealed record NpcInfo(string Name, string? Dungeon = null, bool IsBoss = false);
+/// <param name="EnrageSeconds">Segundos de pelea hasta el enrage del boss, si se conoce.</param>
+public sealed record NpcInfo(string Name, string? Dungeon = null, bool IsBoss = false, int? EnrageSeconds = null);
 
 /// <summary>
 /// Tabla <c>npcId → nombre, dungeon, es boss</c>. El juego no manda el nombre de los monstruos, así que se arma a mano

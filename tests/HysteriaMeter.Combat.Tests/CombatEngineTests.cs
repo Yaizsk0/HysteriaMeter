@@ -39,10 +39,12 @@ public class CombatEngineTests
         Assert.Equal(12345U, unnamed.TargetNpcId);
         Assert.False(unnamed.TargetIsBoss);
 
-        engine.Entities.Npcs = new NpcCatalog(new Dictionary<uint, NpcInfo> { [12345] = new("Destroyer Tarka", "Fortaleza", IsBoss: true) });
+        engine.Entities.Npcs = new NpcCatalog(new Dictionary<uint, NpcInfo> { [12345] = new("Destroyer Tarka", "Fortaleza", IsBoss: true, EnrageSeconds: 480) });
         var named = engine.CurrentSnapshot()!;
         Assert.Equal("Destroyer Tarka", named.TargetName);
         Assert.True(named.TargetIsBoss);
+        Assert.Equal(480, named.TargetEnrageSeconds);
+        Assert.Null(unnamed.TargetEnrageSeconds);
         Assert.Equal("Destroyer Tarka", engine.Entities.DisplayName(Boss));
     }
 

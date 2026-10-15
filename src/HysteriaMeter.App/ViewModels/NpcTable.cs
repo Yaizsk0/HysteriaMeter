@@ -5,7 +5,7 @@ using HysteriaMeter.Combat;
 namespace HysteriaMeter.App.ViewModels;
 
 /// <summary>
-/// Lee <c>data/npcs.json</c>: <c>"npcId": { "name": "...", "dungeon": "...", "boss": true }</c>, o solo
+/// Lee <c>data/npcs.json</c>: <c>"npcId": { "name": "...", "dungeon": "...", "boss": true, "enrage": 480 }</c>, o solo
 /// <c>"npcId": "Nombre"</c>. Un archivo mal escrito no impide abrir el meter: se ve el ID.
 /// </summary>
 public static class NpcTable
@@ -41,7 +41,11 @@ public static class NpcTable
     {
         JsonValueKind.String when value.GetString() is { Length: > 0 } name => new NpcInfo(name),
         JsonValueKind.Object when Text(value, "name") is { } name =>
-            new NpcInfo(name, Text(value, "dungeon"), value.TryGetProperty("boss", out var boss) && boss.ValueKind == JsonValueKind.True),
+            new NpcInfo(
+                name,
+                Text(value, "dungeon"),
+                value.TryGetProperty("boss", out var boss) && boss.ValueKind == JsonValueKind.True,
+                value.TryGetProperty("enrage", out var enrage) && enrage.ValueKind == JsonValueKind.Number && enrage.TryGetInt32(out var seconds) && seconds > 0 ? seconds : null),
         _ => null,
     };
 
