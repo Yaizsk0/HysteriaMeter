@@ -181,6 +181,42 @@ public sealed partial class MeterViewModel : ObservableObject
         set => Update(Preferences with { RefreshMs = value }, nameof(RefreshMs));
     }
 
+    public bool Sounds
+    {
+        get => Preferences.Sounds;
+        set => Update(Preferences with { Sounds = value }, nameof(Sounds));
+    }
+
+    private void Alert(AlertSound sound)
+    {
+        if (Preferences.Sounds)
+        {
+            _session.PlaySound?.Invoke(sound);
+        }
+    }
+
+    /// <summary>El enrage del objetivo: no se llega si al ritmo actual muere después del enrage.</summary>
+    [ObservableProperty]
+    public partial bool IsEnrageDanger { get; set; }
+
+    // Pelea en la que ya se avisó que no se llega al enrage, para avisar una sola vez.
+    private Guid? _enrageWarnedId;
+
+    /// <summary>
+    /// " · enrage en 1:20" (o " · ENRAGE" si ya pasó) y si no se llega: al ritmo actual el boss muere después del enrage.
+    /// </summary>
+    public static (string Text, bool Danger) Enrage(int enrageSeconds, TimeSpan elapsed, TimeSpan? timeToKill)
+    {
+        var remaining = TimeSpan.FromSeconds(enrageSeconds) - elapsed;
+        if (remaining <= TimeSpan.Zero)
+        {
+            return (" · ENRAGE", true);
+        }
+
+        var text = $" · enrage en {remaining.ToString(@"m\:ss", CultureInfo.InvariantCulture)}";
+        return (text, timeToKill is { } ttk && ttk > remaining);
+    }
+
     public bool ShowSparklines
     {
         get => Preferences.Sparklines;
@@ -472,6 +508,7 @@ public sealed partial class MeterViewModel : ObservableObject
         CanEditNote = false;
         IsViewingHistory = true;
         HistoryLabel = $"PRUEBA DE {TimeSpan.FromSeconds(limit).ToString(@"m\:ss", CultureInfo.InvariantCulture)} · TERMINADA";
+        Alert(AlertSound.Info);
         return true;
     }
 
@@ -1010,9 +1047,33 @@ public sealed partial class MeterViewModel : ObservableObject
 
         if (RecordText(target, local.Dps, best) is { } message)
         {
+            Alert(AlertSound.Info);
             RecordMessage = message;
             HasRecordMessage = true;
             _recordUntilUtc = DateTime.UtcNow + RecordNoticeDuration;
+        }
+    }
+
+    private void UpdateEnrage(EncounterSnapshot snapshot, TimeSpan? timeToKill)
+    {
+        if (!IsLive || !HasTargetHealth || snapshot.TargetEnrageSeconds is not { } enrage)
+        {
+            IsEnrageDanger = false;
+            return;
+        }
+
+        var (text, danger) = Enrage(enrage, snapshot.MainTargetDuration ?? snapshot.Duration, timeToKill);
+        TargetHealthText += text;
+        IsEnrageDanger = danger;
+        if (danger && _enrageWarnedId != snapshot.Id)
+        {
+            _enrageWarnedId = snapshot.Id;
+            RecordMessage = timeToKill is { } kill
+                ? $"No llegan al enrage: al ritmo actual muere en {kill.ToString(@"m\:ss", CultureInfo.InvariantCulture)}"
+                : "¡Enrage!";
+            HasRecordMessage = true;
+            _recordUntilUtc = DateTime.UtcNow + MarkNoticeDuration * 2;
+            Alert(AlertSound.Warning);
         }
     }
 
@@ -1262,10 +1323,13 @@ public sealed partial class MeterViewModel : ObservableObject
         Elapsed = snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
         UpdateTargetHealth(snapshot.TargetHealth);
         TargetHealthCheck = HealthCheck(snapshot.TargetHealth, snapshot.Actors.Sum(a => a.MainTargetDamage));
-        if (IsLive && HasTargetHealth && EstimateTimeToKill(snapshot.TargetHealth!.Hp, snapshot.Actors.Sum(a => a.MainTargetDps)) is { } ttk)
+        var ttk = IsLive && HasTargetHealth ? EstimateTimeToKill(snapshot.TargetHealth!.Hp, snapshot.Actors.Sum(a => a.MainTargetDps)) : null;
+        if (ttk is { } kill)
         {
-            TargetHealthText += $" · muere en {ttk.ToString(@"m\:ss", CultureInfo.InvariantCulture)}";
+            TargetHealthText += $" · muere en {kill.ToString(@"m\:ss", CultureInfo.InvariantCulture)}";
         }
+
+        UpdateEnrage(real, ttk);
 
         var tab = Tab;
         var bossOnly = BossOnly;

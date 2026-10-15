@@ -52,7 +52,10 @@ public partial class App : Application
             preferences => UserStore.Save(PreferencesFile, preferences),
             sp.GetRequiredService<EncounterRepository>(),
             sp.GetRequiredService<CaptureStatus>(),
-            sp.GetRequiredService<HysteriaMeter.Protocol.Decoding.DecoderStats>()));
+            sp.GetRequiredService<HysteriaMeter.Protocol.Decoding.DecoderStats>())
+        {
+            PlaySound = sound => (sound == AlertSound.Warning ? System.Media.SystemSounds.Exclamation : System.Media.SystemSounds.Asterisk).Play(),
+        });
         builder.Services.AddSingleton<OverlayWindows>();
         builder.Services.AddSingleton<TrayIcon>();
 

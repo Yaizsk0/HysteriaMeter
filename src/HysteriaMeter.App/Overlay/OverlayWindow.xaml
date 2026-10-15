@@ -281,7 +281,20 @@
                         </Border>
                     </Grid>
                     <TextBlock DockPanel.Dock="Right" Text="{Binding TargetHealthText}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" ToolTip="{Binding TargetHealthCheck}"
-                               Foreground="{StaticResource TextMuted}" Visibility="{Binding HasTargetHealth, Converter={StaticResource Visible}}" />
+                               Visibility="{Binding HasTargetHealth, Converter={StaticResource Visible}}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+                                <Style.Triggers>
+                                    <!-- Al ritmo actual el boss muere después del enrage -->
+                                    <DataTrigger Binding="{Binding IsEnrageDanger}" Value="True">
+                                        <Setter Property="Foreground" Value="#FFE0605A" />
+                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                     <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="14"
                                Foreground="{StaticResource TextBright}" TextTrimming="CharacterEllipsis" />
                 </DockPanel>
@@ -570,6 +583,8 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
                             <CheckBox Style="{StaticResource Option}" Content="Línea de DPS de los últimos 30 s en cada fila" IsChecked="{Binding ShowSparklines}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Sonido en las alertas" IsChecked="{Binding Sounds}"
+                                      ToolTip="Récord, prueba de DPS terminada y enrage al que no se llega (el enrage sale de data/npcs.json)" />
 
                             <TextBlock Text="REFRESCO" Style="{StaticResource SettingsHeader}" />
                             <ListBox ItemsSource="{x:Static vm:MeterPreferences.RefreshOptions}" SelectedItem="{Binding RefreshMs}" Style="{StaticResource Chips}"

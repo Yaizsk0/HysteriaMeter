@@ -87,6 +87,8 @@ public sealed class WindowSmokeTests
             Assert.Contains("ya es otro atajo", viewModel.HotkeyMessage, StringComparison.Ordinal);
             viewModel.HotkeyMark = string.Empty;
             Assert.Equal(string.Empty, session.Preferences.HotkeyMark);
+            viewModel.Sounds = true;
+            Assert.True(session.Preferences.Sounds);
             viewModel.MarkMomentCommand.Execute(null);
             Assert.True(viewModel.HasRecordMessage);
 
@@ -404,7 +406,7 @@ public sealed class WindowSmokeTests
             {
               // comentario
               "npcs": {
-                "12345": { "name": " Destroyer Tarka ", "dungeon": "Fortaleza", "boss": true },
+                "12345": { "name": " Destroyer Tarka ", "dungeon": "Fortaleza", "boss": true, "enrage": 480 },
                 "777": "Esqueleto",
                 "abc": "no es un ID",
                 "888": { "dungeon": "sin nombre" },
@@ -413,7 +415,7 @@ public sealed class WindowSmokeTests
             """);
 
         Assert.Equal(2, table.Count);
-        Assert.Equal(new NpcInfo("Destroyer Tarka", "Fortaleza", IsBoss: true), table.Of(12345));
+        Assert.Equal(new NpcInfo("Destroyer Tarka", "Fortaleza", IsBoss: true, EnrageSeconds: 480), table.Of(12345));
         Assert.Equal(new NpcInfo("Esqueleto"), table.Of(777));
         Assert.Equal(0, NpcTable.Parse("{ roto").Count);
         Assert.Equal(0, NpcTable.Parse("[]").Count);
@@ -422,6 +424,15 @@ public sealed class WindowSmokeTests
         Assert.Equal("Encuentro", MeterViewModel.TitleOf(fight));
         Assert.Equal("NPC 12345", MeterViewModel.TitleOf(fight with { TargetNpcId = 12345 }));
         Assert.Equal("Tarka", MeterViewModel.TitleOf(fight with { TargetName = "Tarka", TargetNpcId = 12345 }));
+    }
+
+    [Fact]
+    public void Enrage_warns_when_the_boss_dies_after_it()
+    {
+        Assert.Equal((" · enrage en 1:20", false), MeterViewModel.Enrage(480, TimeSpan.FromSeconds(400), TimeSpan.FromSeconds(60)));
+        Assert.Equal((" · enrage en 1:20", true), MeterViewModel.Enrage(480, TimeSpan.FromSeconds(400), TimeSpan.FromSeconds(90)));
+        Assert.Equal((" · enrage en 1:20", false), MeterViewModel.Enrage(480, TimeSpan.FromSeconds(400), null));
+        Assert.Equal((" · ENRAGE", true), MeterViewModel.Enrage(480, TimeSpan.FromSeconds(481), null));
     }
 
     [Fact]

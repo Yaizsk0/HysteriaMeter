@@ -64,6 +64,9 @@ public sealed record MeterPreferences
     /// <summary>Apodos por nombre real de personaje; solo cambian lo que se muestra.</summary>
     public IReadOnlyDictionary<string, string> Nicknames { get; init; } = new Dictionary<string, string>();
 
+    /// <summary>Un sonido de Windows con las alertas: récord, prueba de DPS terminada y enrage que no se llega.</summary>
+    public bool Sounds { get; init; }
+
     /// <summary>Atajos globales, como "Ctrl+Shift+L"; vacío = sin atajo.</summary>
     public string HotkeyClickThrough { get; init; } = "Ctrl+Shift+L";
 

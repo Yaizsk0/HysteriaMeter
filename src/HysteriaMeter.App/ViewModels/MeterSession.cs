@@ -78,6 +78,9 @@ public sealed class MeterSession
 
     public CombatEngine Engine { get; }
 
+    /// <summary>Reproduce el sonido de una alerta; <c>null</c> en pruebas.</summary>
+    public Action<AlertSound>? PlaySound { get; init; }
+
     public CaptureRecorder Recorder { get; }
 
     public SkillNames SkillNames { get; }
@@ -125,4 +128,14 @@ public sealed class MeterSession
         Engine.Reset();
         ResetRequested?.Invoke();
     }
+}
+
+/// <summary>Qué tipo de sonido lleva una alerta.</summary>
+public enum AlertSound
+{
+    /// <summary>Algo bueno o informativo (récord, prueba terminada).</summary>
+    Info,
+
+    /// <summary>Algo que pide atención ya (no se llega al enrage).</summary>
+    Warning,
 }
