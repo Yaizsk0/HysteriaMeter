@@ -1,0 +1,7 @@
+{
+  // Nombres de NPCs por ID de plantilla (el npcId del spawn 0x3641). El juego no manda el nombre de los monstruos.
+  // Cuando una pelea sale como "NPC 2001234", agregá ese ID acá y reiniciá el meter.
+  // Formato: "ID decimal": { "name": "Nombre", "dungeon": "Dungeon", "boss": true }, o solo "ID": "Nombre".
+  "npcs": {
+  }
+}

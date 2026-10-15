@@ -330,6 +330,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
             ? window.Last - window.First
             : null;
         var targetSeconds = Math.Max(targetDuration?.TotalSeconds ?? 0, 1);
+        var targetNpc = target is { } tn ? Entities.Profile(tn).NpcId : null;
 
         var actors = encounter.Actors
             .Select(kv =>
@@ -372,14 +373,16 @@ public sealed class CombatEngine(CombatEngineOptions options)
             encounter.Id,
             encounter.Start,
             combatTime is { } combat ? encounter.Start + combat : encounter.LastActivity,
-            // Los monstruos no traen nombre en el paquete: sin nombre conocido queda null, no "#entidad".
-            target is { } t ? Entities.Profile(t).Name : null,
+            // Los monstruos no traen nombre en el paquete: sale de data/npcs.json o queda null, no "#entidad".
+            target is { } t ? Entities.NameOf(t) : null,
             encounter.TargetKilled,
             total,
             actors,
             targetDuration,
             target is { } th ? Entities.HealthOf(th) : null,
-            [.. encounter.Deaths]);
+            [.. encounter.Deaths],
+            targetNpc,
+            targetNpc is { } npc && Entities.Npcs.Of(npc) is { IsBoss: true });
     }
 
     private static double Share(long part, long total) => total == 0 ? 0 : (double)part / total;

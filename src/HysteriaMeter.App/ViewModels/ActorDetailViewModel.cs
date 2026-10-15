@@ -203,7 +203,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         }
 
         Name = alias ?? actor.Name;
-        Target = snapshot.TargetName ?? "Encuentro";
+        Target = MeterViewModel.TitleOf(snapshot);
         Dps = ActorRowViewModel.Compact(actor.Dps);
         ActiveDps = ActorRowViewModel.Compact(actor.ActiveDps);
         Total = ActorRowViewModel.Compact(actor.Damage);
