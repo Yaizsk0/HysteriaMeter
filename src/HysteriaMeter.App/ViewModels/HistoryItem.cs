@@ -35,6 +35,22 @@ public sealed record HistoryItem(
             : i)];
     }
 
+    /// <summary>
+    /// Progreso de mi DPS contra un boss (HS-05): si las peleas filtradas con mi DPS son todas contra el mismo
+    /// objetivo y hay al menos dos, devuelve ese objetivo y los DPS de la más vieja a la más nueva.
+    /// La lista llega de la más nueva a la más vieja, como la muestra el historial.
+    /// </summary>
+    public static (string Target, IReadOnlyList<double> Dps)? Progress(IEnumerable<HistoryItem> newestFirst)
+    {
+        var withDps = newestFirst.Where(i => i.LocalDps is > 0).ToList();
+        if (withDps.Count < 2 || withDps.Select(i => i.Target).Distinct().Count() != 1 || withDps[0].Target == "Encuentro")
+        {
+            return null;
+        }
+
+        return (withDps[0].Target, [.. withDps.Select(i => i.LocalDps!.Value).Reverse()]);
+    }
+
     /// <summary>"récord" si es el mejor; si no, cuánto le faltó en porcentaje.</summary>
     public static string Compare(double dps, double best) =>
         dps >= best ? "· mejor intento" : $"· {((dps / best) - 1).ToString("+0%;−0%", CultureInfo.CurrentCulture)} vs mejor";
