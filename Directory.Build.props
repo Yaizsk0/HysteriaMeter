@@ -9,6 +9,8 @@
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
     <!-- Permite compilar el proyecto WPF también desde Linux/macOS (CI, contenedores). -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- Versión que muestra el overlay; el SDK le agrega el commit ("0.15.0+sha"). -->
+    <Version>0.15.0</Version>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
 </Project>

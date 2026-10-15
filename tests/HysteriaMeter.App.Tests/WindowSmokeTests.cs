@@ -49,6 +49,15 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Version_shows_the_short_commit()
+    {
+        Assert.Equal("v0.15.0 · a352982", AppVersion.Format("0.15.0+a352982e972d3725ee7c7428b76c584d8d57f3c"));
+        Assert.Equal("v0.15.0", AppVersion.Format("0.15.0"));
+        Assert.Equal("versión desconocida", AppVersion.Format(null));
+        Assert.StartsWith("v0.15.0 · ", AppVersion.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Rolling_dps_averages_the_last_seconds()
     {
         Assert.Equal([2d, 2, 4], ActorDetailViewModel.RollingDps([10, 0, 10], 5));

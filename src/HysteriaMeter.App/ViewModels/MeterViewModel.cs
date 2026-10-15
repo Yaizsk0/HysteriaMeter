@@ -154,6 +154,11 @@ public sealed partial class MeterViewModel : ObservableObject
         }
     }
 
+    /// <summary>Versión y commit del build, en configuración y en el tooltip del título.</summary>
+#pragma warning disable CA1822 // propiedad de instancia para el binding de WPF
+    public string Version => AppVersion.Text;
+#pragma warning restore CA1822
+
     public string RecordingHint => _recorder.CurrentPath is { } path
         ? $"Grabando en {Path.GetFileName(path)}"
         : "Para comparar una pelea con Combat Analysis";
