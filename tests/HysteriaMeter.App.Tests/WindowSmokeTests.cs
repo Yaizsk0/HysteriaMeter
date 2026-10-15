@@ -23,7 +23,9 @@ public sealed class WindowSmokeTests
             var app = Application.Current as App ?? new App();
             app.InitializeComponent();
 
-            var viewModel = new MeterViewModel(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty, new MeterPreferences(), _ => { });
+            var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty, new MeterPreferences(), _ => { });
+            var viewModel = new MeterViewModel(session);
+            var healing = new MeterViewModel(session, MeterTab.Healing, showHealing: false);
             var row = new ActorRowViewModel();
             row.Update(1, Actor(), MeterTab.Damage, top: 3000, total: 3000, TimeSpan.FromSeconds(10));
             viewModel.Actors.Add(row);
@@ -34,6 +36,13 @@ public sealed class WindowSmokeTests
             viewModel.Detail.Update(new EncounterSnapshot(Guid.NewGuid(), DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddSeconds(10), "Boss", false, 3000, [Actor()]));
 
             Layout(new OverlayWindow(viewModel));
+            Layout(new OverlayWindow(healing));
+
+            // Las preferencias generales llegan a todas las ventanas; la vista es de cada una.
+            viewModel.OverlayOpacity = 0.8;
+            Assert.Equal(0.8, healing.OverlayOpacity);
+            Assert.True(viewModel.ShowHealingColumn);
+            Assert.False(healing.ShowHealingColumn);
             Layout(new DetailWindow(viewModel.Detail));
             Assert.Equal(2, viewModel.Detail.Skills.Count);
         });

@@ -25,36 +25,50 @@ public sealed partial class MeterViewModel : ObservableObject
 {
     private const string NoTarget = "Esperando combate";
 
+    private readonly MeterSession _session;
     private readonly CombatEngine _engine;
     private readonly CaptureRecorder _recorder;
     private readonly EncounterRepository? _history;
     private readonly DispatcherTimer _timer;
-    private readonly Action<MeterPreferences> _savePreferences;
-    private MeterPreferences _preferences;
     private EncounterSnapshot? _lastFinished;
 
     // Encuentro del historial que se está mirando; mientras tanto el vivo sigue acumulando por detrás.
     private EncounterSnapshot? _pinned;
 
-    public MeterViewModel(
-        CombatEngine engine,
-        CaptureRecorder recorder,
-        SkillNames skillNames,
-        MeterPreferences preferences,
-        Action<MeterPreferences> savePreferences,
-        EncounterRepository? history = null)
+    /// <param name="tab">Qué muestra esta ventana al abrirse.</param>
+    /// <param name="showHealing">Columna HPS al lado del DPS en esta ventana.</param>
+    public MeterViewModel(MeterSession session, MeterTab tab = MeterTab.Damage, bool showHealing = true)
     {
-        _history = history;
-        Detail = new ActorDetailViewModel(skillNames);
-        _engine = engine;
-        _recorder = recorder;
-        _preferences = preferences;
-        _savePreferences = savePreferences;
-        _engine.Scope = preferences.Scope;
-        _engine.SplitEncounters = preferences.SplitEncounters;
+        _session = session;
+        _engine = session.Engine;
+        _recorder = session.Recorder;
+        _history = session.History;
+        Detail = new ActorDetailViewModel(session.SkillNames);
+        Tab = tab;
+        _showHealing = showHealing;
         _engine.EncounterFinished += snapshot => _lastFinished = snapshot;
+        _session.PreferencesChanged += names =>
+        {
+            foreach (var name in names)
+            {
+                OnPropertyChanged(name);
+            }
+        };
+        _session.ResetRequested += ClearRows;
+        _recorder.Changed += _ =>
+        {
+            OnPropertyChanged(nameof(IsRecording));
+            OnPropertyChanged(nameof(RecordingHint));
+        };
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, (_, _) => Refresh(), Dispatcher.CurrentDispatcher);
     }
+
+    private MeterPreferences Preferences => _session.Preferences;
+
+    private bool _showHealing;
+
+    /// <summary>La ventana pide abrir otra (botón +).</summary>
+    public event Action? NewWindowRequested;
 
     [ObservableProperty]
     public partial bool IsSettingsOpen { get; set; }
@@ -74,53 +88,47 @@ public sealed partial class MeterViewModel : ObservableObject
 
     public bool ScopeMe
     {
-        get => _preferences.Scope == ActorScope.Me;
+        get => Preferences.Scope == ActorScope.Me;
         set => SetScope(value, ActorScope.Me);
     }
 
     public bool ScopeParty
     {
-        get => _preferences.Scope == ActorScope.Party;
+        get => Preferences.Scope == ActorScope.Party;
         set => SetScope(value, ActorScope.Party);
     }
 
     public bool ScopeEveryone
     {
-        get => _preferences.Scope == ActorScope.Everyone;
+        get => Preferences.Scope == ActorScope.Everyone;
         set => SetScope(value, ActorScope.Everyone);
     }
 
-    public bool HealingHidden
+    /// <summary>Opción de esta ventana: columna HPS al lado del DPS en la pestaña de daño.</summary>
+    public bool ShowHealing
     {
-        get => _preferences.Healing == HealingView.Hidden;
-        set => SetHealingView(value, HealingView.Hidden);
+        get => _showHealing;
+        set
+        {
+            if (SetProperty(ref _showHealing, value))
+            {
+                OnPropertyChanged(nameof(ShowHealingColumn));
+                OnPropertyChanged(nameof(SecondColumnHeader));
+                Refresh();
+            }
+        }
     }
-
-    public bool HealingInTab
-    {
-        get => _preferences.Healing == HealingView.Tab;
-        set => SetHealingView(value, HealingView.Tab);
-    }
-
-    public bool HealingCombined
-    {
-        get => _preferences.Healing == HealingView.Combined;
-        set => SetHealingView(value, HealingView.Combined);
-    }
-
-    /// <summary>La pestaña CURACIÓN solo existe con la curación en su propia pestaña.</summary>
-    public bool ShowHealingTab => _preferences.Healing == HealingView.Tab;
 
     /// <summary>Columna HPS al lado del DPS, en la pestaña de daño.</summary>
-    public bool ShowHealingColumn => _preferences.Healing == HealingView.Combined && Tab == MeterTab.Damage;
+    public bool ShowHealingColumn => _showHealing && Tab == MeterTab.Damage;
 
     public bool SplitEncounters
     {
-        get => _preferences.SplitEncounters;
+        get => Preferences.SplitEncounters;
         set
         {
             _engine.SplitEncounters = value;
-            Update(_preferences with { SplitEncounters = value }, nameof(SplitEncounters));
+            Update(Preferences with { SplitEncounters = value }, nameof(SplitEncounters));
         }
     }
 
@@ -143,9 +151,6 @@ public sealed partial class MeterViewModel : ObservableObject
             {
                 _recorder.Stop();
             }
-
-            OnPropertyChanged(nameof(IsRecording));
-            OnPropertyChanged(nameof(RecordingHint));
         }
     }
 
@@ -156,19 +161,19 @@ public sealed partial class MeterViewModel : ObservableObject
     /// <summary>Opacidad del overlay entero (una de <see cref="MeterPreferences.Opacities"/>).</summary>
     public double OverlayOpacity
     {
-        get => _preferences.Opacity;
-        set => Update(_preferences with { Opacity = Math.Clamp(value, 0.3, 1) }, nameof(OverlayOpacity));
+        get => Preferences.Opacity;
+        set => Update(Preferences with { Opacity = Math.Clamp(value, 0.3, 1) }, nameof(OverlayOpacity));
     }
 
     public string FontName
     {
-        get => _preferences.TextFont;
-        set => Update(_preferences with { TextFont = value }, nameof(FontName), nameof(Font));
+        get => Preferences.TextFont;
+        set => Update(Preferences with { TextFont = value }, nameof(FontName), nameof(Font));
     }
 
-    public FontFamily Font => MeterPreferences.BundledFonts.Contains(_preferences.TextFont)
-        ? new FontFamily(new Uri("pack://application:,,,/"), $"./Assets/Fonts/#{_preferences.TextFont}")
-        : new FontFamily(_preferences.TextFont);
+    public FontFamily Font => MeterPreferences.BundledFonts.Contains(Preferences.TextFont)
+        ? new FontFamily(new Uri("pack://application:,,,/"), $"./Assets/Fonts/#{Preferences.TextFont}")
+        : new FontFamily(Preferences.TextFont);
 
     public ObservableCollection<ActorRowViewModel> Actors { get; } = [];
 
@@ -387,49 +392,28 @@ public sealed partial class MeterViewModel : ObservableObject
 
     private void SetScope(bool selected, ActorScope scope)
     {
-        if (!selected || _preferences.Scope == scope)
+        if (!selected || Preferences.Scope == scope)
         {
             return;
         }
 
         // Cambiar el filtro a mitad de una pelea mezclaría criterios: se arranca de cero.
         _engine.Scope = scope;
-        Reset();
-        Update(_preferences with { Scope = scope }, nameof(ScopeMe), nameof(ScopeParty), nameof(ScopeEveryone));
+        _session.Reset();
+        Update(Preferences with { Scope = scope }, nameof(ScopeMe), nameof(ScopeParty), nameof(ScopeEveryone));
     }
 
-    private void SetHealingView(bool selected, HealingView view)
-    {
-        if (!selected || _preferences.Healing == view)
-        {
-            return;
-        }
-
-        Update(
-            _preferences with { Healing = view },
-            nameof(HealingHidden), nameof(HealingInTab), nameof(HealingCombined), nameof(ShowHealingTab), nameof(ShowHealingColumn), nameof(SecondColumnHeader));
-        if (view != HealingView.Tab)
-        {
-            Tab = MeterTab.Damage;
-        }
-
-        Refresh();
-    }
-
-    private void Update(MeterPreferences preferences, params string[] changed)
-    {
-        _preferences = preferences;
-        _savePreferences(preferences);
-        foreach (var name in changed)
-        {
-            OnPropertyChanged(name);
-        }
-    }
+    private void Update(MeterPreferences preferences, params string[] changed) => _session.Update(preferences, changed);
 
     [RelayCommand]
-    private void Reset()
+    private void NewWindow() => NewWindowRequested?.Invoke();
+
+    /// <summary>Reinicia el encuentro en todas las ventanas.</summary>
+    [RelayCommand]
+    private void Reset() => _session.Reset();
+
+    private void ClearRows()
     {
-        _engine.Reset();
         _lastFinished = null;
         _pinned = null;
         _shown = null;

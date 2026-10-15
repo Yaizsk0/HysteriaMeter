@@ -186,6 +186,9 @@
                         <Button Style="{StaticResource IconButton}" Command="{Binding ResetCommand}" ToolTip="Reiniciar encuentro">
                             <Path Style="{StaticResource Icon}" Data="M3,12 A9,9 0 1 0 6,5.3 L3,8 M3,3 V8 H8" />
                         </Button>
+                        <Button Style="{StaticResource IconButton}" Command="{Binding NewWindowCommand}" ToolTip="Nueva ventana (por ejemplo, una de curación al lado de la de daño)">
+                            <Path Style="{StaticResource Icon}" Data="M12,5 V19 M5,12 H19" />
+                        </Button>
                         <Button Style="{StaticResource IconButton}" Command="{Binding CopySummaryCommand}" ToolTip="Copiar resumen (para pegar en el chat)">
                             <Path Style="{StaticResource Icon}" Data="M9,9 H20 V20 H9 Z M5,15 H4 V4 H15 V5" />
                         </Button>
@@ -257,8 +260,7 @@
                     <DockPanel>
                         <StackPanel Orientation="Horizontal">
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="DAÑO" IsChecked="{Binding IsDamageTab}" />
-                            <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="CURACIÓN" IsChecked="{Binding IsHealingTab}"
-                                         Visibility="{Binding ShowHealingTab, Converter={StaticResource Visible}}" />
+                            <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="CURACIÓN" IsChecked="{Binding IsHealingTab}" />
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="RECIBIDO" IsEnabled="False"
                                          ToolTip="Próximamente: falta decodificar el daño que reciben los jugadores" ToolTipService.ShowOnDisabled="True" />
                         </StackPanel>
@@ -425,10 +427,9 @@
                                 <TextBlock Text="{Binding RecordingHint}" FontSize="11" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                             </DockPanel>
 
-                            <TextBlock Text="CURACIÓN" Style="{StaticResource SettingsHeader}" />
-                            <RadioButton Style="{StaticResource Option}" GroupName="Healing" Content="Junto al daño (columna HPS)" IsChecked="{Binding HealingCombined}" />
-                            <RadioButton Style="{StaticResource Option}" GroupName="Healing" Content="En su propia pestaña" IsChecked="{Binding HealingInTab}" />
-                            <RadioButton Style="{StaticResource Option}" GroupName="Healing" Content="No mostrar" IsChecked="{Binding HealingHidden}" />
+                            <TextBlock Text="ESTA VENTANA" Style="{StaticResource SettingsHeader}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Mostrar HPS junto al daño" IsChecked="{Binding ShowHealing}"
+                                      ToolTip="Apagado: cada ventana muestra solo lo de su pestaña. Con + abrís otra ventana, por ejemplo una de curación." />
 
                             <TextBlock Text="FUENTE" Style="{StaticResource SettingsHeader}" />
                             <ListBox ItemsSource="{x:Static vm:MeterPreferences.Fonts}" SelectedItem="{Binding FontName}" Style="{StaticResource Chips}">
