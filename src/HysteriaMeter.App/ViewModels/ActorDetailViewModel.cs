@@ -10,6 +10,15 @@ namespace HysteriaMeter.App.ViewModels;
 /// <summary>Una muerte del jugador elegido, para la sección MUERTES del detalle.</summary>
 public sealed record DeathItem(string When, string Summary, string LastHits);
 
+/// <summary>Otro jugador de la pelea, para comparar.</summary>
+public sealed record CompareOption(ulong Id, string Name)
+{
+    public override string ToString() => Name;
+}
+
+/// <summary>Una fila de la comparación: qué se mide, el valor de cada uno y si el elegido gana.</summary>
+public sealed record CompareRow(string Label, string Mine, string Theirs, bool MineBetter, bool TheirsBetter);
+
 /// <summary>Desglose por skill de un jugador (referencia: mocks/Detalle.dc.html). Se refresca con el overlay.</summary>
 public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableObject
 {
@@ -60,6 +69,36 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     public partial string DeathCount { get; set; } = "0";
 
     public ObservableCollection<DeathItem> Deaths { get; } = [];
+
+    /// <summary>Consejos de la pelea (solo para el jugador local).</summary>
+    public ObservableCollection<string> Advice { get; } = [];
+
+    [ObservableProperty]
+    public partial bool HasAdvice { get; set; }
+
+    /// <summary>Los demás jugadores de la pelea, para el selector "Comparar con".</summary>
+    public ObservableCollection<CompareOption> Others { get; } = [];
+
+    [ObservableProperty]
+    public partial CompareOption? CompareWith { get; set; }
+
+    public ObservableCollection<CompareRow> Comparison { get; } = [];
+
+    [ObservableProperty]
+    public partial bool HasComparison { get; set; }
+
+    private EncounterSnapshot? _last;
+
+    // Mientras se rearma la lista de jugadores, el ComboBox escribe null en CompareWith: no hay que reaccionar.
+    private bool _rebuildingOthers;
+
+    partial void OnCompareWithChanged(CompareOption? value)
+    {
+        if (!_rebuildingOthers && _last is { } snapshot)
+        {
+            Update(snapshot);
+        }
+    }
 
     /// <summary>Porcentaje del tiempo pegando, del primer golpe al último.</summary>
     [ObservableProperty]
@@ -136,6 +175,10 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         Accent = row.Accent;
         BarFill = row.BarFill;
         Skills.Clear();
+        _rebuildingOthers = true;
+        CompareWith = null;
+        Others.Clear();
+        _rebuildingOthers = false;
     }
 
     public void Update(EncounterSnapshot snapshot)
@@ -149,6 +192,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
             return;
         }
 
+        _last = snapshot;
         var duration = snapshot.Duration;
         var culture = CultureInfo.CurrentCulture;
         var alias = NicknameOf?.Invoke(actor.Name);
@@ -170,6 +214,8 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         UpdateDeaths(snapshot, actor.Id);
         UpdateChart(actor.Timeline ?? []);
         UpdateActivity(FightActivity.From(actor.Timeline));
+        UpdateAdvice(snapshot, actor);
+        UpdateComparison(snapshot, actor);
 
         var skills = actor.Skills;
         var top = skills.Count > 0 ? skills[0].Damage : 0;
@@ -222,6 +268,83 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         points.Freeze();
         ChartPoints = points;
         PeakDps = ActorRowViewModel.Compact(peak);
+    }
+
+    private string Display(string name) => NicknameOf?.Invoke(name) ?? name;
+
+    private void UpdateAdvice(EncounterSnapshot snapshot, ActorSnapshot actor)
+    {
+        var tips = actor.IsLocalPlayer ? FightAdvice.For(snapshot, actor, Display) : [];
+        HasAdvice = tips.Count > 0;
+        if (!tips.SequenceEqual(Advice))
+        {
+            Advice.Clear();
+            foreach (var tip in tips)
+            {
+                Advice.Add(tip);
+            }
+        }
+    }
+
+    private void UpdateComparison(EncounterSnapshot snapshot, ActorSnapshot actor)
+    {
+        var others = snapshot.Actors.Where(a => a.Id != actor.Id).OrderByDescending(a => a.Dps).Select(a => new CompareOption(a.Id, Display(a.Name))).ToList();
+        if (!others.SequenceEqual(Others))
+        {
+            var selected = CompareWith?.Id;
+            _rebuildingOthers = true;
+            try
+            {
+                Others.Clear();
+                foreach (var option in others)
+                {
+                    Others.Add(option);
+                }
+
+                // Reasignar la elección después de rearmar la lista (el ComboBox la pierde al limpiar).
+                CompareWith = others.FirstOrDefault(o => o.Id == selected);
+            }
+            finally
+            {
+                _rebuildingOthers = false;
+            }
+        }
+
+        var other = CompareWith is { } choice ? snapshot.Actors.FirstOrDefault(a => a.Id == choice.Id) : null;
+        HasComparison = other is not null;
+        Comparison.Clear();
+        if (other is not null)
+        {
+            foreach (var row in Compare(actor, other))
+            {
+                Comparison.Add(row);
+            }
+        }
+    }
+
+    /// <summary>Las filas de la comparación entre dos jugadores de la misma pelea.</summary>
+    public static IReadOnlyList<CompareRow> Compare(ActorSnapshot mine, ActorSnapshot theirs)
+    {
+        var culture = CultureInfo.CurrentCulture;
+        var myActivity = FightActivity.From(mine.Timeline);
+        var theirActivity = FightActivity.From(theirs.Timeline);
+        var myCounts = mine.Counts ?? HitCounts.Empty;
+        var theirCounts = theirs.Counts ?? HitCounts.Empty;
+        return
+        [
+            Row("DPS", mine.Dps, theirs.Dps, v => ActorRowViewModel.Compact(v)),
+            Row("Daño", mine.Damage, theirs.Damage, v => ActorRowViewModel.Compact(v)),
+            Row("DPS activo", mine.ActiveDps, theirs.ActiveDps, v => ActorRowViewModel.Compact(v)),
+            Row("Crítico", mine.CritRate, theirs.CritRate, v => v.ToString("P0", culture)),
+            Row("Espalda", myCounts.Rate(myCounts.Back), theirCounts.Rate(theirCounts.Back), v => v.ToString("P0", culture)),
+            Row("Golpe máximo", mine.MaxHit, theirs.MaxHit, v => ActorRowViewModel.Compact(v)),
+            Row("Activo", myActivity.Uptime, theirActivity.Uptime, v => v.ToString("P0", culture)),
+            Row("Recibido", mine.DamageTaken, theirs.DamageTaken, v => ActorRowViewModel.Compact(v), lowerIsBetter: true),
+            Row("Muertes", mine.Deaths, theirs.Deaths, v => v.ToString("0", culture), lowerIsBetter: true),
+        ];
+
+        static CompareRow Row(string label, double a, double b, Func<double, string> format, bool lowerIsBetter = false) =>
+            new(label, format(a), format(b), lowerIsBetter ? a < b : a > b, lowerIsBetter ? b < a : b > a);
     }
 
     private void UpdateActivity(FightActivity activity)

@@ -5,7 +5,8 @@ namespace HysteriaMeter.Combat;
 /// Cuenta como muerto cada hueco sin daño de más de <see cref="Tolerance"/> segundos, desde el primer golpe hasta el último:
 /// un par de segundos sin pegar es normal (animaciones, esquivar); más que eso es tiempo perdido.
 /// </summary>
-public sealed record FightActivity(int Seconds, int DeadSeconds, int LongestGap, int Gaps)
+/// <param name="LongestGapAt">Segundo de la pelea (desde el inicio del encuentro) en que empezó el hueco más largo.</param>
+public sealed record FightActivity(int Seconds, int DeadSeconds, int LongestGap, int Gaps, int LongestGapAt = 0)
 {
     /// <summary>Segundos seguidos sin daño que no cuentan como tiempo muerto.</summary>
     public const int Tolerance = 2;
@@ -38,12 +39,12 @@ public sealed record FightActivity(int Seconds, int DeadSeconds, int LongestGap,
             return Empty;
         }
 
-        int dead = 0, longest = 0, gaps = 0, run = 0;
+        int dead = 0, longest = 0, longestAt = 0, gaps = 0, run = 0;
         for (var i = first; i <= last; i++)
         {
             if (damageBySecond[i] > 0)
             {
-                Close(run);
+                Close(run, i - run);
                 run = 0;
             }
             else
@@ -52,15 +53,19 @@ public sealed record FightActivity(int Seconds, int DeadSeconds, int LongestGap,
             }
         }
 
-        return new FightActivity(last - first + 1, dead, longest, gaps);
+        return new FightActivity(last - first + 1, dead, longest, gaps, longestAt);
 
-        void Close(int length)
+        void Close(int length, int start)
         {
             if (length > Tolerance)
             {
                 dead += length;
                 gaps++;
-                longest = Math.Max(longest, length);
+                if (length > longest)
+                {
+                    longest = length;
+                    longestAt = start;
+                }
             }
         }
     }
