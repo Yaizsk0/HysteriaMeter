@@ -61,6 +61,8 @@ En configuración, DIAGNÓSTICO muestra el estado de la captura y cuántos mensa
 
 El detalle del jugador muestra cuánto del tiempo estuvo pegando (ACTIVO) y el TIEMPO MUERTO: cada hueco de más de 2 segundos sin daño, desde el primer golpe hasta el último. En el historial, cada pelea contra un boss repetido dice cuánto le faltó a tu DPS para tu mejor intento ("−12% vs mejor"). Para practicar contra el muñeco, PRUEBA DE DPS en configuración cuenta 60, 180 o 300 segundos desde el primer golpe y congela el resultado; Ctrl+Shift+R reinicia para otro intento.
 
+En tu propio detalle aparecen CONSEJOS de la pelea, sacados de reglas simples sobre lo que el meter ve: cuánto tiempo pasaste sin pegar y cuándo fue el hueco más largo, las muertes, los golpes por la espalda y cuánto más DPS hizo el mejor de la party. "Comparar con" pone lado a lado a dos jugadores de la misma pelea (DPS, daño, crítico, espalda, golpe máximo, tiempo activo, recibido y muertes), con el mejor de cada fila en dorado.
+
 En el detalle de un jugador se le puede poner un apodo (Enter para guardar, vacío para sacarlo): cambia solo cómo se ve en el meter. En EXPORTAR Y COMPARTIR, "Exportar perfil" guarda tu configuración en `Exportes\perfil-hysteria.json` para llevarla a otra PC o pasársela a la legión, y "Cargar perfil" la lee de ahí; el webhook de Discord nunca va en el perfil.
 
 Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: los nombres se cargan a mano en `data/skills.json`.

@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:ActorDetailViewModel}"
         Title="{Binding Name, StringFormat='Detalle · {0}'}"
-        Width="700" Height="440" MinWidth="520" MinHeight="220"
+        Width="700" Height="600" MinWidth="520" MinHeight="220"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="CanResizeWithGrip" ShowInTaskbar="False"
         FontSize="13" Foreground="{StaticResource Text}"
@@ -162,6 +162,69 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </Border>
+
+            <!-- Consejos de la pelea (reglas locales, solo para vos) -->
+            <Border DockPanel.Dock="Top" Margin="10,0,10,6" Padding="8,4" Background="#14C9A25A" BorderBrush="{StaticResource Rule}" BorderThickness="1"
+                    Visibility="{Binding HasAdvice, Converter={StaticResource Visible}}">
+                <StackPanel>
+                    <TextBlock Text="CONSEJOS" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Gold}" Margin="0,0,0,2" />
+                    <ItemsControl ItemsSource="{Binding Advice}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding StringFormat='• {0}'}" FontSize="12" Foreground="{StaticResource Text}" TextWrapping="Wrap" Margin="0,1" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Comparar con otro jugador de la misma pelea -->
+            <StackPanel DockPanel.Dock="Top" Margin="10,0,10,6">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="COMPARAR CON" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ComboBox ItemsSource="{Binding Others}" SelectedItem="{Binding CompareWith}" Width="160" FontSize="12" />
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding Comparison}" Margin="0,4,0,0" Visibility="{Binding HasComparison, Converter={StaticResource Visible}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="vm:CompareRow">
+                            <Grid Margin="0,1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="90" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Label}" FontSize="12" Foreground="{StaticResource TextMuted}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Mine}" FontSize="12" HorizontalAlignment="Right">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{StaticResource Text}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding MineBetter}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                                                    <Setter Property="FontWeight" Value="Bold" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Grid.Column="2" Text="{Binding Theirs}" FontSize="12" HorizontalAlignment="Right">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{StaticResource Text}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding TheirsBetter}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                                                    <Setter Property="FontWeight" Value="Bold" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
 
             <!-- DPS en el tiempo (promedio móvil de 5 s) -->
             <Border DockPanel.Dock="Top" Margin="10,2,10,6" Height="92" Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="1"

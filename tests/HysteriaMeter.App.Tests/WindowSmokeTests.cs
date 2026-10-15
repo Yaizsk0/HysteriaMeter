@@ -68,6 +68,8 @@ public sealed class WindowSmokeTests
             Assert.EndsWith("✝", tharos.DisplayName, StringComparison.Ordinal);
             viewModel.ShowDetailCommand.Execute(tharos);
             Assert.True(viewModel.Detail.HasDeaths);
+            viewModel.Detail.CompareWith = viewModel.Detail.Others[0];
+            Assert.True(viewModel.Detail.HasComparison);
             Layout(new DetailWindow(viewModel.Detail));
             var demo = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));
             Layout(new HysteriaMeter.App.Registro.LogWindow(new LogViewModel(() => demo.Deaths![0].LastHits, SkillNames.Empty, tharos.Id, "Tharos")));
@@ -319,6 +321,33 @@ public sealed class WindowSmokeTests
         Assert.NotNull(imported);
         Assert.Equal((500, 15, other.DiscordWebhook), (imported.RefreshMs, imported.IdleSeconds, imported.DiscordWebhook));
         Assert.Null(ProfileFile.FromJson("no es json", other));
+    }
+
+    [Fact]
+    public void Advice_points_at_dead_time_deaths_and_the_gap_to_the_top()
+    {
+        var me = Actor() with { Dps = 1000, ActiveDps = 1400, Deaths = 1, Timeline = [100, 100, 0, 0, 0, 0, 0, 0, 100, 100, 100, 100, 100, 100] };
+        var top = Actor() with { Id = 8, Name = "Rival", IsLocalPlayer = false, Dps = 1500 };
+        var snapshot = new EncounterSnapshot(Guid.NewGuid(), DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddSeconds(14), "Boss", false, 3000, [me, top]);
+
+        var tips = FightAdvice.For(snapshot, me);
+        Assert.Contains(tips, t => t.Contains("6 s sin pegar", StringComparison.Ordinal) && t.Contains("0:02", StringComparison.Ordinal));
+        Assert.Contains(tips, t => t.StartsWith("Moriste 1 vez", StringComparison.Ordinal));
+        Assert.Contains(tips, t => t.StartsWith("Rival hizo", StringComparison.Ordinal));
+        Assert.True(tips.Count <= FightAdvice.Max);
+    }
+
+    [Fact]
+    public void Comparison_marks_who_is_better_in_each_row()
+    {
+        var me = Actor() with { Dps = 1000, Deaths = 0 };
+        var other = Actor() with { Id = 8, Name = "Rival", Dps = 1500, Deaths = 2 };
+        var rows = ActorDetailViewModel.Compare(me, other);
+        var dps = rows.Single(r => r.Label == "DPS");
+        Assert.True(dps.TheirsBetter);
+        Assert.False(dps.MineBetter);
+        var deaths = rows.Single(r => r.Label == "Muertes");
+        Assert.True(deaths.MineBetter);
     }
 
     [Fact]

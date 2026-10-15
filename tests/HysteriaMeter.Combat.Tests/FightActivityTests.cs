@@ -8,7 +8,7 @@ public class FightActivityTests
         // Antes del primer golpe no cuenta; 2 s sin pegar se toleran; 4 s y 3 s son tiempo muerto.
         long[] timeline = [0, 0, 100, 0, 0, 100, 0, 0, 0, 0, 100, 100, 0, 0, 0, 100, 0, 0];
         var activity = FightActivity.From(timeline);
-        Assert.Equal(new FightActivity(Seconds: 14, DeadSeconds: 7, LongestGap: 4, Gaps: 2), activity);
+        Assert.Equal(new FightActivity(Seconds: 14, DeadSeconds: 7, LongestGap: 4, Gaps: 2, LongestGapAt: 6), activity);
         Assert.Equal(0.5, activity.Uptime, 3);
     }
 
