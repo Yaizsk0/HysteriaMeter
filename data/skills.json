@@ -1,0 +1,7 @@
+{
+  // Nombres de skills por ID (el paquete de daño 0x3804 solo trae el ID, u32).
+  // Se completan comparando una pelea grabada con la vista detallada de Combat Analysis.
+  // Formato: "ID decimal": "Nombre". Los que falten se muestran como "Skill <ID>".
+  "skills": {
+  }
+}

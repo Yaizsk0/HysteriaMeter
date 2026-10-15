@@ -42,6 +42,7 @@ public partial class App : Application
         builder.Services.AddSingleton(sp => new MeterViewModel(
             sp.GetRequiredService<CombatEngine>(),
             sp.GetRequiredService<CaptureRecorder>(),
+            SkillNames.Load(Path.Combine(AppContext.BaseDirectory, "data", "skills.json")),
             UserStore.Load<MeterPreferences>(PreferencesFile) ?? new MeterPreferences(),
             preferences => UserStore.Save(PreferencesFile, preferences)));
         builder.Services.AddSingleton<OverlayWindow>();

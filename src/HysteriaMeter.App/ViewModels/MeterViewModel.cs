@@ -30,8 +30,9 @@ public sealed partial class MeterViewModel : ObservableObject
     private MeterPreferences _preferences;
     private EncounterSnapshot? _lastFinished;
 
-    public MeterViewModel(CombatEngine engine, CaptureRecorder recorder, MeterPreferences preferences, Action<MeterPreferences> savePreferences)
+    public MeterViewModel(CombatEngine engine, CaptureRecorder recorder, SkillNames skillNames, MeterPreferences preferences, Action<MeterPreferences> savePreferences)
     {
+        Detail = new ActorDetailViewModel(skillNames);
         _engine = engine;
         _recorder = recorder;
         _preferences = preferences;
@@ -138,6 +139,12 @@ public sealed partial class MeterViewModel : ObservableObject
 
     public ObservableCollection<ActorRowViewModel> Actors { get; } = [];
 
+    /// <summary>Desglose por skill del jugador en el que se hizo clic.</summary>
+    public ActorDetailViewModel Detail { get; }
+
+    /// <summary>La vista abre (o trae al frente) la ventana de detalle.</summary>
+    public event Action? DetailRequested;
+
     [ObservableProperty]
     public partial string Title { get; set; } = NoTarget;
 
@@ -221,6 +228,19 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         Directory.CreateDirectory(CaptureRecorder.Folder);
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{CaptureRecorder.Folder}\"") { UseShellExecute = true });
+    }
+
+    [RelayCommand]
+    private void ShowDetail(ActorRowViewModel? row)
+    {
+        if (row is null)
+        {
+            return;
+        }
+
+        Detail.Select(row);
+        Refresh();
+        DetailRequested?.Invoke();
     }
 
     [RelayCommand]
@@ -346,5 +366,9 @@ public sealed partial class MeterViewModel : ObservableObject
         }
 
         IsEmpty = Actors.Count == 0;
+        if (Detail.ActorId is not null)
+        {
+            Detail.Update(snapshot);
+        }
     }
 }

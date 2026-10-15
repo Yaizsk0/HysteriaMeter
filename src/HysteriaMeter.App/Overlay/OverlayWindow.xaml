@@ -84,7 +84,6 @@
             <Setter Property="IsHitTestVisible" Value="False" />
         </Style>
 
-        <BooleanToVisibilityConverter x:Key="Visible" />
 
         <Style x:Key="SettingsHeader" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
@@ -239,7 +238,7 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="vm:ActorRowViewModel">
                             <Border x:Name="Row" Height="30" Margin="0,0,0,3" Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="1"
-                                    ToolTip="{Binding Breakdown}">
+                                    ToolTip="{Binding Breakdown}" Cursor="Hand" MouseLeftButtonUp="OnRowClick">
                                 <Grid>
                                     <!-- Barra proporcional al primero -->
                                     <Rectangle x:Name="Bar" Fill="{Binding BarFill}" HorizontalAlignment="Stretch">
