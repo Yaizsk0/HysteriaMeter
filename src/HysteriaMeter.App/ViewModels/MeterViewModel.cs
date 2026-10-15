@@ -997,6 +997,41 @@ public sealed partial class MeterViewModel : ObservableObject
         Refresh();
     }
 
+    /// <summary>
+    /// Abre una pelea guardada con "Guardar JSON" (propia o que te pasó otro de la legión) y la muestra fija en el overlay.
+    /// Devuelve <c>false</c> si el archivo no se pudo leer o no es una pelea.
+    /// </summary>
+    public bool OpenSharedFile(string path)
+    {
+        EncounterSnapshot? snapshot;
+        try
+        {
+            snapshot = EncounterExport.FromJson(File.ReadAllText(path));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            ExportMessage = $"No se pudo abrir: {ex.Message}";
+            return false;
+        }
+
+        if (snapshot is null)
+        {
+            ExportMessage = $"{Path.GetFileName(path)} no es una pelea exportada por Hysteria Meter";
+            return false;
+        }
+
+        _pinned = snapshot;
+        _pinnedId = null;
+        CanEditNote = false;
+        IsViewingHistory = true;
+        HistoryLabel = $"ARCHIVO · {Path.GetFileNameWithoutExtension(path)}";
+        IsSettingsOpen = false;
+        IsHistoryOpen = false;
+        ExportMessage = string.Empty;
+        Refresh();
+        return true;
+    }
+
     [RelayCommand]
     private void ToggleCompact() => IsCompact = !IsCompact;
 

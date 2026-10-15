@@ -44,4 +44,27 @@ public sealed class EncounterExportTests
     {
         Assert.Equal("Destroyer_ Tarka 2026-10-15 21-42", EncounterExport.FileName(Fight(), Start));
     }
+
+    [Fact]
+    public void Json_round_trips_a_shared_fight()
+    {
+        var fight = Fight();
+
+        var read = EncounterExport.FromJson(EncounterExport.ToJson(fight));
+
+        Assert.NotNull(read);
+        Assert.Equal(fight.TargetName, read.TargetName);
+        Assert.Equal(fight.TotalDamage, read.TotalDamage);
+        Assert.Equal(["Beto;el", "Mati"], read.Actors.Select(a => a.Name));
+        Assert.True(read.Actors[1].IsLocalPlayer);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("no es json")]
+    [InlineData("[1,2,3]")]
+    [InlineData("{}")]
+    [InlineData("{\"Start\":\"2026-10-15T21:42:00+00:00\",\"End\":\"2026-10-15T21:00:00+00:00\",\"Actors\":[{\"Name\":\"Mati\"}]}")]
+    [InlineData("{\"Start\":\"2026-10-15T21:42:00+00:00\",\"End\":\"2026-10-15T21:43:00+00:00\",\"Actors\":[]}")]
+    public void Invalid_json_is_not_a_fight(string json) => Assert.Null(EncounterExport.FromJson(json));
 }

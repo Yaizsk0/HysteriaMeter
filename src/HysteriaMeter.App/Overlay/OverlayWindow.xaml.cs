@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -207,6 +208,42 @@ public partial class OverlayWindow : Window
         if (e.ButtonState == MouseButtonState.Pressed)
         {
             DragMove();
+        }
+    }
+
+    private void OnOpenFightClick(object sender, RoutedEventArgs e)
+    {
+        Directory.CreateDirectory(MeterViewModel.ExportFolder);
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Abrir pelea",
+            Filter = "Pelea de Hysteria Meter (*.json)|*.json",
+            InitialDirectory = MeterViewModel.ExportFolder,
+        };
+        if (dialog.ShowDialog(this) == true)
+        {
+            _viewModel.OpenSharedFile(dialog.FileName);
+        }
+    }
+
+    private static string? DroppedJson(DragEventArgs e) =>
+        e.Data.GetData(DataFormats.FileDrop) is string[] { Length: 1 } files
+        && files[0].EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+            ? files[0]
+            : null;
+
+    private void OnRootDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = DroppedJson(e) is null ? DragDropEffects.None : DragDropEffects.Copy;
+        e.Handled = true;
+    }
+
+    private void OnRootDrop(object sender, DragEventArgs e)
+    {
+        if (DroppedJson(e) is { } path)
+        {
+            _viewModel.OpenSharedFile(path);
+            e.Handled = true;
         }
     }
 
