@@ -264,6 +264,35 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void History_compares_my_dps_with_the_best_try_on_the_same_target()
+    {
+        HistoryItem Item(string target, double? dps) => new("x", target, "15/10 21:00", "01:00", "1m", false, LocalDps: dps);
+        var items = HistoryItem.WithComparisons([Item("Tarka", 800), Item("Tarka", 1000), Item("Solo", 500), Item("Tarka", null)]);
+        Assert.Contains("vs mejor", items[0].VsBest);
+        Assert.Contains("20", items[0].VsBest);
+        Assert.Equal("· mejor intento", items[1].VsBest);
+        Assert.Equal(string.Empty, items[2].VsBest);
+        Assert.Equal(string.Empty, items[3].VsBest);
+    }
+
+    [Fact]
+    public void Practice_counts_down_and_ends_at_the_limit()
+    {
+        Assert.Equal(TimeSpan.FromSeconds(31), MeterViewModel.PracticeRemaining(TimeSpan.FromSeconds(29.5), 60));
+        Assert.Null(MeterViewModel.PracticeRemaining(TimeSpan.FromSeconds(60), 60));
+    }
+
+    [Fact]
+    public void Dead_time_is_described_with_the_longest_gap()
+    {
+        var (uptime, dead, hint) = ActorDetailViewModel.DescribeActivity(new FightActivity(100, 12, 6, 3));
+        Assert.Contains("88", uptime);
+        Assert.Equal("12 s", dead);
+        Assert.Contains("6 s", hint);
+        Assert.Equal("–", ActorDetailViewModel.DescribeActivity(FightActivity.Empty).Uptime);
+    }
+
+    [Fact]
     public void Demo_encounter_is_consistent()
     {
         var demo = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));

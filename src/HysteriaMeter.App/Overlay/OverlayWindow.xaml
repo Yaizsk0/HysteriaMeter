@@ -463,6 +463,7 @@
                                                         <Run Text="{Binding Duration, Mode=OneWay}" />
                                                         <Run Text="{Binding Result, Mode=OneWay}" />
                                                         <Run Text="{Binding AttemptText, Mode=OneWay}" />
+                                                        <Run Text="{Binding VsBest, Mode=OneWay}" />
                                                     </TextBlock>
                                                     <TextBlock Text="{Binding Note}" FontSize="11" FontStyle="Italic" Foreground="{StaticResource TextMuted}" TextTrimming="CharacterEllipsis"
                                                                Visibility="{Binding HasNote, Converter={StaticResource Visible}}" />
@@ -499,6 +500,28 @@
                             </ListBox>
                             <CheckBox Style="{StaticResource Option}" Content="Volver al vivo cuando empieza una pelea" IsChecked="{Binding AutoBackToLive}"
                                       ToolTip="Si estás mirando una pelea guardada y arranca otra, el overlay vuelve solo a la actual" />
+
+                            <TextBlock Text="PRUEBA DE DPS (MUÑECO)" Style="{StaticResource SettingsHeader}" />
+                            <TextBlock Text="Congela la pelea al llegar a este tiempo; reiniciá (Ctrl+Shift+R) para otro intento" FontSize="11" Foreground="{StaticResource TextDim}"
+                                       TextWrapping="Wrap" Margin="0,0,0,2" />
+                            <ListBox ItemsSource="{x:Static vm:MeterPreferences.PracticeOptions}" SelectedItem="{Binding PracticeSeconds}" Style="{StaticResource Chips}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock>
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="{Binding StringFormat='{}{0} s'}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding}" Value="0">
+                                                            <Setter Property="Text" Value="Apagada" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
 
                             <TextBlock Text="GRABACIÓN" Style="{StaticResource SettingsHeader}" />
                             <CheckBox Style="{StaticResource Option}" Content="Grabar lo capturado (.pcap)" IsChecked="{Binding IsRecording}"

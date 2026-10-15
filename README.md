@@ -59,6 +59,8 @@ Los datos (preferencias, historial, grabaciones y exportes) van a `%LOCALAPPDATA
 
 En configuración, DIAGNÓSTICO muestra el estado de la captura y cuántos mensajes del juego se leyeron, cuántos se reconocen, los errores y las resincronizaciones. Si llega tráfico pero no se reconoce nada, el punto se pone ámbar con un aviso de que el juego pudo haberse actualizado. El tooltip de la vida del boss compara el daño contado con la vida que perdió (auto-verificación).
 
+El detalle del jugador muestra cuánto del tiempo estuvo pegando (ACTIVO) y el TIEMPO MUERTO: cada hueco de más de 2 segundos sin daño, desde el primer golpe hasta el último. En el historial, cada pelea contra un boss repetido dice cuánto le faltó a tu DPS para tu mejor intento ("−12% vs mejor"). Para practicar contra el muñeco, PRUEBA DE DPS en configuración cuenta 60, 180 o 300 segundos desde el primer golpe y congela el resultado; Ctrl+Shift+R reinicia para otro intento.
+
 Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: los nombres se cargan a mano en `data/skills.json`.
 
 Para grabar una pelea desde el overlay: engranaje → GRABACIÓN → "Grabar lo capturado (.pcap)". Mientras graba aparece `● REC` arriba; los archivos quedan en `%LOCALAPPDATA%\HysteriaMeter\Grabaciones` ("Abrir carpeta"). Esas grabaciones tienen nombres de personajes: no se suben al repo.

@@ -56,6 +56,11 @@ public sealed record MeterPreferences
     /// <summary>Si se está mirando una pelea guardada y empieza otra, volver solo al vivo.</summary>
     public bool AutoBackToLive { get; init; } = true;
 
+    /// <summary>Prueba de DPS contra el muñeco: segundos de pelea que se cuentan (0 = apagada).</summary>
+    public static IReadOnlyList<int> PracticeOptions { get; } = [0, 60, 180, 300];
+
+    public int PracticeSeconds { get; init; }
+
     // "TextFont" y no "Font": así las preferencias guardadas con la fuente vieja no pisan la nueva por defecto.
     public string TextFont { get; init; } = "Inter";
 }

@@ -38,6 +38,16 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
 
     public ObservableCollection<DeathItem> Deaths { get; } = [];
 
+    /// <summary>Porcentaje del tiempo pegando, del primer golpe al último.</summary>
+    [ObservableProperty]
+    public partial string Uptime { get; set; } = "–";
+
+    [ObservableProperty]
+    public partial string DeadTime { get; set; } = "–";
+
+    [ObservableProperty]
+    public partial string DeadTimeHint { get; set; } = string.Empty;
+
     [ObservableProperty]
     public partial bool HasDeaths { get; set; }
 
@@ -129,6 +139,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         DeathCount = actor.Deaths.ToString(culture);
         UpdateDeaths(snapshot, actor.Id);
         UpdateChart(actor.Timeline ?? []);
+        UpdateActivity(FightActivity.From(actor.Timeline));
 
         var skills = actor.Skills;
         var top = skills.Count > 0 ? skills[0].Damage : 0;
@@ -181,6 +192,27 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         points.Freeze();
         ChartPoints = points;
         PeakDps = ActorRowViewModel.Compact(peak);
+    }
+
+    private void UpdateActivity(FightActivity activity)
+    {
+        (Uptime, DeadTime, DeadTimeHint) = DescribeActivity(activity);
+    }
+
+    /// <summary>"92%", "12 s" y la explicación con la cantidad de huecos y el más largo.</summary>
+    public static (string Uptime, string DeadTime, string Hint) DescribeActivity(FightActivity activity)
+    {
+        if (activity.Seconds == 0)
+        {
+            return ("–", "–", string.Empty);
+        }
+
+        var uptime = activity.Uptime.ToString("P0", CultureInfo.CurrentCulture);
+        var dead = $"{activity.DeadSeconds} s";
+        var hint = activity.Gaps == 0
+            ? $"Sin huecos de más de {FightActivity.Tolerance} s sin pegar en {activity.Seconds} s de pelea"
+            : $"{activity.Gaps} huecos de más de {FightActivity.Tolerance} s sin pegar (el más largo, {activity.LongestGap} s) en {activity.Seconds} s de pelea";
+        return (uptime, dead, hint);
     }
 
     private void UpdateDeaths(EncounterSnapshot snapshot, ulong actorId)

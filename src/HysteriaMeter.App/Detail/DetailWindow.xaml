@@ -122,6 +122,14 @@
                     <TextBlock Text="MUERTES" Style="{StaticResource StatLabel}" />
                     <TextBlock Text="{Binding DeathCount}" Style="{StaticResource StatValue}" />
                 </StackPanel>
+                <StackPanel Style="{StaticResource Stat}" ToolTip="{Binding DeadTimeHint}">
+                    <TextBlock Text="ACTIVO" Style="{StaticResource StatLabel}" />
+                    <TextBlock Text="{Binding Uptime}" Style="{StaticResource StatValue}" />
+                </StackPanel>
+                <StackPanel Style="{StaticResource Stat}" ToolTip="{Binding DeadTimeHint}">
+                    <TextBlock Text="TIEMPO MUERTO" Style="{StaticResource StatLabel}" />
+                    <TextBlock Text="{Binding DeadTime}" Style="{StaticResource StatValue}" />
+                </StackPanel>
             </StackPanel>
 
             <!-- Muertes: qué lo mató y cuánto recibió antes -->
