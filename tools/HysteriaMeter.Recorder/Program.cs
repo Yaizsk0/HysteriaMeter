@@ -183,10 +183,14 @@ static async Task<int> ReplayAsync(string input, Options options)
     Console.WriteLine($"Errores de decodificación: {stats.Errors}\n");
     foreach (var encounter in encounters)
     {
-        Console.WriteLine($"[{encounter.Start:HH:mm:ss}] {encounter.TargetName ?? "?"} · {encounter.Duration.TotalSeconds:0.0}s · {(encounter.TargetKilled ? "muerto" : "sin terminar")} · total {encounter.TotalDamage:N0}");
+        Console.WriteLine($"[{encounter.Start:HH:mm:ss}] {encounter.TargetName ?? "?"} · {encounter.Duration.TotalSeconds:0.0}s · {(encounter.TargetKilled ? "muerto" : "sin terminar")} · total {encounter.TotalDamage:N0}"
+            + (encounter.MainTargetDuration is { } window ? $" · contra el objetivo {window.TotalSeconds:0.00}s" : string.Empty));
         foreach (var actor in encounter.Actors)
         {
-            Console.WriteLine($"    {actor.Name,-20} {actor.Damage,10:N0}  {actor.Dps,8:N0} dps  {actor.Share,6:P0}  {actor.Hits,4} golpes");
+            var c = actor.Counts ?? HitCounts.Empty;
+            Console.WriteLine($"    {actor.Name,-20} {actor.Damage,10:N0}  {actor.Dps,8:N0} dps  {actor.Share,6:P0}  {actor.Hits,4} golpes"
+                + $"  | objetivo {actor.MainTargetDamage,10:N0} {actor.MainTargetDps,8:N0} dps"
+                + $"  | CRI {c.Critical} PERF {c.Perfect} DOUB {c.DoubleHit} FRNT {c.Front} BACK {c.Back} MULT {c.MultiHit}");
         }
     }
 

@@ -90,6 +90,25 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Main_target_damage_and_window_match_combat_analysis()
+    {
+        // Combat Analysis mide solo el objetivo elegido, del primer al último golpe sobre él.
+        const ulong add = 901;
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, add, null, NpcId: 777));
+        engine.Apply(new DamageEvent(At(0), Me, add, 1, 500, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Me, Boss, 1, 10_000, HitModifiers.Critical | HitModifiers.BackAttack));
+        engine.Apply(new DamageEvent(At(4), Me, add, 1, 500, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(7), Me, Boss, 1, 10_000, HitModifiers.MultiHit | HitModifiers.FrontAttack));
+
+        var snapshot = engine.CurrentSnapshot()!;
+        var me = Assert.Single(snapshot.Actors);
+        Assert.Equal(TimeSpan.FromSeconds(5), snapshot.MainTargetDuration);
+        Assert.Equal((21_000L, 20_000L, 4_000d), (me.Damage, me.MainTargetDamage, me.MainTargetDps));
+        Assert.Equal(new HitCounts(4, 1, 0, 0, 1, 1, 1), me.Counts);
+    }
+
+    [Fact]
     public void Npc_damage_is_not_ranked()
     {
         var engine = CreateEngine();

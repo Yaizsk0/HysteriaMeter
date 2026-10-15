@@ -61,7 +61,7 @@
             <ItemsControl ItemsSource="{Binding Actors}" Margin="0,6,0,0">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="vm:ActorRowViewModel">
-                        <Grid Height="22" Margin="0,1">
+                        <Grid Height="22" Margin="0,1" ToolTip="{Binding Breakdown}">
                             <!-- Barra proporcional al primero -->
                             <Rectangle HorizontalAlignment="Stretch" RadiusX="3" RadiusY="3" RenderTransformOrigin="0,0.5">
                                 <Rectangle.Style>

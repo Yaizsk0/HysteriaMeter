@@ -23,7 +23,7 @@ description: "Tareas de la feature 002: precisión del combate"
 ## Phase 2: Foundational
 
 - [X] T003 [P] `HitModifiers` con `Perfect`, `Double`, `Front`, `MultiHit` y `ModifierCoverage` en `src/HysteriaMeter.Protocol/Events/CombatEvents.cs`
-- [ ] T004 [P] Contadores por modificador y estado "sin identificar" en `ActorSnapshot` y `SkillSnapshot` en `src/HysteriaMeter.Combat/Snapshots.cs`
+- [X] T004 [P] Contadores por modificador y estado "sin identificar" en `ActorSnapshot` y `SkillSnapshot` en `src/HysteriaMeter.Combat/Snapshots.cs`
 - [ ] T005 Migración de SQLite con las columnas nuevas en `src/HysteriaMeter.Storage/EncounterRepository.cs` + test
 
 **Checkpoint**: modelo listo para recibir los datos nuevos sin cambiar resultados actuales.
@@ -33,7 +33,7 @@ description: "Tareas de la feature 002: precisión del combate"
 - [X] T006 [US1] Research: correlacionar flags de `0x3804` con CRI/PERF/DOUB/FRNT/BACK/MULT y documentarlo en `protocol-notes.md`
 - [X] T007 [US1] Decodificar los modificadores en `src/HysteriaMeter.Protocol/Decoding/DamagePacketDecoder.cs` + test con bytes reales
 - [X] T008 [US1] Contar multi-golpe como un solo golpe con su daño total en `CombatEngine` + test
-- [ ] T009 [US1] Mostrar crit % y "sin identificar" en las filas del overlay en `src/HysteriaMeter.App/ViewModels/ActorRowViewModel.cs`
+- [X] T009 [US1] Mostrar crit % y "sin identificar" en las filas del overlay en `src/HysteriaMeter.App/ViewModels/ActorRowViewModel.cs`
 
 ## Phase 4: User Story 2 - Daño completo del local (P1)
 

@@ -1,6 +1,7 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using HysteriaMeter.Combat;
+using HysteriaMeter.Protocol.Events;
 
 namespace HysteriaMeter.App.ViewModels;
 
@@ -30,6 +31,10 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial string CritRate { get; set; } = string.Empty;
 
+    /// <summary>Detalle del golpe a golpe, como las columnas de Combat Analysis (tooltip de la fila).</summary>
+    [ObservableProperty]
+    public partial string Breakdown { get; set; } = string.Empty;
+
     /// <summary>Largo de la barra: proporción respecto del primero (0..1).</summary>
     [ObservableProperty]
     public partial double Bar { get; set; }
@@ -45,6 +50,22 @@ public sealed partial class ActorRowViewModel : ObservableObject
         Share = actor.Share.ToString("P0", CultureInfo.CurrentCulture);
         CritRate = actor.CritRate.ToString("P0", CultureInfo.CurrentCulture);
         Bar = topDamage == 0 ? 0 : (double)actor.Damage / topDamage;
+        Breakdown = BuildBreakdown(actor);
+    }
+
+    internal static string BuildBreakdown(ActorSnapshot actor)
+    {
+        var c = actor.Counts ?? HitCounts.Empty;
+        var culture = CultureInfo.CurrentCulture;
+        string Rate(HitModifiers modifier, int count) =>
+            ModifierCoverage.IsIdentified(modifier) ? c.Rate(count).ToString("P0", culture) : "sin identificar";
+
+        return string.Join(
+            Environment.NewLine,
+            $"Contra el objetivo: {Compact(actor.MainTargetDamage)} ({Compact(actor.MainTargetDps)} DPS)",
+            $"Golpes: {c.Hits.ToString("N0", culture)} · máximo {Compact(actor.MaxHit)}",
+            $"Crítico {Rate(HitModifiers.Critical, c.Critical)} · Perfecto {Rate(HitModifiers.Perfect, c.Perfect)} · Doble {Rate(HitModifiers.DoubleHit, c.DoubleHit)}",
+            $"Frente {Rate(HitModifiers.FrontAttack, c.Front)} · Espalda {Rate(HitModifiers.BackAttack, c.Back)} · Multi {Rate(HitModifiers.MultiHit, c.MultiHit)}");
     }
 
     internal static string Compact(double value) => value switch

@@ -20,6 +20,16 @@ internal sealed class Encounter(DateTimeOffset start)
 
     public ulong? MainTarget => DamageTaken.Count == 0 ? null : DamageTaken.MaxBy(kv => kv.Value).Key;
 
+    /// <summary>Primer y último golpe a cada objetivo: Combat Analysis mide la pelea así.</summary>
+    public Dictionary<ulong, (DateTimeOffset First, DateTimeOffset Last)> TargetWindows { get; } = [];
+
+    public void RegisterDamage(ulong target, long amount, DateTimeOffset at)
+    {
+        DamageTaken[target] = DamageTaken.GetValueOrDefault(target) + amount;
+        TargetWindows[target] = TargetWindows.TryGetValue(target, out var window) ? (window.First, at) : (at, at);
+        LastActivity = at;
+    }
+
     public ActorStats Actor(ulong id)
     {
         if (!Actors.TryGetValue(id, out var stats))
@@ -46,8 +56,14 @@ internal sealed class ActorStats
 
     public Dictionary<uint, SkillStats> Skills { get; } = [];
 
-    public void AddHit(uint skillId, long amount, HitModifiers modifiers)
+    public HitCounter Counts { get; } = new();
+
+    public Dictionary<ulong, long> DamageByTarget { get; } = [];
+
+    public void AddHit(uint skillId, ulong targetId, long amount, HitModifiers modifiers)
     {
+        DamageByTarget[targetId] = DamageByTarget.GetValueOrDefault(targetId) + amount;
+        Counts.Add(modifiers);
         // Como Combat Analysis: los ticks de DoT suman daño pero no cuentan como golpe.
         var periodic = modifiers.HasFlag(HitModifiers.DamageOverTime);
         var hit = periodic ? 0 : 1;
@@ -63,6 +79,7 @@ internal sealed class ActorStats
             Skills[skillId] = skill;
         }
 
+        skill.Counts.Add(modifiers);
         skill.Damage += amount;
         skill.Hits += hit;
         skill.Crits += critical ? 1 : 0;
@@ -79,4 +96,36 @@ internal sealed class SkillStats
     public int Crits { get; set; }
 
     public long MaxHit { get; set; }
+
+    public HitCounter Counts { get; } = new();
+}
+
+/// <summary>Cuenta golpes por modificador, igual que las columnas de Combat Analysis. Los ticks de DoT no son golpes.</summary>
+internal sealed class HitCounter
+{
+    private int _hits;
+    private int _crits;
+    private int _perfect;
+    private int _double;
+    private int _front;
+    private int _back;
+    private int _multi;
+
+    public void Add(HitModifiers modifiers)
+    {
+        if (modifiers.HasFlag(HitModifiers.DamageOverTime))
+        {
+            return;
+        }
+
+        _hits++;
+        _crits += modifiers.HasFlag(HitModifiers.Critical) ? 1 : 0;
+        _perfect += modifiers.HasFlag(HitModifiers.Perfect) ? 1 : 0;
+        _double += modifiers.HasFlag(HitModifiers.DoubleHit) ? 1 : 0;
+        _front += modifiers.HasFlag(HitModifiers.FrontAttack) ? 1 : 0;
+        _back += modifiers.HasFlag(HitModifiers.BackAttack) ? 1 : 0;
+        _multi += modifiers.HasFlag(HitModifiers.MultiHit) ? 1 : 0;
+    }
+
+    public HitCounts Snapshot() => new(_hits, _crits, _perfect, _double, _front, _back, _multi);
 }
