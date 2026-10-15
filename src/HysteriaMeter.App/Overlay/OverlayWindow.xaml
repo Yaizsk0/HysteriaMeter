@@ -419,6 +419,14 @@
                             <CheckBox DockPanel.Dock="Right" Style="{StaticResource Option}" Content="Derrotados" IsChecked="{Binding OnlyKills}" Margin="8,0,0,0" />
                             <TextBox Style="{StaticResource Field}" Text="{Binding HistorySearch, UpdateSourceTrigger=PropertyChanged}" ToolTip="Buscar por boss o por nota" />
                         </DockPanel>
+                        <!-- Progreso de mi DPS cuando la búsqueda deja un solo boss -->
+                        <Border DockPanel.Dock="Top" Height="54" Margin="0,0,0,6" Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="1"
+                                Visibility="{Binding HasProgress, Converter={StaticResource Visible}}">
+                            <Grid>
+                                <Polyline Points="{Binding ProgressPoints}" Stretch="Fill" Margin="6,18,6,5" Stroke="{StaticResource Gold}" StrokeThickness="1.5" StrokeLineJoin="Round" />
+                                <TextBlock Text="{Binding ProgressText}" Margin="6,2,6,0" FontSize="10" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" VerticalAlignment="Top" />
+                            </Grid>
+                        </Border>
                         <ScrollViewer VerticalScrollBarVisibility="Hidden">
                             <ItemsControl ItemsSource="{Binding History}">
                                 <ItemsControl.ItemTemplate>

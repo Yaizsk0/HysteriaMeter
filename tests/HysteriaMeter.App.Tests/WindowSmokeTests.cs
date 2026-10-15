@@ -351,6 +351,19 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Progress_shows_only_for_a_single_boss_oldest_first()
+    {
+        HistoryItem Item(string target, double? dps) => new("x", target, "15/10 21:00", "01:00", "1m", false, LocalDps: dps);
+        var progress = HistoryItem.Progress([Item("Tarka", 1200), Item("Tarka", null), Item("Tarka", 900), Item("Tarka", 1000)]);
+        Assert.NotNull(progress);
+        Assert.Equal("Tarka", progress.Value.Target);
+        Assert.Equal([1000d, 900d, 1200d], progress.Value.Dps);
+        Assert.Null(HistoryItem.Progress([Item("Tarka", 1200), Item("Solo", 900)]));
+        Assert.Null(HistoryItem.Progress([Item("Tarka", 1200)]));
+        Assert.StartsWith("Tarka · 3 intentos", MeterViewModel.ProgressSummary("Tarka", progress.Value.Dps), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Demo_encounter_is_consistent()
     {
         var demo = DemoEncounter.Create(DateTimeOffset.UnixEpoch.AddHours(1));

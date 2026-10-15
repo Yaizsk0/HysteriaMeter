@@ -816,6 +816,40 @@ public sealed partial class MeterViewModel : ObservableObject
         ApplyHistoryFilter();
     }
 
+    /// <summary>Línea de mi DPS a lo largo de los intentos, cuando la búsqueda deja un solo boss.</summary>
+    [ObservableProperty]
+    public partial PointCollection ProgressPoints { get; set; } = [];
+
+    [ObservableProperty]
+    public partial bool HasProgress { get; set; }
+
+    [ObservableProperty]
+    public partial string ProgressText { get; set; } = string.Empty;
+
+    private void UpdateProgress((string Target, IReadOnlyList<double> Dps)? progress)
+    {
+        HasProgress = progress is not null;
+        if (progress is not { } p)
+        {
+            return;
+        }
+
+        var peak = p.Dps.Max();
+        var points = new PointCollection(p.Dps.Count);
+        for (var i = 0; i < p.Dps.Count; i++)
+        {
+            points.Add(new System.Windows.Point(i, peak - p.Dps[i]));
+        }
+
+        points.Freeze();
+        ProgressPoints = points;
+        ProgressText = ProgressSummary(p.Target, p.Dps);
+    }
+
+    /// <summary>"Tarka · 8 intentos · último 11.2k · mejor 12.4k".</summary>
+    public static string ProgressSummary(string target, IReadOnlyList<double> dps) =>
+        $"{target} · {dps.Count} intentos · último {ActorRowViewModel.Compact(dps[^1])} · mejor {ActorRowViewModel.Compact(dps.Max())}";
+
     private void ApplyHistoryFilter()
     {
         History.Clear();
@@ -823,6 +857,8 @@ public sealed partial class MeterViewModel : ObservableObject
         {
             History.Add(item);
         }
+
+        UpdateProgress(HistoryItem.Progress(_allHistory.Where(i => i.Matches(HistorySearch, OnlyKills))));
     }
 
     [RelayCommand]
