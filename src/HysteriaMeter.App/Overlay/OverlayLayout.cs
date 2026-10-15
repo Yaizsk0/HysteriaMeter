@@ -3,8 +3,8 @@ using System.Text.Json;
 
 namespace HysteriaMeter.App.Overlay;
 
-/// <summary>Posición, ancho y zoom del overlay, guardados entre sesiones en %LOCALAPPDATA%\HysteriaMeter.</summary>
-internal sealed record OverlayLayout(double Left, double Top, double Width, double Zoom)
+/// <summary>Posición, tamaño y zoom del overlay, guardados entre sesiones en %LOCALAPPDATA%\HysteriaMeter.</summary>
+internal sealed record OverlayLayout(double Left, double Top, double Width, double Zoom, double Height = 0)
 {
     private static readonly string FilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HysteriaMeter", "overlay.json");

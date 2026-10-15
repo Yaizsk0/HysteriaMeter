@@ -22,7 +22,7 @@ public partial class OverlayWindow : Window
         DataContext = _viewModel = viewModel;
         RestoreLayout();
         Loaded += (_, _) => _viewModel.Start();
-        Closing += (_, _) => OverlayLayout.Save(new OverlayLayout(Left, Top, Width, Zoom.ScaleX));
+        Closing += (_, _) => OverlayLayout.Save(new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height));
         Closed += (_, _) => _viewModel.Stop();
     }
 
@@ -34,6 +34,11 @@ public partial class OverlayWindow : Window
         }
 
         Width = Math.Clamp(layout.Width, MinWidth, MaxWidth);
+        if (layout.Height > 0)
+        {
+            Height = Math.Clamp(layout.Height, MinHeight, MaxHeight);
+        }
+
         SetZoom(layout.Zoom);
 
         // Si la posición guardada quedó fuera de pantalla (otro monitor), se usa la de Windows.
@@ -91,17 +96,21 @@ public partial class OverlayWindow : Window
         }
     }
 
-    private void OnResizeDragDelta(object sender, DragDeltaEventArgs e) =>
+    private void OnResizeDragDelta(object sender, DragDeltaEventArgs e)
+    {
         Width = Math.Clamp(Width + (e.HorizontalChange * Zoom.ScaleX), MinWidth, MaxWidth);
+        Height = Math.Clamp(Height + (e.VerticalChange * Zoom.ScaleY), MinHeight, MaxHeight);
+    }
 
     private void OnPreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
         {
-            // El ancho acompaña al zoom para que las columnas no se aprieten.
+            // El tamaño acompaña al zoom para que las columnas no se aprieten.
             var before = Zoom.ScaleX;
             SetZoom(before + (Math.Sign(e.Delta) * ZoomStep));
             Width = Math.Clamp(Width * Zoom.ScaleX / before, MinWidth, MaxWidth);
+            Height = Math.Clamp(Height * Zoom.ScaleY / before, MinHeight, MaxHeight);
             e.Handled = true;
         }
     }

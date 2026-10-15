@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MeterViewModel}"
         Title="Hysteria Meter"
-        Width="356" MinWidth="260" MaxWidth="900" SizeToContent="Height" MinHeight="60"
+        Width="356" Height="300" MinWidth="260" MaxWidth="900" MinHeight="150" MaxHeight="1400"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="NoResize" ShowInTaskbar="True"
         FontFamily="{StaticResource BodyFont}" FontSize="13" Foreground="{StaticResource Text}"
@@ -94,9 +94,9 @@
             <ScaleTransform x:Name="Zoom" ScaleX="1" ScaleY="1" />
         </Grid.LayoutTransform>
         <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource GoldDim}" BorderThickness="1" CornerRadius="2">
-            <StackPanel>
+            <DockPanel>
                 <!-- Encabezado: se arrastra la ventana desde acá -->
-                <DockPanel MouseLeftButtonDown="OnHeaderMouseDown" Cursor="SizeAll">
+                <DockPanel DockPanel.Dock="Top" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="SizeAll">
                     <DockPanel.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                             <GradientStop Color="#24C9A25A" Offset="0" />
@@ -139,11 +139,11 @@
                 </DockPanel>
 
                 <!-- Objetivo principal -->
-                <TextBlock Text="{Binding Title}" Margin="10,8,10,6" FontFamily="{StaticResource TitleFont}" FontWeight="Bold" FontSize="14"
+                <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" Margin="10,8,10,6" FontFamily="{StaticResource TitleFont}" FontWeight="Bold" FontSize="14"
                            Foreground="{StaticResource TextBright}" TextTrimming="CharacterEllipsis" />
 
                 <!-- Pestañas -->
-                <Border BorderBrush="{StaticResource RuleDim}" BorderThickness="0,0,0,1" Padding="10,0">
+                <Border DockPanel.Dock="Top" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,0,0,1" Padding="10,0">
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Right" Text="{Binding ColumnsHeader}" FontSize="12" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
                         <StackPanel Orientation="Horizontal">
@@ -155,9 +155,30 @@
                     </DockPanel>
                 </Border>
 
-                <!-- Filas -->
-                <TextBlock Text="Esperando el primer golpe…" Margin="10,10" Foreground="{StaticResource TextDim}"
+                <!-- Pie -->
+                <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,1,0,0" Padding="10,6,18,6">
+                    <DockPanel TextElement.FontSize="12" TextElement.Foreground="{StaticResource TextDim}">
+                        <TextBlock DockPanel.Dock="Right">
+                            <Run Text="Crít." />
+                            <Run Text="{Binding CritRate, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
+                            <Run Text="· Máx." />
+                            <Run Text="{Binding MaxHit, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
+                        </TextBlock>
+                        <TextBlock>
+                            <Run Text="Party" />
+                            <Run Text="{Binding PartyPerSecond, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
+                            <Run Text="{Binding RateUnit, Mode=OneWay}" />
+                            <Run Text="·" />
+                            <Run Text="{Binding PartyTotal, Mode=OneWay}" />
+                        </TextBlock>
+                    </DockPanel>
+                </Border>
+
+                <!-- Filas: ocupan el resto del alto; si no entran, se desplazan con la rueda. -->
+                <Grid>
+                <TextBlock Text="Esperando el primer golpe…" Margin="10,10" VerticalAlignment="Top" Foreground="{StaticResource TextDim}"
                            Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
+                <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding Actors}" Margin="6,6,6,8">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="vm:ActorRowViewModel">
@@ -211,31 +232,15 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                </ScrollViewer>
+                </Grid>
 
-                <!-- Pie -->
-                <Border BorderBrush="{StaticResource RuleDim}" BorderThickness="0,1,0,0" Padding="10,6">
-                    <DockPanel TextElement.FontSize="12" TextElement.Foreground="{StaticResource TextDim}">
-                        <TextBlock DockPanel.Dock="Right">
-                            <Run Text="Crít." />
-                            <Run Text="{Binding CritRate, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
-                            <Run Text="· Máx." />
-                            <Run Text="{Binding MaxHit, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
-                        </TextBlock>
-                        <TextBlock>
-                            <Run Text="Party" />
-                            <Run Text="{Binding PartyPerSecond, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
-                            <Run Text="{Binding RateUnit, Mode=OneWay}" />
-                            <Run Text="·" />
-                            <Run Text="{Binding PartyTotal, Mode=OneWay}" />
-                        </TextBlock>
-                    </DockPanel>
-                </Border>
-            </StackPanel>
+            </DockPanel>
         </Border>
 
-        <!-- Agarradera para cambiar el ancho; el alto se ajusta solo a la cantidad de filas. -->
+        <!-- Agarradera para cambiar ancho y alto. -->
         <Thumb HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="14" Height="14" Margin="0,0,1,1"
-               Cursor="SizeWE" DragDelta="OnResizeDragDelta" ToolTip="Arrastrá para cambiar el ancho · Ctrl + rueda para el zoom">
+               Cursor="SizeNWSE" DragDelta="OnResizeDragDelta" ToolTip="Arrastrá para cambiar el tamaño · Ctrl + rueda para el zoom">
             <Thumb.Template>
                 <ControlTemplate TargetType="Thumb">
                     <Grid Background="Transparent">
