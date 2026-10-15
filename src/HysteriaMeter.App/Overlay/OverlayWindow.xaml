@@ -10,7 +10,7 @@
         Width="356" Height="300" MinWidth="260" MaxWidth="900" MinHeight="150" MaxHeight="1400"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="NoResize" ShowInTaskbar="True"
-        FontFamily="{Binding Font}" FontSize="13" Opacity="{Binding OverlayOpacity}" Foreground="{StaticResource Text}"
+        FontFamily="{Binding Font}" FontSize="13" Opacity="{Binding EffectiveOpacity}" MouseEnter="OnMouseEnterWindow" MouseLeave="OnMouseLeaveWindow" Foreground="{StaticResource Text}"
         TextOptions.TextFormattingMode="Display">
 
     <!-- Referencia visual: mocks/Main.dc.html (aprobado por Mati el 2026-10-15). -->
@@ -212,13 +212,20 @@
                         <TextBlock Text="● REC" FontSize="10" FontWeight="Bold" Foreground="#E0524A" Margin="0,0,8,0" VerticalAlignment="Center"
                                    Visibility="{Binding IsRecording, Converter={StaticResource Visible}}" ToolTip="{Binding RecordingHint}" />
                         <!-- Verde mientras hay combate; gris con el último encuentro terminado. -->
-                        <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center">
+                        <!-- Rojo si se cortó la captura y ámbar si no llega tráfico del juego. -->
+                        <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center" ToolTip="{Binding StatusText}">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse">
                                     <Setter Property="Fill" Value="#5C6774" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsLive}" Value="True">
+                                        <DataTrigger Binding="{Binding StatusKind}" Value="live">
                                             <Setter Property="Fill" Value="#4CD964" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StatusKind}" Value="warn">
+                                            <Setter Property="Fill" Value="#E0A84A" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StatusKind}" Value="error">
+                                            <Setter Property="Fill" Value="#E0524A" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -239,7 +246,7 @@
                 </Border>
 
                 <!-- Objetivo principal -->
-                <DockPanel DockPanel.Dock="Top" Margin="10,8,10,6">
+                <DockPanel DockPanel.Dock="Top" Margin="10,8,10,6" Visibility="{Binding IsExpanded, Converter={StaticResource Visible}}">
                     <!-- Vida del objetivo principal, como en el mock: "6.11M / 9.86M · 62%" y una barra fina debajo -->
                     <Grid DockPanel.Dock="Bottom" Height="4" Margin="0,5,0,0" Visibility="{Binding HasTargetHealth, Converter={StaticResource Visible}}">
                         <Border Background="{StaticResource HealthTrack}" BorderBrush="{StaticResource HealthTrackBorder}" BorderThickness="1" />
@@ -256,7 +263,7 @@
                 </DockPanel>
 
                 <!-- Pestañas -->
-                <Border DockPanel.Dock="Top" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,0,0,1" Padding="10,0">
+                <Border DockPanel.Dock="Top" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,0,0,1" Padding="10,0" Visibility="{Binding IsExpanded, Converter={StaticResource Visible}}">
                     <DockPanel>
                         <StackPanel Orientation="Horizontal">
                             <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="DAÑO" IsChecked="{Binding IsDamageTab}" />
@@ -268,7 +275,7 @@
                 </Border>
 
                 <!-- Pie -->
-                <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,1,0,0" Padding="10,6,18,6">
+                <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,1,0,0" Padding="10,6,18,6" Visibility="{Binding IsExpanded, Converter={StaticResource Visible}}">
                     <DockPanel TextElement.FontSize="12" TextElement.Foreground="{StaticResource TextDim}">
                         <TextBlock DockPanel.Dock="Right">
                             <Run Text="Crít." />
@@ -287,7 +294,7 @@
                 </Border>
 
                 <!-- Encabezado de columnas, alineado con las filas (margen 6 + borde 1 + 8) -->
-                <Grid DockPanel.Dock="Top" Margin="15,5,15,0" TextElement.FontSize="11" TextElement.Foreground="{StaticResource TextDim}">
+                <Grid DockPanel.Dock="Top" Margin="15,5,15,0" TextElement.FontSize="11" TextElement.Foreground="{StaticResource TextDim}" Visibility="{Binding IsExpanded, Converter={StaticResource Visible}}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="46" />
                         <ColumnDefinition Width="*" />
@@ -303,7 +310,7 @@
 
                 <!-- Filas: ocupan el resto del alto; si no entran, se desplazan con la rueda. -->
                 <Grid>
-                <TextBlock Text="Esperando el primer golpe…" Margin="10,10" VerticalAlignment="Top" Foreground="{StaticResource TextDim}"
+                <TextBlock Text="{Binding EmptyText}" Margin="10,10" TextWrapping="Wrap" VerticalAlignment="Top" Foreground="{StaticResource TextDim}"
                            Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
                 <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding Actors}" Margin="6,3,6,8">
@@ -340,7 +347,7 @@
                                         </Grid>
                                         <TextBlock x:Name="NameText" Grid.Column="2" Text="{Binding DisplayName}" FontSize="15" FontWeight="SemiBold"
                                                    VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Grid.Column="3" Text="{Binding PerSecond}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource TextBright}"
+                                        <TextBlock x:Name="PerSecondText" Grid.Column="3" Text="{Binding PerSecond}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource TextBright}"
                                                    HorizontalAlignment="Right" VerticalAlignment="Center" />
                                         <!-- Total, o HPS cuando daño y curación van juntos -->
                                         <TextBlock x:Name="TotalText" Grid.Column="4" Text="{Binding Total}" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Right" VerticalAlignment="Center" />
@@ -352,6 +359,13 @@
                                 <DataTrigger Binding="{Binding DataContext.ShowHealingColumn, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
                                     <Setter TargetName="TotalText" Property="Text" Value="{Binding HealingPerSecond}" />
                                     <Setter TargetName="TotalText" Property="Foreground" Value="{StaticResource Healing}" />
+                                </DataTrigger>
+                                <!-- Compacto: filas más bajas para que entren más jugadores -->
+                                <DataTrigger Binding="{Binding DataContext.IsCompact, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                    <Setter TargetName="Row" Property="Height" Value="22" />
+                                    <Setter TargetName="Row" Property="Margin" Value="0,0,0,2" />
+                                    <Setter TargetName="NameText" Property="FontSize" Value="13" />
+                                    <Setter TargetName="PerSecondText" Property="FontSize" Value="13" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding IsLocalPlayer}" Value="True">
                                     <Setter TargetName="Row" Property="BorderBrush" Value="{StaticResource RowBorderLocal}" />
@@ -430,6 +444,8 @@
                             <TextBlock Text="ESTA VENTANA" Style="{StaticResource SettingsHeader}" />
                             <CheckBox Style="{StaticResource Option}" Content="Mostrar HPS junto al daño" IsChecked="{Binding ShowHealing}"
                                       ToolTip="Apagado: cada ventana muestra solo lo de su pestaña. Con + abrís otra ventana, por ejemplo una de curación." />
+                            <CheckBox Style="{StaticResource Option}" Content="Modo compacto" IsChecked="{Binding IsCompact}"
+                                      ToolTip="Solo las filas y el reloj. También se cambia con doble clic en el encabezado." />
 
                             <TextBlock Text="FUENTE" Style="{StaticResource SettingsHeader}" />
                             <ListBox ItemsSource="{x:Static vm:MeterPreferences.Fonts}" SelectedItem="{Binding FontName}" Style="{StaticResource Chips}">
@@ -441,6 +457,9 @@
                             </ListBox>
 
                             <TextBlock Text="OPACIDAD" Style="{StaticResource SettingsHeader}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Opaco al pasar el mouse" IsChecked="{Binding OpaqueOnHover}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Atenuar sin combate" IsChecked="{Binding FadeWhenIdle}"
+                                      ToolTip="Casi transparente si no hay pelea hace 20 segundos; vuelve solo al empezar a pegar." />
                             <ListBox ItemsSource="{x:Static vm:MeterPreferences.Opacities}" SelectedItem="{Binding OverlayOpacity}" Style="{StaticResource Chips}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
@@ -449,12 +468,18 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
 
+                            <TextBlock Text="PRUEBA" Style="{StaticResource SettingsHeader}" />
+                            <Button Content="Ver barras de prueba" Command="{Binding ShowDemoCommand}" Cursor="Hand" HorizontalAlignment="Left"
+                                    Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" FontSize="12" Padding="0,2"
+                                    ToolTip="Una pelea inventada para acomodar tamaño, fuente y opacidad sin combatir" />
+
                             <TextBlock Text="ATAJOS" Style="{StaticResource SettingsHeader}" />
                             <TextBlock FontSize="12" Foreground="{StaticResource TextMuted}" LineHeight="18">
                                 <Run Text="Ctrl+Shift+L" Foreground="{StaticResource Text}" /><Run Text="  bloquear / desbloquear clics" /><LineBreak />
                                 <Run Text="Ctrl+Shift+R" Foreground="{StaticResource Text}" /><Run Text="  reiniciar el encuentro" /><LineBreak />
                                 <Run Text="Ctrl+Shift+H" Foreground="{StaticResource Text}" /><Run Text="  ocultar / mostrar el overlay" /><LineBreak />
-                                <Run Text="Ctrl+rueda" Foreground="{StaticResource Text}" /><Run Text="  zoom" />
+                                <Run Text="Ctrl+rueda" Foreground="{StaticResource Text}" /><Run Text="  zoom" /><LineBreak />
+                                <Run Text="Doble clic arriba" Foreground="{StaticResource Text}" /><Run Text="  modo compacto" />
                             </TextBlock>
 
                             <TextBlock Text="VERSIÓN" Style="{StaticResource SettingsHeader}" />

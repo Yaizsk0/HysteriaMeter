@@ -14,6 +14,12 @@ public sealed record MeterPreferences
 
     public double Opacity { get; init; } = 1.0;
 
+    /// <summary>Opaco del todo mientras el mouse está encima, aunque la opacidad sea baja.</summary>
+    public bool OpaqueOnHover { get; init; } = true;
+
+    /// <summary>Casi transparente cuando no hay combate hace un rato.</summary>
+    public bool FadeWhenIdle { get; init; }
+
     public ActorScope Scope { get; init; } = ActorScope.Party;
 
     public bool SplitEncounters { get; init; } = true;

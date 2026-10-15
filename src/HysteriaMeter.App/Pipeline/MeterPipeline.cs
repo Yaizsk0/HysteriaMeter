@@ -22,6 +22,7 @@ public sealed partial class MeterPipeline(
     CombatEngine engine,
     EncounterRepository repository,
     CaptureRecorder recorder,
+    CaptureStatus status,
     IOptions<CaptureSettings> captureOptions,
     ILogger<MeterPipeline> logger) : BackgroundService
 {
@@ -65,6 +66,7 @@ public sealed partial class MeterPipeline(
                 {
                     _lastSegmentAt = segment.Timestamp;
                     _sinceLastSegment.Restart();
+                    status.MarkTraffic(DateTime.UtcNow);
 
                     var result = flows.Push(segment);
                     if (!segment.Flow.IsFromServer() || (result.Chunks.Count == 0 && !result.GapDetected))
@@ -98,6 +100,7 @@ public sealed partial class MeterPipeline(
             }
             catch (Exception ex)
             {
+                status.Fail(ex.Message);
                 LogCaptureFailed(ex);
             }
         }

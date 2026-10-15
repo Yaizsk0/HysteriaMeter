@@ -10,7 +10,8 @@ public sealed record OverlayLayout(
     double Zoom,
     double Height = 0,
     MeterTab Tab = MeterTab.Damage,
-    bool ShowHealing = true)
+    bool ShowHealing = true,
+    bool Compact = false)
 {
     private const string FileName = "ventanas.json";
 

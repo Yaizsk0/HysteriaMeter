@@ -38,6 +38,7 @@ public partial class App : Application
         builder.Services.AddSingleton(sp => new EncounterRepository(
             Path.Combine(AppContext.BaseDirectory, sp.GetRequiredService<IOptions<MeterSettings>>().Value.DatabasePath)));
         builder.Services.AddSingleton<CaptureRecorder>();
+        builder.Services.AddSingleton<CaptureStatus>();
         builder.Services.AddHostedService<MeterPipeline>();
         builder.Services.AddSingleton(sp => new MeterSession(
             sp.GetRequiredService<CombatEngine>(),
@@ -45,7 +46,8 @@ public partial class App : Application
             SkillNames.Load(Path.Combine(AppContext.BaseDirectory, "data", "skills.json")),
             UserStore.Load<MeterPreferences>(PreferencesFile) ?? new MeterPreferences(),
             preferences => UserStore.Save(PreferencesFile, preferences),
-            sp.GetRequiredService<EncounterRepository>()));
+            sp.GetRequiredService<EncounterRepository>(),
+            sp.GetRequiredService<CaptureStatus>()));
         builder.Services.AddSingleton<OverlayWindows>();
 
         _host = builder.Build();

@@ -25,6 +25,12 @@ public sealed partial class MeterViewModel : ObservableObject
 {
     private const string NoTarget = "Esperando combate";
 
+    /// <summary>Sin combate durante este tiempo, el overlay se atenúa (si la opción está activa).</summary>
+    public static readonly TimeSpan FadeAfter = TimeSpan.FromSeconds(20);
+
+    /// <summary>Opacidad del overlay atenuado.</summary>
+    public const double FadedOpacity = 0.2;
+
     private readonly MeterSession _session;
     private readonly CombatEngine _engine;
     private readonly CaptureRecorder _recorder;
@@ -37,7 +43,8 @@ public sealed partial class MeterViewModel : ObservableObject
 
     /// <param name="tab">Qué muestra esta ventana al abrirse.</param>
     /// <param name="showHealing">Columna HPS al lado del DPS en esta ventana.</param>
-    public MeterViewModel(MeterSession session, MeterTab tab = MeterTab.Damage, bool showHealing = true)
+    /// <param name="compact">Modo compacto: solo las filas y el reloj.</param>
+    public MeterViewModel(MeterSession session, MeterTab tab = MeterTab.Damage, bool showHealing = true, bool compact = false)
     {
         _session = session;
         _engine = session.Engine;
@@ -46,6 +53,7 @@ public sealed partial class MeterViewModel : ObservableObject
         Detail = new ActorDetailViewModel(session.SkillNames);
         Tab = tab;
         _showHealing = showHealing;
+        IsCompact = compact;
         _engine.EncounterFinished += snapshot => _lastFinished = snapshot;
         _session.PreferencesChanged += names =>
         {
@@ -163,12 +171,63 @@ public sealed partial class MeterViewModel : ObservableObject
         ? $"Grabando en {Path.GetFileName(path)}"
         : "Para comparar una pelea con Combat Analysis";
 
-    /// <summary>Opacidad del overlay entero (una de <see cref="MeterPreferences.Opacities"/>).</summary>
+    /// <summary>Opacidad elegida para el overlay (una de <see cref="MeterPreferences.Opacities"/>).</summary>
     public double OverlayOpacity
     {
         get => Preferences.Opacity;
-        set => Update(Preferences with { Opacity = Math.Clamp(value, 0.3, 1) }, nameof(OverlayOpacity));
+        set => Update(Preferences with { Opacity = Math.Clamp(value, 0.3, 1) }, nameof(OverlayOpacity), nameof(EffectiveOpacity));
     }
+
+    public bool OpaqueOnHover
+    {
+        get => Preferences.OpaqueOnHover;
+        set => Update(Preferences with { OpaqueOnHover = value }, nameof(OpaqueOnHover), nameof(EffectiveOpacity));
+    }
+
+    public bool FadeWhenIdle
+    {
+        get => Preferences.FadeWhenIdle;
+        set => Update(Preferences with { FadeWhenIdle = value }, nameof(FadeWhenIdle), nameof(EffectiveOpacity));
+    }
+
+    /// <summary>El mouse está sobre la ventana (lo avisa la vista).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EffectiveOpacity))]
+    public partial bool IsHovered { get; set; }
+
+    private DateTime _lastCombatUtc = DateTime.UtcNow;
+
+    /// <summary>Opacidad que se aplica a la ventana: la elegida, opaca con el mouse encima, atenuada sin combate.</summary>
+    public double EffectiveOpacity =>
+        ComputeOpacity(Preferences.Opacity, IsHovered, Preferences.OpaqueOnHover, Preferences.FadeWhenIdle, DateTime.UtcNow - _lastCombatUtc);
+
+    public static double ComputeOpacity(double chosen, bool hovered, bool opaqueOnHover, bool fadeWhenIdle, TimeSpan sinceCombat)
+    {
+        if (hovered && opaqueOnHover)
+        {
+            return 1;
+        }
+
+        return fadeWhenIdle && sinceCombat > FadeAfter ? Math.Min(chosen, FadedOpacity) : chosen;
+    }
+
+    /// <summary>Modo compacto de esta ventana: sin objetivo, pestañas, encabezados ni pie.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsExpanded))]
+    public partial bool IsCompact { get; set; }
+
+    public bool IsExpanded => !IsCompact;
+
+    /// <summary>Estado de la captura: "live", "idle", "warn" o "error" (color del punto del encabezado).</summary>
+    [ObservableProperty]
+    public partial string StatusKind { get; set; } = "idle";
+
+    [ObservableProperty]
+    public partial string StatusText { get; set; } = string.Empty;
+
+    /// <summary>Lo que se muestra con el overlay vacío: espera de combate o el problema de captura.</summary>
+    [ObservableProperty]
+    public partial string EmptyText { get; set; } = "Esperando el primer golpe…";
 
     public string FontName
     {
@@ -387,6 +446,21 @@ public sealed partial class MeterViewModel : ObservableObject
         Refresh();
     }
 
+    /// <summary>Muestra una pelea inventada para acomodar el overlay sin combatir.</summary>
+    [RelayCommand]
+    private void ShowDemo()
+    {
+        _pinned = DemoEncounter.Create(DateTimeOffset.Now);
+        IsViewingHistory = true;
+        HistoryLabel = "DEMO · datos de prueba";
+        IsSettingsOpen = false;
+        IsHistoryOpen = false;
+        Refresh();
+    }
+
+    [RelayCommand]
+    private void ToggleCompact() => IsCompact = !IsCompact;
+
     [RelayCommand]
     private void BackToLive()
     {
@@ -434,6 +508,27 @@ public sealed partial class MeterViewModel : ObservableObject
         IsEmpty = true;
     }
 
+    private void UpdateStatus(bool inCombat)
+    {
+        var now = DateTime.UtcNow;
+        if (inCombat)
+        {
+            _lastCombatUtc = now;
+        }
+
+        var state = _session.Status.Current(now);
+        StatusText = state == CaptureState.Capturing && inCombat ? "En combate" : _session.Status.Describe(now);
+        StatusKind = state switch
+        {
+            CaptureState.Failed => "error",
+            CaptureState.NoTraffic => "warn",
+            _ when inCombat => "live",
+            _ => "idle",
+        };
+        EmptyText = state is CaptureState.Capturing ? "Esperando el primer golpe…" : StatusText;
+        OnPropertyChanged(nameof(EffectiveOpacity));
+    }
+
     private void UpdateTargetHealth(Health? health)
     {
         HasTargetHealth = health is { MaxHp: > 0 };
@@ -451,6 +546,7 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         var current = _engine.CurrentSnapshot();
         IsLive = _pinned is null && current is not null;
+        UpdateStatus(current is not null);
         var snapshot = _pinned ?? current ?? _lastFinished;
         if (snapshot is null)
         {

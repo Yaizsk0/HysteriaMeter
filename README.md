@@ -43,6 +43,8 @@ dotnet run --project src/HysteriaMeter.App -c Release -- --Capture:Mode=Replay -
 
 Como en Details!, el botón + abre otra ventana del overlay: cada una elige su pestaña (DAÑO o CURACIÓN) y si muestra el HPS junto al daño, y todas se recuerdan con su posición. Cerrar la primera cierra la app.
 
+Doble clic en el encabezado alterna el modo compacto (solo filas y reloj). El overlay se vuelve opaco al pasar el mouse y, si lo activás, se atenúa cuando no hay combate. El punto del encabezado indica la captura: verde en combate, ámbar sin tráfico del juego, rojo si se cortó. En configuración, "Ver barras de prueba" muestra una pelea inventada para acomodar todo sin combatir.
+
 Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: los nombres se cargan a mano en `data/skills.json`.
 
 Para grabar una pelea desde el overlay: engranaje → GRABACIÓN → "Grabar lo capturado (.pcap)". Mientras graba aparece `● REC` arriba; los archivos quedan en `%LOCALAPPDATA%\HysteriaMeter\Grabaciones` ("Abrir carpeta"). Esas grabaciones tienen nombres de personajes: no se suben al repo.

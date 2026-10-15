@@ -40,7 +40,7 @@ public partial class OverlayWindow : Window
     public OverlayLayout? CurrentLayout() =>
         double.IsNaN(Left) || double.IsNaN(Top)
             ? null
-            : new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height, _viewModel.Tab, _viewModel.ShowHealing);
+            : new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height, _viewModel.Tab, _viewModel.ShowHealing, _viewModel.IsCompact);
 
     private void ShowDetail()
     {
@@ -155,11 +155,22 @@ public partial class OverlayWindow : Window
 
     private void OnHeaderMouseDown(object sender, MouseButtonEventArgs e)
     {
+        if (e.ClickCount == 2)
+        {
+            _viewModel.ToggleCompactCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
         if (e.ButtonState == MouseButtonState.Pressed)
         {
             DragMove();
         }
     }
+
+    private void OnMouseEnterWindow(object sender, MouseEventArgs e) => _viewModel.IsHovered = true;
+
+    private void OnMouseLeaveWindow(object sender, MouseEventArgs e) => _viewModel.IsHovered = false;
 
     private void OnResizeDragDelta(object sender, DragDeltaEventArgs e)
     {
