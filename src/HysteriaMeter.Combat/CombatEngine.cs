@@ -307,7 +307,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
         if (_current is null)
         {
-            _current = new Encounter(at);
+            _current = new Encounter(at) { ZoneEnteredAt = Entities.ZoneEnteredAt };
             _session ??= new Encounter(at);
             _sessionFights++;
         }
@@ -402,7 +402,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
             [.. encounter.Deaths],
             targetNpc,
             targetNpc is { } npc && Entities.Npcs.Of(npc) is { IsBoss: true },
-            [.. encounter.Marks]);
+            [.. encounter.Marks],
+            encounter.ZoneEnteredAt);
     }
 
     private static double Share(long part, long total) => total == 0 ? 0 : (double)part / total;

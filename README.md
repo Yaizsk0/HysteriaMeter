@@ -67,6 +67,8 @@ El detalle del jugador muestra cuánto del tiempo estuvo pegando (ACTIVO) y el T
 
 Los atajos globales se cambian en configuración, en ATAJOS: clic en la caja y apretá la combinación nueva (Borrar lo saca). Por defecto: Ctrl+Shift+L bloquea los clics, Ctrl+Shift+R reinicia, Ctrl+Shift+H oculta el overlay y Ctrl+Shift+M marca el momento de la pelea ("acá tiré el burst"). Las marcas se ven en el gráfico del detalle y van en el JSON exportado. Si otro programa ya usa una combinación, el meter avisa.
 
+En el historial, las peleas de una misma entrada a dungeon quedan agrupadas bajo un encabezado ("ENTRADA 21:30 · 4 peleas · 2 bosses · 24:10"), con el tiempo desde que entraste hasta la última pelea. El meter detecta la entrada porque al cambiar de zona el juego abre otra conexión. Las marcas del atajo también se guardan en el historial.
+
 En tu propio detalle aparecen CONSEJOS de la pelea, sacados de reglas simples sobre lo que el meter ve: cuánto tiempo pasaste sin pegar y cuándo fue el hueco más largo, las muertes, los golpes por la espalda y cuánto más DPS hizo el mejor de la party. "Comparar con" pone lado a lado a dos jugadores de la misma pelea (DPS, daño, crítico, espalda, golpe máximo, tiempo activo, recibido y muertes), con el mejor de cada fila en dorado.
 
 En el detalle de un jugador se le puede poner un apodo (Enter para guardar, vacío para sacarlo): cambia solo cómo se ve en el meter. En EXPORTAR Y COMPARTIR, "Exportar perfil" guarda tu configuración en `Exportes\perfil-hysteria.json` para llevarla a otra PC o pasársela a la legión, y "Cargar perfil" la lee de ahí; el webhook de Discord nunca va en el perfil.

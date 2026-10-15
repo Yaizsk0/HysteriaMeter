@@ -31,6 +31,9 @@ internal sealed class Encounter(DateTimeOffset start)
     /// <summary>Momentos marcados con el atajo, en segundos desde el inicio.</summary>
     public List<int> Marks { get; } = [];
 
+    /// <summary>Entrada a la zona donde empezó la pelea (ver <see cref="EntityRegistry.ZoneEnteredAt"/>).</summary>
+    public DateTimeOffset? ZoneEnteredAt { get; init; }
+
     public void AddLog(CombatLogEntry entry)
     {
         if (Log.Count >= LogCapacity)
