@@ -44,17 +44,35 @@ public sealed class SkillNames(IReadOnlyDictionary<uint, string> names)
 
     public const int MaxLength = 32;
 
-    public static SkillNames Load(string path)
+    /// <summary>
+    /// Une varios archivos: los posteriores pisan a los anteriores. Así lo extraído del juego
+    /// (<c>%LOCALAPPDATA%\HysteriaMeter\Juego\skills.json</c>) se completa con lo cargado a mano en <c>data/</c>.
+    /// </summary>
+    public static SkillNames Load(params string[] paths)
     {
+        var names = new Dictionary<uint, string>();
+        foreach (var path in paths)
+        {
+            foreach (var (id, name) in Read(path))
+            {
+                names[id] = name;
+            }
+        }
+
+        return names.Count == 0 ? Empty : new SkillNames(names);
+    }
+
+    private static Dictionary<uint, string> Read(string path)
+    {
+        var names = new Dictionary<uint, string>();
         if (!File.Exists(path))
         {
-            return Empty;
+            return names;
         }
 
         try
         {
             using var document = JsonDocument.Parse(File.ReadAllText(path), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
-            var names = new Dictionary<uint, string>();
             if (document.RootElement.TryGetProperty("skills", out var skills))
             {
                 foreach (var entry in skills.EnumerateObject())
@@ -65,13 +83,13 @@ public sealed class SkillNames(IReadOnlyDictionary<uint, string> names)
                     }
                 }
             }
-
-            return new SkillNames(names);
         }
         catch (JsonException)
         {
             // Un skills.json mal escrito no debe impedir abrir el meter: se ven los IDs.
-            return Empty;
+            names.Clear();
         }
+
+        return names;
     }
 }

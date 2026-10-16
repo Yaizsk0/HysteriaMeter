@@ -7,6 +7,8 @@
     <PackageVersion Include="Dapper" Version="2.1.89" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.13" />
+    <PackageVersion Include="CUE4Parse" Version="1.2.2.202610" />
+    <PackageVersion Include="Microsoft.Bcl.Memory" Version="10.0.13" />
     <!-- Tests -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />

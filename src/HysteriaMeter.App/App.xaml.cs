@@ -50,7 +50,7 @@ public partial class App : Application
             IdleTimeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<MeterSettings>>().Value.IdleTimeoutSeconds),
         })
         {
-            Entities = { Npcs = NpcTable.Load(Path.Combine(AppContext.BaseDirectory, "data", "npcs.json")) },
+            Entities = { Npcs = NpcTable.Load(AppPaths.In("Juego", "npcs.json"), Path.Combine(AppContext.BaseDirectory, "data", "npcs.json")) },
         });
         builder.Services.AddSingleton(sp => new EncounterRepository(
             AppPaths.Database(sp.GetRequiredService<IOptions<MeterSettings>>().Value.DatabasePath)));
@@ -61,7 +61,7 @@ public partial class App : Application
         builder.Services.AddSingleton(sp => new MeterSession(
             sp.GetRequiredService<CombatEngine>(),
             sp.GetRequiredService<CaptureRecorder>(),
-            SkillNames.Load(Path.Combine(AppContext.BaseDirectory, "data", "skills.json")),
+            SkillNames.Load(AppPaths.In("Juego", "skills.json"), Path.Combine(AppContext.BaseDirectory, "data", "skills.json")),
             // Quien ya tenía preferencias guardadas no es nuevo: ve las novedades en vez de la bienvenida.
             UserStore.Load<MeterPreferences>(PreferencesFile) is { } saved ? saved with { LastSeenNews = Math.Max(saved.LastSeenNews, 1) } : new MeterPreferences(),
             preferences => UserStore.Save(PreferencesFile, preferences),
