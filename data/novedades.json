@@ -27,6 +27,7 @@
     { "id": 54, "text": "Comparar con tu intento anterior o tu mejor intento: ahora también a qué tiempo llegó el boss al 75, 50 y 25 %." },
     { "id": 55, "text": "Historial: tu kill más rápida contra cada boss queda marcada con ⏱ y aparece en la línea de progreso." },
     { "id": 56, "text": "Esc cierra el panel abierto (configuración, historial), vuelve a la pelea actual y cierra el detalle y el registro." },
-    { "id": 57, "text": "Configuración → Fijar posición y tamaño: el overlay no se mueve ni se agranda sin querer, y los botones siguen andando." }
+    { "id": 57, "text": "Configuración → Fijar posición y tamaño: el overlay no se mueve ni se agranda sin querer, y los botones siguen andando." },
+    { "id": 58, "text": "Columnas opcionales CRIT y MÁX en el overlay: porcentaje de críticos y golpe más alto de cada jugador." }
   ]
 }

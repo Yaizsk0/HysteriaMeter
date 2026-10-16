@@ -100,6 +100,11 @@ public sealed record MeterPreferences
     /// <summary>Columna "10 s": el DPS de los últimos segundos, para ver quién está pegando ahora (como el Last10DPS de ACT).</summary>
     public bool ShowRecentColumn { get; init; }
 
+    /// <summary>Columnas de Ember/ACT: porcentaje de críticos y golpe más alto de cada jugador.</summary>
+    public bool ShowCritColumn { get; init; }
+
+    public bool ShowMaxHitColumn { get; init; }
+
     /// <summary>Solo tu fila, para tener el overlay mínimo mientras jugás (como el modo colapsado de Ember).</summary>
     public bool OnlyMe { get; init; }
 

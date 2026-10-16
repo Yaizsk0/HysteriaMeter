@@ -392,6 +392,8 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="1" Text="JUGADOR" />
                     <TextBlock Grid.Column="2" Text="{Binding RateUnit}" HorizontalAlignment="Right" />
@@ -401,6 +403,10 @@
                                Visibility="{Binding ShowShareColumn, Converter={StaticResource Visible}}" />
                     <TextBlock Grid.Column="5" Text="10 s" Width="50" TextAlignment="Right" ToolTip="DPS de los últimos 10 segundos"
                                Visibility="{Binding ShowRecentColumn, Converter={StaticResource Visible}}" />
+                    <TextBlock Grid.Column="6" Text="CRIT" Width="42" TextAlignment="Right" ToolTip="Porcentaje de golpes críticos"
+                               Visibility="{Binding ShowCritColumn, Converter={StaticResource Visible}}" />
+                    <TextBlock Grid.Column="7" Text="MÁX" Width="50" TextAlignment="Right" ToolTip="Golpe más alto de la pelea"
+                               Visibility="{Binding ShowMaxHitColumn, Converter={StaticResource Visible}}" />
                 </Grid>
 
                 <!-- Filas: ocupan el resto del alto; si no entran, se desplazan con la rueda. -->
@@ -429,6 +435,8 @@
                                             <ColumnDefinition Width="28" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="58" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
@@ -464,6 +472,10 @@
                                                    Visibility="{Binding DataContext.ShowShareColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}" />
                                         <TextBlock Grid.Column="6" Text="{Binding Recent}" Foreground="{StaticResource TextMuted}" Width="50" TextAlignment="Right" VerticalAlignment="Center"
                                                    Visibility="{Binding DataContext.ShowRecentColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}" />
+                                        <TextBlock Grid.Column="7" Text="{Binding Crit}" Foreground="{StaticResource TextMuted}" Width="42" TextAlignment="Right" VerticalAlignment="Center"
+                                                   Visibility="{Binding DataContext.ShowCritColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}" />
+                                        <TextBlock Grid.Column="8" Text="{Binding MaxHitText}" Foreground="{StaticResource TextMuted}" Width="50" TextAlignment="Right" VerticalAlignment="Center"
+                                                   Visibility="{Binding DataContext.ShowMaxHitColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}" />
                                     </Grid>
                                 </Grid>
                             </Border>
@@ -667,6 +679,8 @@
                             <CheckBox Style="{StaticResource Option}" Content="Columna TOTAL (o HPS)" IsChecked="{Binding ShowTotalColumn}" />
                             <CheckBox Style="{StaticResource Option}" Content="Columna %" IsChecked="{Binding ShowShareColumn}" />
                             <CheckBox Style="{StaticResource Option}" Content="Columna 10 s (DPS de los últimos 10 segundos)" IsChecked="{Binding ShowRecentColumn}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Columna CRIT (porcentaje de críticos)" IsChecked="{Binding ShowCritColumn}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Columna MÁX (golpe más alto)" IsChecked="{Binding ShowMaxHitColumn}" />
                             <CheckBox Style="{StaticResource Option}" Content="Imanes: pegar la ventana a los bordes al soltarla" IsChecked="{Binding SnapWindows}"
                                       ToolTip="Bordes de la pantalla y de las otras ventanas del meter" />
                             <CheckBox Style="{StaticResource Option}" Content="Fijar posición y tamaño" IsChecked="{Binding LockPosition}"

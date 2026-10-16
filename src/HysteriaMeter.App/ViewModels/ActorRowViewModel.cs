@@ -78,6 +78,14 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial string Recent { get; set; } = "–";
 
+    /// <summary>Porcentaje de golpes críticos (columna "CRIT").</summary>
+    [ObservableProperty]
+    public partial string Crit { get; set; } = "–";
+
+    /// <summary>Golpe más alto de la pelea (columna "MÁX").</summary>
+    [ObservableProperty]
+    public partial string MaxHitText { get; set; } = "–";
+
     public const int RecentSeconds = 10;
 
     /// <summary>
