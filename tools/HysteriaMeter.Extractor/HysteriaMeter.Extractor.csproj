@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>hysteria-extract</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CUE4Parse" />
+    <!-- Fija una versión sin la vulnerabilidad GHSA-73j8-2gch-69rq (CUE4Parse trae la 9.0.0). -->
+    <PackageReference Include="Microsoft.Bcl.Memory" />
+  </ItemGroup>
+</Project>

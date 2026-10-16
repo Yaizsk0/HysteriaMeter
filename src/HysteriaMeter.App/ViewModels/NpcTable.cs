@@ -10,14 +10,29 @@ namespace HysteriaMeter.App.ViewModels;
 /// </summary>
 public static class NpcTable
 {
-    public static NpcCatalog Load(string path) => File.Exists(path) ? Parse(File.ReadAllText(path)) : NpcCatalog.Empty;
-
-    public static NpcCatalog Parse(string json)
+    /// <summary>Une varios archivos: los posteriores pisan a los anteriores (lo extraído del juego, después <c>data/</c>).</summary>
+    public static NpcCatalog Load(params string[] paths)
     {
+        var npcs = new Dictionary<uint, NpcInfo>();
+        foreach (var path in paths.Where(File.Exists))
+        {
+            foreach (var (id, npc) in Entries(File.ReadAllText(path)))
+            {
+                npcs[id] = npc;
+            }
+        }
+
+        return npcs.Count == 0 ? NpcCatalog.Empty : new NpcCatalog(npcs);
+    }
+
+    public static NpcCatalog Parse(string json) => Entries(json) is { Count: > 0 } npcs ? new NpcCatalog(npcs) : NpcCatalog.Empty;
+
+    private static Dictionary<uint, NpcInfo> Entries(string json)
+    {
+        var npcs = new Dictionary<uint, NpcInfo>();
         try
         {
             using var document = JsonDocument.Parse(json, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
-            var npcs = new Dictionary<uint, NpcInfo>();
             if (document.RootElement.ValueKind == JsonValueKind.Object && document.RootElement.TryGetProperty("npcs", out var entries) && entries.ValueKind == JsonValueKind.Object)
             {
                 foreach (var entry in entries.EnumerateObject())
@@ -29,12 +44,13 @@ public static class NpcTable
                 }
             }
 
-            return new NpcCatalog(npcs);
         }
         catch (JsonException)
         {
-            return NpcCatalog.Empty;
+            npcs.Clear();
         }
+
+        return npcs;
     }
 
     private static NpcInfo? Read(JsonElement value) => value.ValueKind switch

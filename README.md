@@ -92,7 +92,9 @@ Los monstruos tampoco traen nombre: si una pelea sale como "NPC 2001234", agreg�
 Si además le ponés `"enrage": 480` (segundos de pelea hasta el enrage), la vida del boss en el overlay dice "enrage en 1:20" y se pone roja cuando, al DPS actual, el boss muere después del enrage. Con "Sonido en las alertas" (configuración) suena un aviso de Windows en ese caso, al batir un récord y al terminar la prueba de DPS.
 
 Para grabar una pelea desde el overlay: engranaje → GRABACIÓN → "Grabar lo capturado (.pcap)". Mientras graba aparece `● REC` arriba; los archivos quedan en `%LOCALAPPDATA%\HysteriaMeter\Grabaciones` ("Abrir carpeta"). Esas grabaciones tienen nombres de personajes: no se suben al repo.
-Invocaciones sin dueño: si una invocación que el juego manda sin dueño usa una skill de clase (por ejemplo Bittercold Wind del Hechicero) y en la pelea hay un solo jugador de esa clase, su daño se le suma a ese jugador, como hace Abyss.
+Invocaciones sin dueño: si una invocación que el juego manda sin dueño usa una skill de clase (por ejemplo Bittercold Wind del Hechicero) y en la pelea hay un solo jugador de esa clase, su daño se le suma a ese jugador, como hace Abyss.,
+Nombres e íconos desde el juego instalado: `tools/HysteriaMeter.Extractor` (`hysteria-extract`) lee los archivos de AION 2 en disco, con el juego cerrado, y deja lo extraído en `%LOCALAPPDATA%\HysteriaMeter\Juego`. Los archivos del juego están cifrados: la clave la ponés vos con `--clave 0x...` o la variable `AION2_AES_KEY`. Sin clave, `hysteria-extract info --juego "D:\SteamLibrary\steamapps\common\AION2"` solo muestra cuántos contenedores hay. El meter usa `Juego\skills.json` y `Juego
+pcs.json` si existen, y lo que cargues a mano en `data/` les gana. Nada extraído va al repo (constitución, principio VII).
 
 ## Spec Kit
 
