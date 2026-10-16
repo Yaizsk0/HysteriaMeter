@@ -643,6 +643,16 @@
                             <CheckBox Style="{StaticResource Option}" Content="Sonido en las alertas" IsChecked="{Binding Sounds}"
                                       ToolTip="Récord, prueba de DPS terminada y enrage al que no se llega (el enrage sale de data/npcs.json)" />
 
+                            <TextBlock Text="TEMA" Style="{StaticResource SettingsHeader}" />
+                            <ListBox ItemsSource="{x:Static vm:MeterViewModel.ThemeOptions}" SelectedItem="{Binding SelectedTheme}" Style="{StaticResource Chips}"
+                                     ToolTip="Si algún color no cambia, se ve completo al reabrir el meter">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" ToolTip="{Binding Description}" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
                             <TextBlock Text="FILAS" Style="{StaticResource SettingsHeader}" />
                             <ListBox ItemsSource="{x:Static vm:MeterPreferences.RowHeightOptions}" SelectedItem="{Binding RowHeight}" Style="{StaticResource Chips}"
                                      ToolTip="Alto de cada fila">
