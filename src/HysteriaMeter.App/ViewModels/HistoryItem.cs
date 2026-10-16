@@ -20,8 +20,41 @@ public sealed record HistoryItem(
     // Entrada a la zona (ISO 8601) y fin de la pelea: las peleas con la misma entrada son una "run".
     string? Run = null,
     DateTimeOffset? Ended = null,
-    string RunHeader = "")
+    string RunHeader = "",
+    int? Percentile = null)
 {
+    /// <summary>"P87": qué parte de tus intentos contra ese objetivo hiciste igual o menos DPS que en este.</summary>
+    public string PercentileText => Percentile is { } p ? $"P{p}" : string.Empty;
+
+    public bool HasPercentile => Percentile is not null;
+
+    /// <summary>Color del percentil, como en Warcraft Logs: gris, verde, azul, violeta, naranja y dorado el mejor.</summary>
+    public System.Windows.Media.Brush PercentileBrush => TierBrush(Percentile ?? 0);
+
+    public static System.Windows.Media.Brush TierBrush(int percentile) => Tiers[percentile switch
+    {
+        >= 100 => 5,
+        >= 95 => 4,
+        >= 75 => 3,
+        >= 50 => 2,
+        >= 25 => 1,
+        _ => 0,
+    }];
+
+    private static readonly System.Windows.Media.Brush[] Tiers =
+        [.. new[] { "#9D9D9D", "#1EFF00", "#0070FF", "#A335EE", "#FF8000", "#E5CC80" }.Select(Freeze)];
+
+    private static System.Windows.Media.Brush Freeze(string hex)
+    {
+        var brush = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex));
+        brush.Freeze();
+        return brush;
+    }
+
+    /// <summary>Percentil de <paramref name="dps"/> entre <paramref name="all"/>: el mejor da 100.</summary>
+    public static int PercentileOf(double dps, IReadOnlyCollection<double> all) =>
+        all.Count == 0 ? 0 : (int)Math.Round(100.0 * all.Count(d => d <= dps) / all.Count);
+
     public bool HasRunHeader => RunHeader.Length > 0;
 
     /// <summary>
@@ -73,14 +106,14 @@ public sealed record HistoryItem(
     /// </summary>
     public static IReadOnlyList<HistoryItem> WithComparisons(IReadOnlyList<HistoryItem> items)
     {
-        var best = items
+        var attempts = items
             .Where(i => i.LocalDps is > 0 && i.Target != "Encuentro")
             .GroupBy(i => i.Target)
             .Where(g => g.Count() > 1)
-            .ToDictionary(g => g.Key, g => g.Max(i => i.LocalDps!.Value));
+            .ToDictionary(g => g.Key, g => (IReadOnlyCollection<double>)[.. g.Select(i => i.LocalDps!.Value)]);
 
-        return [.. items.Select(i => i.LocalDps is { } dps && dps > 0 && best.TryGetValue(i.Target, out var top)
-            ? i with { VsBest = Compare(dps, top) }
+        return [.. items.Select(i => i.LocalDps is { } dps && dps > 0 && attempts.TryGetValue(i.Target, out var all)
+            ? i with { VsBest = Compare(dps, all.Max()), Percentile = PercentileOf(dps, all) }
             : i)];
     }
 
