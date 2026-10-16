@@ -81,6 +81,9 @@ public sealed record MeterPreferences
     /// <summary>Solo tu fila, para tener el overlay mínimo mientras jugás (como el modo colapsado de Ember).</summary>
     public bool OnlyMe { get; init; }
 
+    /// <summary>Última novedad vista (id de <c>data/novedades.json</c>); 0 = nunca abrió el meter.</summary>
+    public int LastSeenNews { get; init; }
+
     /// <summary>Atajos globales, como "Ctrl+Shift+L"; vacío = sin atajo.</summary>
     public string HotkeyClickThrough { get; init; } = "Ctrl+Shift+L";
 

@@ -77,6 +77,8 @@ A la izquierda de cada nombre va el símbolo de su clase, deducido de las skills
 
 Como en Details!, en configuración se puede pintar cada fila con el color de su clase ("Colores por clase", colores en `data/classes.json`), sacar las columnas TOTAL y % para un overlay más angosto, y dejar "Solo mi fila": tu DPS con tu puesto real en la party.
 
+El botón ❚❚ del encabezado pausa el overlay: congela lo que ves (por ejemplo, para leer el resultado con calma) mientras la pelea sigue contando por detrás. La primera vez que abrís el meter aparece una bienvenida con lo básico, y después de cada actualización, la lista de novedades (`data/novedades.json`), una sola vez.
+
 Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: los nombres se cargan a mano en `data/skills.json`.
 
 Los monstruos tampoco traen nombre: si una pelea sale como "NPC 2001234", agregá ese ID a `data/npcs.json` con su nombre, la dungeon y si es boss (`"2001234": { "name": "Destroyer Tarka", "dungeon": "...", "boss": true }`) y la próxima vez se ve con nombre, también en el historial y en el progreso por boss.

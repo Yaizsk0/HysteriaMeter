@@ -32,6 +32,7 @@ public partial class App : Application
         builder.Services.Configure<MeterSettings>(builder.Configuration.GetSection("Meter"));
 
         PlayerClasses.Load(Path.Combine(AppContext.BaseDirectory, "data", "classes.json"));
+        NewsFeed.Load(Path.Combine(AppContext.BaseDirectory, "data", "novedades.json"));
         builder.Services.AddSingleton(sp => new CombatEngine(new CombatEngineOptions
         {
             IdleTimeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<MeterSettings>>().Value.IdleTimeoutSeconds),
@@ -49,7 +50,8 @@ public partial class App : Application
             sp.GetRequiredService<CombatEngine>(),
             sp.GetRequiredService<CaptureRecorder>(),
             SkillNames.Load(Path.Combine(AppContext.BaseDirectory, "data", "skills.json")),
-            UserStore.Load<MeterPreferences>(PreferencesFile) ?? new MeterPreferences(),
+            // Quien ya tenía preferencias guardadas no es nuevo: ve las novedades en vez de la bienvenida.
+            UserStore.Load<MeterPreferences>(PreferencesFile) is { } saved ? saved with { LastSeenNews = Math.Max(saved.LastSeenNews, 1) } : new MeterPreferences(),
             preferences => UserStore.Save(PreferencesFile, preferences),
             sp.GetRequiredService<EncounterRepository>(),
             sp.GetRequiredService<CaptureStatus>(),
