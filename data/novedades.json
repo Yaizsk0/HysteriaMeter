@@ -25,6 +25,7 @@
     { "id": 52, "text": "Fases del boss en el detalle: a qué minuto bajó del 75, 50 y 25 % de vida." },
     { "id": 53, "text": "Configuración → VERSIÓN: \"Iniciar con Windows\" abre el meter al iniciar sesión." },
     { "id": 54, "text": "Comparar con tu intento anterior o tu mejor intento: ahora también a qué tiempo llegó el boss al 75, 50 y 25 %." },
-    { "id": 55, "text": "Historial: tu kill más rápida contra cada boss queda marcada con ⏱ y aparece en la línea de progreso." }
+    { "id": 55, "text": "Historial: tu kill más rápida contra cada boss queda marcada con ⏱ y aparece en la línea de progreso." },
+    { "id": 56, "text": "Esc cierra el panel abierto (configuración, historial), vuelve a la pelea actual y cierra el detalle y el registro." }
   ]
 }
