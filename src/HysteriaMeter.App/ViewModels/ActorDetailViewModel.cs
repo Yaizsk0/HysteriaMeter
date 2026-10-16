@@ -50,6 +50,43 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         }
     }
 
+    /// <summary>Skill que se está renombrando (doble clic en su fila); <c>null</c> si ninguna.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRenamingSkill), nameof(RenamingSkillLabel))]
+    public partial SkillRowViewModel? RenamingSkill { get; set; }
+
+    public bool IsRenamingSkill => RenamingSkill is not null;
+
+    public string RenamingSkillLabel => RenamingSkill is { } skill ? $"Nombre para la skill {skill.SkillId}:" : string.Empty;
+
+    [ObservableProperty]
+    public partial string SkillNameDraft { get; set; } = string.Empty;
+
+    /// <summary>Se guardó un nombre de skill (vacío lo saca); lo persiste quien guarda las preferencias.</summary>
+    public event Action<uint, string>? SkillRenamed;
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void StartRenameSkill(SkillRowViewModel? skill)
+    {
+        RenamingSkill = skill;
+        SkillNameDraft = skill is null || skill.Name.StartsWith("Skill ", StringComparison.Ordinal) ? string.Empty : skill.Name;
+    }
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void SaveSkillName()
+    {
+        if (RenamingSkill is { } skill)
+        {
+            SkillRenamed?.Invoke(skill.SkillId, SkillNameDraft);
+            skill.Name = names.Of(skill.SkillId);
+        }
+
+        RenamingSkill = null;
+    }
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void CancelSkillRename() => RenamingSkill = null;
+
     /// <summary>La vista abre el registro filtrado por este jugador.</summary>
     public event Action<LogViewModel>? LogRequested;
 
