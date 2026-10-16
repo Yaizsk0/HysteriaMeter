@@ -159,6 +159,30 @@ public sealed class EncounterRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task Records_and_attempts_are_per_character()
+    {
+        var repository = new EncounterRepository(_path);
+        await repository.InitializeAsync();
+        var start = new DateTimeOffset(2026, 10, 16, 21, 0, 0, TimeSpan.Zero);
+        var main = Fight(start, "Tarka", localDps: 3000, localName: "Tests");
+        var alt = Fight(start.AddMinutes(10), "Tarka", localDps: 1000, localName: "Alt");
+        var altAgain = Fight(start.AddMinutes(20), "Tarka", localDps: 1200, localName: "Alt");
+        foreach (var fight in new[] { main, alt, altAgain })
+        {
+            await repository.SaveAsync(fight);
+        }
+
+        var list = (await repository.ListRecentAsync()).ToDictionary(e => e.Id);
+        Assert.True(list[altAgain.Id.ToString()].IsRecord);
+        Assert.Equal(2, list[altAgain.Id.ToString()].Attempt);
+        Assert.Equal("Alt", list[altAgain.Id.ToString()].LocalName);
+        Assert.Equal(1000, await repository.BestLocalDpsAsync("Tarka", altAgain.Id.ToString(), "Alt"));
+        Assert.Equal(3000, await repository.BestLocalDpsAsync("Tarka", altAgain.Id.ToString()));
+        Assert.Null(await repository.PreviousLocalDpsAsync("Tarka", main.Id.ToString(), "Tests"));
+        Assert.Equal((alt.Id.ToString(), alt.Id.ToString()), await repository.PastAttemptsAsync("Tarka", altAgain.Id.ToString(), "Alt"));
+    }
+
+    [Fact]
     public async Task Cleanup_keeps_kills_and_notes()
     {
         var repository = new EncounterRepository(_path);
@@ -183,14 +207,14 @@ public sealed class EncounterRepositoryTests : IDisposable
         Assert.Null(await repository.LoadAsync(kill.Id.ToString()));
     }
 
-    private static EncounterSnapshot Fight(DateTimeOffset start, string target, double localDps) => new(
+    private static EncounterSnapshot Fight(DateTimeOffset start, string target, double localDps, string localName = "Mati") => new(
         Guid.NewGuid(),
         start,
         start.AddSeconds(60),
         target,
         TargetKilled: false,
         TotalDamage: (long)(localDps * 60),
-        [new ActorSnapshot(1, "Mati", null, true, (long)(localDps * 60), localDps, 1, 10, 2, 100, 0, [])]);
+        [new ActorSnapshot(1, localName, null, true, (long)(localDps * 60), localDps, 1, 10, 2, 100, 0, [])]);
 
     public void Dispose()
     {

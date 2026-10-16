@@ -21,8 +21,20 @@ public sealed record HistoryItem(
     string? Run = null,
     DateTimeOffset? Ended = null,
     string RunHeader = "",
-    int? Percentile = null)
+    int? Percentile = null,
+    // Personaje local de esa pelea: récords, intentos y percentiles se cuentan por personaje.
+    string? Character = null,
+    string CharacterTag = "")
 {
+    /// <summary>Opción del filtro de personaje que muestra todos.</summary>
+    public const string AllCharacters = "Todos";
+
+    /// <summary>Con más de un personaje en el historial, cada fila dice con cuál fue ("· Griffith").</summary>
+    public static IReadOnlyList<HistoryItem> WithCharacterTags(IReadOnlyList<HistoryItem> items) =>
+        items.Select(i => i.Character).Where(c => c is not null).Distinct(StringComparer.Ordinal).Count() > 1
+            ? [.. items.Select(i => i.Character is { } c ? i with { CharacterTag = $"· {c}" } : i)]
+            : items;
+
     /// <summary>"P87": qué parte de tus intentos contra ese objetivo hiciste igual o menos DPS que en este.</summary>
     public string PercentileText => Percentile is { } p ? $"P{p}" : string.Empty;
 
@@ -108,11 +120,11 @@ public sealed record HistoryItem(
     {
         var attempts = items
             .Where(i => i.LocalDps is > 0 && i.Target != "Encuentro")
-            .GroupBy(i => i.Target)
+            .GroupBy(i => (i.Target, i.Character))
             .Where(g => g.Count() > 1)
             .ToDictionary(g => g.Key, g => (IReadOnlyCollection<double>)[.. g.Select(i => i.LocalDps!.Value)]);
 
-        return [.. items.Select(i => i.LocalDps is { } dps && dps > 0 && attempts.TryGetValue(i.Target, out var all)
+        return [.. items.Select(i => i.LocalDps is { } dps && dps > 0 && attempts.TryGetValue((i.Target, i.Character), out var all)
             ? i with { VsBest = Compare(dps, all.Max()), Percentile = PercentileOf(dps, all) }
             : i)];
     }
@@ -125,7 +137,7 @@ public sealed record HistoryItem(
     public static (string Target, IReadOnlyList<double> Dps)? Progress(IEnumerable<HistoryItem> newestFirst)
     {
         var withDps = newestFirst.Where(i => i.LocalDps is > 0).ToList();
-        if (withDps.Count < 2 || withDps.Select(i => i.Target).Distinct().Count() != 1 || withDps[0].Target == "Encuentro")
+        if (withDps.Count < 2 || withDps.Select(i => (i.Target, i.Character)).Distinct().Count() != 1 || withDps[0].Target == "Encuentro")
         {
             return null;
         }
@@ -144,9 +156,10 @@ public sealed record HistoryItem(
 
     public bool HasNote => !string.IsNullOrEmpty(Note);
 
-    /// <summary>Coincide con la búsqueda del panel (objetivo o nota, sin importar mayúsculas).</summary>
-    public bool Matches(string? search, bool onlyKills) =>
+    /// <summary>Coincide con la búsqueda del panel (objetivo o nota, sin importar mayúsculas) y con el personaje elegido.</summary>
+    public bool Matches(string? search, bool onlyKills, string? character = null) =>
         (!onlyKills || Killed)
+        && (character is null or AllCharacters || Character == character)
         && (string.IsNullOrWhiteSpace(search)
             || Target.Contains(search.Trim(), StringComparison.CurrentCultureIgnoreCase)
             || (Note?.Contains(search.Trim(), StringComparison.CurrentCultureIgnoreCase) ?? false));
@@ -169,6 +182,7 @@ public sealed record HistoryItem(
             summary.IsRecord && summary.Attempt > 1,
             summary.LocalDps,
             Run: summary.ZoneEnteredAt,
-            Ended: end);
+            Ended: end,
+            Character: summary.LocalName);
     }
 }
