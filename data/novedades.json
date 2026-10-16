@@ -14,6 +14,7 @@
     { "id": 41, "text": "Doble clic en una skill del detalle para ponerle nombre." },
     { "id": 42, "text": "Vista RUN: toda la dungeon junta (trash y bosses) con el tiempo desde que entraste." },
     { "id": 43, "text": "Historial: percentil de tu DPS entre tus intentos, con colores como Warcraft Logs." },
-    { "id": 44, "text": "Configuración → DIAGNÓSTICO: \"Reportar un problema\" arma el reporte y abre GitHub." }
+    { "id": 44, "text": "Configuración → DIAGNÓSTICO: \"Reportar un problema\" arma el reporte y abre GitHub." },
+    { "id": 45, "text": "Atajos nuevos: Ctrl+Shift+N minimiza y Ctrl+Shift+P pausa (se cambian en ATAJOS)." }
   ]
 }

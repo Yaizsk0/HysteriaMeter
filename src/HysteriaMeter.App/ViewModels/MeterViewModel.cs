@@ -586,6 +586,18 @@ public sealed partial class MeterViewModel : ObservableObject
         set => SetHotkey(value, Preferences.HotkeyVisibility, text => Preferences with { HotkeyVisibility = text }, nameof(HotkeyVisibility));
     }
 
+    public string HotkeyMinimize
+    {
+        get => Preferences.HotkeyMinimize;
+        set => SetHotkey(value, Preferences.HotkeyMinimize, text => Preferences with { HotkeyMinimize = text }, nameof(HotkeyMinimize));
+    }
+
+    public string HotkeyPause
+    {
+        get => Preferences.HotkeyPause;
+        set => SetHotkey(value, Preferences.HotkeyPause, text => Preferences with { HotkeyPause = text }, nameof(HotkeyPause));
+    }
+
     public string HotkeyMark
     {
         get => Preferences.HotkeyMark;
@@ -624,7 +636,7 @@ public sealed partial class MeterViewModel : ObservableObject
         }
     }
 
-    private string[] HotkeyTexts() => [Preferences.HotkeyClickThrough, Preferences.HotkeyReset, Preferences.HotkeyVisibility, Preferences.HotkeyMark];
+    private string[] HotkeyTexts() => [Preferences.HotkeyClickThrough, Preferences.HotkeyReset, Preferences.HotkeyVisibility, Preferences.HotkeyMark, Preferences.HotkeyMinimize, Preferences.HotkeyPause];
 
     /// <summary>Marca este momento de la pelea en curso; se ve en el detalle y en el JSON exportado.</summary>
     [RelayCommand]

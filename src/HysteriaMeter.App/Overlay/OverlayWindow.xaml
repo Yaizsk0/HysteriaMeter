@@ -794,7 +794,7 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
-                                    <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                                    <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
                                 </Grid.RowDefinitions>
                                 <TextBox Grid.Row="0" Text="{Binding HotkeyClickThrough, UpdateSourceTrigger=Explicit}" />
                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="bloquear / desbloquear clics" />
@@ -804,6 +804,10 @@
                                 <TextBlock Grid.Row="2" Grid.Column="1" Text="ocultar / mostrar el overlay" />
                                 <TextBox Grid.Row="3" Text="{Binding HotkeyMark, UpdateSourceTrigger=Explicit}" />
                                 <TextBlock Grid.Row="3" Grid.Column="1" Text="marcar este momento de la pelea" />
+                                <TextBox Grid.Row="4" Text="{Binding HotkeyMinimize, UpdateSourceTrigger=Explicit}" />
+                                <TextBlock Grid.Row="4" Grid.Column="1" Text="minimizar / abrir el overlay" />
+                                <TextBox Grid.Row="5" Text="{Binding HotkeyPause, UpdateSourceTrigger=Explicit}" />
+                                <TextBlock Grid.Row="5" Grid.Column="1" Text="pausar / seguir en vivo" />
                             </Grid>
                             <TextBlock Text="{Binding HotkeyMessage}" FontSize="11" Foreground="{StaticResource Gold}" TextWrapping="Wrap" Margin="0,0,0,4">
                                 <TextBlock.Style>
