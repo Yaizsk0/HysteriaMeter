@@ -18,6 +18,13 @@ public sealed class OverlayWindows(MeterSession session)
     public OverlayWindow OpenSaved()
     {
         var layouts = OverlayLayout.LoadAll();
+        if (!session.Preferences.BossOnlyDefaulted)
+        {
+            // "Solo boss" pasó a venir prendido (como cuenta Abyss): se prende una vez en las ventanas guardadas.
+            layouts = [.. layouts.Select(l => l with { BossOnly = true })];
+            session.Update(session.Preferences with { BossOnlyDefaulted = true });
+        }
+
         if (layouts.Count == 0)
         {
             return Open(null);
@@ -60,7 +67,7 @@ public sealed class OverlayWindows(MeterSession session)
             layout?.ShowHealing ?? true,
             layout?.Compact ?? false,
             layout?.Session ?? false,
-            layout?.BossOnly ?? false,
+            layout?.BossOnly ?? true,
             layout?.Run ?? false);
         var window = new OverlayWindow(viewModel, layout, this);
         viewModel.NewWindowRequested += () => OpenNext(window);
