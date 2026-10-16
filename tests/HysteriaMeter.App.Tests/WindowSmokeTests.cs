@@ -162,6 +162,15 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Vs_previous_attempt_shows_the_change_in_percent()
+    {
+        Assert.Null(MeterViewModel.VsPreviousText(1000, previous: null));
+        Assert.Null(MeterViewModel.VsPreviousText(1000, previous: 1005));
+        Assert.StartsWith("+8% vs tu intento anterior", MeterViewModel.VsPreviousText(1080, 1000), StringComparison.Ordinal);
+        Assert.StartsWith("-20% vs tu intento anterior", MeterViewModel.VsPreviousText(800, 1000), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void History_search_matches_target_or_note()
     {
         var item = new HistoryItem("x", "Destroyer Tarka", "15/10 21:42", "02:47", "3.0k", Killed: false, Note: "Piedra nueva");

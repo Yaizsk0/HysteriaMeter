@@ -150,6 +150,9 @@ public sealed class EncounterRepositoryTests : IDisposable
         Assert.Equal("con piedra nueva", list[third.Id.ToString()].Note);
         Assert.Equal(1500, await repository.BestLocalDpsAsync("Tarka", third.Id.ToString()));
         Assert.Null(await repository.BestLocalDpsAsync("Otro", other.Id.ToString()));
+        Assert.Equal(1500, await repository.PreviousLocalDpsAsync("Tarka", third.Id.ToString()));
+        Assert.Equal(1000, await repository.PreviousLocalDpsAsync("Tarka", second.Id.ToString()));
+        Assert.Null(await repository.PreviousLocalDpsAsync("Otro", other.Id.ToString()));
     }
 
     [Fact]
