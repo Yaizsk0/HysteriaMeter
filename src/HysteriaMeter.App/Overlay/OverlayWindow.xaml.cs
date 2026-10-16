@@ -328,7 +328,7 @@ public partial class OverlayWindow : Window
             return;
         }
 
-        if (e.ButtonState == MouseButtonState.Pressed)
+        if (e.ButtonState == MouseButtonState.Pressed && _viewModel.CanMoveWindow)
         {
             DragMove();
             SnapToEdges();

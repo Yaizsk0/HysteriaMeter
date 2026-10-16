@@ -65,6 +65,12 @@ public sealed class WindowSmokeTests
             Assert.True(viewModel.IsViewingHistory);
             viewModel.EscapeCommand.Execute(null);
             Assert.False(viewModel.IsViewingHistory);
+
+            // Fijar posición vale para todas las ventanas y saca la agarradera.
+            viewModel.LockPosition = true;
+            Assert.False(healing.CanMoveWindow);
+            Layout(new OverlayWindow(viewModel));
+            viewModel.LockPosition = false;
             viewModel.BackToLiveCommand.Execute(null);
             viewModel.IsSessionView = true;
             viewModel.BossOnly = true;

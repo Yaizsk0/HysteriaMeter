@@ -280,6 +280,15 @@ public sealed partial class MeterViewModel : ObservableObject
         set => Update(Preferences with { SnapWindows = value }, nameof(SnapWindows));
     }
 
+    public bool LockPosition
+    {
+        get => Preferences.LockPosition;
+        set => Update(Preferences with { LockPosition = value }, nameof(LockPosition), nameof(CanMoveWindow));
+    }
+
+    /// <summary>Se puede arrastrar y cambiar el tamaño (no está fijado).</summary>
+    public bool CanMoveWindow => !Preferences.LockPosition;
+
     public bool ShowRecentColumn
     {
         get => Preferences.ShowRecentColumn;
