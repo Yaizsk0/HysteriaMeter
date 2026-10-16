@@ -571,6 +571,19 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Minimized_pill_shows_my_dps_and_rank()
+    {
+        var me = new ActorRowViewModel();
+        me.Update(2, Actor(), MeterTab.Damage, 6000, 9000, TimeSpan.FromSeconds(10));
+        var other = new ActorRowViewModel();
+        other.Update(1, Actor() with { IsLocalPlayer = false, Name = "Otro" }, MeterTab.Damage, 6000, 9000, TimeSpan.FromSeconds(10));
+
+        Assert.Equal($"{me.PerSecond} · #2 de 3", MeterViewModel.MinimizedSummary([other, me], "900", 3));
+        Assert.Equal("900 party", MeterViewModel.MinimizedSummary([other], "900", 3));
+        Assert.Equal("HYSTERIA", MeterViewModel.MinimizedSummary([], "0", 0));
+    }
+
+    [Fact]
     public void Rows_take_the_class_color_when_asked()
     {
         var row = new ActorRowViewModel();

@@ -9,6 +9,7 @@
     { "id": 36, "text": "Colores por clase, columnas TOTAL y % opcionales y \"Solo mi fila\" (configuración)." },
     { "id": 37, "text": "Botón de pausa en el encabezado: congela lo que ves mientras la pelea sigue contando." },
     { "id": 38, "text": "Alto de fila y máximo de jugadores en configuración (FILAS); si quedás afuera, tu fila se ve igual." },
-    { "id": 39, "text": "Temas visuales en configuración: Dorado, Mínimo, Abismo y Carmesí." }
+    { "id": 39, "text": "Temas visuales en configuración: Dorado, Mínimo, Abismo y Carmesí." },
+    { "id": 40, "text": "Botón — en el encabezado: minimiza el overlay a una pastilla con tu DPS y tu puesto." }
   ]
 }
