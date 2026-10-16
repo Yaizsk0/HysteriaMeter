@@ -316,7 +316,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
                 Skills.Add(new SkillRowViewModel());
             }
 
-            Skills[i].Update(names.Of(skills[i].SkillId), skills[i], top, duration);
+            Skills[i].Update(names.Of(skills[i].SkillId), skills[i], top, duration, names.IconOf(skills[i].SkillId));
         }
 
         while (Skills.Count > skills.Count)
