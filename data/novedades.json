@@ -12,6 +12,7 @@
     { "id": 39, "text": "Temas visuales en configuración: Dorado, Mínimo, Abismo y Carmesí." },
     { "id": 40, "text": "Botón — en el encabezado: minimiza el overlay a una pastilla con tu DPS y tu puesto." },
     { "id": 41, "text": "Doble clic en una skill del detalle para ponerle nombre." },
-    { "id": 42, "text": "Vista RUN: toda la dungeon junta (trash y bosses) con el tiempo desde que entraste." }
+    { "id": 42, "text": "Vista RUN: toda la dungeon junta (trash y bosses) con el tiempo desde que entraste." },
+    { "id": 43, "text": "Historial: percentil de tu DPS entre tus intentos, con colores como Warcraft Logs." }
   ]
 }

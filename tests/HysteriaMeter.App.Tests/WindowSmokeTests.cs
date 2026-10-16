@@ -314,6 +314,10 @@ public sealed class WindowSmokeTests
         Assert.Equal("· mejor intento", items[1].VsBest);
         Assert.Equal(string.Empty, items[2].VsBest);
         Assert.Equal(string.Empty, items[3].VsBest);
+        Assert.Equal(("P50", "P100"), (items[0].PercentileText, items[1].PercentileText));
+        Assert.False(items[2].HasPercentile);
+        Assert.Equal(25, HistoryItem.PercentileOf(10, [10, 20, 30, 40]));
+        Assert.NotEqual(HistoryItem.TierBrush(100), HistoryItem.TierBrush(96));
     }
 
     [Fact]
