@@ -71,7 +71,7 @@ public sealed partial class MeterViewModel : ObservableObject
     /// <param name="compact">Modo compacto: solo las filas y el reloj.</param>
     /// <param name="sessionView">Mostrar la sesión entera en vez de la pelea actual.</param>
     /// <param name="bossOnly">Contar solo el daño al objetivo principal.</param>
-    public MeterViewModel(MeterSession session, MeterTab tab = MeterTab.Damage, bool showHealing = true, bool compact = false, bool sessionView = false, bool bossOnly = false)
+    public MeterViewModel(MeterSession session, MeterTab tab = MeterTab.Damage, bool showHealing = true, bool compact = false, bool sessionView = false, bool bossOnly = false, bool runView = false)
     {
         _session = session;
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(session.Preferences.RefreshMs), DispatcherPriority.Background, (_, _) => Refresh(), Dispatcher.CurrentDispatcher);
@@ -88,6 +88,7 @@ public sealed partial class MeterViewModel : ObservableObject
         _notice = session.TakeStartupNotice();
         IsCompact = compact;
         IsSessionView = sessionView;
+        IsRunView = runView && !sessionView;
         BossOnly = bossOnly;
         var dispatcher = Dispatcher.CurrentDispatcher;
         _engine.EncounterFinished += snapshot =>
@@ -499,16 +500,37 @@ public sealed partial class MeterViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsFightView), nameof(IsSessionChip))]
     public partial bool IsSessionView { get; set; }
 
-    // Los chips PELEA/SESIÓN son RadioButtons: al destildarse uno escribe false, y si eso cambiara la vista
-    // los dos se pisarían en un bucle infinito. Como en las pestañas, solo cuenta el que se tilda.
-    public bool IsFightView
+    /// <summary>Esta ventana muestra la run: todas las peleas desde que entraste a la dungeon (trash y bosses juntos).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFightView), nameof(IsRunChip))]
+    public partial bool IsRunView { get; set; }
+
+    public bool IsRunChip
     {
-        get => !IsSessionView;
+        get => IsRunView;
         set
         {
             if (value)
             {
                 IsSessionView = false;
+                IsRunView = true;
+            }
+        }
+    }
+
+    partial void OnIsRunViewChanged(bool value) => Refresh();
+
+    // Los chips PELEA/SESIÓN son RadioButtons: al destildarse uno escribe false, y si eso cambiara la vista
+    // los dos se pisarían en un bucle infinito. Como en las pestañas, solo cuenta el que se tilda.
+    public bool IsFightView
+    {
+        get => !IsSessionView && !IsRunView;
+        set
+        {
+            if (value)
+            {
+                IsSessionView = false;
+                IsRunView = false;
             }
         }
     }
@@ -520,6 +542,7 @@ public sealed partial class MeterViewModel : ObservableObject
         {
             if (value)
             {
+                IsRunView = false;
                 IsSessionView = true;
             }
         }
@@ -627,7 +650,7 @@ public sealed partial class MeterViewModel : ObservableObject
     private bool CheckPractice(EncounterSnapshot? current)
     {
         var limit = Preferences.PracticeSeconds;
-        if (limit <= 0 || current is null || _pinned is not null || IsSessionView || current.Id == _practiceDoneId)
+        if (limit <= 0 || current is null || _pinned is not null || IsSessionView || IsRunView || current.Id == _practiceDoneId)
         {
             return false;
         }
@@ -1442,7 +1465,11 @@ public sealed partial class MeterViewModel : ObservableObject
         UpdateStatus(current is not null);
         CheckPractice(current);
         IsLive = _pinned is null && current is not null;
-        if (_pinned is null && IsSessionView)
+        if (_pinned is null && IsRunView)
+        {
+            current = _engine.RunSnapshot();
+        }
+        else if (_pinned is null && IsSessionView)
         {
             current = _engine.SessionSnapshot();
         }
