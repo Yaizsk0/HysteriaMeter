@@ -43,6 +43,13 @@ public static class PlayerClasses
     /// <summary>La tabla en uso: la de <c>data/classes.json</c> si se cargó, si no la de por defecto.</summary>
     public static IReadOnlyDictionary<int, PlayerClass> Current { get; private set; } = Defaults;
 
+    /// <summary>Carpeta con emblemas de clase (<c>&lt;id&gt;.png</c>), por ejemplo <c>Juego\clases</c>; <c>null</c> si no hay.</summary>
+    public static string? EmblemFolder { get; set; }
+
+    /// <summary>Ruta del emblema de la clase; <c>null</c> si no hay (queda el símbolo dibujado).</summary>
+    public static string? EmblemOf(int? classId) =>
+        classId is { } id && EmblemFolder is { } folder && Path.Combine(folder, $"{id}.png") is var path && File.Exists(path) ? path : null;
+
     public static PlayerClass? Of(int? classId) => classId is { } id && Current.TryGetValue(id, out var playerClass) ? playerClass : null;
 
     public static void Load(string path)

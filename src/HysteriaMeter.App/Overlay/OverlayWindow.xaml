@@ -473,9 +473,11 @@
                                             <TextBlock x:Name="InitialText" Text="{Binding Initial}" FontSize="11" FontWeight="Bold" Foreground="{Binding Accent}"
                                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             <!-- Símbolo de la clase (deducida por sus skills); tapa la inicial cuando se sabe -->
-                                            <Path Data="{Binding ClassIcon}" Fill="{Binding Accent}" Width="10" Height="10" Stretch="Uniform"
+                                            <Path x:Name="ClassPath" Data="{Binding ClassIcon}" Fill="{Binding Accent}" Width="10" Height="10" Stretch="Uniform"
                                                   HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="{Binding ClassName}"
                                                   Visibility="{Binding HasClassIcon, Converter={StaticResource Visible}}" />
+                                            <Image x:Name="ClassEmblemImage" Width="20" Height="20" ToolTip="{Binding ClassName}" Visibility="Collapsed"
+                                                   RenderOptions.BitmapScalingMode="HighQuality" />
                                         </Grid>
                                         <DockPanel Grid.Column="2" VerticalAlignment="Center">
                                             <TextBlock DockPanel.Dock="Right" Text="{Binding Gear}" FontSize="11" Margin="6,0,4,0" Foreground="{StaticResource TextDim}"
@@ -513,6 +515,13 @@
                                     <Setter TargetName="PerSecondText" Property="FontSize" Value="13" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding HasClassIcon}" Value="True">
+                                    <Setter TargetName="InitialText" Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding HasClassEmblem}" Value="True">
+                                    <Setter TargetName="ClassEmblemImage" Property="Source" Value="{Binding ClassEmblem}" />
+                                    <Setter TargetName="ClassEmblemImage" Property="Visibility" Value="Visible" />
+                                    <Setter TargetName="ClassPath" Property="Visibility" Value="Collapsed" />
+                                    <Setter TargetName="Diamond" Property="Visibility" Value="Collapsed" />
                                     <Setter TargetName="InitialText" Property="Visibility" Value="Collapsed" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding IsLocalPlayer}" Value="True">
