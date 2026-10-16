@@ -396,7 +396,7 @@
                 <ItemsControl ItemsSource="{Binding Actors}" Margin="6,3,6,8">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="vm:ActorRowViewModel">
-                            <Border x:Name="Row" Height="30" Margin="0,0,0,3" Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="1"
+                            <Border x:Name="Row" Height="{Binding DataContext.RowHeight, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,0,0,3" Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="1"
                                     ToolTip="{Binding Breakdown}" Cursor="Hand" MouseLeftButtonUp="OnRowClick">
                                 <Grid>
                                     <!-- Barra proporcional al primero -->
@@ -436,10 +436,10 @@
                                             <TextBlock DockPanel.Dock="Right" Text="{Binding Gear}" FontSize="11" Margin="6,0,4,0" Foreground="{StaticResource TextDim}"
                                                        VerticalAlignment="Center" ToolTip="Item level · power"
                                                        Visibility="{Binding HasGear, Converter={StaticResource Visible}}" />
-                                            <TextBlock x:Name="NameText" Text="{Binding DisplayName}" FontSize="15" FontWeight="SemiBold"
+                                            <TextBlock x:Name="NameText" Text="{Binding DisplayName}" FontSize="{Binding DataContext.RowNameSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="SemiBold"
                                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                         </DockPanel>
-                                        <TextBlock x:Name="PerSecondText" Grid.Column="3" Text="{Binding PerSecond}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource TextBright}"
+                                        <TextBlock x:Name="PerSecondText" Grid.Column="3" Text="{Binding PerSecond}" FontSize="{Binding DataContext.RowNameSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="Bold" Foreground="{StaticResource TextBright}"
                                                    HorizontalAlignment="Right" VerticalAlignment="Center" />
                                         <!-- Total, o HPS cuando daño y curación van juntos -->
                                         <TextBlock x:Name="TotalText" Grid.Column="4" Text="{Binding Total}" Foreground="{StaticResource TextMuted}" Width="58" TextAlignment="Right" VerticalAlignment="Center"
@@ -642,6 +642,29 @@
                                       ToolTip="El overlay muestra solo tu DPS y tu puesto en la party" />
                             <CheckBox Style="{StaticResource Option}" Content="Sonido en las alertas" IsChecked="{Binding Sounds}"
                                       ToolTip="Récord, prueba de DPS terminada y enrage al que no se llega (el enrage sale de data/npcs.json)" />
+
+                            <TextBlock Text="FILAS" Style="{StaticResource SettingsHeader}" />
+                            <ListBox ItemsSource="{x:Static vm:MeterPreferences.RowHeightOptions}" SelectedItem="{Binding RowHeight}" Style="{StaticResource Chips}"
+                                     ToolTip="Alto de cada fila">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding StringFormat='{}{0} px'}" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <ListBox ItemsSource="{x:Static vm:MeterPreferences.MaxRowsOptions}" SelectedItem="{Binding MaxRows}" Style="{StaticResource Chips}"
+                                     ToolTip="Cuántos jugadores mostrar; si quedás afuera, tu fila ocupa el último lugar">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock x:Name="Label" Text="{Binding StringFormat='{}máx. {0}'}" />
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding}" Value="0">
+                                                <Setter TargetName="Label" Property="Text" Value="todas" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
 
                             <TextBlock Text="REFRESCO" Style="{StaticResource SettingsHeader}" />
                             <ListBox ItemsSource="{x:Static vm:MeterPreferences.RefreshOptions}" SelectedItem="{Binding RefreshMs}" Style="{StaticResource Chips}"

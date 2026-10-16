@@ -7,6 +7,7 @@
     { "id": 34, "text": "Símbolo de clase a la izquierda del nombre, e item level y power a la derecha." },
     { "id": 35, "text": "Al matar al boss ya no aparece una pelea fantasma que tapaba el resultado." },
     { "id": 36, "text": "Colores por clase, columnas TOTAL y % opcionales y \"Solo mi fila\" (configuración)." },
-    { "id": 37, "text": "Botón de pausa en el encabezado: congela lo que ves mientras la pelea sigue contando." }
+    { "id": 37, "text": "Botón de pausa en el encabezado: congela lo que ves mientras la pelea sigue contando." },
+    { "id": 38, "text": "Alto de fila y máximo de jugadores en configuración (FILAS); si quedás afuera, tu fila se ve igual." }
   ]
 }
