@@ -1225,16 +1225,18 @@ public sealed partial class MeterViewModel : ObservableObject
         }
 
         double? best;
+        double? previous;
         try
         {
             best = await _history.BestLocalDpsAsync(target, snapshot.Id.ToString()).ConfigureAwait(true);
+            previous = await _history.PreviousLocalDpsAsync(target, snapshot.Id.ToString()).ConfigureAwait(true);
         }
         catch (DbException)
         {
             return;
         }
 
-        if (RecordText(target, local.Dps, best) is { } message)
+        if ((RecordText(target, local.Dps, best) ?? VsPreviousText(local.Dps, previous)) is { } message)
         {
             Alert(AlertSound.Info);
             RecordMessage = message;
@@ -1277,6 +1279,24 @@ public sealed partial class MeterViewModel : ObservableObject
         previousBest is { } best && dps > best
             ? $"¡Récord en {target}! {ActorRowViewModel.Compact(dps)} DPS (antes {ActorRowViewModel.Compact(best)})"
             : null;
+
+    /// <summary>"+8% vs tu intento anterior (11.0k DPS)", o <c>null</c> si no hay intento anterior o la diferencia es mínima.</summary>
+    public static string? VsPreviousText(double dps, double? previous)
+    {
+        if (previous is not { } before || before <= 0)
+        {
+            return null;
+        }
+
+        var change = (dps - before) / before;
+        if (Math.Abs(change) < 0.01)
+        {
+            return null;
+        }
+
+        var percent = (change * 100).ToString("+0;-0", CultureInfo.InvariantCulture);
+        return $"{percent}% vs tu intento anterior ({ActorRowViewModel.Compact(before)} DPS)";
+    }
 
     [RelayCommand]
     private async Task OpenEncounterAsync(HistoryItem? item)

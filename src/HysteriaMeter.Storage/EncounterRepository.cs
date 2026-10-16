@@ -199,6 +199,20 @@ public sealed class EncounterRepository(string databasePath)
             new { targetName, excludeId }).ConfigureAwait(false);
     }
 
+    /// <summary>DPS propio en el intento anterior contra ese objetivo (el último antes de <paramref name="excludeId"/>). <c>null</c> si no hay.</summary>
+    public async Task<double?> PreviousLocalDpsAsync(string targetName, string excludeId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await connection.ExecuteScalarAsync<double?>(
+            """
+            SELECT a.dps FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
+            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId
+              AND e.started_at < COALESCE((SELECT started_at FROM encounters WHERE id = @excludeId), '9999')
+            ORDER BY e.started_at DESC LIMIT 1
+            """,
+            new { targetName, excludeId }).ConfigureAwait(false);
+    }
+
     /// <summary>Guarda (o borra, con texto vacío) la nota de una pelea.</summary>
     public async Task SetNoteAsync(string id, string? note, CancellationToken cancellationToken = default)
     {
