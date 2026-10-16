@@ -37,6 +37,7 @@ public partial class OverlayWindow : Window
         Loaded += (_, _) => _viewModel.Start();
         _viewModel.DetailRequested += ShowDetail;
         _viewModel.CopyImageRequested += CopyImage;
+        _viewModel.SaveImageRequested += SaveImage;
 
         // Una ventana cerrada no puede ser dueña de otra: se suelta del view model al cerrarse.
         Closed += (_, _) =>
@@ -44,6 +45,7 @@ public partial class OverlayWindow : Window
             _viewModel.Stop();
             _viewModel.DetailRequested -= ShowDetail;
             _viewModel.CopyImageRequested -= CopyImage;
+            _viewModel.SaveImageRequested -= SaveImage;
         };
     }
 
@@ -59,13 +61,55 @@ public partial class OverlayWindow : Window
     /// <summary>Copia el overlay como imagen (para pegar en Discord), al tamaño real en pantalla.</summary>
     private void CopyImage()
     {
+        if (RenderOverlay() is not { } bitmap)
+        {
+            return;
+        }
+
+        try
+        {
+            Clipboard.SetImage(bitmap);
+            _viewModel.ExportMessage = "Imagen copiada: pegala en Discord con Ctrl+V";
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            _viewModel.ExportMessage = "Otro programa tiene el portapapeles abierto; probá de nuevo";
+        }
+    }
+
+    /// <summary>Guarda el overlay como .png (al derrotar un boss). Con varias ventanas, solo la primera.</summary>
+    private void SaveImage(string path)
+    {
+        if ((_windows is not null && !IsMain) || RenderOverlay() is not { } bitmap)
+        {
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using var file = File.Create(path);
+            encoder.Save(file);
+            _viewModel.ExportMessage = $"Imagen guardada: {Path.GetFileName(path)}";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _viewModel.ExportMessage = $"No se pudo guardar la imagen: {ex.Message}";
+        }
+    }
+
+    /// <summary>El overlay dibujado al tamaño real en pantalla; <c>null</c> si todavía no tiene tamaño.</summary>
+    private RenderTargetBitmap? RenderOverlay()
+    {
         Root.UpdateLayout();
         var dpi = VisualTreeHelper.GetDpi(this);
         var width = (int)Math.Ceiling(Root.ActualWidth * Zoom.ScaleX * dpi.DpiScaleX);
         var height = (int)Math.Ceiling(Root.ActualHeight * Zoom.ScaleY * dpi.DpiScaleY);
         if (width <= 0 || height <= 0)
         {
-            return;
+            return null;
         }
 
         // VisualBrush dibuja el contenido sin el zoom propio del Grid: se escala a mano al tamaño en pantalla.
@@ -77,15 +121,8 @@ public partial class OverlayWindow : Window
 
         var bitmap = new RenderTargetBitmap(width, height, dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
         bitmap.Render(drawing);
-        try
-        {
-            Clipboard.SetImage(bitmap);
-            _viewModel.ExportMessage = "Imagen copiada: pegala en Discord con Ctrl+V";
-        }
-        catch (System.Runtime.InteropServices.ExternalException)
-        {
-            _viewModel.ExportMessage = "Otro programa tiene el portapapeles abierto; probá de nuevo";
-        }
+        bitmap.Freeze();
+        return bitmap;
     }
 
     private void ShowDetail()

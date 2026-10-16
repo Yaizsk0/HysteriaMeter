@@ -51,7 +51,7 @@ El historial (botón del reloj) se puede buscar por boss o por nota y filtrar po
 
 Con la vida del boss a la vista, el overlay estima en cuánto muere al ritmo actual de la party ("muere en 0:42"). Cada fila tiene detrás una línea tenue con el DPS de los últimos 30 segundos. En configuración se elige el formato de los números (2.04M, 2.0M o 2.040.321) y cada cuánto se refresca el overlay.
 
-En configuración, EXPORTAR Y COMPARTIR copia el overlay como imagen (para pegar en Discord) y guarda la pelea en CSV o JSON en `%LOCALAPPDATA%\HysteriaMeter\Exportes`. Con "Ocultar los nombres de los demás", el resumen y los archivos dicen "Yo", "Jugador 1", "Jugador 2". Si pegás la URL de un webhook de Discord, el resumen se puede mandar al canal a mano o solo al derrotar un boss. Es lo único que sale de tu PC, y solo si lo configurás.
+En configuración, EXPORTAR Y COMPARTIR copia el overlay como imagen (para pegar en Discord) y guarda la pelea en CSV o JSON en `%LOCALAPPDATA%\HysteriaMeter\Exportes`. Con "Guardar una imagen al derrotar un boss", cada boss derrotado (marcado como boss en `data/npcs.json` o que aguantó al menos 30 s) deja ahí un .png del overlay con su nombre y la hora (no se guarda si el overlay está en pausa, minimizado o con un panel abierto). Con "Ocultar los nombres de los demás", el resumen y los archivos dicen "Yo", "Jugador 1", "Jugador 2". Si pegás la URL de un webhook de Discord, el resumen se puede mandar al canal a mano o solo al derrotar un boss. Es lo único que sale de tu PC, y solo si lo configurás.
 
 "Abrir pelea…" carga un JSON guardado así (tuyo o el que te pasó otro de la legión) y lo muestra en el overlay como una pelea del historial, con detalle, skills y gráfico. También se puede arrastrar el archivo al overlay.
 

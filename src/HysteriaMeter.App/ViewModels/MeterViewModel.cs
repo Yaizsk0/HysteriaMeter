@@ -100,6 +100,10 @@ public sealed partial class MeterViewModel : ObservableObject
         {
             _lastFinished = snapshot;
             dispatcher.InvokeAsync(() => CheckRecordAsync(snapshot));
+            if (Preferences.ImageOnKill && IsBossKill(snapshot))
+            {
+                dispatcher.InvokeAsync(() => SaveKillImageAsync(snapshot));
+            }
         };
         _session.PreferencesChanged += names =>
         {
@@ -978,6 +982,40 @@ public sealed partial class MeterViewModel : ObservableObject
 
     /// <summary>La vista copia la imagen del overlay al portapapeles.</summary>
     public event Action? CopyImageRequested;
+
+    /// <summary>La vista guarda la imagen del overlay en esa ruta (.png).</summary>
+    public event Action<string>? SaveImageRequested;
+
+    public bool ImageOnKill
+    {
+        get => Preferences.ImageOnKill;
+        set => Update(Preferences with { ImageOnKill = value }, nameof(ImageOnKill));
+    }
+
+    /// <summary>Espera a que el overlay muestre la pelea terminada antes de sacar la imagen.</summary>
+    private static readonly TimeSpan KillImageDelay = TimeSpan.FromSeconds(1.5);
+
+    private async Task SaveKillImageAsync(EncounterSnapshot snapshot)
+    {
+        await Task.Delay(KillImageDelay).ConfigureAwait(true);
+
+        // Solo si se ve esa pelea completa: en pausa, minimizado o con un panel abierto la imagen no serviría.
+        if (_shown?.Id == snapshot.Id && IsFullView && !IsSettingsOpen && !IsHistoryOpen)
+        {
+            SaveImageRequested?.Invoke(KillImagePath(snapshot));
+        }
+    }
+
+    /// <summary>Peleas de al menos este largo cuentan como boss aunque no estén marcadas en data/npcs.json (el trash muere antes).</summary>
+    public static readonly TimeSpan BossKillMinDuration = TimeSpan.FromSeconds(30);
+
+    /// <summary>Un boss derrotado: marcado como boss en data/npcs.json, o un objetivo que aguantó al menos 30 s.</summary>
+    public static bool IsBossKill(EncounterSnapshot snapshot) =>
+        snapshot.TargetKilled && (snapshot.TargetIsBoss || (snapshot.MainTargetDuration ?? snapshot.Duration) >= BossKillMinDuration);
+
+    /// <summary>Exportes\2026-10-16 21-03 Tarka.png, con el mismo nombre que el CSV y el JSON.</summary>
+    public static string KillImagePath(EncounterSnapshot snapshot) =>
+        Path.Combine(ExportFolder, $"{EncounterExport.FileName(snapshot, snapshot.Start.ToLocalTime())}.png");
 
     [RelayCommand]
     private void ExportCsv() => Export("csv", EncounterExport.ToCsv);
