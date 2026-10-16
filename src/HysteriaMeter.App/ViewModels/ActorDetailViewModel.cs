@@ -11,7 +11,7 @@ namespace HysteriaMeter.App.ViewModels;
 public sealed record DeathItem(string When, string Summary, string LastHits);
 
 /// <summary>Otro jugador de la pelea o, con <paramref name="Saved"/>, uno de tus intentos guardados contra el mismo objetivo.</summary>
-public sealed record CompareOption(ulong Id, string Name, ActorSnapshot? Saved = null)
+public sealed record CompareOption(ulong Id, string Name, ActorSnapshot? Saved = null, IReadOnlyList<HealthPhase>? SavedPhases = null)
 {
     /// <summary>Ids reservados para los intentos guardados: no chocan con entidades del juego.</summary>
     public const ulong PreviousAttemptId = ulong.MaxValue;
@@ -21,7 +21,7 @@ public sealed record CompareOption(ulong Id, string Name, ActorSnapshot? Saved =
     /// <summary>"Tu intento anterior · 12.3k" con tu fila de esa pelea; <c>null</c> si la pelea no tiene jugador local.</summary>
     public static CompareOption? Attempt(ulong id, string label, EncounterSnapshot? saved) =>
         saved?.Actors.FirstOrDefault(a => a.IsLocalPlayer) is { } me
-            ? new CompareOption(id, $"{label} · {ActorRowViewModel.Compact(me.Dps)}", me)
+            ? new CompareOption(id, $"{label} · {ActorRowViewModel.Compact(me.Dps)}", me, saved.Phases)
             : null;
 
     public override string ToString() => Name;
@@ -425,11 +425,41 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         Comparison.Clear();
         if (other is not null)
         {
-            foreach (var row in Compare(actor, other))
+            var rows = Compare(actor, other);
+            if (CompareWith?.Saved is not null)
+            {
+                rows = [.. rows, .. ComparePhases(snapshot.Phases, CompareWith.SavedPhases)];
+            }
+
+            foreach (var row in rows)
             {
                 Comparison.Add(row);
             }
         }
+    }
+
+    /// <summary>
+    /// Contra un intento guardado: a qué tiempo llegó el boss a cada fase en esta pelea y en esa (antes es mejor).
+    /// Solo las fases que tienen las dos.
+    /// </summary>
+    public static IReadOnlyList<CompareRow> ComparePhases(IReadOnlyList<HealthPhase>? mine, IReadOnlyList<HealthPhase>? theirs)
+    {
+        if (mine is null || theirs is null)
+        {
+            return [];
+        }
+
+        return
+        [
+            .. mine.Join(theirs, p => p.Percent, p => p.Percent, (a, b) => new CompareRow(
+                $"Boss al {a.Percent}%",
+                Clock(a.Second),
+                Clock(b.Second),
+                a.Second < b.Second,
+                b.Second < a.Second)),
+        ];
+
+        static string Clock(int seconds) => TimeSpan.FromSeconds(seconds).ToString(@"m\:ss", CultureInfo.InvariantCulture);
     }
 
     /// <summary>Las filas de la comparación entre dos jugadores de la misma pelea.</summary>
