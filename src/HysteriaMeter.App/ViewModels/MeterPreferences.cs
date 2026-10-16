@@ -24,6 +24,16 @@ public sealed record MeterPreferences
 
     public int RefreshMs { get; init; } = 250;
 
+    /// <summary>Alto de cada fila en píxeles (Details: "bar height").</summary>
+    public static IReadOnlyList<int> RowHeightOptions { get; } = [24, 30, 36];
+
+    public int RowHeight { get; init; } = 30;
+
+    /// <summary>Cuántas filas mostrar (0 = todas). Si quedás afuera, tu fila reemplaza a la última, como en Details!.</summary>
+    public static IReadOnlyList<int> MaxRowsOptions { get; } = [0, 5, 8, 12];
+
+    public int MaxRows { get; init; }
+
     /// <summary>Al exportar o compartir, los nombres de los demás pasan a "Jugador 1", "Jugador 2"...</summary>
     public bool AnonymizeExports { get; init; }
 

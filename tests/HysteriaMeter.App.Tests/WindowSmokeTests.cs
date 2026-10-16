@@ -540,6 +540,16 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Limited_rows_always_keep_the_local_player()
+    {
+        var rows = Enumerable.Range(1, 6).Select(i => Actor() with { Id = (ulong)i, Name = $"J{i}", IsLocalPlayer = i == 6 }).ToList();
+
+        Assert.Equal([1UL, 2, 6], MeterViewModel.LimitRows(rows, 3).Select(a => a.Id));
+        Assert.Equal(6, MeterViewModel.LimitRows(rows, 0).Count);
+        Assert.Equal([1UL, 2, 3, 4, 5], MeterViewModel.LimitRows([.. rows.Take(5)], 5).Select(a => a.Id));
+    }
+
+    [Fact]
     public void Rows_take_the_class_color_when_asked()
     {
         var row = new ActorRowViewModel();

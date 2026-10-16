@@ -101,7 +101,7 @@ public sealed partial class MeterViewModel : ObservableObject
             }
 
             _timer.Interval = TimeSpan.FromMilliseconds(Preferences.RefreshMs);
-            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)) || names.Contains(nameof(ShowGear)) || names.Contains(nameof(ColorByClass)) || names.Contains(nameof(OnlyMe)) || names.Contains(nameof(Preferences)) || names.Contains(string.Empty))
+            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)) || names.Contains(nameof(ShowGear)) || names.Contains(nameof(ColorByClass)) || names.Contains(nameof(OnlyMe)) || names.Contains(nameof(MaxRows)) || names.Contains(nameof(Preferences)) || names.Contains(string.Empty))
             {
                 Refresh();
             }
@@ -174,6 +174,41 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         get => NumberStyleOptions.First(o => o.Style == Preferences.Numbers);
         set => Update(Preferences with { Numbers = value.Style }, nameof(SelectedNumberStyle));
+    }
+
+    public int RowHeight
+    {
+        get => Preferences.RowHeight;
+        set => Update(Preferences with { RowHeight = value }, nameof(RowHeight), nameof(RowNameSize));
+    }
+
+    /// <summary>Letra del nombre y del DPS acorde al alto de la fila.</summary>
+    public double RowNameSize => Preferences.RowHeight switch { <= 24 => 13, >= 36 => 17, _ => 15 };
+
+    public int MaxRows
+    {
+        get => Preferences.MaxRows;
+        set => Update(Preferences with { MaxRows = value }, nameof(MaxRows));
+    }
+
+    /// <summary>
+    /// Las primeras <paramref name="max"/> filas (0 = todas). Si el jugador local queda afuera, ocupa el último lugar
+    /// para que siempre te veas (Details: "always show me").
+    /// </summary>
+    public static List<ActorSnapshot> LimitRows(List<ActorSnapshot> rows, int max)
+    {
+        if (max <= 0 || rows.Count <= max)
+        {
+            return rows;
+        }
+
+        var shown = rows.Take(max).ToList();
+        if (!shown.Any(a => a.IsLocalPlayer) && rows.FirstOrDefault(a => a.IsLocalPlayer) is { } me)
+        {
+            shown[^1] = me;
+        }
+
+        return shown;
     }
 
     public int RefreshMs
@@ -1419,6 +1454,8 @@ public sealed partial class MeterViewModel : ObservableObject
         {
             rows = [.. rows.Where(a => a.IsLocalPlayer)];
         }
+
+        rows = LimitRows(rows, Preferences.MaxRows);
 
         PartyTotal = ActorRowViewModel.Compact(total);
         PartyPerSecond = ActorRowViewModel.Compact(total / snapshot.Duration.TotalSeconds);
