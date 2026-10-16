@@ -36,6 +36,7 @@ public partial class OverlayWindow : Window
         RestoreLayout(layout);
         Loaded += (_, _) => _viewModel.Start();
         _viewModel.DetailRequested += ShowDetail;
+        _viewModel.RunSummaryRequested += ShowRunSummary;
         _viewModel.CopyImageRequested += CopyImage;
         _viewModel.SaveImageRequested += SaveImage;
 
@@ -44,6 +45,7 @@ public partial class OverlayWindow : Window
         {
             _viewModel.Stop();
             _viewModel.DetailRequested -= ShowDetail;
+            _viewModel.RunSummaryRequested -= ShowRunSummary;
             _viewModel.CopyImageRequested -= CopyImage;
             _viewModel.SaveImageRequested -= SaveImage;
         };
@@ -136,6 +138,9 @@ public partial class OverlayWindow : Window
 
         _detail.Activate();
     }
+
+    private void ShowRunSummary(DungeonSummaryViewModel summary) =>
+        new Dungeon.DungeonWindow(summary) { Owner = this }.Show();
 
     private void RestoreLayout(OverlayLayout? layout)
     {

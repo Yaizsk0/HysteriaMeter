@@ -100,6 +100,8 @@ Las skills de clase (IDs 11xxxxxx a 18xxxxxx) traen nivel y variante en los últ
 
 Íconos de skills: si existe `%LOCALAPPDATA%\HysteriaMeter\Juego\iconos\<id>.png`, el detalle lo muestra a la izquierda del nombre (también con el de la skill base). Los íconos son locales y no se suben al repo. Igual con los emblemas de clase: `Juego\clases\<número de clase>.png` (11 a 18) reemplaza al rombo con el símbolo dibujado en el overlay.
 
+Modo dungeon: en el historial, cada run (peleas con la misma entrada a la zona) tiene un botón RESUMEN ›. Abre la run entera: entrada y última pelea, una línea de tiempo con trash, kills y wipes, una tarjeta por boss con sus intentos y el DPS y las muertes de cada jugador, y una tabla de muertes y DPS por jugador y boss. Un boss es el que está marcado en `npcs.json`, o un objetivo que se llevó la mayor parte del daño y aguantó al menos 30 s; el resto es trash. "Copiar para Discord" copia el resumen como texto.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).

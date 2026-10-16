@@ -47,6 +47,12 @@ public sealed class WindowSmokeTests
             Assert.False(healing.ShowHealingColumn);
             Layout(new DetailWindow(viewModel.Detail));
             Assert.Equal(2, viewModel.Detail.Skills.Count);
+
+            // Modo dungeon: con un boss y también sin ninguno (solo trash).
+            var start = DateTimeOffset.UnixEpoch;
+            var kill = new EncounterSnapshot(Guid.NewGuid(), start, start.AddSeconds(90), "Kromede", true, 3000, [Actor()], TargetIsBoss: true);
+            Layout(new Dungeon.DungeonWindow(new DungeonSummaryViewModel(DungeonSummary.From([kill], start))));
+            Layout(new Dungeon.DungeonWindow(new DungeonSummaryViewModel(DungeonSummary.From([], start))));
             viewModel.Detail.Nickname = "El Tanque";
             viewModel.Detail.SaveNicknameCommand.Execute(null);
             Assert.Equal("El Tanque", session.Preferences.Nicknames["Tester"]);

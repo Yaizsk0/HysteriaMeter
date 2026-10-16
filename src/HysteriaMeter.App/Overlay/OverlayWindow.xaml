@@ -558,8 +558,15 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:HistoryItem">
                                         <StackPanel>
-                                        <TextBlock Text="{Binding RunHeader}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Gold}" Margin="0,6,0,3"
-                                                   Visibility="{Binding HasRunHeader, Converter={StaticResource Visible}}" />
+                                        <DockPanel Margin="0,6,0,3" Visibility="{Binding HasRunHeader, Converter={StaticResource Visible}}">
+                                            <!-- Modo dungeon: resumen de toda la run -->
+                                            <Button DockPanel.Dock="Right" Content="RESUMEN ›" Cursor="Hand" FontSize="11" FontWeight="SemiBold"
+                                                    Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" Padding="4,0"
+                                                    ToolTip="Modo dungeon: cada boss, sus intentos y cuántas veces murió cada uno"
+                                                    Command="{Binding DataContext.OpenRunSummaryCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}" />
+                                            <TextBlock Text="{Binding RunHeader}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Gold}" />
+                                        </DockPanel>
                                         <Button Command="{Binding DataContext.OpenEncounterCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                 CommandParameter="{Binding}" Cursor="Hand" Margin="0,0,0,3" HorizontalContentAlignment="Stretch">
                                             <Button.Template>

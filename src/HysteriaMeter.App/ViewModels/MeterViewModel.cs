@@ -1080,25 +1080,16 @@ public sealed partial class MeterViewModel : ObservableObject
         }
     }
 
-    /// <summary>Peleas de al menos este largo cuentan como boss aunque no estén marcadas en data/npcs.json (el trash muere antes).</summary>
-    public static readonly TimeSpan BossKillMinDuration = TimeSpan.FromSeconds(30);
+    /// <summary>Peleas de al menos este largo cuentan como boss aunque no estén marcadas en data/npcs.json.</summary>
+    public static readonly TimeSpan BossKillMinDuration = BossRules.BossKillMinDuration;
 
-    /// <summary>Un boss derrotado: marcado como boss en data/npcs.json, o un objetivo que aguantó al menos 30 s.</summary>
     /// <summary>Parte del daño que tiene que ir al objetivo principal para tomar la pelea como de boss.</summary>
-    public const double BossFightShare = 0.6;
+    public const double BossFightShare = BossRules.BossFightShare;
 
-    /// <summary>
-    /// "Solo boss" solo tiene sentido contra un boss: marcado en data/npcs.json, o el objetivo que se llevó la mayor parte del daño.
-    /// En un pull de trash el daño se reparte y se cuenta todo, como antes.
-    /// </summary>
-    public static bool LooksLikeBossFight(EncounterSnapshot snapshot)
-    {
-        var total = snapshot.Actors.Sum(a => a.Damage);
-        return snapshot.TargetIsBoss || (total > 0 && snapshot.Actors.Sum(a => a.MainTargetDamage) >= total * BossFightShare);
-    }
+    /// <summary>"Solo boss" solo tiene sentido contra un boss; en un pull de trash se cuenta todo.</summary>
+    public static bool LooksLikeBossFight(EncounterSnapshot snapshot) => BossRules.LooksLikeBossFight(snapshot);
 
-    public static bool IsBossKill(EncounterSnapshot snapshot) =>
-        snapshot.TargetKilled && (snapshot.TargetIsBoss || (snapshot.MainTargetDuration ?? snapshot.Duration) >= BossKillMinDuration);
+    public static bool IsBossKill(EncounterSnapshot snapshot) => BossRules.IsBossKill(snapshot);
 
     /// <summary>Exportes\2026-10-16 21-03 Tarka.png, con el mismo nombre que el CSV y el JSON.</summary>
     public static string KillImagePath(EncounterSnapshot snapshot) =>
@@ -1554,6 +1545,38 @@ public sealed partial class MeterViewModel : ObservableObject
     }
 
     /// <summary>Muestra una pelea inventada para acomodar el overlay sin combatir.</summary>
+    /// <summary>Pide abrir el modo dungeon con el resumen de una run.</summary>
+    public event Action<DungeonSummaryViewModel>? RunSummaryRequested;
+
+    /// <summary>Modo dungeon: carga todas las peleas de la run de esa fila (misma entrada a la zona) y arma el resumen.</summary>
+    [RelayCommand]
+    private async Task OpenRunSummaryAsync(HistoryItem? item)
+    {
+        if (item?.Run is not { } run || _history is null)
+        {
+            return;
+        }
+
+        var fights = new List<EncounterSnapshot>();
+        try
+        {
+            foreach (var fight in _allHistory.Where(i => i.Run == run))
+            {
+                if (await _history.LoadAsync(fight.Id).ConfigureAwait(true) is { } snapshot)
+                {
+                    fights.Add(snapshot);
+                }
+            }
+        }
+        catch (DbException)
+        {
+            return;
+        }
+
+        var entered = DateTimeOffset.TryParse(run, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var at) ? at : (DateTimeOffset?)null;
+        RunSummaryRequested?.Invoke(new DungeonSummaryViewModel(DungeonSummary.From(fights, entered)));
+    }
+
     [RelayCommand]
     private void ShowDemo()
     {
