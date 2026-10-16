@@ -28,7 +28,34 @@ public sealed class SkillNames(IReadOnlyDictionary<uint, string> names)
         skillId / 1_000_000 is >= 11 and <= 18 && skillId % 10_000 != 0 ? skillId / 10_000 * 10_000 : null;
 
     /// <summary>Una copia propia, para no tocar la tabla compartida (por ejemplo <see cref="Empty"/>) al poner nombres.</summary>
-    public SkillNames Copy() => new(names) { Custom = Custom };
+    public SkillNames Copy() => new(names) { Custom = Custom, IconFolder = IconFolder };
+
+    /// <summary>La misma tabla con íconos desde esa carpeta (si existe).</summary>
+    public SkillNames WithIcons(string folder) => new(names) { Custom = Custom, IconFolder = Directory.Exists(folder) ? folder : null };
+
+    /// <summary>Carpeta con los íconos (<c>&lt;id&gt;.png</c>), por ejemplo <c>Juego\iconos</c>; <c>null</c> si no hay.</summary>
+    public string? IconFolder { get; init; }
+
+    private readonly Dictionary<uint, string?> _icons = [];
+
+    /// <summary>Ruta del ícono de la skill o, si no está, el de su skill base; <c>null</c> si no hay ninguno.</summary>
+    public string? IconOf(uint skillId)
+    {
+        if (IconFolder is null)
+        {
+            return null;
+        }
+
+        if (!_icons.TryGetValue(skillId, out var icon))
+        {
+            icon = new[] { skillId, BaseOf(skillId) ?? skillId }
+                .Select(id => Path.Combine(IconFolder, $"{id}.png"))
+                .FirstOrDefault(File.Exists);
+            _icons[skillId] = icon;
+        }
+
+        return icon;
+    }
 
     /// <summary>Pone, cambia o (con texto vacío) saca el nombre que el usuario le dio a una skill.</summary>
     public static IReadOnlyDictionary<uint, string> With(IReadOnlyDictionary<uint, string>? custom, uint skillId, string? name)

@@ -10,6 +10,10 @@ public sealed partial class SkillRowViewModel : ObservableObject
     [ObservableProperty]
     public partial string Name { get; set; } = string.Empty;
 
+    /// <summary>Ruta del ícono de la skill; <c>null</c> si no hay.</summary>
+    [ObservableProperty]
+    public partial string? Icon { get; set; }
+
     /// <summary>ID de la skill, para renombrarla.</summary>
     public uint SkillId { get; private set; }
 
@@ -45,12 +49,13 @@ public sealed partial class SkillRowViewModel : ObservableObject
     [ObservableProperty]
     public partial double Bar { get; set; }
 
-    public void Update(string name, SkillSnapshot skill, long top, TimeSpan duration)
+    public void Update(string name, SkillSnapshot skill, long top, TimeSpan duration, string? icon = null)
     {
         var culture = CultureInfo.CurrentCulture;
         var counts = skill.Counts ?? HitCounts.Empty;
         SkillId = skill.SkillId;
         Name = name;
+        Icon = icon;
         Note = skill.PeriodicDamage == 0 ? string.Empty : $"DoT {((double)skill.PeriodicDamage / skill.Damage).ToString("P0", culture)}";
         Damage = ActorRowViewModel.Compact(skill.Damage);
         Share = skill.Share.ToString("P1", culture);

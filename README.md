@@ -98,6 +98,8 @@ pcs.json` si existen, y lo que cargues a mano en `data/` les gana. Nada extraíd
 
 Las skills de clase (IDs 11xxxxxx a 18xxxxxx) traen nivel y variante en los últimos cuatro dígitos: si no hay nombre para el ID exacto se usa el de la skill base (15280143 → 15280000), así alcanza con nombrar la base.
 
+Íconos de skills: si existe `%LOCALAPPDATA%\HysteriaMeter\Juego\iconos\<id>.png`, el detalle lo muestra a la izquierda del nombre (también con el de la skill base). Los íconos son locales y no se suben al repo.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).

@@ -35,6 +35,19 @@ public class GameDataTests
     }
 
     [Fact]
+    public void Skill_icons_fall_back_to_the_base_skill()
+    {
+        var folder = Directory.CreateTempSubdirectory().FullName;
+        File.WriteAllBytes(Path.Combine(folder, "15280000.png"), [1]);
+
+        var names = SkillNames.Empty.WithIcons(folder);
+
+        Assert.Equal(Path.Combine(folder, "15280000.png"), names.IconOf(15280143));
+        Assert.Null(names.IconOf(15010000));
+        Assert.Null(SkillNames.Empty.WithIcons(Path.Combine(folder, "no-existe")).IconOf(15280000));
+    }
+
+    [Fact]
     public void Npc_files_are_merged_and_a_broken_one_is_ignored()
     {
         var folder = Directory.CreateTempSubdirectory().FullName;
