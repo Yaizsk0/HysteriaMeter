@@ -74,6 +74,7 @@ public sealed class EncounterRepository(string databasePath)
         await AddColumnIfMissingAsync(connection, "encounter_actors", "deaths", "INTEGER NOT NULL DEFAULT 0").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounters", "zone_entered_at", "TEXT").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounters", "marks_json", "TEXT").ConfigureAwait(false);
+        await AddColumnIfMissingAsync(connection, "encounters", "phases_json", "TEXT").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounter_actors", "item_level", "INTEGER").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounter_actors", "combat_power", "INTEGER").ConfigureAwait(false);
         await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS ix_encounters_target ON encounters(target_name, started_at)").ConfigureAwait(false);
@@ -96,8 +97,8 @@ public sealed class EncounterRepository(string databasePath)
         await connection.ExecuteAsync(
             """
             INSERT OR REPLACE INTO encounters (id, started_at, ended_at, target_name, target_killed, total_damage, main_target_seconds, deaths_json,
-                                               zone_entered_at, marks_json)
-            VALUES (@Id, @Start, @End, @TargetName, @TargetKilled, @TotalDamage, @MainTargetSeconds, @DeathsJson, @ZoneEnteredAt, @MarksJson)
+                                               zone_entered_at, marks_json, phases_json)
+            VALUES (@Id, @Start, @End, @TargetName, @TargetKilled, @TotalDamage, @MainTargetSeconds, @DeathsJson, @ZoneEnteredAt, @MarksJson, @PhasesJson)
             """,
             new
             {
@@ -111,6 +112,7 @@ public sealed class EncounterRepository(string databasePath)
                 DeathsJson = encounter.Deaths is { Count: > 0 } deaths ? JsonSerializer.Serialize(deaths) : null,
                 ZoneEnteredAt = encounter.ZoneEnteredAt?.ToString("O", CultureInfo.InvariantCulture),
                 MarksJson = encounter.Marks is { Count: > 0 } marks ? JsonSerializer.Serialize(marks) : null,
+                PhasesJson = encounter.Phases is { Count: > 0 } phases ? JsonSerializer.Serialize(phases) : null,
             },
             transaction).ConfigureAwait(false);
 
@@ -290,7 +292,7 @@ public sealed class EncounterRepository(string databasePath)
             """
             SELECT id AS Id, started_at AS StartedAt, ended_at AS EndedAt, target_name AS TargetName,
                    target_killed AS TargetKilled, total_damage AS TotalDamage, main_target_seconds AS MainTargetSeconds,
-                   deaths_json AS DeathsJson, zone_entered_at AS ZoneEnteredAt, marks_json AS MarksJson
+                   deaths_json AS DeathsJson, zone_entered_at AS ZoneEnteredAt, marks_json AS MarksJson, phases_json AS PhasesJson
             FROM encounters WHERE id = @id
             """,
             new { id }).ConfigureAwait(false);
@@ -347,6 +349,7 @@ public sealed class EncounterRepository(string databasePath)
             encounter.MainTargetSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null,
             Deaths: encounter.DeathsJson is null ? null : JsonSerializer.Deserialize<DeathRecap[]>(encounter.DeathsJson),
             Marks: encounter.MarksJson is null ? null : JsonSerializer.Deserialize<int[]>(encounter.MarksJson),
+            Phases: encounter.PhasesJson is null ? null : JsonSerializer.Deserialize<HealthPhase[]>(encounter.PhasesJson),
             ZoneEnteredAt: encounter.ZoneEnteredAt is null ? null : DateTimeOffset.Parse(encounter.ZoneEnteredAt, CultureInfo.InvariantCulture));
     }
 
@@ -383,7 +386,7 @@ internal sealed record EncounterRow(
 
 internal sealed record EncounterDetailRow(
     string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage, double? MainTargetSeconds, string? DeathsJson,
-    string? ZoneEnteredAt, string? MarksJson);
+    string? ZoneEnteredAt, string? MarksJson, string? PhasesJson);
 
 internal sealed record ActorRow(
     long ActorId, string Name, long? ClassId, long IsLocal, long Damage, double Dps, long Hits, long Crits, long MaxHit, long Healing,

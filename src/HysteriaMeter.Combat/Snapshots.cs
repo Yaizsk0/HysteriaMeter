@@ -22,11 +22,16 @@ public sealed record EncounterSnapshot(
     // Entrada a la zona donde empezó la pelea: las peleas con la misma entrada son una "run" de dungeon.
     DateTimeOffset? ZoneEnteredAt = null,
     // Segundos hasta el enrage del objetivo principal, si data/npcs.json lo trae.
-    int? TargetEnrageSeconds = null)
+    int? TargetEnrageSeconds = null,
+    // Cuándo la vida del objetivo principal bajó del 75, 50 y 25 % (fases de la pelea).
+    IReadOnlyList<HealthPhase>? Phases = null)
 {
     /// <summary>Duración mínima de 1 s para que un único golpe no dé un DPS absurdo.</summary>
     public TimeSpan Duration => TimeSpan.FromTicks(Math.Max((End - Start).Ticks, TimeSpan.TicksPerSecond));
 }
+
+/// <summary>La vida del objetivo bajó de <paramref name="Percent"/> % a los <paramref name="Second"/> segundos de pelea.</summary>
+public sealed record HealthPhase(int Percent, int Second);
 
 public sealed record ActorSnapshot(
     ulong Id,

@@ -31,6 +31,12 @@ internal sealed class Encounter(DateTimeOffset start)
     /// <summary>Momentos marcados con el atajo, en segundos desde el inicio.</summary>
     public List<int> Marks { get; } = [];
 
+    /// <summary>Vida (en %) de cada objetivo la primera vez que se la vio en esta pelea: solo cuentan las fases que cruzó acá.</summary>
+    public Dictionary<ulong, double> FirstHealthPercent { get; } = [];
+
+    /// <summary>Fases cruzadas por cada objetivo (75, 50 y 25 %), en orden.</summary>
+    public Dictionary<ulong, List<HealthPhase>> Phases { get; } = [];
+
     /// <summary>Entrada a la zona donde empezó la pelea (ver <see cref="EntityRegistry.ZoneEnteredAt"/>).</summary>
     public DateTimeOffset? ZoneEnteredAt { get; init; }
 

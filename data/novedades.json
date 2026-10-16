@@ -21,6 +21,7 @@
     { "id": 48, "text": "Columna \"10 s\" opcional (configuración): el DPS de los últimos 10 segundos de cada jugador." },
     { "id": 49, "text": "Opción en EXPORTAR Y COMPARTIR: guardar una imagen del overlay cada vez que derrotás un boss." },
     { "id": 50, "text": "Historial por personaje: récords, intentos y percentiles ya no mezclan a tus personajes, y hay un filtro para ver uno solo." },
-    { "id": 51, "text": "Imanes: al soltar el overlay cerca de un borde de la pantalla o de otra ventana del meter, se pega solo." }
+    { "id": 51, "text": "Imanes: al soltar el overlay cerca de un borde de la pantalla o de otra ventana del meter, se pega solo." },
+    { "id": 52, "text": "Fases del boss en el detalle: a qué minuto bajó del 75, 50 y 25 % de vida." }
   ]
 }
