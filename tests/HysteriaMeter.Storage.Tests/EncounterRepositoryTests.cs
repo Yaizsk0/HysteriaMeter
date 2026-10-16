@@ -153,6 +153,9 @@ public sealed class EncounterRepositoryTests : IDisposable
         Assert.Equal(1500, await repository.PreviousLocalDpsAsync("Tarka", third.Id.ToString()));
         Assert.Equal(1000, await repository.PreviousLocalDpsAsync("Tarka", second.Id.ToString()));
         Assert.Null(await repository.PreviousLocalDpsAsync("Otro", other.Id.ToString()));
+        Assert.Equal((second.Id.ToString(), second.Id.ToString()), await repository.PastAttemptsAsync("Tarka", third.Id.ToString()));
+        Assert.Equal((first.Id.ToString(), third.Id.ToString()), await repository.PastAttemptsAsync("Tarka", second.Id.ToString()));
+        Assert.Equal(((string?)null, (string?)null), await repository.PastAttemptsAsync("Otro", other.Id.ToString()));
     }
 
     [Fact]

@@ -179,11 +179,11 @@
                 </StackPanel>
             </Border>
 
-            <!-- Comparar con otro jugador de la misma pelea -->
+            <!-- Comparar con otro jugador de la misma pelea o, para el jugador local, con tus intentos guardados -->
             <StackPanel DockPanel.Dock="Top" Margin="10,0,10,6">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="COMPARAR CON" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <ComboBox ItemsSource="{Binding Others}" SelectedItem="{Binding CompareWith}" Width="160" FontSize="12" />
+                    <ComboBox ItemsSource="{Binding Others}" SelectedItem="{Binding CompareWith}" Width="210" FontSize="12" />
                 </StackPanel>
                 <ItemsControl ItemsSource="{Binding Comparison}" Margin="0,4,0,0" Visibility="{Binding HasComparison, Converter={StaticResource Visible}}">
                     <ItemsControl.ItemTemplate>

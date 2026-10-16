@@ -78,7 +78,12 @@ public sealed partial class MeterViewModel : ObservableObject
         _engine = session.Engine;
         _recorder = session.Recorder;
         _history = session.History;
-        Detail = new ActorDetailViewModel(session.SkillNames) { LogSource = session.Engine.CombatLog, NicknameOf = name => Preferences.Nicknames.GetValueOrDefault(name) };
+        Detail = new ActorDetailViewModel(session.SkillNames)
+        {
+            LogSource = session.Engine.CombatLog,
+            NicknameOf = name => Preferences.Nicknames.GetValueOrDefault(name),
+            PastAttempts = LoadPastAttemptsAsync,
+        };
         Detail.SkillRenamed += (skillId, name) =>
             Update(Preferences with { SkillAliases = SkillNames.With(Preferences.SkillAliases, skillId, name) }, nameof(Preferences));
         Detail.NicknameChanged += (realName, alias) =>
@@ -1279,6 +1284,34 @@ public sealed partial class MeterViewModel : ObservableObject
         previousBest is { } best && dps > best
             ? $"¡Récord en {target}! {ActorRowViewModel.Compact(dps)} DPS (antes {ActorRowViewModel.Compact(best)})"
             : null;
+
+    /// <summary>Tu intento anterior y tu mejor intento contra el objetivo, para "Comparar con" del detalle.</summary>
+    private async Task<IReadOnlyList<CompareOption>> LoadPastAttemptsAsync(EncounterSnapshot snapshot)
+    {
+        if (_history is null || snapshot.TargetName is not { Length: > 0 } target)
+        {
+            return [];
+        }
+
+        try
+        {
+            var (previousId, bestId) = await _history.PastAttemptsAsync(target, snapshot.Id.ToString()).ConfigureAwait(true);
+            var previous = previousId is null ? null : await _history.LoadAsync(previousId).ConfigureAwait(true);
+            var best = bestId is null || bestId == previousId ? null : await _history.LoadAsync(bestId).ConfigureAwait(true);
+            return
+            [
+                .. new[]
+                {
+                    CompareOption.Attempt(CompareOption.PreviousAttemptId, bestId == previousId ? "Tu intento anterior (tu mejor)" : "Tu intento anterior", previous),
+                    CompareOption.Attempt(CompareOption.BestAttemptId, "Tu mejor intento", best),
+                }.OfType<CompareOption>(),
+            ];
+        }
+        catch (DbException)
+        {
+            return [];
+        }
+    }
 
     /// <summary>"+8% vs tu intento anterior (11.0k DPS)", o <c>null</c> si no hay intento anterior o la diferencia es mínima.</summary>
     public static string? VsPreviousText(double dps, double? previous)

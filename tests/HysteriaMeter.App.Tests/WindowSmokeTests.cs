@@ -162,6 +162,17 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Saved_attempt_option_uses_the_local_row_of_that_fight()
+    {
+        Assert.Null(CompareOption.Attempt(CompareOption.PreviousAttemptId, "Tu intento anterior", null));
+        var saved = DemoEncounter.Create(DateTimeOffset.UtcNow);
+        var option = CompareOption.Attempt(CompareOption.PreviousAttemptId, "Tu intento anterior", saved);
+        Assert.NotNull(option);
+        Assert.StartsWith("Tu intento anterior · ", option.Name, StringComparison.Ordinal);
+        Assert.True(option.Saved!.IsLocalPlayer);
+    }
+
+    [Fact]
     public void Vs_previous_attempt_shows_the_change_in_percent()
     {
         Assert.Null(MeterViewModel.VsPreviousText(1000, previous: null));
