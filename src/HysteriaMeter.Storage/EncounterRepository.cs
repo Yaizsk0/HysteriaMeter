@@ -213,6 +213,31 @@ public sealed class EncounterRepository(string databasePath)
             new { targetName, excludeId }).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Ids de tu intento anterior y de tu mejor intento contra ese objetivo, sin contar <paramref name="excludeId"/>,
+    /// para compararlos con la pelea actual. Cada uno es <c>null</c> si no hay.
+    /// </summary>
+    public async Task<(string? Previous, string? Best)> PastAttemptsAsync(string targetName, string excludeId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var previous = await connection.ExecuteScalarAsync<string?>(
+            """
+            SELECT e.id FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
+            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId
+              AND e.started_at < COALESCE((SELECT started_at FROM encounters WHERE id = @excludeId), '9999')
+            ORDER BY e.started_at DESC LIMIT 1
+            """,
+            new { targetName, excludeId }).ConfigureAwait(false);
+        var best = await connection.ExecuteScalarAsync<string?>(
+            """
+            SELECT e.id FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
+            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId
+            ORDER BY a.dps DESC LIMIT 1
+            """,
+            new { targetName, excludeId }).ConfigureAwait(false);
+        return (previous, best);
+    }
+
     /// <summary>Guarda (o borra, con texto vacío) la nota de una pelea.</summary>
     public async Task SetNoteAsync(string id, string? note, CancellationToken cancellationToken = default)
     {

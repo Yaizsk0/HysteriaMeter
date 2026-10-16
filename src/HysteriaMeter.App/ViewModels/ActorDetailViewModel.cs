@@ -10,9 +10,20 @@ namespace HysteriaMeter.App.ViewModels;
 /// <summary>Una muerte del jugador elegido, para la sección MUERTES del detalle.</summary>
 public sealed record DeathItem(string When, string Summary, string LastHits);
 
-/// <summary>Otro jugador de la pelea, para comparar.</summary>
-public sealed record CompareOption(ulong Id, string Name)
+/// <summary>Otro jugador de la pelea o, con <paramref name="Saved"/>, uno de tus intentos guardados contra el mismo objetivo.</summary>
+public sealed record CompareOption(ulong Id, string Name, ActorSnapshot? Saved = null)
 {
+    /// <summary>Ids reservados para los intentos guardados: no chocan con entidades del juego.</summary>
+    public const ulong PreviousAttemptId = ulong.MaxValue;
+
+    public const ulong BestAttemptId = ulong.MaxValue - 1;
+
+    /// <summary>"Tu intento anterior · 12.3k" con tu fila de esa pelea; <c>null</c> si la pelea no tiene jugador local.</summary>
+    public static CompareOption? Attempt(ulong id, string label, EncounterSnapshot? saved) =>
+        saved?.Actors.FirstOrDefault(a => a.IsLocalPlayer) is { } me
+            ? new CompareOption(id, $"{label} · {ActorRowViewModel.Compact(me.Dps)}", me)
+            : null;
+
     public override string ToString() => Name;
 }
 
@@ -120,6 +131,12 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     public partial CompareOption? CompareWith { get; set; }
 
     public ObservableCollection<CompareRow> Comparison { get; } = [];
+
+    /// <summary>Carga tu intento anterior y tu mejor intento contra el objetivo de la pelea, para compararte; <c>null</c> sin historial.</summary>
+    public Func<EncounterSnapshot, Task<IReadOnlyList<CompareOption>>>? PastAttempts { get; set; }
+
+    private IReadOnlyList<CompareOption> _past = [];
+    private Guid? _pastFor;
 
     [ObservableProperty]
     public partial bool HasComparison { get; set; }
@@ -237,6 +254,8 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         CompareWith = null;
         Others.Clear();
         _rebuildingOthers = false;
+        _past = [];
+        _pastFor = null;
     }
 
     public void Update(EncounterSnapshot snapshot)
@@ -275,6 +294,11 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         ChartMarks = MarksText(snapshot.Marks);
         UpdateActivity(FightActivity.From(actor.Timeline));
         UpdateAdvice(snapshot, actor);
+        if (actor.IsLocalPlayer && _pastFor != snapshot.Id)
+        {
+            _ = LoadPastAttemptsAsync(snapshot);
+        }
+
         UpdateComparison(snapshot, actor);
 
         var skills = actor.Skills;
@@ -346,9 +370,29 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         }
     }
 
+    private async Task LoadPastAttemptsAsync(EncounterSnapshot snapshot)
+    {
+        _pastFor = snapshot.Id;
+        _past = [];
+        if (PastAttempts is not { } source)
+        {
+            return;
+        }
+
+        var past = await source(snapshot).ConfigureAwait(true);
+
+        // Si mientras cargaba se eligió otro jugador o empezó otra pelea, esto ya no corresponde.
+        if (_pastFor == snapshot.Id && _last is { } last)
+        {
+            _past = past;
+            Update(last);
+        }
+    }
+
     private void UpdateComparison(EncounterSnapshot snapshot, ActorSnapshot actor)
     {
-        var others = snapshot.Actors.Where(a => a.Id != actor.Id).OrderByDescending(a => a.Dps).Select(a => new CompareOption(a.Id, Display(a.Name))).ToList();
+        var others = snapshot.Actors.Where(a => a.Id != actor.Id).OrderByDescending(a => a.Dps).Select(a => new CompareOption(a.Id, Display(a.Name)))
+            .Concat(actor.IsLocalPlayer ? _past : []).ToList();
         if (!others.SequenceEqual(Others))
         {
             var selected = CompareWith?.Id;
@@ -370,7 +414,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
             }
         }
 
-        var other = CompareWith is { } choice ? snapshot.Actors.FirstOrDefault(a => a.Id == choice.Id) : null;
+        var other = CompareWith is { } choice ? choice.Saved ?? snapshot.Actors.FirstOrDefault(a => a.Id == choice.Id) : null;
         HasComparison = other is not null;
         Comparison.Clear();
         if (other is not null)
