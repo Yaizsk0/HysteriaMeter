@@ -144,6 +144,7 @@ public sealed partial class MeterViewModel : ObservableObject
     public ObservableCollection<HistoryItem> History { get; } = [];
 
     private List<HistoryItem> _allHistory = [];
+    private readonly RankTrends _rankTrends = new();
 
     /// <summary>Búsqueda del panel de historial: objetivo o nota.</summary>
     [ObservableProperty]
@@ -1785,6 +1786,8 @@ public sealed partial class MeterViewModel : ObservableObject
         var total = rows.Sum(metric);
         var top = rows.Count > 0 ? metric(rows[0]) : 0;
         var ranked = rows;
+        _rankTrends.Begin(snapshot.Id, ((int)tab * 2) + (bossOnly ? 1 : 0));
+        var now = DateTimeOffset.Now;
         if (Preferences.OnlyMe && rows.Any(a => a.IsLocalPlayer))
         {
             rows = [.. rows.Where(a => a.IsLocalPlayer)];
@@ -1806,7 +1809,9 @@ public sealed partial class MeterViewModel : ObservableObject
                 Actors.Add(new ActorRowViewModel());
             }
 
-            Actors[i].Update(ranked.IndexOf(rows[i]) + 1, rows[i], Tab, top, total, snapshot.Duration, BossOnly, Preferences.ShowGear, Preferences.ColorByClass);
+            var rank = ranked.IndexOf(rows[i]) + 1;
+            Actors[i].Update(rank, rows[i], Tab, top, total, snapshot.Duration, BossOnly, Preferences.ShowGear, Preferences.ColorByClass);
+            Actors[i].Trend = _rankTrends.Update(rows[i].Id, rank, now);
             Actors[i].Spark = Preferences.Sparklines && Tab == MeterTab.Damage ? ActorRowViewModel.Sparkline(rows[i].Timeline) : null;
             Actors[i].Recent = Preferences.ShowRecentColumn && Tab == MeterTab.Damage
                 ? ActorRowViewModel.Compact(ActorRowViewModel.RecentDps(rows[i].Timeline, snapshot.Duration))

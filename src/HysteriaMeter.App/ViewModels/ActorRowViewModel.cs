@@ -78,6 +78,10 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial string Recent { get; set; } = "–";
 
+    /// <summary>"▲" o "▼" unos segundos después de subir o bajar de puesto.</summary>
+    [ObservableProperty]
+    public partial string Trend { get; set; } = string.Empty;
+
     /// <summary>Porcentaje de golpes críticos (columna "CRIT").</summary>
     [ObservableProperty]
     public partial string Crit { get; set; } = "–";
