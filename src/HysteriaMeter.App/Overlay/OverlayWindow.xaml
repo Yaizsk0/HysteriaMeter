@@ -493,6 +493,9 @@
                         <TextBlock DockPanel.Dock="Top" Text="PELEAS GUARDADAS" Style="{StaticResource SettingsHeader}" Margin="0,0,0,6" />
                         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                             <CheckBox DockPanel.Dock="Right" Style="{StaticResource Option}" Content="Derrotados" IsChecked="{Binding OnlyKills}" Margin="8,0,0,0" />
+                            <ComboBox DockPanel.Dock="Right" ItemsSource="{Binding HistoryCharacters}" SelectedItem="{Binding SelectedCharacter}" Width="100" FontSize="12" Margin="8,0,0,0"
+                                      ToolTip="Personaje: récords, intentos y percentiles se cuentan por personaje"
+                                      Visibility="{Binding HasSeveralCharacters, Converter={StaticResource Visible}}" />
                             <TextBox Style="{StaticResource Field}" Text="{Binding HistorySearch, UpdateSourceTrigger=PropertyChanged}" ToolTip="Buscar por boss o por nota" />
                         </DockPanel>
                         <!-- Progreso de mi DPS cuando la búsqueda deja un solo boss -->
@@ -555,6 +558,7 @@
                                                         <Run Text="{Binding Duration, Mode=OneWay}" />
                                                         <Run Text="{Binding Result, Mode=OneWay}" />
                                                         <Run Text="{Binding AttemptText, Mode=OneWay}" />
+                                                        <Run Text="{Binding CharacterTag, Mode=OneWay}" />
                                                         <Run Text="{Binding VsBest, Mode=OneWay}" />
                                                     </TextBlock>
                                                     <TextBlock Text="{Binding Note}" FontSize="11" FontStyle="Italic" Foreground="{StaticResource TextMuted}" TextTrimming="CharacterEllipsis"

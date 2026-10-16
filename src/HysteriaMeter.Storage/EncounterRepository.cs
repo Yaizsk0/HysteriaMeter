@@ -161,16 +161,20 @@ public sealed class EncounterRepository(string databasePath)
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
 
         // Intento: cuántas veces se peleó contra ese objetivo hasta esta pelea. Récord: el mejor DPS propio contra ese objetivo.
+        // Los dos son por personaje: con varios personajes, cada uno compite contra sí mismo ("IS" compara también null).
         var rows = await connection.QueryAsync<EncounterRow>(
             """
+            WITH loc AS (SELECT encounter_id, MAX(dps) AS dps, MAX(name) AS name FROM encounter_actors WHERE is_local = 1 GROUP BY encounter_id)
             SELECT e.id AS Id, e.started_at AS StartedAt, e.ended_at AS EndedAt, e.target_name AS TargetName,
                    e.target_killed AS TargetKilled, e.total_damage AS TotalDamage, e.note AS Note,
-                   (SELECT MAX(a.dps) FROM encounter_actors a WHERE a.encounter_id = e.id AND a.is_local = 1) AS LocalDps,
-                   (SELECT MAX(a.dps) FROM encounter_actors a JOIN encounters o ON o.id = a.encounter_id
-                     WHERE a.is_local = 1 AND o.target_name = e.target_name) AS BestLocalDps,
-                   (SELECT COUNT(*) FROM encounters o WHERE o.target_name = e.target_name AND o.started_at <= e.started_at) AS Attempt,
-                   e.zone_entered_at AS ZoneEnteredAt
-            FROM encounters e ORDER BY e.started_at DESC LIMIT @limit
+                   l.dps AS LocalDps,
+                   (SELECT MAX(l2.dps) FROM loc l2 JOIN encounters o ON o.id = l2.encounter_id
+                     WHERE o.target_name = e.target_name AND l2.name IS l.name) AS BestLocalDps,
+                   (SELECT COUNT(*) FROM encounters o LEFT JOIN loc l2 ON l2.encounter_id = o.id
+                     WHERE o.target_name = e.target_name AND o.started_at <= e.started_at AND l2.name IS l.name) AS Attempt,
+                   e.zone_entered_at AS ZoneEnteredAt,
+                   l.name AS LocalName
+            FROM encounters e LEFT JOIN loc l ON l.encounter_id = e.id ORDER BY e.started_at DESC LIMIT @limit
             """,
             new { limit }).ConfigureAwait(false);
         return [.. rows.Select(r => new EncounterSummary(
@@ -184,57 +188,61 @@ public sealed class EncounterRepository(string databasePath)
             r.LocalDps,
             r.TargetName is null ? 0 : (int)r.Attempt,
             r.LocalDps is { } dps && r.BestLocalDps is { } best && dps >= best,
-            r.ZoneEnteredAt))];
+            r.ZoneEnteredAt,
+            r.LocalName))];
     }
 
-    /// <summary>Mejor DPS propio contra ese objetivo, sin contar la pelea <paramref name="excludeId"/>. <c>null</c> si no hay otra.</summary>
-    public async Task<double?> BestLocalDpsAsync(string targetName, string excludeId, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Mejor DPS propio contra ese objetivo, sin contar la pelea <paramref name="excludeId"/>. <c>null</c> si no hay otra.
+    /// Con <paramref name="localName"/>, solo las peleas con ese personaje.
+    /// </summary>
+    public async Task<double?> BestLocalDpsAsync(string targetName, string excludeId, string? localName = null, CancellationToken cancellationToken = default)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         return await connection.ExecuteScalarAsync<double?>(
             """
             SELECT MAX(a.dps) FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
-            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId
+            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
             """,
-            new { targetName, excludeId }).ConfigureAwait(false);
+            new { targetName, excludeId, localName }).ConfigureAwait(false);
     }
 
     /// <summary>DPS propio en el intento anterior contra ese objetivo (el último antes de <paramref name="excludeId"/>). <c>null</c> si no hay.</summary>
-    public async Task<double?> PreviousLocalDpsAsync(string targetName, string excludeId, CancellationToken cancellationToken = default)
+    public async Task<double?> PreviousLocalDpsAsync(string targetName, string excludeId, string? localName = null, CancellationToken cancellationToken = default)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         return await connection.ExecuteScalarAsync<double?>(
             """
             SELECT a.dps FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
-            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId
+            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
               AND e.started_at < COALESCE((SELECT started_at FROM encounters WHERE id = @excludeId), '9999')
             ORDER BY e.started_at DESC LIMIT 1
             """,
-            new { targetName, excludeId }).ConfigureAwait(false);
+            new { targetName, excludeId, localName }).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Ids de tu intento anterior y de tu mejor intento contra ese objetivo, sin contar <paramref name="excludeId"/>,
     /// para compararlos con la pelea actual. Cada uno es <c>null</c> si no hay.
     /// </summary>
-    public async Task<(string? Previous, string? Best)> PastAttemptsAsync(string targetName, string excludeId, CancellationToken cancellationToken = default)
+    public async Task<(string? Previous, string? Best)> PastAttemptsAsync(string targetName, string excludeId, string? localName = null, CancellationToken cancellationToken = default)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         var previous = await connection.ExecuteScalarAsync<string?>(
             """
             SELECT e.id FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
-            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId
+            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
               AND e.started_at < COALESCE((SELECT started_at FROM encounters WHERE id = @excludeId), '9999')
             ORDER BY e.started_at DESC LIMIT 1
             """,
-            new { targetName, excludeId }).ConfigureAwait(false);
+            new { targetName, excludeId, localName }).ConfigureAwait(false);
         var best = await connection.ExecuteScalarAsync<string?>(
             """
             SELECT e.id FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
-            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId
+            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
             ORDER BY a.dps DESC LIMIT 1
             """,
-            new { targetName, excludeId }).ConfigureAwait(false);
+            new { targetName, excludeId, localName }).ConfigureAwait(false);
         return (previous, best);
     }
 
@@ -365,12 +373,13 @@ public sealed record EncounterSummary(
     double? LocalDps = null,
     int Attempt = 0,
     bool IsRecord = false,
-    string? ZoneEnteredAt = null);
+    string? ZoneEnteredAt = null,
+    string? LocalName = null);
 
 /// <summary>SQLite no tiene booleanos: la fila cruda trae <c>target_killed</c> como entero.</summary>
 internal sealed record EncounterRow(
     string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage, string? Note,
-    double? LocalDps, double? BestLocalDps, long Attempt, string? ZoneEnteredAt);
+    double? LocalDps, double? BestLocalDps, long Attempt, string? ZoneEnteredAt, string? LocalName);
 
 internal sealed record EncounterDetailRow(
     string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage, double? MainTargetSeconds, string? DeathsJson,

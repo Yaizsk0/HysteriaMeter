@@ -204,6 +204,21 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void History_compares_and_filters_per_character()
+    {
+        HistoryItem Item(string id, string character, double dps) =>
+            new(id, "Tarka", "16/10 21:00", "01:00", "1.0M", true, LocalDps: dps, Character: character);
+
+        var items = HistoryItem.WithCharacterTags(HistoryItem.WithComparisons([Item("a", "Tests", 3000), Item("b", "Alt", 1000), Item("c", "Alt", 1200)]));
+        Assert.Equal(100, items.Single(i => i.Id == "c").Percentile);
+        Assert.Null(items.Single(i => i.Id == "a").Percentile);
+        Assert.Equal("· Alt", items.Single(i => i.Id == "b").CharacterTag);
+        Assert.True(items[0].Matches(null, onlyKills: false, HistoryItem.AllCharacters));
+        Assert.False(items[0].Matches(null, onlyKills: false, "Alt"));
+        Assert.Empty(HistoryItem.WithCharacterTags([Item("x", "Tests", 1)]).Single().CharacterTag);
+    }
+
+    [Fact]
     public void Vs_previous_attempt_shows_the_change_in_percent()
     {
         Assert.Null(MeterViewModel.VsPreviousText(1000, previous: null));

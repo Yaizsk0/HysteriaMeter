@@ -156,6 +156,17 @@ public sealed partial class MeterViewModel : ObservableObject
 
     partial void OnOnlyKillsChanged(bool value) => ApplyHistoryFilter();
 
+    /// <summary>"Todos" y cada personaje con peleas guardadas; el filtro aparece con más de un personaje.</summary>
+    public ObservableCollection<string> HistoryCharacters { get; } = [];
+
+    [ObservableProperty]
+    public partial bool HasSeveralCharacters { get; set; }
+
+    [ObservableProperty]
+    public partial string SelectedCharacter { get; set; } = HistoryItem.AllCharacters;
+
+    partial void OnSelectedCharacterChanged(string value) => ApplyHistoryFilter();
+
     // Pelea guardada que se está mirando (para la nota y para borrarla).
     private string? _pinnedId;
 
@@ -1152,7 +1163,7 @@ public sealed partial class MeterViewModel : ObservableObject
 
         try
         {
-            _allHistory = [.. HistoryItem.WithComparisons([.. (await _history.ListRecentAsync(200).ConfigureAwait(true)).Select(HistoryItem.From)])];
+            _allHistory = [.. HistoryItem.WithCharacterTags(HistoryItem.WithComparisons([.. (await _history.ListRecentAsync(200).ConfigureAwait(true)).Select(HistoryItem.From)]))];
         }
         catch (DbException)
         {
@@ -1160,7 +1171,23 @@ public sealed partial class MeterViewModel : ObservableObject
             _allHistory = [];
         }
 
+        UpdateHistoryCharacters();
         ApplyHistoryFilter();
+    }
+
+    private void UpdateHistoryCharacters()
+    {
+        var characters = _allHistory.Select(i => i.Character).OfType<string>().Distinct(StringComparer.Ordinal).Order(StringComparer.CurrentCulture).ToList();
+        HasSeveralCharacters = characters.Count > 1;
+        var selected = SelectedCharacter;
+        HistoryCharacters.Clear();
+        HistoryCharacters.Add(HistoryItem.AllCharacters);
+        foreach (var character in characters)
+        {
+            HistoryCharacters.Add(character);
+        }
+
+        SelectedCharacter = HistoryCharacters.Contains(selected) ? selected : HistoryItem.AllCharacters;
     }
 
     /// <summary>Línea de mi DPS a lo largo de los intentos, cuando la búsqueda deja un solo boss.</summary>
@@ -1200,13 +1227,13 @@ public sealed partial class MeterViewModel : ObservableObject
     private void ApplyHistoryFilter()
     {
         History.Clear();
-        var visible = _allHistory.Where(i => i.Matches(HistorySearch, OnlyKills)).Take(60).ToList();
+        var visible = _allHistory.Where(i => i.Matches(HistorySearch, OnlyKills, SelectedCharacter)).Take(60).ToList();
         foreach (var item in HistoryItem.WithRuns(visible, _allHistory))
         {
             History.Add(item);
         }
 
-        UpdateProgress(HistoryItem.Progress(_allHistory.Where(i => i.Matches(HistorySearch, OnlyKills))));
+        UpdateProgress(HistoryItem.Progress(_allHistory.Where(i => i.Matches(HistorySearch, OnlyKills, SelectedCharacter))));
     }
 
     [RelayCommand]
@@ -1277,8 +1304,8 @@ public sealed partial class MeterViewModel : ObservableObject
         double? previous;
         try
         {
-            best = await _history.BestLocalDpsAsync(target, snapshot.Id.ToString()).ConfigureAwait(true);
-            previous = await _history.PreviousLocalDpsAsync(target, snapshot.Id.ToString()).ConfigureAwait(true);
+            best = await _history.BestLocalDpsAsync(target, snapshot.Id.ToString(), local.Name).ConfigureAwait(true);
+            previous = await _history.PreviousLocalDpsAsync(target, snapshot.Id.ToString(), local.Name).ConfigureAwait(true);
         }
         catch (DbException)
         {
@@ -1339,7 +1366,8 @@ public sealed partial class MeterViewModel : ObservableObject
 
         try
         {
-            var (previousId, bestId) = await _history.PastAttemptsAsync(target, snapshot.Id.ToString()).ConfigureAwait(true);
+            var localName = snapshot.Actors.FirstOrDefault(a => a.IsLocalPlayer)?.Name;
+            var (previousId, bestId) = await _history.PastAttemptsAsync(target, snapshot.Id.ToString(), localName).ConfigureAwait(true);
             var previous = previousId is null ? null : await _history.LoadAsync(previousId).ConfigureAwait(true);
             var best = bestId is null || bestId == previousId ? null : await _history.LoadAsync(bestId).ConfigureAwait(true);
             return
