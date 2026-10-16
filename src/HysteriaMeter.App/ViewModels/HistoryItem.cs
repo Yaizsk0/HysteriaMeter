@@ -24,8 +24,17 @@ public sealed record HistoryItem(
     int? Percentile = null,
     // Personaje local de esa pelea: récords, intentos y percentiles se cuentan por personaje.
     string? Character = null,
-    string CharacterTag = "")
+    string CharacterTag = "",
+    // Largo de la pelea en segundos, para la kill más rápida.
+    double? Seconds = null,
+    string FastestTag = "")
 {
+    /// <summary>La kill más rápida de las peleas que muestra el historial (todas contra el mismo boss), o <c>null</c>.</summary>
+    public static TimeSpan? FastestKill(IEnumerable<HistoryItem> items) =>
+        items.Where(i => i.Killed && i.Seconds is > 0).Select(i => i.Seconds!.Value).DefaultIfEmpty().Min() is var best and > 0
+            ? TimeSpan.FromSeconds(best)
+            : null;
+
     /// <summary>Opción del filtro de personaje que muestra todos.</summary>
     public const string AllCharacters = "Todos";
 
@@ -124,9 +133,17 @@ public sealed record HistoryItem(
             .Where(g => g.Count() > 1)
             .ToDictionary(g => g.Key, g => (IReadOnlyCollection<double>)[.. g.Select(i => i.LocalDps!.Value)]);
 
+        // La kill más rápida contra cada boss (por personaje), si hubo más de una kill.
+        var fastest = items
+            .Where(i => i.Killed && i.Seconds is > 0 && i.Target != "Encuentro")
+            .GroupBy(i => (i.Target, i.Character))
+            .Where(g => g.Count() > 1)
+            .ToDictionary(g => g.Key, g => g.MinBy(i => i.Seconds)!.Id);
+
         return [.. items.Select(i => i.LocalDps is { } dps && dps > 0 && attempts.TryGetValue((i.Target, i.Character), out var all)
             ? i with { VsBest = Compare(dps, all.Max()), Percentile = PercentileOf(dps, all) }
-            : i)];
+            : i)
+            .Select(i => fastest.TryGetValue((i.Target, i.Character), out var id) && id == i.Id ? i with { FastestTag = "· ⏱ kill más rápida" } : i)];
     }
 
     /// <summary>
@@ -183,6 +200,7 @@ public sealed record HistoryItem(
             summary.LocalDps,
             Run: summary.ZoneEnteredAt,
             Ended: end,
-            Character: summary.LocalName);
+            Character: summary.LocalName,
+            Seconds: (end - start).TotalSeconds);
     }
 }

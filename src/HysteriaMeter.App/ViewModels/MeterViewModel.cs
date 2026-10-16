@@ -1241,7 +1241,7 @@ public sealed partial class MeterViewModel : ObservableObject
     [ObservableProperty]
     public partial string ProgressText { get; set; } = string.Empty;
 
-    private void UpdateProgress((string Target, IReadOnlyList<double> Dps)? progress)
+    private void UpdateProgress((string Target, IReadOnlyList<double> Dps)? progress, TimeSpan? fastestKill)
     {
         HasProgress = progress is not null;
         if (progress is not { } p)
@@ -1258,12 +1258,13 @@ public sealed partial class MeterViewModel : ObservableObject
 
         points.Freeze();
         ProgressPoints = points;
-        ProgressText = ProgressSummary(p.Target, p.Dps);
+        ProgressText = ProgressSummary(p.Target, p.Dps, fastestKill);
     }
 
-    /// <summary>"Tarka · 8 intentos · último 11.2k · mejor 12.4k".</summary>
-    public static string ProgressSummary(string target, IReadOnlyList<double> dps) =>
-        $"{target} · {dps.Count} intentos · último {ActorRowViewModel.Compact(dps[^1])} · mejor {ActorRowViewModel.Compact(dps.Max())}";
+    /// <summary>"Tarka · 8 intentos · último 11.2k · mejor 12.4k · kill más rápida 2:25".</summary>
+    public static string ProgressSummary(string target, IReadOnlyList<double> dps, TimeSpan? fastestKill = null) =>
+        $"{target} · {dps.Count} intentos · último {ActorRowViewModel.Compact(dps[^1])} · mejor {ActorRowViewModel.Compact(dps.Max())}"
+        + (fastestKill is { } kill ? $" · kill más rápida {kill.ToString(@"m\:ss", CultureInfo.InvariantCulture)}" : string.Empty);
 
     private void ApplyHistoryFilter()
     {
@@ -1274,7 +1275,8 @@ public sealed partial class MeterViewModel : ObservableObject
             History.Add(item);
         }
 
-        UpdateProgress(HistoryItem.Progress(_allHistory.Where(i => i.Matches(HistorySearch, OnlyKills, SelectedCharacter))));
+        var matching = _allHistory.Where(i => i.Matches(HistorySearch, OnlyKills, SelectedCharacter)).ToList();
+        UpdateProgress(HistoryItem.Progress(matching), HistoryItem.FastestKill(matching));
     }
 
     [RelayCommand]

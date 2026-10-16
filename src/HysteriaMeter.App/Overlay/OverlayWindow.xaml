@@ -560,6 +560,7 @@
                                                         <Run Text="{Binding AttemptText, Mode=OneWay}" />
                                                         <Run Text="{Binding CharacterTag, Mode=OneWay}" />
                                                         <Run Text="{Binding VsBest, Mode=OneWay}" />
+                                                        <Run Text="{Binding FastestTag, Mode=OneWay}" />
                                                     </TextBlock>
                                                     <TextBlock Text="{Binding Note}" FontSize="11" FontStyle="Italic" Foreground="{StaticResource TextMuted}" TextTrimming="CharacterEllipsis"
                                                                Visibility="{Binding HasNote, Converter={StaticResource Visible}}" />
