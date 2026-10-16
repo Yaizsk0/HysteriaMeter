@@ -97,6 +97,9 @@ public sealed record MeterPreferences
     /// <summary>Tema visual (ver <see cref="MeterThemes"/>).</summary>
     public string Theme { get; init; } = MeterThemes.Default;
 
+    /// <summary>Nombres de skills puestos desde el detalle (ID → nombre).</summary>
+    public IReadOnlyDictionary<uint, string> SkillAliases { get; init; } = new Dictionary<uint, string>();
+
     /// <summary>Atajos globales, como "Ctrl+Shift+L"; vacío = sin atajo.</summary>
     public string HotkeyClickThrough { get; init; } = "Ctrl+Shift+L";
 

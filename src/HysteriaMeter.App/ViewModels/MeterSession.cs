@@ -25,7 +25,8 @@ public sealed class MeterSession
     {
         Engine = engine;
         Recorder = recorder;
-        SkillNames = skillNames;
+        SkillNames = skillNames.Copy();
+        SkillNames.Custom = preferences.SkillAliases ?? new Dictionary<uint, string>();
         History = history;
         Status = status ?? new CaptureStatus();
         Decoder = decoder ?? new DecoderStats();
@@ -117,6 +118,7 @@ public sealed class MeterSession
     public void Update(MeterPreferences preferences, params string[] changed)
     {
         Preferences = preferences;
+        SkillNames.Custom = preferences.SkillAliases ?? new Dictionary<uint, string>();
         ViewModels.Numbers.Style = preferences.Numbers;
         Engine.IdleTimeout = TimeSpan.FromSeconds(preferences.IdleSeconds);
         Engine.Scope = preferences.Scope;

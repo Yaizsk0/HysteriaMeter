@@ -79,6 +79,8 @@ public sealed partial class MeterViewModel : ObservableObject
         _recorder = session.Recorder;
         _history = session.History;
         Detail = new ActorDetailViewModel(session.SkillNames) { LogSource = session.Engine.CombatLog, NicknameOf = name => Preferences.Nicknames.GetValueOrDefault(name) };
+        Detail.SkillRenamed += (skillId, name) =>
+            Update(Preferences with { SkillAliases = SkillNames.With(Preferences.SkillAliases, skillId, name) }, nameof(Preferences));
         Detail.NicknameChanged += (realName, alias) =>
             Update(Preferences with { Nicknames = ViewModels.Nicknames.With(Preferences.Nicknames, realName, alias) }, nameof(Preferences));
         Tab = tab;

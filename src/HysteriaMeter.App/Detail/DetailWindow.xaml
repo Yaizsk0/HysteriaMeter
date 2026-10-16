@@ -275,11 +275,30 @@
                 <ContentControl Content="{Binding Totals}" ContentTemplate="{StaticResource SkillRowCells}" FontWeight="Bold" />
             </Border>
 
+            <!-- Renombrar una skill: doble clic en su fila (el juego solo manda el ID) -->
+            <DockPanel DockPanel.Dock="Top" Margin="18,2,18,4" Visibility="{Binding IsRenamingSkill, Converter={StaticResource Visible}}">
+                <TextBlock Text="{Binding RenamingSkillLabel}" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0" />
+                <Button DockPanel.Dock="Right" Content="✕" Command="{Binding CancelSkillRenameCommand}" Cursor="Hand" Background="Transparent" BorderThickness="0"
+                        Foreground="{StaticResource TextDim}" Margin="4,0,0,0" ToolTip="Cancelar" />
+                <Button DockPanel.Dock="Right" Content="✓" Command="{Binding SaveSkillNameCommand}" Cursor="Hand" Background="Transparent" BorderThickness="0"
+                        Foreground="{StaticResource Gold}" Margin="4,0,0,0" ToolTip="Guardar (vacío vuelve al nombre de skills.json)" />
+                <TextBox Text="{Binding SkillNameDraft, UpdateSourceTrigger=PropertyChanged}" FontSize="12" MaxLength="32" Padding="4,1">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding SaveSkillNameCommand}" />
+                        <KeyBinding Key="Escape" Command="{Binding CancelSkillRenameCommand}" />
+                    </TextBox.InputBindings>
+                </TextBox>
+            </DockPanel>
+
             <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="10,2,10,4">
                 <ItemsControl ItemsSource="{Binding Skills}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="vm:SkillRowViewModel">
-                            <Grid Height="26" Margin="0,0,0,2">
+                            <Grid Height="26" Margin="0,0,0,2" Background="Transparent" ToolTip="Doble clic para ponerle nombre">
+                                <Grid.InputBindings>
+                                    <MouseBinding Gesture="LeftDoubleClick" CommandParameter="{Binding}"
+                                                  Command="{Binding DataContext.StartRenameSkillCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                </Grid.InputBindings>
                                 <Rectangle Fill="{Binding DataContext.BarFill, RelativeSource={RelativeSource AncestorType=Window}}" Opacity="0.55" RenderTransformOrigin="0,0.5">
                                     <Rectangle.RenderTransform>
                                         <ScaleTransform ScaleX="{Binding Bar}" />

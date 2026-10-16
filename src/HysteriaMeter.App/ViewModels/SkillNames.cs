@@ -11,7 +11,38 @@ public sealed class SkillNames(IReadOnlyDictionary<uint, string> names)
 {
     public static SkillNames Empty { get; } = new(new Dictionary<uint, string>());
 
-    public string Of(uint skillId) => names.TryGetValue(skillId, out var name) ? name : $"Skill {skillId}";
+    /// <summary>Nombres que puso el usuario desde el detalle (doble clic en una skill); pisan a los del archivo.</summary>
+    public IReadOnlyDictionary<uint, string> Custom { get; set; } = new Dictionary<uint, string>();
+
+    public string Of(uint skillId) =>
+        Custom.TryGetValue(skillId, out var custom) ? custom : names.TryGetValue(skillId, out var name) ? name : $"Skill {skillId}";
+
+    /// <summary>Una copia propia, para no tocar la tabla compartida (por ejemplo <see cref="Empty"/>) al poner nombres.</summary>
+    public SkillNames Copy() => new(names) { Custom = Custom };
+
+    /// <summary>Pone, cambia o (con texto vacío) saca el nombre que el usuario le dio a una skill.</summary>
+    public static IReadOnlyDictionary<uint, string> With(IReadOnlyDictionary<uint, string>? custom, uint skillId, string? name)
+    {
+        var result = new Dictionary<uint, string>(custom ?? new Dictionary<uint, string>());
+        var clean = name?.Trim() ?? string.Empty;
+        if (clean.Length > MaxLength)
+        {
+            clean = clean[..MaxLength];
+        }
+
+        if (clean.Length == 0)
+        {
+            result.Remove(skillId);
+        }
+        else
+        {
+            result[skillId] = clean;
+        }
+
+        return result;
+    }
+
+    public const int MaxLength = 32;
 
     public static SkillNames Load(string path)
     {

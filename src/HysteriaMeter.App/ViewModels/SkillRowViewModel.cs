@@ -10,6 +10,9 @@ public sealed partial class SkillRowViewModel : ObservableObject
     [ObservableProperty]
     public partial string Name { get; set; } = string.Empty;
 
+    /// <summary>ID de la skill, para renombrarla.</summary>
+    public uint SkillId { get; private set; }
+
     /// <summary>Parte del daño que viene de ticks de DoT, si tiene.</summary>
     [ObservableProperty]
     public partial string Note { get; set; } = string.Empty;
@@ -46,6 +49,7 @@ public sealed partial class SkillRowViewModel : ObservableObject
     {
         var culture = CultureInfo.CurrentCulture;
         var counts = skill.Counts ?? HitCounts.Empty;
+        SkillId = skill.SkillId;
         Name = name;
         Note = skill.PeriodicDamage == 0 ? string.Empty : $"DoT {((double)skill.PeriodicDamage / skill.Damage).ToString("P0", culture)}";
         Damage = ActorRowViewModel.Compact(skill.Damage);
