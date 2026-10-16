@@ -109,7 +109,7 @@ public sealed partial class MeterViewModel : ObservableObject
             }
 
             _timer.Interval = TimeSpan.FromMilliseconds(Preferences.RefreshMs);
-            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)) || names.Contains(nameof(ShowGear)) || names.Contains(nameof(ColorByClass)) || names.Contains(nameof(OnlyMe)) || names.Contains(nameof(MaxRows)) || names.Contains(nameof(Preferences)) || names.Contains(string.Empty))
+            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)) || names.Contains(nameof(ShowRecentColumn)) || names.Contains(nameof(ShowGear)) || names.Contains(nameof(ColorByClass)) || names.Contains(nameof(OnlyMe)) || names.Contains(nameof(MaxRows)) || names.Contains(nameof(Preferences)) || names.Contains(string.Empty))
             {
                 Refresh();
             }
@@ -257,6 +257,12 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         get => Preferences.ShowShareColumn;
         set => Update(Preferences with { ShowShareColumn = value }, nameof(ShowShareColumn));
+    }
+
+    public bool ShowRecentColumn
+    {
+        get => Preferences.ShowRecentColumn;
+        set => Update(Preferences with { ShowRecentColumn = value }, nameof(ShowRecentColumn));
     }
 
     public bool OnlyMe
@@ -1617,6 +1623,9 @@ public sealed partial class MeterViewModel : ObservableObject
 
             Actors[i].Update(ranked.IndexOf(rows[i]) + 1, rows[i], Tab, top, total, snapshot.Duration, BossOnly, Preferences.ShowGear, Preferences.ColorByClass);
             Actors[i].Spark = Preferences.Sparklines && Tab == MeterTab.Damage ? ActorRowViewModel.Sparkline(rows[i].Timeline) : null;
+            Actors[i].Recent = Preferences.ShowRecentColumn && Tab == MeterTab.Damage
+                ? ActorRowViewModel.Compact(ActorRowViewModel.RecentDps(rows[i].Timeline, snapshot.Duration))
+                : "–";
             Actors[i].HealingPerSecond = combined && rows[i].Healing > 0
                 ? ActorRowViewModel.Compact(rows[i].Healing / snapshot.Duration.TotalSeconds)
                 : "–";

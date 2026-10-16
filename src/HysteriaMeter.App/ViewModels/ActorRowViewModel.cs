@@ -74,6 +74,34 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial PointCollection? Spark { get; set; }
 
+    /// <summary>DPS de los últimos <see cref="RecentSeconds"/> segundos (columna "10 s").</summary>
+    [ObservableProperty]
+    public partial string Recent { get; set; } = "–";
+
+    public const int RecentSeconds = 10;
+
+    /// <summary>
+    /// Daño de los últimos <paramref name="window"/> segundos de la pelea dividido por esos segundos.
+    /// Cuenta hasta el final de la pelea, así quien dejó de pegar baja a 0 aunque su último golpe sea viejo.
+    /// </summary>
+    public static double RecentDps(IReadOnlyList<long>? timeline, TimeSpan duration, int window = RecentSeconds)
+    {
+        if (timeline is not { Count: > 0 })
+        {
+            return 0;
+        }
+
+        var end = Math.Max(timeline.Count, (int)Math.Ceiling(duration.TotalSeconds));
+        var start = Math.Max(0, end - window);
+        long sum = 0;
+        for (var i = start; i < Math.Min(end, timeline.Count); i++)
+        {
+            sum += timeline[i];
+        }
+
+        return (double)sum / (end - start);
+    }
+
     /// <summary>Segundos que muestra la línea de cada fila.</summary>
     public const int SparkSeconds = 30;
 
