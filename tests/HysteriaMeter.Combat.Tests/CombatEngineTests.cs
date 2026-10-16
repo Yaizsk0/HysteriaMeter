@@ -168,6 +168,37 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Run_adds_the_fights_since_entering_the_zone()
+    {
+        const ulong MeInNextZone = 3;
+        var engine = CreateEngine();
+        Assert.Null(engine.RunSnapshot());
+
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 10, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(5), Me, Boss, 10, 1000, HitModifiers.None));
+        engine.Tick(At(30));
+        engine.Apply(new DamageEvent(At(100), Me, Boss, 20, 500, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(105), Me, Boss, 10, 500, HitModifiers.None));
+
+        var run = engine.RunSnapshot()!;
+        Assert.Equal("Run 01:45 · 2 peleas", run.TargetName);
+        Assert.Equal(TimeSpan.FromSeconds(10), run.Duration);
+        Assert.Equal(3000, run.Actors.Single(a => a.Id == Me).Damage);
+
+        // Otra zona (otra conexión, otra entidad): empieza otra run, la sesión sigue sumando.
+        engine.Tick(At(150));
+        engine.Apply(new LocalPlayerEvent(At(200), MeInNextZone, Name: null));
+        engine.Apply(new DamageEvent(At(210), MeInNextZone, Boss, 1, 700, HitModifiers.None));
+
+        Assert.Equal("Run 00:10 · 1 pelea", engine.RunSnapshot()!.TargetName);
+        Assert.Equal(700, engine.RunSnapshot()!.Actors.Sum(a => a.Damage));
+        Assert.Equal(3700, engine.SessionSnapshot()!.Actors.Sum(a => a.Damage));
+
+        engine.Reset();
+        Assert.Null(engine.RunSnapshot());
+    }
+
+    [Fact]
     public void Idle_timeout_can_change_while_running()
     {
         var engine = CreateEngine();

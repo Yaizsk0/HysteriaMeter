@@ -40,6 +40,12 @@ public sealed class CombatEngine(CombatEngineOptions options)
     private Encounter? _session;
     private TimeSpan _sessionCombat;
     private int _sessionFights;
+
+    // La "run": todas las peleas desde que entramos a la zona actual (dungeon), trash y bosses juntos.
+    private Encounter? _run;
+    private TimeSpan _runCombat;
+    private int _runFights;
+    private DateTimeOffset? _runZone;
     private ActorScope _scope = ActorScope.Party;
     private bool _splitEncounters = true;
 
@@ -139,6 +145,9 @@ public sealed class CombatEngine(CombatEngineOptions options)
             _session = null;
             _sessionCombat = TimeSpan.Zero;
             _sessionFights = 0;
+            _run = null;
+            _runCombat = TimeSpan.Zero;
+            _runFights = 0;
         }
     }
 
@@ -159,6 +168,29 @@ public sealed class CombatEngine(CombatEngineOptions options)
             return BuildSnapshot(_session, combat) with { TargetName = SessionTitle(_sessionFights) };
         }
     }
+
+    /// <summary>
+    /// Todas las peleas desde que entramos a la zona actual (trash y bosses de la dungeon juntos). El DPS va sobre el
+    /// tiempo en combate; el título lleva el tiempo desde la entrada.
+    /// </summary>
+    public EncounterSnapshot? RunSnapshot()
+    {
+        lock (_gate)
+        {
+            if (_run is null)
+            {
+                return null;
+            }
+
+            var combat = _runCombat + (_current is null ? TimeSpan.Zero : _current.LastActivity - _current.Start);
+            var since = _runZone ?? _run.Start;
+            return BuildSnapshot(_run, combat) with { TargetName = RunTitle(_run.LastActivity - since, _runFights), ZoneEnteredAt = _runZone };
+        }
+    }
+
+    /// <summary>"Run 18:20 · 3 peleas".</summary>
+    public static string RunTitle(TimeSpan sinceEntry, int fights) =>
+        $"Run {(int)Math.Max(0, sinceEntry.TotalMinutes):00}:{Math.Max(0, sinceEntry.Seconds):00} · {(fights == 1 ? "1 pelea" : $"{fights} peleas")}";
 
     /// <summary>"Sesión · 3 peleas".</summary>
     public static string SessionTitle(int fights) => fights == 1 ? "Sesión · 1 pelea" : $"Sesión · {fights} peleas";
@@ -209,6 +241,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
         var overkill = Entities.ApplyDamage(e.TargetId, e.Amount);
         RecordHit(encounter, source, e, overkill);
         RecordHit(_session!, source, e, overkill);
+        RecordHit(_run!, source, e, overkill);
         encounter.AddLog(Entry(e, LogKind.Damage, source, Entities.Canonical(e.TargetId), e.SkillId, e.Amount, e.Modifiers));
     }
 
@@ -232,6 +265,11 @@ public sealed class CombatEngine(CombatEngineOptions options)
         if (_session is not null)
         {
             yield return _session;
+        }
+
+        if (_run is not null)
+        {
+            yield return _run;
         }
     }
 
@@ -332,6 +370,15 @@ public sealed class CombatEngine(CombatEngineOptions options)
             _current = new Encounter(at) { ZoneEnteredAt = Entities.ZoneEnteredAt };
             _session ??= new Encounter(at);
             _sessionFights++;
+            if (_run is null || _runZone != Entities.ZoneEnteredAt)
+            {
+                _run = new Encounter(at);
+                _runCombat = TimeSpan.Zero;
+                _runFights = 0;
+                _runZone = Entities.ZoneEnteredAt;
+            }
+
+            _runFights++;
         }
 
         return _current;
@@ -356,6 +403,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
         var snapshot = BuildSnapshot(_current);
         _sessionCombat += _current.LastActivity - _current.Start;
+        _runCombat += _current.LastActivity - _current.Start;
         _lastLog = _current.Log;
         _current = null;
         EncounterFinished?.Invoke(snapshot);

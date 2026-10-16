@@ -57,7 +57,7 @@ En configuración, EXPORTAR Y COMPARTIR copia el overlay como imagen (para pegar
 
 La pestaña RECIBIDO muestra el daño que le hicieron los monstruos a cada uno (todavía sin validar contra Combat Analysis). Quien murió lleva una ✝ junto al nombre; en el detalle del jugador se ve qué lo mató y cuánto recibió en los 10 segundos anteriores. El botón "Registro" del detalle abre el golpe a golpe de la pelea, con búsqueda por jugador, skill o modificador.
 
-Cada ventana elige entre PELEA (la actual) y SESIÓN (todas las peleas desde el último reinicio, con el DPS sobre el tiempo en combate), y puede contar solo el daño al boss. En configuración se elige tras cuántos segundos sin daño termina una pelea, y si el overlay vuelve solo al vivo cuando arranca otra mientras mirás el historial.
+Cada ventana elige entre PELEA (la actual), RUN (todas las peleas desde que entraste a la dungeon, trash y bosses juntos, con el tiempo de la run en el título: "Run 18:20 · 9 peleas") y SESIÓN (todas las peleas desde el último reinicio, con el DPS sobre el tiempo en combate), y puede contar solo el daño al boss. En configuración se elige tras cuántos segundos sin daño termina una pelea, y si el overlay vuelve solo al vivo cuando arranca otra mientras mirás el historial.
 
 Los datos (preferencias, historial, grabaciones y exportes) van a `%LOCALAPPDATA%\HysteriaMeter`. Con un archivo `portable.txt` junto a `HysteriaMeter.exe`, van a la carpeta `datos` al lado del programa. El historial de versiones anteriores, que estaba junto al .exe, se copia solo la primera vez.
 

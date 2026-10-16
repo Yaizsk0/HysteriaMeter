@@ -52,7 +52,7 @@ public partial class OverlayWindow : Window
     public OverlayLayout? CurrentLayout() =>
         double.IsNaN(Left) || double.IsNaN(Top)
             ? null
-            : new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height, _viewModel.Tab, _viewModel.ShowHealing, _viewModel.IsCompact, _viewModel.IsSessionView, _viewModel.BossOnly);
+            : new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height, _viewModel.Tab, _viewModel.ShowHealing, _viewModel.IsCompact, _viewModel.IsSessionView, _viewModel.BossOnly, _viewModel.IsRunView);
 
     /// <summary>Copia el overlay como imagen (para pegar en Discord), al tamaño real en pantalla.</summary>
     private void CopyImage()

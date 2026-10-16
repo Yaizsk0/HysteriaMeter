@@ -13,7 +13,8 @@ public sealed record OverlayLayout(
     bool ShowHealing = true,
     bool Compact = false,
     bool Session = false,
-    bool BossOnly = false)
+    bool BossOnly = false,
+    bool Run = false)
 {
     private const string FileName = "ventanas.json";
 
