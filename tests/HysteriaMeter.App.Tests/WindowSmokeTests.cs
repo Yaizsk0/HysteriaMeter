@@ -173,6 +173,18 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Recent_dps_counts_the_last_seconds_until_the_end_of_the_fight()
+    {
+        Assert.Equal(0, ActorRowViewModel.RecentDps(null, TimeSpan.FromSeconds(30)));
+        long[] timeline = [.. Enumerable.Repeat(100L, 20)];
+        Assert.Equal(100, ActorRowViewModel.RecentDps(timeline, TimeSpan.FromSeconds(20)));
+
+        // Dejó de pegar en el segundo 20 y la pelea va por el 25: los últimos 10 s tienen 5 sin daño.
+        Assert.Equal(50, ActorRowViewModel.RecentDps(timeline, TimeSpan.FromSeconds(25)));
+        Assert.Equal(100, ActorRowViewModel.RecentDps([500, 500], TimeSpan.FromSeconds(10)));
+    }
+
+    [Fact]
     public void Vs_previous_attempt_shows_the_change_in_percent()
     {
         Assert.Null(MeterViewModel.VsPreviousText(1000, previous: null));

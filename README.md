@@ -75,7 +75,7 @@ En el detalle de un jugador se le puede poner un apodo (Enter para guardar, vac�
 
 A la izquierda de cada nombre va el símbolo de su clase, deducido de las skills que usa, y a la derecha su item level y power ("2130 · 93.1k"), leídos de cuando el jugador aparece cerca (los tuyos, al entrar a la zona). Se ocultan en configuración con "Item level y power al lado del nombre". Si alguna clase sale con el nombre equivocado, se corrige en `data/classes.json`.
 
-Como en Details!, en configuración se puede pintar cada fila con el color de su clase ("Colores por clase", colores en `data/classes.json`), sacar las columnas TOTAL y % para un overlay más angosto, y dejar "Solo mi fila": tu DPS con tu puesto real en la party.
+Como en Details!, en configuración se puede pintar cada fila con el color de su clase ("Colores por clase", colores en `data/classes.json`), sacar las columnas TOTAL y % para un overlay más angosto, sumar la columna "10 s" (el DPS de los últimos 10 segundos, para ver quién está pegando ahora, como el Last10DPS de ACT) y dejar "Solo mi fila": tu DPS con tu puesto real en la party.
 
 El botón ❚❚ del encabezado pausa el overlay: congela lo que ves (por ejemplo, para leer el resultado con calma) mientras la pelea sigue contando por detrás. La primera vez que abrís el meter aparece una bienvenida con lo básico, y después de cada actualización, la lista de novedades (`data/novedades.json`), una sola vez.
 

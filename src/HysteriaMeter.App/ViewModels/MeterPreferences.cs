@@ -88,6 +88,9 @@ public sealed record MeterPreferences
 
     public bool ShowShareColumn { get; init; } = true;
 
+    /// <summary>Columna "10 s": el DPS de los últimos segundos, para ver quién está pegando ahora (como el Last10DPS de ACT).</summary>
+    public bool ShowRecentColumn { get; init; }
+
     /// <summary>Solo tu fila, para tener el overlay mínimo mientras jugás (como el modo colapsado de Ember).</summary>
     public bool OnlyMe { get; init; }
 
