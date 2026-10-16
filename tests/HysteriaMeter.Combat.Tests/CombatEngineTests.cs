@@ -342,6 +342,30 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Hits_after_the_boss_dies_do_not_open_a_phantom_encounter()
+    {
+        const ulong add = 901;
+        var engine = CreateEngine();
+        var finished = new List<EncounterSnapshot>();
+        engine.EncounterFinished += finished.Add;
+
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 100, HitModifiers.None));
+        engine.Apply(new DeathEvent(At(3), Boss));
+
+        // Golpe en vuelo al cadáver, costo de vida propio y "daño" a un compañero: nada de esto es una pelea.
+        engine.Apply(new DamageEvent(At(3.1), Ally, Boss, 1, 500, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(3.2), Ally, Ally, 1, 884, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(3.3), Me, Ally, 1, 1076, HitModifiers.None));
+        Assert.Null(engine.CurrentSnapshot());
+
+        // El próximo monstruo sí abre una pelea nueva.
+        engine.Apply(new EntitySpawnEvent(At(4), add, null, 2001));
+        engine.Apply(new DamageEvent(At(5), Me, add, 1, 100, HitModifiers.None));
+        Assert.Equal(100, engine.CurrentSnapshot()!.TotalDamage);
+        Assert.Single(finished);
+    }
+
+    [Fact]
     public void Healing_is_tracked_during_encounter()
     {
         var engine = CreateEngine();
