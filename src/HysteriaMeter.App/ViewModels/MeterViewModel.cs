@@ -71,7 +71,7 @@ public sealed partial class MeterViewModel : ObservableObject
     /// <param name="compact">Modo compacto: solo las filas y el reloj.</param>
     /// <param name="sessionView">Mostrar la sesión entera en vez de la pelea actual.</param>
     /// <param name="bossOnly">Contar solo el daño al objetivo principal.</param>
-    public MeterViewModel(MeterSession session, MeterTab tab = MeterTab.Damage, bool showHealing = true, bool compact = false, bool sessionView = false, bool bossOnly = false, bool runView = false)
+    public MeterViewModel(MeterSession session, MeterTab tab = MeterTab.Damage, bool showHealing = true, bool compact = false, bool sessionView = false, bool bossOnly = true, bool runView = false)
     {
         _session = session;
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(session.Preferences.RefreshMs), DispatcherPriority.Background, (_, _) => Refresh(), Dispatcher.CurrentDispatcher);
@@ -1084,6 +1084,19 @@ public sealed partial class MeterViewModel : ObservableObject
     public static readonly TimeSpan BossKillMinDuration = TimeSpan.FromSeconds(30);
 
     /// <summary>Un boss derrotado: marcado como boss en data/npcs.json, o un objetivo que aguantó al menos 30 s.</summary>
+    /// <summary>Parte del daño que tiene que ir al objetivo principal para tomar la pelea como de boss.</summary>
+    public const double BossFightShare = 0.6;
+
+    /// <summary>
+    /// "Solo boss" solo tiene sentido contra un boss: marcado en data/npcs.json, o el objetivo que se llevó la mayor parte del daño.
+    /// En un pull de trash el daño se reparte y se cuenta todo, como antes.
+    /// </summary>
+    public static bool LooksLikeBossFight(EncounterSnapshot snapshot)
+    {
+        var total = snapshot.Actors.Sum(a => a.Damage);
+        return snapshot.TargetIsBoss || (total > 0 && snapshot.Actors.Sum(a => a.MainTargetDamage) >= total * BossFightShare);
+    }
+
     public static bool IsBossKill(EncounterSnapshot snapshot) =>
         snapshot.TargetKilled && (snapshot.TargetIsBoss || (snapshot.MainTargetDuration ?? snapshot.Duration) >= BossKillMinDuration);
 
@@ -1775,7 +1788,7 @@ public sealed partial class MeterViewModel : ObservableObject
         UpdateEnrage(real, ttk);
 
         var tab = Tab;
-        var bossOnly = BossOnly;
+        var bossOnly = BossOnly && LooksLikeBossFight(snapshot);
         Func<ActorSnapshot, long> metric = a => tab.Metric(a, bossOnly);
         var combined = ShowHealingColumn;
         var rows = snapshot.Actors
@@ -1810,7 +1823,7 @@ public sealed partial class MeterViewModel : ObservableObject
             }
 
             var rank = ranked.IndexOf(rows[i]) + 1;
-            Actors[i].Update(rank, rows[i], Tab, top, total, snapshot.Duration, BossOnly, Preferences.ShowGear, Preferences.ColorByClass);
+            Actors[i].Update(rank, rows[i], Tab, top, total, snapshot.Duration, bossOnly, Preferences.ShowGear, Preferences.ColorByClass);
             Actors[i].Trend = _rankTrends.Update(rows[i].Id, rank, now);
             Actors[i].Spark = Preferences.Sparklines && Tab == MeterTab.Damage ? ActorRowViewModel.Sparkline(rows[i].Timeline) : null;
             Actors[i].Recent = Preferences.ShowRecentColumn && Tab == MeterTab.Damage

@@ -160,6 +160,19 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Boss_only_applies_when_the_main_target_took_most_of_the_damage()
+    {
+        static ActorSnapshot Hitter(long damage, long onMain) =>
+            new(1, "Tests", null, true, damage, damage, 1, 1, 0, damage, 0, [], MainTargetDamage: onMain);
+        static EncounterSnapshot Fight(bool boss, params ActorSnapshot[] actors) =>
+            new(Guid.NewGuid(), DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddSeconds(60), "X", false, 0, actors, TargetIsBoss: boss);
+
+        Assert.True(MeterViewModel.LooksLikeBossFight(Fight(false, Hitter(1000, 900))));
+        Assert.False(MeterViewModel.LooksLikeBossFight(Fight(false, Hitter(1000, 300))));
+        Assert.True(MeterViewModel.LooksLikeBossFight(Fight(true, Hitter(1000, 300))));
+    }
+
+    [Fact]
     public void Version_shows_the_short_commit()
     {
         Assert.Equal("v0.15.0 · a352982", AppVersion.Format("0.15.0+a352982e972d3725ee7c7428b76c584d8d57f3c"));

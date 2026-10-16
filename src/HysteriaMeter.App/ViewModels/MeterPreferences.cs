@@ -97,6 +97,9 @@ public sealed record MeterPreferences
     /// <summary>Fijar posición y tamaño: el overlay no se arrastra ni se agranda sin querer, pero los botones siguen andando (Details!: "lock").</summary>
     public bool LockPosition { get; init; }
 
+    /// <summary>Ya se prendió "solo boss" en las ventanas guardadas antes de que viniera prendido de entrada (se hace una sola vez).</summary>
+    public bool BossOnlyDefaulted { get; init; }
+
     /// <summary>Columna "10 s": el DPS de los últimos segundos, para ver quién está pegando ahora (como el Last10DPS de ACT).</summary>
     public bool ShowRecentColumn { get; init; }
 

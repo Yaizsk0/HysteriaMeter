@@ -672,7 +672,7 @@
                             <CheckBox Style="{StaticResource Option}" Content="Mostrar HPS junto al daño" IsChecked="{Binding ShowHealing}"
                                       ToolTip="Apagado: cada ventana muestra solo lo de su pestaña. Con + abrís otra ventana, por ejemplo una de curación." />
                             <CheckBox Style="{StaticResource Option}" Content="Solo el daño al boss" IsChecked="{Binding BossOnly}"
-                                      ToolTip="Cuenta solo el daño al objetivo principal, sin adds ni trash" />
+                                      ToolTip="Contra un boss cuenta solo el daño al boss, sin adds (como Abyss). En un pull de trash se cuenta todo." />
                             <CheckBox Style="{StaticResource Option}" Content="Modo compacto" IsChecked="{Binding IsCompact}"
                                       ToolTip="Solo las filas y el reloj. También se cambia con doble clic en el encabezado." />
 
