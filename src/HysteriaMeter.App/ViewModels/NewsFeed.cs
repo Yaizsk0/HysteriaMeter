@@ -48,8 +48,8 @@ public static class NewsFeed
                 foreach (var entry in news.EnumerateArray())
                 {
                     if (entry.ValueKind == JsonValueKind.Object
-                        && entry.TryGetProperty("id", out var id) && id.TryGetInt32(out var number) && number > 0
-                        && entry.TryGetProperty("text", out var text) && text.GetString() is { Length: > 0 } line)
+                        && entry.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number && id.TryGetInt32(out var number) && number > 0
+                        && entry.TryGetProperty("text", out var text) && text.ValueKind == JsonValueKind.String && text.GetString() is { Length: > 0 } line)
                     {
                         items.Add(new NewsItem(number, line.Trim()));
                     }
