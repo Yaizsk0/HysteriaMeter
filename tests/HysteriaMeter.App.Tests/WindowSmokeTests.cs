@@ -584,6 +584,22 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Skill_names_set_by_the_user_win_over_the_file()
+    {
+        var names = new SkillNames(new Dictionary<uint, string> { [100] = "Del archivo" }).Copy();
+        names.Custom = SkillNames.With(null, 100, " Mía ");
+        Assert.Equal("Mía", names.Of(100));
+        Assert.Equal("Skill 7", names.Of(7));
+
+        names.Custom = SkillNames.With(names.Custom, 100, "");
+        Assert.Equal("Del archivo", names.Of(100));
+        Assert.Empty(SkillNames.Empty.Custom);
+
+        var json = System.Text.Json.JsonSerializer.Serialize(new MeterPreferences { SkillAliases = SkillNames.With(null, 12010350, "Golpe") });
+        Assert.Equal("Golpe", System.Text.Json.JsonSerializer.Deserialize<MeterPreferences>(json)!.SkillAliases[12010350]);
+    }
+
+    [Fact]
     public void Rows_take_the_class_color_when_asked()
     {
         var row = new ActorRowViewModel();

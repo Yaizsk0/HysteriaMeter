@@ -85,7 +85,7 @@ En TEMA hay cuatro estilos, como los de Ember: Dorado (el de siempre), Mínimo (
 
 El botón — del encabezado minimiza el overlay a una pastilla con tu DPS y tu puesto ("12.3k · #2 de 6"), como Ember; se arrastra igual y el cuadradito lo vuelve a abrir.
 
-Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: los nombres se cargan a mano en `data/skills.json`.
+Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: doble clic en una skill del detalle para ponerle nombre (queda guardado en tus preferencias), o cargalos en `data/skills.json` para toda la legión.
 
 Los monstruos tampoco traen nombre: si una pelea sale como "NPC 2001234", agregá ese ID a `data/npcs.json` con su nombre, la dungeon y si es boss (`"2001234": { "name": "Destroyer Tarka", "dungeon": "...", "boss": true }`) y la próxima vez se ve con nombre, también en el historial y en el progreso por boss.
 
