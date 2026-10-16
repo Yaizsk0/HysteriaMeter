@@ -345,6 +345,8 @@
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" TextElement.FontSize="11">
                             <RadioButton Style="{StaticResource Tab}" GroupName="Segment" Content="PELEA" IsChecked="{Binding IsFightView}"
                                          ToolTip="La pelea actual (o la última que terminó)" />
+                            <RadioButton Style="{StaticResource Tab}" GroupName="Segment" Content="RUN" IsChecked="{Binding IsRunChip}"
+                                         ToolTip="Todas las peleas desde que entraste a la dungeon: trash y bosses juntos, con el tiempo de la run" />
                             <RadioButton Style="{StaticResource Tab}" GroupName="Segment" Content="SESIÓN" IsChecked="{Binding IsSessionChip}"
                                          ToolTip="Todas las peleas desde el último reinicio, con el DPS sobre el tiempo en combate" />
                         </StackPanel>

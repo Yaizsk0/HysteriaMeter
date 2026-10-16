@@ -60,7 +60,8 @@ public sealed class OverlayWindows(MeterSession session)
             layout?.ShowHealing ?? true,
             layout?.Compact ?? false,
             layout?.Session ?? false,
-            layout?.BossOnly ?? false);
+            layout?.BossOnly ?? false,
+            layout?.Run ?? false);
         var window = new OverlayWindow(viewModel, layout, this);
         viewModel.NewWindowRequested += () => OpenNext(window);
         window.Closing += (_, _) => OnClosing(window);
