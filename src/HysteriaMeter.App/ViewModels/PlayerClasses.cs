@@ -5,7 +5,8 @@ using System.Windows.Media;
 namespace HysteriaMeter.App.ViewModels;
 
 /// <summary>Una clase del juego: nombre y símbolo (dibujado por nosotros, sin assets del juego).</summary>
-public sealed record PlayerClass(string Name, Geometry Icon);
+/// <param name="Color">Color de la clase para las barras (opción "Colores por clase").</param>
+public sealed record PlayerClass(string Name, Geometry Icon, Color Color);
 
 /// <summary>
 /// Clases por número (los IDs de skill de cada clase empiezan con él: 12010350 es de la clase 12). Los nombres y
@@ -29,14 +30,14 @@ public static class PlayerClasses
     /// <summary>Orden clásico de AION; si el número de alguna está mal, se corrige en data/classes.json.</summary>
     public static IReadOnlyDictionary<int, PlayerClass> Defaults { get; } = new Dictionary<int, PlayerClass>
     {
-        [11] = new("Gladiador", Icons["espada"]),
-        [12] = new("Templario", Icons["escudo"]),
-        [13] = new("Asesino", Icons["dagas"]),
-        [14] = new("Ranger", Icons["arco"]),
-        [15] = new("Hechicero", Icons["llama"]),
-        [16] = new("Espiritualista", Icons["orbe"]),
-        [17] = new("Clérigo", Icons["cruz"]),
-        [18] = new("Chanter", Icons["nota"]),
+        [11] = new("Gladiador", Icons["espada"], Color.FromRgb(0xD8, 0x9A, 0x4E)),
+        [12] = new("Templario", Icons["escudo"], Color.FromRgb(0x5A, 0x8F, 0xD8)),
+        [13] = new("Asesino", Icons["dagas"], Color.FromRgb(0x9A, 0x62, 0xD8)),
+        [14] = new("Ranger", Icons["arco"], Color.FromRgb(0x6C, 0xBF, 0x4F)),
+        [15] = new("Hechicero", Icons["llama"], Color.FromRgb(0xE0, 0x5E, 0x4E)),
+        [16] = new("Espiritualista", Icons["orbe"], Color.FromRgb(0xC0, 0x5C, 0xD6)),
+        [17] = new("Clérigo", Icons["cruz"], Color.FromRgb(0xE8, 0xE0, 0xB0)),
+        [18] = new("Chanter", Icons["nota"], Color.FromRgb(0x3F, 0xB8, 0x9F)),
     };
 
     /// <summary>La tabla en uso: la de <c>data/classes.json</c> si se cargó, si no la de por defecto.</summary>
@@ -53,7 +54,7 @@ public static class PlayerClasses
     }
 
     /// <summary>
-    /// <c>{ "classes": { "12": { "name": "Templario", "icon": "escudo" } } }</c>. Lo que falte o esté mal queda como
+    /// <c>{ "classes": { "12": { "name": "Templario", "icon": "escudo", "color": "#5A8FD8" } } }</c>. Lo que falte o esté mal queda como
     /// en <see cref="Defaults"/>.
     /// </summary>
     public static IReadOnlyDictionary<int, PlayerClass> Parse(string json)
@@ -82,9 +83,12 @@ public static class PlayerClasses
                 var icon = entry.Value.TryGetProperty("icon", out var i) && i.ValueKind == JsonValueKind.String && i.GetString() is { } key && Icons.TryGetValue(key, out var geometry)
                     ? geometry
                     : table.GetValueOrDefault(id)?.Icon;
+                var color = entry.Value.TryGetProperty("color", out var c) && c.ValueKind == JsonValueKind.String && ParseColor(c.GetString()) is { } parsed
+                    ? parsed
+                    : table.GetValueOrDefault(id)?.Color ?? Colors.Gray;
                 if (name is not null && icon is not null)
                 {
-                    table[id] = new PlayerClass(name, icon);
+                    table[id] = new PlayerClass(name, icon, color);
                 }
             }
         }
@@ -94,6 +98,18 @@ public static class PlayerClasses
         }
 
         return table;
+    }
+
+    /// <summary>"#RRGGBB"; <c>null</c> si no es un color.</summary>
+    public static Color? ParseColor(string? text)
+    {
+        if (text is not { Length: 7 } || text[0] != '#'
+            || !uint.TryParse(text.AsSpan(1), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var rgb))
+        {
+            return null;
+        }
+
+        return Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
     }
 
     private static Geometry Icon(string data)

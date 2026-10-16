@@ -522,6 +522,21 @@ public sealed class WindowSmokeTests
         Assert.Same(PlayerClasses.Icons["cruz"], table[12].Icon);
         Assert.Equal(PlayerClasses.Defaults[15], table[15]);
         Assert.Equal(PlayerClasses.Defaults.Count, PlayerClasses.Parse("no es json").Count);
+        Assert.Equal(System.Windows.Media.Color.FromRgb(0x11, 0x22, 0x33), PlayerClasses.Parse("""{ "classes": { "12": { "color": "#112233" } } }""")[12].Color);
+        Assert.Null(PlayerClasses.ParseColor("rojo"));
+    }
+
+    [Fact]
+    public void Rows_take_the_class_color_when_asked()
+    {
+        var row = new ActorRowViewModel();
+        var templario = Actor() with { ClassId = 12, IsLocalPlayer = false };
+
+        row.Update(1, templario, MeterTab.Damage, 3000, 3000, TimeSpan.FromSeconds(10), colorByClass: true);
+        Assert.Equal(PlayerColors.ForClass(PlayerClasses.Defaults[12].Color), row.Accent);
+
+        row.Update(1, templario, MeterTab.Damage, 3000, 3000, TimeSpan.FromSeconds(10));
+        Assert.Equal(PlayerColors.For(templario.Name), row.Accent);
     }
 
     private static ActorSnapshot Actor() => new(
