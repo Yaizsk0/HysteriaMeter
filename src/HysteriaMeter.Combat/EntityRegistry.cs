@@ -200,6 +200,34 @@ public sealed class EntityRegistry
         return profile.Name ?? (profile.NpcId is { } npcId ? Npcs.Of(npcId)?.Name : null);
     }
 
+    /// <summary>
+    /// Una invocación que aparece como monstruo y sin dueño (por ejemplo el espíritu del Hechicero, que pega con
+    /// Bittercold Wind) pero usa una skill de jugador: si hay un solo jugador conocido de esa clase, es suya.
+    /// La asignación queda guardada para los golpes siguientes.
+    /// </summary>
+    public bool TryAdoptSummon(ulong summonId, uint skillId, out ulong owner)
+    {
+        owner = 0;
+        if (ClassOfSkill(skillId) is not { } classId)
+        {
+            return false;
+        }
+
+        var candidates = _profiles
+            .Where(p => p.Value is { NpcId: null } profile && profile.ClassId == classId && IsKnownPlayer(p.Key))
+            .Select(p => p.Key)
+            .Take(2)
+            .ToList();
+        if (candidates.Count != 1 || candidates[0] == summonId)
+        {
+            return false;
+        }
+
+        owner = candidates[0];
+        _owners[summonId] = owner;
+        return true;
+    }
+
     private bool TryGetOwner(ulong id, out ulong owner)
     {
         if (_owners.TryGetValue(id, out owner))

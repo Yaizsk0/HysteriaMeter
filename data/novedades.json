@@ -32,6 +32,7 @@
     { "id": 59, "text": "Alt+← y Alt+→ (o las flechas ‹ ›) recorren tus peleas guardadas sin abrir el historial." },
     { "id": 60, "text": "En vivo, ▲ o ▼ junto al puesto de quien acaba de subir o bajar en el ranking." },
     { "id": 61, "text": "\"Solo el daño al boss\" viene prendido: contra un boss los números coinciden con Abyss; en el trash se cuenta todo." },
-    { "id": 64, "text": "El historial ya no cierra el meter cuando la última pelea fue contra un monstruo sin nombre." }
+    { "id": 64, "text": "El historial ya no cierra el meter cuando la última pelea fue contra un monstruo sin nombre." },
+    { "id": 62, "text": "Las invocaciones que el juego manda sin dueño (como Bittercold Wind del Hechicero) se le suman al único jugador de esa clase en la pelea." }
   ]
 }

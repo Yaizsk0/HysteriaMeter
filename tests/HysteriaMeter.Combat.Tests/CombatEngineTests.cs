@@ -263,6 +263,44 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Ownerless_summon_using_a_class_skill_goes_to_the_only_player_of_that_class()
+    {
+        // Kromede: Abyss le da a Rubia (Hechicero) 605k de Bittercold Wind, que pega una invocación sin dueño.
+        var engine = CreateEngine();
+        engine.Apply(new EntityInfoEvent(T0, Ally, "Aliado", 15));
+        engine.Apply(new EntitySpawnEvent(T0, MySummon, OwnerId: null, NpcId: 2920650));
+        engine.Apply(new DamageEvent(At(0), MySummon, Boss, 15280143, 2_000, HitModifiers.Critical));
+        engine.Apply(new DamageEvent(At(1), MySummon, Boss, 15280143, 3_000, HitModifiers.Critical));
+
+        var actor = Assert.Single(engine.CurrentSnapshot()!.Actors);
+        Assert.Equal((Ally, 5_000L), (actor.Id, actor.Damage));
+    }
+
+    [Fact]
+    public void Ownerless_summon_is_not_guessed_when_two_players_share_the_class()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new EntityInfoEvent(T0, Ally, "Aliado", 15));
+        engine.Apply(new EntityInfoEvent(T0, Me, "Mati", 15));
+        engine.Apply(new EntitySpawnEvent(T0, MySummon, OwnerId: null, NpcId: 2920650));
+        engine.Apply(new DamageEvent(At(0), MySummon, Boss, 15280143, 2_000, HitModifiers.None));
+
+        Assert.Null(engine.CurrentSnapshot());
+    }
+
+    [Fact]
+    public void Monster_hitting_a_player_is_never_adopted()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new EntityInfoEvent(T0, Ally, "Aliado", 15));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 10, 1_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), Boss, Ally, 15280143, 500, HitModifiers.None));
+
+        var actors = engine.CurrentSnapshot()!.Actors;
+        Assert.DoesNotContain(actors, a => a.Id == Ally && a.Damage > 0);
+    }
+
+    [Fact]
     public void Dot_ticks_add_damage_but_not_hits()
     {
         // Punishment en Combat Analysis: 2 golpes y 191.141 de daño, contando el DoT.

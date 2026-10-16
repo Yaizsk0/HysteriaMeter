@@ -223,6 +223,12 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var source = Entities.Canonical(e.SourceId);
+        if (Entities.IsNpc(source) && Entities.IsNpc(Entities.Canonical(e.TargetId))
+            && Entities.TryAdoptSummon(source, e.SkillId, out var owner))
+        {
+            source = owner; // invocación sin dueño que le pega a un monstruo con una skill de jugador
+        }
+
         if (Entities.IsNpc(source))
         {
             OnDamageTaken(e, source);
