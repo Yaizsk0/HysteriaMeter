@@ -245,6 +245,12 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Autostart_command_quotes_the_path()
+    {
+        Assert.Equal("\"C:\\Program Files\\Hysteria Meter\\HysteriaMeter.exe\"", Autostart.CommandFor(@"C:\Program Files\Hysteria Meter\HysteriaMeter.exe"));
+    }
+
+    [Fact]
     public void Vs_previous_attempt_shows_the_change_in_percent()
     {
         Assert.Null(MeterViewModel.VsPreviousText(1000, previous: null));

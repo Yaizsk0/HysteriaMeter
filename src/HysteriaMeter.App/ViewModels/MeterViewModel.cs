@@ -729,6 +729,41 @@ public sealed partial class MeterViewModel : ObservableObject
         set => Update(Preferences with { AutoBackToLive = value }, nameof(AutoBackToLive));
     }
 
+    /// <summary>"Iniciar con Windows": vive en el registro del usuario, no en las preferencias (es de esta PC).</summary>
+    public bool StartWithWindows
+    {
+        get
+        {
+            try
+            {
+                return Autostart.IsEnabled();
+            }
+            catch (System.Security.SecurityException)
+            {
+                return false;
+            }
+        }
+
+        set
+        {
+            if (Environment.ProcessPath is not { } exe)
+            {
+                return;
+            }
+
+            try
+            {
+                Autostart.Set(value, exe);
+            }
+            catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+            {
+                ExportMessage = $"No se pudo cambiar el inicio con Windows: {ex.Message}";
+            }
+
+            OnPropertyChanged();
+        }
+    }
+
     /// <summary>Datos en la carpeta del programa (portable) o en %LOCALAPPDATA%.</summary>
 #pragma warning disable CA1822 // propiedad de instancia para el binding de WPF
     public string DataFolderHint => AppPaths.IsPortable
