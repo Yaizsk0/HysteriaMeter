@@ -96,6 +96,8 @@ Invocaciones sin dueño: si una invocación que el juego manda sin dueño usa un
 Nombres e íconos desde el juego instalado: `tools/HysteriaMeter.Extractor` (`hysteria-extract`) lee los archivos de AION 2 en disco, con el juego cerrado, y deja lo extraído en `%LOCALAPPDATA%\HysteriaMeter\Juego`. Los archivos del juego están cifrados: la clave la ponés vos con `--clave 0x...` o la variable `AION2_AES_KEY`. Sin clave, `hysteria-extract info --juego "D:\SteamLibrary\steamapps\common\AION2"` solo muestra cuántos contenedores hay. El meter usa `Juego\skills.json` y `Juego
 pcs.json` si existen, y lo que cargues a mano en `data/` les gana. Nada extraído va al repo (constitución, principio VII).
 
+Las skills de clase (IDs 11xxxxxx a 18xxxxxx) traen nivel y variante en los últimos cuatro dígitos: si no hay nombre para el ID exacto se usa el de la skill base (15280143 → 15280000), así alcanza con nombrar la base.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
