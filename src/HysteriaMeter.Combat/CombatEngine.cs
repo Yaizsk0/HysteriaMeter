@@ -101,6 +101,9 @@ public sealed class CombatEngine(CombatEngineOptions options)
                 case DeathEvent death:
                     OnDeath(death);
                     break;
+                case HealthEvent health:
+                    TrackPhases(health.EntityId, null, health.Timestamp);
+                    break;
             }
         }
     }
@@ -238,11 +241,45 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var encounter = EnsureEncounter(e.Timestamp);
+        var before = HealthPercent(e.TargetId);
         var overkill = Entities.ApplyDamage(e.TargetId, e.Amount);
+        TrackPhases(e.TargetId, before, e.Timestamp);
         RecordHit(encounter, source, e, overkill);
         RecordHit(_session!, source, e, overkill);
         RecordHit(_run!, source, e, overkill);
         encounter.AddLog(Entry(e, LogKind.Damage, source, Entities.Canonical(e.TargetId), e.SkillId, e.Amount, e.Modifiers));
+    }
+
+    /// <summary>Porcentajes de vida que marcan las fases de una pelea.</summary>
+    internal static readonly int[] PhaseThresholds = [75, 50, 25];
+
+    private double? HealthPercent(ulong target) =>
+        Entities.HealthOf(target) is { MaxHp: > 0 } health ? 100.0 * health.Hp / health.MaxHp : null;
+
+    /// <summary>
+    /// Anota el segundo en que la vida del objetivo bajó de cada fase. Solo las fases por encima de la vida con que se lo
+    /// vio por primera vez en la pelea: si arrancamos a capturar con el boss al 40 %, el 75 y el 50 no se inventan.
+    /// </summary>
+    private void TrackPhases(ulong target, double? before, DateTimeOffset at)
+    {
+        if (_current is not { } encounter || HealthPercent(target) is not { } now)
+        {
+            return;
+        }
+
+        if (!encounter.FirstHealthPercent.TryGetValue(target, out var first))
+        {
+            encounter.FirstHealthPercent[target] = first = before ?? now;
+        }
+
+        var phases = encounter.Phases.TryGetValue(target, out var list) ? list : encounter.Phases[target] = [];
+        foreach (var threshold in PhaseThresholds)
+        {
+            if (first > threshold && now <= threshold && !phases.Exists(p => p.Percent == threshold))
+            {
+                phases.Add(new HealthPhase(threshold, Math.Max(0, (int)(at - encounter.Start).TotalSeconds)));
+            }
+        }
     }
 
     private static void RecordHit(Encounter encounter, ulong source, DamageEvent e, long overkill)
@@ -476,7 +513,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
             targetNpc is { } npc && Entities.Npcs.Of(npc) is { IsBoss: true },
             [.. encounter.Marks],
             encounter.ZoneEnteredAt,
-            targetNpc is { } enrageNpc ? Entities.Npcs.Of(enrageNpc)?.EnrageSeconds : null);
+            targetNpc is { } enrageNpc ? Entities.Npcs.Of(enrageNpc)?.EnrageSeconds : null,
+            target is { } tp && encounter.Phases.TryGetValue(tp, out var phases) && phases.Count > 0 ? [.. phases] : null);
     }
 
     private static double Share(long part, long total) => total == 0 ? 0 : (double)part / total;

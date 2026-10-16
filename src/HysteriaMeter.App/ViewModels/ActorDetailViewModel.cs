@@ -232,6 +232,12 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     [ObservableProperty]
     public partial string ChartMarks { get; set; } = string.Empty;
 
+    /// <summary>" · boss 75% 0:42 · 50% 1:30 · 25% 2:10": cuándo la vida del objetivo bajó de cada fase, o vacío.</summary>
+    public static string PhasesText(IReadOnlyList<HealthPhase>? phases) =>
+        phases is not { Count: > 0 }
+            ? string.Empty
+            : " · boss " + string.Join(" · ", phases.Select(p => $"{p.Percent}% {TimeSpan.FromSeconds(p.Second).ToString(@"m\:ss", CultureInfo.InvariantCulture)}"));
+
     public static string MarksText(IReadOnlyList<int>? marks) =>
         marks is not { Count: > 0 }
             ? string.Empty
@@ -291,7 +297,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         DeathCount = actor.Deaths.ToString(culture);
         UpdateDeaths(snapshot, actor.Id);
         UpdateChart(actor.Timeline ?? []);
-        ChartMarks = MarksText(snapshot.Marks);
+        ChartMarks = MarksText(snapshot.Marks) + PhasesText(snapshot.Phases);
         UpdateActivity(FightActivity.From(actor.Timeline));
         UpdateAdvice(snapshot, actor);
         if (actor.IsLocalPlayer && _pastFor != snapshot.Id)

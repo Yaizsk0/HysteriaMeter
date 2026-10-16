@@ -238,6 +238,13 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Phases_text_lists_when_the_boss_crossed_each_phase()
+    {
+        Assert.Empty(ActorDetailViewModel.PhasesText(null));
+        Assert.Equal(" · boss 75% 0:42 · 50% 1:30", ActorDetailViewModel.PhasesText([new HealthPhase(75, 42), new HealthPhase(50, 90)]));
+    }
+
+    [Fact]
     public void Vs_previous_attempt_shows_the_change_in_percent()
     {
         Assert.Null(MeterViewModel.VsPreviousText(1000, previous: null));

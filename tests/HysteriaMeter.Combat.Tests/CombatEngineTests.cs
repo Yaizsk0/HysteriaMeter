@@ -498,4 +498,29 @@ public class CombatEngineTests
         var me = engine.CurrentSnapshot()!.Actors.Single(a => a.Id == Me);
         Assert.Equal((900L, 350L), (me.Damage, me.Overkill));
     }
+
+    [Fact]
+    public void Records_when_the_boss_crosses_each_phase()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345, Hp: 1000, MaxHp: 1000));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 200, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(3), Me, Boss, 1, 100, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(5), Boss, 400));
+        engine.Apply(new DamageEvent(At(7), Me, Boss, 1, 300, HitModifiers.None));
+
+        // 800 (80 %) → 700 cruza el 75 a los 3 s; 400 cruza el 50 a los 5 s; 100 cruza el 25 a los 7 s.
+        Assert.Equal([new HealthPhase(75, 3), new HealthPhase(50, 5), new HealthPhase(25, 7)], engine.CurrentSnapshot()!.Phases);
+    }
+
+    [Fact]
+    public void Phases_already_passed_when_the_capture_started_are_not_invented()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345, Hp: 400, MaxHp: 1000));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 100, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Me, Boss, 1, 100, HitModifiers.None));
+
+        Assert.Equal([new HealthPhase(25, 2)], engine.CurrentSnapshot()!.Phases);
+    }
 }
