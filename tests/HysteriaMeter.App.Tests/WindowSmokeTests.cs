@@ -511,6 +511,20 @@ public sealed class WindowSmokeTests
         Assert.Null(HistoryItem.Progress([Item("Tarka", 1200), Item("Solo", 900)]));
         Assert.Null(HistoryItem.Progress([Item("Tarka", 1200)]));
         Assert.StartsWith("Tarka · 3 intentos", MeterViewModel.ProgressSummary("Tarka", progress.Value.Dps), StringComparison.Ordinal);
+        Assert.EndsWith("· kill más rápida 2:25", MeterViewModel.ProgressSummary("Tarka", progress.Value.Dps, TimeSpan.FromSeconds(145)), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Fastest_kill_is_tagged_per_boss()
+    {
+        HistoryItem Kill(string id, double seconds, bool killed = true) =>
+            new(id, "Tarka", "16/10 21:00", "02:00", "1.0M", killed, Seconds: seconds);
+
+        var items = HistoryItem.WithComparisons([Kill("a", 150), Kill("b", 140), Kill("c", 90, killed: false)]);
+        Assert.Equal("· ⏱ kill más rápida", items.Single(i => i.Id == "b").FastestTag);
+        Assert.Empty(items.Single(i => i.Id == "a").FastestTag);
+        Assert.Equal(TimeSpan.FromSeconds(140), HistoryItem.FastestKill(items));
+        Assert.Null(HistoryItem.FastestKill([Kill("x", 90, killed: false)]));
     }
 
     [Fact]
