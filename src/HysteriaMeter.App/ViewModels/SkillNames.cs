@@ -14,8 +14,18 @@ public sealed class SkillNames(IReadOnlyDictionary<uint, string> names)
     /// <summary>Nombres que puso el usuario desde el detalle (doble clic en una skill); pisan a los del archivo.</summary>
     public IReadOnlyDictionary<uint, string> Custom { get; set; } = new Dictionary<uint, string>();
 
+    /// <summary>
+    /// El nombre exacto o, si no está, el de la skill base: en las skills de clase (11xxxxxx a 18xxxxxx) los últimos
+    /// cuatro dígitos son nivel y variante (Bittercold Wind 15280143 → 15280000).
+    /// </summary>
     public string Of(uint skillId) =>
-        Custom.TryGetValue(skillId, out var custom) ? custom : names.TryGetValue(skillId, out var name) ? name : $"Skill {skillId}";
+        Custom.TryGetValue(skillId, out var custom) ? custom
+        : names.TryGetValue(skillId, out var name) ? name
+        : BaseOf(skillId) is { } baseId && (Custom.TryGetValue(baseId, out name) || names.TryGetValue(baseId, out name)) ? name
+        : $"Skill {skillId}";
+
+    private static uint? BaseOf(uint skillId) =>
+        skillId / 1_000_000 is >= 11 and <= 18 && skillId % 10_000 != 0 ? skillId / 10_000 * 10_000 : null;
 
     /// <summary>Una copia propia, para no tocar la tabla compartida (por ejemplo <see cref="Empty"/>) al poner nombres.</summary>
     public SkillNames Copy() => new(names) { Custom = Custom };

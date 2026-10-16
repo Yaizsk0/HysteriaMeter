@@ -34,6 +34,7 @@
     { "id": 61, "text": "\"Solo el daño al boss\" viene prendido: contra un boss los números coinciden con Abyss; en el trash se cuenta todo." },
     { "id": 64, "text": "El historial ya no cierra el meter cuando la última pelea fue contra un monstruo sin nombre." },
     { "id": 62, "text": "Las invocaciones que el juego manda sin dueño (como Bittercold Wind del Hechicero) se le suman al único jugador de esa clase en la pelea." },
-    { "id": 63, "text": "Herramienta hysteria-extract: con la clave de los archivos del juego, saca nombres de skills y NPCs a tu PC; el meter los usa solo." }
+    { "id": 63, "text": "Herramienta hysteria-extract: con la clave de los archivos del juego, saca nombres de skills y NPCs a tu PC; el meter los usa solo." },
+    { "id": 65, "text": "Las variantes de nivel de una skill de clase (15280143) toman el nombre de su skill base (15280000)." }
   ]
 }

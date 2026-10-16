@@ -20,6 +20,21 @@ public class GameDataTests
     }
 
     [Fact]
+    public void Class_skill_variants_take_the_name_of_their_base_skill()
+    {
+        var folder = Directory.CreateTempSubdirectory().FullName;
+        var file = Path.Combine(folder, "skills.json");
+        File.WriteAllText(file, """{ "skills": { "15280000": "Bittercold Wind", "15060453": "Hellfire (3/3)" } }""");
+
+        var names = SkillNames.Load(file);
+
+        Assert.Equal("Bittercold Wind", names.Of(15280143));
+        Assert.Equal("Hellfire (3/3)", names.Of(15060453));
+        Assert.Equal("Skill 15060451", names.Of(15060451));
+        Assert.Equal("Skill 3001016", names.Of(3001016));
+    }
+
+    [Fact]
     public void Npc_files_are_merged_and_a_broken_one_is_ignored()
     {
         var folder = Directory.CreateTempSubdirectory().FullName;
