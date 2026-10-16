@@ -185,6 +185,25 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Kill_image_goes_to_exports_with_the_fight_name()
+    {
+        var path = MeterViewModel.KillImagePath(DemoEncounter.Create(DateTimeOffset.UtcNow));
+        Assert.Equal(MeterViewModel.ExportFolder, Path.GetDirectoryName(path));
+        Assert.EndsWith(".png", path, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Boss_kill_needs_a_boss_or_a_long_fight()
+    {
+        var start = DateTimeOffset.UtcNow;
+        var trash = new EncounterSnapshot(Guid.NewGuid(), start, start.AddSeconds(8), "Trash", true, 100, []);
+        Assert.False(MeterViewModel.IsBossKill(trash));
+        Assert.True(MeterViewModel.IsBossKill(trash with { TargetIsBoss = true }));
+        Assert.True(MeterViewModel.IsBossKill(trash with { End = start.AddSeconds(45) }));
+        Assert.False(MeterViewModel.IsBossKill(trash with { End = start.AddSeconds(45), TargetKilled = false }));
+    }
+
+    [Fact]
     public void Vs_previous_attempt_shows_the_change_in_percent()
     {
         Assert.Null(MeterViewModel.VsPreviousText(1000, previous: null));

@@ -43,6 +43,9 @@ public sealed record MeterPreferences
     /// <summary>Mandar el resumen a Discord solo al derrotar un boss.</summary>
     public bool DiscordOnKill { get; init; }
 
+    /// <summary>Guardar una imagen del overlay en Exportes al derrotar un boss, para tener el registro sin acordarse.</summary>
+    public bool ImageOnKill { get; init; }
+
     /// <summary>Línea de DPS de los últimos 30 s detrás de cada fila.</summary>
     public bool Sparklines { get; init; } = true;
 

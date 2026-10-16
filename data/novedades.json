@@ -18,6 +18,7 @@
     { "id": 45, "text": "Atajos nuevos: Ctrl+Shift+N minimiza y Ctrl+Shift+P pausa (se cambian en ATAJOS)." },
     { "id": 46, "text": "Al terminar una pelea: cuánto mejoraste contra tu intento anterior en ese boss (\"+8% vs tu intento anterior\")." },
     { "id": 47, "text": "Detalle → Comparar con: ahora también tu intento anterior y tu mejor intento contra ese boss." },
-    { "id": 48, "text": "Columna \"10 s\" opcional (configuración): el DPS de los últimos 10 segundos de cada jugador." }
+    { "id": 48, "text": "Columna \"10 s\" opcional (configuración): el DPS de los últimos 10 segundos de cada jugador." },
+    { "id": 49, "text": "Opción en EXPORTAR Y COMPARTIR: guardar una imagen del overlay cada vez que derrotás un boss." }
   ]
 }
