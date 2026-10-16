@@ -200,6 +200,11 @@ public sealed class CombatEngine(CombatEngineOptions options)
             return; // jugadores fuera del filtro no cuentan ni abren encuentros
         }
 
+        if (OpensEncounter(e.Timestamp) && !CanOpenEncounter(source, Entities.Canonical(e.TargetId)))
+        {
+            return;
+        }
+
         var encounter = EnsureEncounter(e.Timestamp);
         var overkill = Entities.ApplyDamage(e.TargetId, e.Amount);
         RecordHit(encounter, source, e, overkill);
@@ -303,6 +308,17 @@ public sealed class CombatEngine(CombatEngineOptions options)
             Finish();
         }
     }
+
+    private bool OpensEncounter(DateTimeOffset at) =>
+        _current is null || (_splitEncounters && at - _current.LastActivity > _idleTimeout);
+
+    /// <summary>
+    /// Solo un golpe a un monstruo vivo abre una pelea. Al morir el boss siguen llegando golpes que ya estaban
+    /// en vuelo, ticks sobre el cadáver y "daño" de jugador a jugador (costos de vida, efectos propios): antes
+    /// abrían una pelea fantasma de décimas de segundo que tapaba el resultado del boss.
+    /// </summary>
+    private bool CanOpenEncounter(ulong source, ulong target) =>
+        target != source && !Entities.IsKnownPlayer(target) && !Entities.IsDeadNpc(target);
 
     private Encounter EnsureEncounter(DateTimeOffset at)
     {

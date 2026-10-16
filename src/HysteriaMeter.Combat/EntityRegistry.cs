@@ -19,6 +19,7 @@ public sealed class EntityRegistry
     private readonly Dictionary<ulong, string> _pendingOwnerNames = [];
     private readonly Dictionary<ulong, DateTimeOffset> _partySeenAt = [];
     private readonly Dictionary<ulong, Health> _health = [];
+    private readonly HashSet<ulong> _deadNpcs = [];
     private DateTimeOffset _now;
     private string? _localName;
     private (int? ItemLevel, long? CombatPower)? _localGear;
@@ -82,6 +83,7 @@ public sealed class EntityRegistry
                     _pendingOwnerNames[spawn.EntityId] = ownerName;
                 }
 
+                _deadNpcs.Remove(spawn.EntityId);
                 if (spawn.NpcId is { } npcId)
                 {
                     Update(spawn.EntityId, p => p with { NpcId = npcId });
@@ -108,6 +110,9 @@ public sealed class EntityRegistry
                     Update(localId, p => p with { CombatPower = power.CombatPower });
                 }
 
+                break;
+            case DeathEvent death when IsNpc(Canonical(death.EntityId)):
+                _deadNpcs.Add(Canonical(death.EntityId));
                 break;
             case EntityInfoEvent info:
                 SetName(info.EntityId, info.Name);
@@ -169,6 +174,18 @@ public sealed class EntityRegistry
     public static int? ClassOfSkill(uint skillId) => (int)(skillId / 1_000_000) is var prefix and >= 11 and <= 18 ? prefix : null;
 
     public EntityProfile Profile(ulong id) => _profiles.GetValueOrDefault(id, EntityProfile.Empty);
+
+    /// <summary>Un monstruo que ya murió (y no volvió a aparecer).</summary>
+    public bool IsDeadNpc(ulong canonicalId) => _deadNpcs.Contains(canonicalId);
+
+    /// <summary>
+    /// Un jugador conocido: el local, uno con nombre o clase, o un compañero de party. Las entidades sin datos
+    /// (por ejemplo monstruos que aparecieron antes de empezar a capturar) no cuentan como jugadores.
+    /// </summary>
+    public bool IsKnownPlayer(ulong canonicalId) =>
+        canonicalId == LocalPlayerId
+        || Profile(canonicalId) is { NpcId: null } profile && (profile.Name is not null || profile.ClassId is not null)
+        || _partySeenAt.ContainsKey(canonicalId);
 
     /// <summary>Un NPC/monstruo: no suma al ranking de DPS.</summary>
     public bool IsNpc(ulong canonicalId) => Profile(canonicalId).NpcId is not null;
