@@ -57,6 +57,14 @@ public sealed class WindowSmokeTests
             Assert.True(viewModel.IsViewingHistory);
             viewModel.IsCompact = true;
             Layout(new OverlayWindow(viewModel));
+
+            // Esc: primero cierra el panel abierto y recién después vuelve a la pelea en vivo.
+            viewModel.IsSettingsOpen = true;
+            viewModel.EscapeCommand.Execute(null);
+            Assert.False(viewModel.IsSettingsOpen);
+            Assert.True(viewModel.IsViewingHistory);
+            viewModel.EscapeCommand.Execute(null);
+            Assert.False(viewModel.IsViewingHistory);
             viewModel.BackToLiveCommand.Execute(null);
             viewModel.IsSessionView = true;
             viewModel.BossOnly = true;

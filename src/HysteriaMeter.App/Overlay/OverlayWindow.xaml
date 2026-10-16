@@ -14,6 +14,9 @@
         TextOptions.TextFormattingMode="Display">
 
     <!-- Referencia visual: mocks/Main.dc.html (aprobado por Mati el 2026-10-15). -->
+    <Window.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding EscapeCommand}" />
+    </Window.InputBindings>
     <Window.Resources>
         <Style x:Key="IconButton" TargetType="Button">
             <Setter Property="Width" Value="26" />
