@@ -91,6 +91,9 @@ public sealed record MeterPreferences
 
     public bool ShowShareColumn { get; init; } = true;
 
+    /// <summary>Al soltar el overlay cerca de un borde de la pantalla o de otra ventana del meter, se pega a ese borde.</summary>
+    public bool SnapWindows { get; init; } = true;
+
     /// <summary>Columna "10 s": el DPS de los últimos segundos, para ver quién está pegando ahora (como el Last10DPS de ACT).</summary>
     public bool ShowRecentColumn { get; init; }
 

@@ -274,6 +274,12 @@ public sealed partial class MeterViewModel : ObservableObject
         set => Update(Preferences with { ShowShareColumn = value }, nameof(ShowShareColumn));
     }
 
+    public bool SnapWindows
+    {
+        get => Preferences.SnapWindows;
+        set => Update(Preferences with { SnapWindows = value }, nameof(SnapWindows));
+    }
+
     public bool ShowRecentColumn
     {
         get => Preferences.ShowRecentColumn;
