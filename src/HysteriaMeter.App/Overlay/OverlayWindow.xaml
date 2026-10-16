@@ -842,6 +842,8 @@
 
                             <TextBlock Text="VERSIÓN" Style="{StaticResource SettingsHeader}" />
                             <TextBlock Text="{Binding Version, Mode=OneTime}" FontSize="12" Foreground="{StaticResource TextMuted}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Iniciar con Windows" IsChecked="{Binding StartWithWindows}"
+                                      ToolTip="Abre el meter al iniciar sesión. Si movés la carpeta del programa, se corrige sola al abrirlo." />
                             <TextBlock Text="DIAGNÓSTICO" Style="{StaticResource SettingsHeader}" />
                             <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap" />
                             <TextBlock Text="{Binding Diagnostics}" FontSize="11" Foreground="{StaticResource TextDim}" TextWrapping="Wrap" Margin="0,2,0,0"

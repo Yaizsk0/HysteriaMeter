@@ -32,6 +32,18 @@ public partial class App : Application
         builder.Services.Configure<MeterSettings>(builder.Configuration.GetSection("Meter"));
 
         PlayerClasses.Load(Path.Combine(AppContext.BaseDirectory, "data", "classes.json"));
+        if (Environment.ProcessPath is { } exe)
+        {
+            try
+            {
+                Autostart.Refresh(exe);
+            }
+            catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException or IOException)
+            {
+                // Sin permiso para el registro: el inicio con Windows queda como estaba.
+            }
+        }
+
         NewsFeed.Load(Path.Combine(AppContext.BaseDirectory, "data", "novedades.json"));
         builder.Services.AddSingleton(sp => new CombatEngine(new CombatEngineOptions
         {
