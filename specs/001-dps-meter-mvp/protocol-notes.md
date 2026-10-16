@@ -82,7 +82,7 @@ varint entity | u8 tipo | u8 | u8 hasOwnerName | [varint len + UTF-8 ownerName] 
 ```
 
 - Monstruos: `hasOwnerName = 0`. Invocaciones de jugadores (tipos `0x5F`, `0x1C`): a veces traen el nombre del dueño; el motor lo resuelve contra los nombres conocidos.
-- Hay invocaciones sin nombre de dueño y sin ID de dueño en el spawn: su daño todavía no se atribuye.
+- Hay invocaciones sin nombre de dueño y sin ID de dueño en el spawn (por ejemplo el espíritu del Hechicero, skill 15280143 Bittercold Wind: 605k en Kromede, todos críticos). Si le pegan a un monstruo con una skill de jugador (prefijo de clase 11–18) y hay un solo jugador conocido de esa clase, el motor le asigna la invocación. Con dos jugadores de la misma clase sigue sin atribuirse: falta encontrar el dueño real en el protocolo (grabar una pelea con un Hechicero).
 - HP y HPmax son los dos últimos varints del cuerpo (validado: 119.700/119.700). Lo que hay entre la posición y el HP no es un solo varint (`9a 38 01` antes del HP), por eso se leen desde el final. El motor toma el máximo visto en `0x8D00` como HPmax y calcula el overkill del golpe final con el HP restante.
 
 ### Layout de `0x3645` (parcial)
