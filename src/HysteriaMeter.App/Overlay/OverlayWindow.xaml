@@ -242,9 +242,43 @@
                                 </Style>
                             </Ellipse.Style>
                         </Ellipse>
+                        <!-- Pausa: congela lo que se ve, la pelea sigue contando -->
+                        <Button Command="{Binding TogglePauseCommand}" Cursor="Hand" Background="Transparent" BorderThickness="0" Padding="2,0" Margin="0,0,6,0"
+                                Foreground="{StaticResource TextDim}" FontSize="11" VerticalAlignment="Center">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Content" Value="❚❚" />
+                                    <Setter Property="ToolTip" Value="Pausar: congela lo que ves (la pelea sigue contando)" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPaused}" Value="True">
+                                            <Setter Property="Content" Value="▶ PAUSA" />
+                                            <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                                            <Setter Property="ToolTip" Value="Seguir mostrando en vivo" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
                         <TextBlock Text="{Binding Elapsed}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
                     </StackPanel>
                 </DockPanel>
+
+                <!-- Bienvenida del primer arranque o novedades después de actualizar -->
+                <Border DockPanel.Dock="Top" Background="#26C9A25A" BorderBrush="{StaticResource GoldDim}" BorderThickness="0,0,0,1" Padding="10,6"
+                        Visibility="{Binding HasNotice, Converter={StaticResource Visible}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Bottom" Content="Entendido" Command="{Binding DismissNoticeCommand}" HorizontalAlignment="Right" Cursor="Hand"
+                                Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" FontSize="11" FontWeight="Bold" Padding="4,2" Margin="0,4,0,0" />
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding NoticeTitle}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Gold}" Margin="0,0,0,3" />
+                        <ItemsControl ItemsSource="{Binding NoticeLines}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding StringFormat='• {0}'}" FontSize="11" TextWrapping="Wrap" Margin="0,1" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DockPanel>
+                </Border>
 
                 <!-- Récord personal al terminar una pelea -->
                 <Border DockPanel.Dock="Top" Background="#33C9A25A" BorderBrush="{StaticResource GoldDim}" BorderThickness="0,0,0,1" Padding="10,4"

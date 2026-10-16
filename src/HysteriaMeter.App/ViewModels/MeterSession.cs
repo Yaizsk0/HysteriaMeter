@@ -94,6 +94,20 @@ public sealed class MeterSession
 
     public MeterPreferences Preferences { get; private set; }
 
+    private bool _noticeTaken;
+
+    /// <summary>La bienvenida o las novedades, una sola vez por arranque: la ve la primera ventana que pregunta.</summary>
+    public StartupNotice? TakeStartupNotice()
+    {
+        if (_noticeTaken)
+        {
+            return null;
+        }
+
+        _noticeTaken = true;
+        return NewsFeed.NoticeFor(NewsFeed.Current, Preferences.LastSeenNews);
+    }
+
     /// <summary>Nombres de las propiedades de <see cref="MeterViewModel"/> que hay que refrescar en todas las ventanas.</summary>
     public event Action<IReadOnlyList<string>>? PreferencesChanged;
 

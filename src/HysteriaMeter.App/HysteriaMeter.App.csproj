@@ -31,5 +31,6 @@
     <None Include="..\..\data\skills.json" Link="data\skills.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\data\npcs.json" Link="data\npcs.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\data\classes.json" Link="data\classes.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\data\novedades.json" Link="data\novedades.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

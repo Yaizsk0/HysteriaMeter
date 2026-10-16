@@ -83,6 +83,7 @@ public sealed partial class MeterViewModel : ObservableObject
             Update(Preferences with { Nicknames = ViewModels.Nicknames.With(Preferences.Nicknames, realName, alias) }, nameof(Preferences));
         Tab = tab;
         _showHealing = showHealing;
+        _notice = session.TakeStartupNotice();
         IsCompact = compact;
         IsSessionView = sessionView;
         BossOnly = bossOnly;
@@ -211,6 +212,41 @@ public sealed partial class MeterViewModel : ObservableObject
         get => Preferences.OnlyMe;
         set => Update(Preferences with { OnlyMe = value }, nameof(OnlyMe));
     }
+
+    private StartupNotice? _notice;
+
+    /// <summary>Bienvenida del primer arranque o novedades desde la última vez (se cierra con "Entendido").</summary>
+    public bool HasNotice => _notice is not null;
+
+    public string NoticeTitle => _notice?.Title ?? string.Empty;
+
+    public IReadOnlyList<string> NoticeLines => _notice?.Lines ?? [];
+
+    [RelayCommand]
+    private void DismissNotice()
+    {
+        if (_notice is { } notice)
+        {
+            _notice = null;
+            Update(Preferences with { LastSeenNews = Math.Max(Preferences.LastSeenNews, notice.LatestId) });
+            OnPropertyChanged(nameof(HasNotice));
+        }
+    }
+
+    /// <summary>Congela lo que muestra el overlay (como el botón de pausa de LOA Logs); la pelea sigue contando.</summary>
+    [ObservableProperty]
+    public partial bool IsPaused { get; set; }
+
+    partial void OnIsPausedChanged(bool value)
+    {
+        if (!value)
+        {
+            Refresh();
+        }
+    }
+
+    [RelayCommand]
+    private void TogglePause() => IsPaused = !IsPaused;
 
     public bool Sounds
     {
@@ -1339,6 +1375,11 @@ public sealed partial class MeterViewModel : ObservableObject
         if (_pinned is null && IsSessionView)
         {
             current = _engine.SessionSnapshot();
+        }
+
+        if (IsPaused && _pinned is null && _shown is not null)
+        {
+            return;
         }
 
         var snapshot = _pinned ?? current ?? _lastFinished;
