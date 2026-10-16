@@ -126,6 +126,25 @@ public sealed class EncounterRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task Lists_when_the_latest_fight_has_no_target_name()
+    {
+        // La pelea más reciente sin nombre de objetivo (monstruo sin npcs.json): el récord sale NULL en la primera
+        // fila y SQLite no le da tipo a la columna; el historial se caía al abrirse.
+        var repository = new EncounterRepository(_path);
+        await repository.InitializeAsync();
+        var start = new DateTimeOffset(2026, 10, 16, 4, 0, 0, TimeSpan.Zero);
+        await repository.SaveAsync(Fight(start, "Tarka", localDps: 1000));
+        await repository.SaveAsync(new EncounterSnapshot(
+            Guid.NewGuid(), start.AddMinutes(5), start.AddMinutes(6), null, TargetKilled: true, TotalDamage: 500,
+            [new ActorSnapshot(2, "Rubia", 15, false, 500, 50, 1, 5, 0, 200, 0, [])]));
+
+        var list = await repository.ListRecentAsync();
+
+        Assert.Equal(2, list.Count);
+        Assert.Null(list[0].LocalDps);
+    }
+
+    [Fact]
     public async Task Lists_attempts_records_and_notes_per_target()
     {
         var repository = new EncounterRepository(_path);
