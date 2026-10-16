@@ -251,6 +251,18 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Phase_comparison_marks_the_faster_attempt()
+    {
+        Assert.Empty(ActorDetailViewModel.ComparePhases(null, [new HealthPhase(75, 40)]));
+        var rows = ActorDetailViewModel.ComparePhases(
+            [new HealthPhase(75, 40), new HealthPhase(50, 80)],
+            [new HealthPhase(75, 45), new HealthPhase(50, 70), new HealthPhase(25, 100)]);
+        Assert.Equal(2, rows.Count);
+        Assert.Equal(new CompareRow("Boss al 75%", "0:40", "0:45", true, false), rows[0]);
+        Assert.Equal(new CompareRow("Boss al 50%", "1:20", "1:10", false, true), rows[1]);
+    }
+
+    [Fact]
     public void Vs_previous_attempt_shows_the_change_in_percent()
     {
         Assert.Null(MeterViewModel.VsPreviousText(1000, previous: null));
