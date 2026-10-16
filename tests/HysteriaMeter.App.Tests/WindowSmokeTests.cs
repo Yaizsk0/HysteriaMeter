@@ -71,6 +71,16 @@ public sealed class WindowSmokeTests
             Assert.False(healing.CanMoveWindow);
             Layout(new OverlayWindow(viewModel));
             viewModel.LockPosition = false;
+
+            // Columnas CRIT y MÁX: se llenan con la pelea en pantalla.
+            viewModel.ShowCritColumn = true;
+            viewModel.ShowMaxHitColumn = true;
+            viewModel.ShowDemoCommand.Execute(null);
+            Assert.NotEqual("–", viewModel.Actors[0].Crit);
+            Assert.NotEqual("–", viewModel.Actors[0].MaxHitText);
+            Layout(new OverlayWindow(viewModel));
+            viewModel.ShowCritColumn = false;
+            viewModel.ShowMaxHitColumn = false;
             viewModel.BackToLiveCommand.Execute(null);
             viewModel.IsSessionView = true;
             viewModel.BossOnly = true;

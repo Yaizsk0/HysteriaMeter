@@ -113,7 +113,7 @@ public sealed partial class MeterViewModel : ObservableObject
             }
 
             _timer.Interval = TimeSpan.FromMilliseconds(Preferences.RefreshMs);
-            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)) || names.Contains(nameof(ShowRecentColumn)) || names.Contains(nameof(ShowGear)) || names.Contains(nameof(ColorByClass)) || names.Contains(nameof(OnlyMe)) || names.Contains(nameof(MaxRows)) || names.Contains(nameof(Preferences)) || names.Contains(string.Empty))
+            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)) || names.Contains(nameof(ShowRecentColumn)) || names.Contains(nameof(ShowCritColumn)) || names.Contains(nameof(ShowMaxHitColumn)) || names.Contains(nameof(ShowGear)) || names.Contains(nameof(ColorByClass)) || names.Contains(nameof(OnlyMe)) || names.Contains(nameof(MaxRows)) || names.Contains(nameof(Preferences)) || names.Contains(string.Empty))
             {
                 Refresh();
             }
@@ -293,6 +293,18 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         get => Preferences.ShowRecentColumn;
         set => Update(Preferences with { ShowRecentColumn = value }, nameof(ShowRecentColumn));
+    }
+
+    public bool ShowCritColumn
+    {
+        get => Preferences.ShowCritColumn;
+        set => Update(Preferences with { ShowCritColumn = value }, nameof(ShowCritColumn));
+    }
+
+    public bool ShowMaxHitColumn
+    {
+        get => Preferences.ShowMaxHitColumn;
+        set => Update(Preferences with { ShowMaxHitColumn = value }, nameof(ShowMaxHitColumn));
     }
 
     public bool OnlyMe
@@ -1761,6 +1773,8 @@ public sealed partial class MeterViewModel : ObservableObject
             Actors[i].Recent = Preferences.ShowRecentColumn && Tab == MeterTab.Damage
                 ? ActorRowViewModel.Compact(ActorRowViewModel.RecentDps(rows[i].Timeline, snapshot.Duration))
                 : "–";
+            Actors[i].Crit = Tab == MeterTab.Damage && rows[i].Hits > 0 ? rows[i].CritRate.ToString("P0", CultureInfo.CurrentCulture) : "–";
+            Actors[i].MaxHitText = Tab == MeterTab.Damage && rows[i].MaxHit > 0 ? ActorRowViewModel.Compact(rows[i].MaxHit) : "–";
             Actors[i].HealingPerSecond = combined && rows[i].Healing > 0
                 ? ActorRowViewModel.Compact(rows[i].Healing / snapshot.Duration.TotalSeconds)
                 : "–";
