@@ -380,9 +380,25 @@ public sealed record EncounterSummary(
     string? LocalName = null);
 
 /// <summary>SQLite no tiene booleanos: la fila cruda trae <c>target_killed</c> como entero.</summary>
-internal sealed record EncounterRow(
-    string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage, string? Note,
-    double? LocalDps, double? BestLocalDps, long Attempt, string? ZoneEnteredAt, string? LocalName);
+/// <summary>
+/// Con propiedades y no con constructor: Sqlite informa como BLOB una columna calculada que en la primera fila viene NULL
+/// (por ejemplo el récord de una pelea sin objetivo) y Dapper no encontraba un constructor con esos tipos.
+/// </summary>
+internal sealed class EncounterRow
+{
+    public string Id { get; set; } = "";
+    public string StartedAt { get; set; } = "";
+    public string EndedAt { get; set; } = "";
+    public string? TargetName { get; set; }
+    public long TargetKilled { get; set; }
+    public long TotalDamage { get; set; }
+    public string? Note { get; set; }
+    public double? LocalDps { get; set; }
+    public double? BestLocalDps { get; set; }
+    public long Attempt { get; set; }
+    public string? ZoneEnteredAt { get; set; }
+    public string? LocalName { get; set; }
+}
 
 internal sealed record EncounterDetailRow(
     string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage, double? MainTargetSeconds, string? DeathsJson,
