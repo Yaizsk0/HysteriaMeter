@@ -292,6 +292,30 @@ public sealed partial class MeterViewModel : ObservableObject
     [RelayCommand]
     private void TogglePause() => IsPaused = !IsPaused;
 
+    /// <summary>Overlay minimizado a una pastilla con tu DPS (como Ember al borde de la pantalla).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFullView))]
+    public partial bool IsMinimized { get; set; }
+
+    public bool IsFullView => !IsMinimized;
+
+    /// <summary>"12.3k · #2 de 6": tu DPS y tu puesto, o el DPS de la party si no estás en la pelea.</summary>
+    [ObservableProperty]
+    public partial string MinimizedText { get; set; } = "HYSTERIA";
+
+    [RelayCommand]
+    private void ToggleMinimized() => IsMinimized = !IsMinimized;
+
+    public static string MinimizedSummary(IReadOnlyList<ActorRowViewModel> rows, string partyPerSecond, int players)
+    {
+        if (rows.FirstOrDefault(r => r.IsLocalPlayer) is { } me)
+        {
+            return $"{me.PerSecond} · #{me.Rank} de {players}";
+        }
+
+        return players == 0 ? "HYSTERIA" : $"{partyPerSecond} party";
+    }
+
     public bool Sounds
     {
         get => Preferences.Sounds;
@@ -1493,6 +1517,7 @@ public sealed partial class MeterViewModel : ObservableObject
         }
 
         IsEmpty = Actors.Count == 0;
+        MinimizedText = MinimizedSummary(Actors, PartyPerSecond, ranked.Count);
         if (Detail.ActorId is not null)
         {
             Detail.Update(real);
