@@ -110,7 +110,7 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial double Bar { get; set; }
 
-    public void Update(int rank, ActorSnapshot actor, MeterTab tab, long top, long total, TimeSpan duration, bool bossOnly = false, bool showGear = true)
+    public void Update(int rank, ActorSnapshot actor, MeterTab tab, long top, long total, TimeSpan duration, bool bossOnly = false, bool showGear = true, bool colorByClass = false)
     {
         var playerClass = PlayerClasses.Of(actor.ClassId);
         ClassIcon = playerClass?.Icon;
@@ -123,8 +123,17 @@ public sealed partial class ActorRowViewModel : ObservableObject
         Name = actor.Name;
         DisplayName = (actor.IsLocalPlayer ? $"{actor.Name} (vos)" : actor.Name) + DeathMark(actor.Deaths);
         Initial = InitialOf(actor.Name);
-        Accent = actor.IsLocalPlayer ? PlayerColors.Local : PlayerColors.For(actor.Name);
-        BarFill = actor.IsLocalPlayer ? PlayerColors.LocalBar : PlayerColors.BarFor(actor.Name);
+        if (colorByClass && playerClass is not null)
+        {
+            Accent = PlayerColors.ForClass(playerClass.Color);
+            BarFill = PlayerColors.BarForClass(playerClass.Color);
+        }
+        else
+        {
+            Accent = actor.IsLocalPlayer ? PlayerColors.Local : PlayerColors.For(actor.Name);
+            BarFill = actor.IsLocalPlayer ? PlayerColors.LocalBar : PlayerColors.BarFor(actor.Name);
+        }
+
         IsLocalPlayer = actor.IsLocalPlayer;
         PerSecond = Compact(tab switch
         {

@@ -100,7 +100,7 @@ public sealed partial class MeterViewModel : ObservableObject
             }
 
             _timer.Interval = TimeSpan.FromMilliseconds(Preferences.RefreshMs);
-            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)) || names.Contains(nameof(ShowGear)) || names.Contains(nameof(Preferences)) || names.Contains(string.Empty))
+            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)) || names.Contains(nameof(ShowGear)) || names.Contains(nameof(ColorByClass)) || names.Contains(nameof(OnlyMe)) || names.Contains(nameof(Preferences)) || names.Contains(string.Empty))
             {
                 Refresh();
             }
@@ -186,6 +186,30 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         get => Preferences.ShowGear;
         set => Update(Preferences with { ShowGear = value }, nameof(ShowGear));
+    }
+
+    public bool ColorByClass
+    {
+        get => Preferences.ColorByClass;
+        set => Update(Preferences with { ColorByClass = value }, nameof(ColorByClass));
+    }
+
+    public bool ShowTotalColumn
+    {
+        get => Preferences.ShowTotalColumn;
+        set => Update(Preferences with { ShowTotalColumn = value }, nameof(ShowTotalColumn));
+    }
+
+    public bool ShowShareColumn
+    {
+        get => Preferences.ShowShareColumn;
+        set => Update(Preferences with { ShowShareColumn = value }, nameof(ShowShareColumn));
+    }
+
+    public bool OnlyMe
+    {
+        get => Preferences.OnlyMe;
+        set => Update(Preferences with { OnlyMe = value }, nameof(OnlyMe));
     }
 
     public bool Sounds
@@ -1349,6 +1373,11 @@ public sealed partial class MeterViewModel : ObservableObject
             .ToList();
         var total = rows.Sum(metric);
         var top = rows.Count > 0 ? metric(rows[0]) : 0;
+        var ranked = rows;
+        if (Preferences.OnlyMe && rows.Any(a => a.IsLocalPlayer))
+        {
+            rows = [.. rows.Where(a => a.IsLocalPlayer)];
+        }
 
         PartyTotal = ActorRowViewModel.Compact(total);
         PartyPerSecond = ActorRowViewModel.Compact(total / snapshot.Duration.TotalSeconds);
@@ -1364,7 +1393,7 @@ public sealed partial class MeterViewModel : ObservableObject
                 Actors.Add(new ActorRowViewModel());
             }
 
-            Actors[i].Update(i + 1, rows[i], Tab, top, total, snapshot.Duration, BossOnly, Preferences.ShowGear);
+            Actors[i].Update(ranked.IndexOf(rows[i]) + 1, rows[i], Tab, top, total, snapshot.Duration, BossOnly, Preferences.ShowGear, Preferences.ColorByClass);
             Actors[i].Spark = Preferences.Sparklines && Tab == MeterTab.Damage ? ActorRowViewModel.Sparkline(rows[i].Timeline) : null;
             Actors[i].HealingPerSecond = combined && rows[i].Healing > 0
                 ? ActorRowViewModel.Compact(rows[i].Healing / snapshot.Duration.TotalSeconds)

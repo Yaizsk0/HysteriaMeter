@@ -343,13 +343,15 @@
                         <ColumnDefinition Width="46" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="58" />
-                        <ColumnDefinition Width="58" />
-                        <ColumnDefinition Width="42" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="1" Text="JUGADOR" />
                     <TextBlock Grid.Column="2" Text="{Binding RateUnit}" HorizontalAlignment="Right" />
-                    <TextBlock Grid.Column="3" Text="{Binding SecondColumnHeader}" HorizontalAlignment="Right" />
-                    <TextBlock Grid.Column="4" Text="%" HorizontalAlignment="Right" />
+                    <TextBlock Grid.Column="3" Text="{Binding SecondColumnHeader}" Width="58" TextAlignment="Right"
+                               Visibility="{Binding ShowTotalColumn, Converter={StaticResource Visible}}" />
+                    <TextBlock Grid.Column="4" Text="%" Width="42" TextAlignment="Right"
+                               Visibility="{Binding ShowShareColumn, Converter={StaticResource Visible}}" />
                 </Grid>
 
                 <!-- Filas: ocupan el resto del alto; si no entran, se desplazan con la rueda. -->
@@ -378,8 +380,8 @@
                                             <ColumnDefinition Width="28" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="58" />
-                                            <ColumnDefinition Width="58" />
-                                            <ColumnDefinition Width="42" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Grid.Column="0" Text="{Binding Rank}" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
                                         <!-- Rombo de clase: por ahora la inicial; el color de clase llega cuando decodifiquemos la clase. -->
@@ -406,8 +408,10 @@
                                         <TextBlock x:Name="PerSecondText" Grid.Column="3" Text="{Binding PerSecond}" FontSize="15" FontWeight="Bold" Foreground="{StaticResource TextBright}"
                                                    HorizontalAlignment="Right" VerticalAlignment="Center" />
                                         <!-- Total, o HPS cuando daño y curación van juntos -->
-                                        <TextBlock x:Name="TotalText" Grid.Column="4" Text="{Binding Total}" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="5" Text="{Binding Share}" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                        <TextBlock x:Name="TotalText" Grid.Column="4" Text="{Binding Total}" Foreground="{StaticResource TextMuted}" Width="58" TextAlignment="Right" VerticalAlignment="Center"
+                                                   Visibility="{Binding DataContext.ShowTotalColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}" />
+                                        <TextBlock Grid.Column="5" Text="{Binding Share}" Foreground="{StaticResource TextMuted}" Width="42" TextAlignment="Right" VerticalAlignment="Center"
+                                                   Visibility="{Binding DataContext.ShowShareColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}" />
                                     </Grid>
                                 </Grid>
                             </Border>
@@ -596,6 +600,12 @@
                             </ListBox>
                             <CheckBox Style="{StaticResource Option}" Content="Línea de DPS de los últimos 30 s en cada fila" IsChecked="{Binding ShowSparklines}" />
                             <CheckBox Style="{StaticResource Option}" Content="Item level y power al lado del nombre" IsChecked="{Binding ShowGear}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Colores por clase (en vez de uno por jugador)" IsChecked="{Binding ColorByClass}"
+                                      ToolTip="Los colores de cada clase se cambian en data/classes.json" />
+                            <CheckBox Style="{StaticResource Option}" Content="Columna TOTAL (o HPS)" IsChecked="{Binding ShowTotalColumn}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Columna %" IsChecked="{Binding ShowShareColumn}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Solo mi fila" IsChecked="{Binding OnlyMe}"
+                                      ToolTip="El overlay muestra solo tu DPS y tu puesto en la party" />
                             <CheckBox Style="{StaticResource Option}" Content="Sonido en las alertas" IsChecked="{Binding Sounds}"
                                       ToolTip="Récord, prueba de DPS terminada y enrage al que no se llega (el enrage sale de data/npcs.json)" />
 

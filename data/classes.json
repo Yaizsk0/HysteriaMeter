@@ -1,15 +1,15 @@
 {
   // Clases por número: los IDs de skill de cada clase empiezan con él (12010350 → clase 12).
   // El meter deduce la clase de cada jugador por las skills que usa. Si un nombre está mal, corregilo acá.
-  // Símbolos disponibles: espada, escudo, dagas, arco, llama, orbe, cruz, nota.
+  // Símbolos disponibles: espada, escudo, dagas, arco, llama, orbe, cruz, nota. "color" (#RRGGBB) se usa con "Colores por clase".
   "classes": {
-    "11": { "name": "Gladiador", "icon": "espada" },
-    "12": { "name": "Templario", "icon": "escudo" },
-    "13": { "name": "Asesino", "icon": "dagas" },
-    "14": { "name": "Ranger", "icon": "arco" },
-    "15": { "name": "Hechicero", "icon": "llama" },
-    "16": { "name": "Espiritualista", "icon": "orbe" },
-    "17": { "name": "Clérigo", "icon": "cruz" },
-    "18": { "name": "Chanter", "icon": "nota" }
+    "11": { "name": "Gladiador", "icon": "espada", "color": "#D89A4E" },
+    "12": { "name": "Templario", "icon": "escudo", "color": "#5A8FD8" },
+    "13": { "name": "Asesino", "icon": "dagas", "color": "#9A62D8" },
+    "14": { "name": "Ranger", "icon": "arco", "color": "#6CBF4F" },
+    "15": { "name": "Hechicero", "icon": "llama", "color": "#E05E4E" },
+    "16": { "name": "Espiritualista", "icon": "orbe", "color": "#C05CD6" },
+    "17": { "name": "Clérigo", "icon": "cruz", "color": "#E8E0B0" },
+    "18": { "name": "Chanter", "icon": "nota", "color": "#3FB89F" }
   }
 }

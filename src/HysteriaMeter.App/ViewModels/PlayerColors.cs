@@ -5,9 +5,9 @@ namespace HysteriaMeter.App.ViewModels;
 /// <summary>
 /// Un color por jugador para distinguir las filas de un vistazo. Sale del nombre, así cada jugador
 /// conserva su color entre peleas. El dorado queda reservado para el jugador local.
-/// Cuando decodifiquemos la clase, el color va a salir de la clase.
+/// Con "Colores por clase", el color sale de la clase (como en Details!), también para el local.
 /// </summary>
-internal static class PlayerColors
+public static class PlayerColors
 {
     private static readonly Color[] Palette =
     [
@@ -33,6 +33,15 @@ internal static class PlayerColors
     public static Brush For(string name) => Accents[IndexOf(name)];
 
     public static Brush BarFor(string name) => Bars[IndexOf(name)];
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Color, (Brush Accent, Brush Bar)> ByColor = new();
+
+    public static Brush ForClass(Color color) => OfColor(color).Accent;
+
+    public static Brush BarForClass(Color color) => OfColor(color).Bar;
+
+    private static (Brush Accent, Brush Bar) OfColor(Color color) => ByColor.GetOrAdd(color, c =>
+        (Freeze(new SolidColorBrush(c)), Freeze(new SolidColorBrush(Color.FromArgb(0x8C, c.R, c.G, c.B)))));
 
     /// <summary>FNV-1a: estable entre ejecuciones (string.GetHashCode cambia en cada proceso).</summary>
     internal static int IndexOf(string name)

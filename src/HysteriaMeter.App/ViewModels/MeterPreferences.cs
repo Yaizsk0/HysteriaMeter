@@ -70,6 +70,17 @@ public sealed record MeterPreferences
     /// <summary>Item level y power de cada jugador al lado de su nombre.</summary>
     public bool ShowGear { get; init; } = true;
 
+    /// <summary>Barras y rombo del color de la clase (como Details!) en vez de un color por jugador.</summary>
+    public bool ColorByClass { get; init; }
+
+    /// <summary>Columnas a la derecha del DPS: total (o HPS) y porcentaje.</summary>
+    public bool ShowTotalColumn { get; init; } = true;
+
+    public bool ShowShareColumn { get; init; } = true;
+
+    /// <summary>Solo tu fila, para tener el overlay mínimo mientras jugás (como el modo colapsado de Ember).</summary>
+    public bool OnlyMe { get; init; }
+
     /// <summary>Atajos globales, como "Ctrl+Shift+L"; vacío = sin atajo.</summary>
     public string HotkeyClickThrough { get; init; } = "Ctrl+Shift+L";
 
