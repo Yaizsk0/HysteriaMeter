@@ -94,6 +94,9 @@ public sealed record MeterPreferences
     /// <summary>Última novedad vista (id de <c>data/novedades.json</c>); 0 = nunca abrió el meter.</summary>
     public int LastSeenNews { get; init; }
 
+    /// <summary>Tema visual (ver <see cref="MeterThemes"/>).</summary>
+    public string Theme { get; init; } = MeterThemes.Default;
+
     /// <summary>Atajos globales, como "Ctrl+Shift+L"; vacío = sin atajo.</summary>
     public string HotkeyClickThrough { get; init; } = "Ctrl+Shift+L";
 

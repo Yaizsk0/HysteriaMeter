@@ -176,6 +176,15 @@ public sealed partial class MeterViewModel : ObservableObject
         set => Update(Preferences with { Numbers = value.Style }, nameof(SelectedNumberStyle));
     }
 
+    public static IReadOnlyList<MeterTheme> ThemeOptions => MeterThemes.All;
+
+    /// <summary>Tema visual; las ventanas que se abren después lo toman completo.</summary>
+    public MeterTheme SelectedTheme
+    {
+        get => MeterThemes.Of(Preferences.Theme);
+        set => Update(Preferences with { Theme = value?.Name ?? MeterThemes.Default }, nameof(SelectedTheme));
+    }
+
     public int RowHeight
     {
         get => Preferences.RowHeight;

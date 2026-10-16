@@ -81,6 +81,8 @@ El botón ❚❚ del encabezado pausa el overlay: congela lo que ves (por ejempl
 
 En FILAS se elige el alto de cada fila (24, 30 o 36 px) y cuántos jugadores mostrar; si quedás fuera del corte, tu fila ocupa el último lugar con tu puesto real.
 
+En TEMA hay cuatro estilos, como los de Ember: Dorado (el de siempre), Mínimo (gris, sin dorados), Abismo (violeta) y Carmesí.
+
 Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: los nombres se cargan a mano en `data/skills.json`.
 
 Los monstruos tampoco traen nombre: si una pelea sale como "NPC 2001234", agregá ese ID a `data/npcs.json` con su nombre, la dungeon y si es boss (`"2001234": { "name": "Destroyer Tarka", "dungeon": "...", "boss": true }`) y la próxima vez se ve con nombre, también en el historial y en el progreso por boss.

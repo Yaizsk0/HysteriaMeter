@@ -550,6 +550,27 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Themes_replace_and_restore_the_palette()
+    {
+        RunOnSta(() =>
+        {
+            var resources = new ResourceDictionary
+            {
+                ["Gold"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gold),
+                ["Panel"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black),
+            };
+            var defaults = MeterThemes.Snapshot(resources);
+
+            MeterThemes.Apply(resources, "Abismo", defaults);
+            Assert.Equal(MeterThemes.Of("Abismo").Colors["Gold"], ((System.Windows.Media.SolidColorBrush)resources["Gold"]).Color);
+
+            MeterThemes.Apply(resources, "no existe", defaults);
+            Assert.Equal(System.Windows.Media.Colors.Gold, ((System.Windows.Media.SolidColorBrush)resources["Gold"]).Color);
+            Assert.All(MeterThemes.All.Skip(1), t => Assert.Equal(14, t.Colors.Count));
+        });
+    }
+
+    [Fact]
     public void Rows_take_the_class_color_when_asked()
     {
         var row = new ActorRowViewModel();
