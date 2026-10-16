@@ -870,6 +870,23 @@ public sealed partial class MeterViewModel : ObservableObject
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{CaptureRecorder.Folder}\"") { UseShellExecute = true });
     }
 
+    /// <summary>Copia el reporte (versión, sistema, diagnóstico; sin nombres) y abre un issue nuevo en GitHub.</summary>
+    [RelayCommand]
+    private void ReportProblem()
+    {
+        var report = BugReport.Build(Version, Environment.OSVersion.VersionString, StatusText, Diagnostics, Preferences);
+        try
+        {
+            System.Windows.Clipboard.SetText(report);
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            // Si el portapapeles está ocupado, igual va en la URL.
+        }
+
+        Process.Start(new ProcessStartInfo(BugReport.IssueUrl(report)) { UseShellExecute = true });
+    }
+
     /// <summary>Último encuentro mostrado, para copiar el resumen.</summary>
     private EncounterSnapshot? _shown;
 
