@@ -1467,6 +1467,44 @@ public sealed partial class MeterViewModel : ObservableObject
         return $"{percent}% vs tu intento anterior ({ActorRowViewModel.Compact(before)} DPS)";
     }
 
+    /// <summary>Alt+← o ‹: la pelea guardada anterior, sin abrir el historial (como los segmentos de Details!).</summary>
+    [RelayCommand]
+    private Task OlderFightAsync() => StepFightAsync(+1);
+
+    /// <summary>Alt+→ o ›: la pelea siguiente; desde la más nueva vuelve al vivo.</summary>
+    [RelayCommand]
+    private Task NewerFightAsync() => StepFightAsync(-1);
+
+    private async Task StepFightAsync(int step)
+    {
+        if (_history is null || (_pinnedId is null && step < 0))
+        {
+            return;
+        }
+
+        List<HistoryItem> items;
+        try
+        {
+            items = [.. (await _history.ListRecentAsync(200).ConfigureAwait(true)).Select(HistoryItem.From)];
+        }
+        catch (DbException)
+        {
+            return;
+        }
+
+        // La lista va de la más nueva a la más vieja; desde el vivo (o una pelea abierta de archivo) la anterior es la primera.
+        var index = _pinnedId is null ? -1 : items.FindIndex(i => i.Id == _pinnedId);
+        var next = index + step;
+        if (next < 0)
+        {
+            BackToLive();
+        }
+        else if (next < items.Count)
+        {
+            await OpenEncounterAsync(items[next]).ConfigureAwait(true);
+        }
+    }
+
     [RelayCommand]
     private async Task OpenEncounterAsync(HistoryItem? item)
     {

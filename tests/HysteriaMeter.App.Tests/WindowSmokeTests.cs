@@ -81,6 +81,10 @@ public sealed class WindowSmokeTests
             Layout(new OverlayWindow(viewModel));
             viewModel.ShowCritColumn = false;
             viewModel.ShowMaxHitColumn = false;
+
+            // Sin base de historial, las flechas de peleas no hacen nada (y no rompen).
+            viewModel.OlderFightCommand.Execute(null);
+            viewModel.NewerFightCommand.Execute(null);
             viewModel.BackToLiveCommand.Execute(null);
             viewModel.IsSessionView = true;
             viewModel.BossOnly = true;
