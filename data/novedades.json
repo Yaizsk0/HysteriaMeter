@@ -29,6 +29,7 @@
     { "id": 56, "text": "Esc cierra el panel abierto (configuración, historial), vuelve a la pelea actual y cierra el detalle y el registro." },
     { "id": 57, "text": "Configuración → Fijar posición y tamaño: el overlay no se mueve ni se agranda sin querer, y los botones siguen andando." },
     { "id": 58, "text": "Columnas opcionales CRIT y MÁX en el overlay: porcentaje de críticos y golpe más alto de cada jugador." },
-    { "id": 59, "text": "Alt+← y Alt+→ (o las flechas ‹ ›) recorren tus peleas guardadas sin abrir el historial." }
+    { "id": 59, "text": "Alt+← y Alt+→ (o las flechas ‹ ›) recorren tus peleas guardadas sin abrir el historial." },
+    { "id": 60, "text": "En vivo, ▲ o ▼ junto al puesto de quien acaba de subir o bajar en el ranking." }
   ]
 }

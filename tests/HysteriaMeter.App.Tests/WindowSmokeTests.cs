@@ -141,6 +141,25 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Rank_trend_marks_who_moved_for_a_few_seconds()
+    {
+        var trends = new RankTrends();
+        var fight = Guid.NewGuid();
+        var t0 = DateTimeOffset.UnixEpoch;
+        trends.Begin(fight, 0);
+        Assert.Equal(string.Empty, trends.Update(1, 2, t0));
+        Assert.Equal(string.Empty, trends.Update(2, 1, t0));
+        Assert.Equal("▲", trends.Update(1, 1, t0.AddSeconds(1)));
+        Assert.Equal("▼", trends.Update(2, 2, t0.AddSeconds(1)));
+        Assert.Equal("▲", trends.Update(1, 1, t0.AddSeconds(2)));
+        Assert.Equal(string.Empty, trends.Update(1, 1, t0.AddSeconds(1) + RankTrends.Duration));
+
+        // Otra pelea u otra pestaña: nadie "sube" por el solo hecho de reordenarse.
+        trends.Begin(fight, 1);
+        Assert.Equal(string.Empty, trends.Update(2, 1, t0.AddSeconds(10)));
+    }
+
+    [Fact]
     public void Version_shows_the_short_commit()
     {
         Assert.Equal("v0.15.0 · a352982", AppVersion.Format("0.15.0+a352982e972d3725ee7c7428b76c584d8d57f3c"));
