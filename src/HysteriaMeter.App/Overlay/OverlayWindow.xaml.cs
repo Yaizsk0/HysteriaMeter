@@ -331,7 +331,32 @@ public partial class OverlayWindow : Window
         if (e.ButtonState == MouseButtonState.Pressed)
         {
             DragMove();
+            SnapToEdges();
         }
+    }
+
+    /// <summary>Al soltar la ventana, la pega a un borde de la pantalla o de otra ventana del meter si quedó cerca.</summary>
+    private void SnapToEdges()
+    {
+        if (!_viewModel.SnapWindows || double.IsNaN(Left) || double.IsNaN(Top))
+        {
+            return;
+        }
+
+        var window = new Rect(Left, Top, ActualWidth, ActualHeight);
+        var others = _windows?.All.Where(w => !ReferenceEquals(w, this) && w.IsVisible).Select(w => new Rect(w.Left, w.Top, w.ActualWidth, w.ActualHeight)).ToList() ?? [];
+        var snapped = WindowSnap.Snap(window, ScreenWorkArea(), others);
+        Left = snapped.X;
+        Top = snapped.Y;
+    }
+
+    /// <summary>Área de trabajo (sin la barra de tareas) del monitor donde está la ventana, en unidades de WPF.</summary>
+    private Rect ScreenWorkArea()
+    {
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var handle = new WindowInteropHelper(this).Handle;
+        var area = System.Windows.Forms.Screen.FromHandle(handle).WorkingArea;
+        return new Rect(area.Left / dpi.DpiScaleX, area.Top / dpi.DpiScaleY, area.Width / dpi.DpiScaleX, area.Height / dpi.DpiScaleY);
     }
 
     private void OnOpenFightClick(object sender, RoutedEventArgs e)

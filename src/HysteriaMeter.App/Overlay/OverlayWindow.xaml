@@ -661,6 +661,8 @@
                             <CheckBox Style="{StaticResource Option}" Content="Columna TOTAL (o HPS)" IsChecked="{Binding ShowTotalColumn}" />
                             <CheckBox Style="{StaticResource Option}" Content="Columna %" IsChecked="{Binding ShowShareColumn}" />
                             <CheckBox Style="{StaticResource Option}" Content="Columna 10 s (DPS de los últimos 10 segundos)" IsChecked="{Binding ShowRecentColumn}" />
+                            <CheckBox Style="{StaticResource Option}" Content="Imanes: pegar la ventana a los bordes al soltarla" IsChecked="{Binding SnapWindows}"
+                                      ToolTip="Bordes de la pantalla y de las otras ventanas del meter" />
                             <CheckBox Style="{StaticResource Option}" Content="Solo mi fila" IsChecked="{Binding OnlyMe}"
                                       ToolTip="El overlay muestra solo tu DPS y tu puesto en la party" />
                             <CheckBox Style="{StaticResource Option}" Content="Sonido en las alertas" IsChecked="{Binding Sounds}"

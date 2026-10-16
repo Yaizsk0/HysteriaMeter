@@ -219,6 +219,25 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Snap_sticks_to_screen_edges_and_other_windows()
+    {
+        var screen = new Rect(0, 0, 1920, 1040);
+
+        // Cerca de la esquina superior izquierda: se pega.
+        Assert.Equal(new Point(0, 0), WindowSnap.Snap(new Rect(9, 12, 300, 200), screen, []));
+
+        // Lejos de todo: no se mueve.
+        Assert.Equal(new Point(500, 400), WindowSnap.Snap(new Rect(500, 400, 300, 200), screen, []));
+
+        // Al lado de otra ventana: se pega a su borde derecho y se alinea arriba con ella.
+        var other = new Rect(100, 100, 300, 200);
+        Assert.Equal(new Point(400, 100), WindowSnap.Snap(new Rect(408, 106, 300, 200), screen, [other]));
+
+        // Una ventana lejos en el otro eje no atrae.
+        Assert.Equal(new Point(408, 700), WindowSnap.Snap(new Rect(408, 700, 300, 200), screen, [other]));
+    }
+
+    [Fact]
     public void Vs_previous_attempt_shows_the_change_in_percent()
     {
         Assert.Null(MeterViewModel.VsPreviousText(1000, previous: null));
