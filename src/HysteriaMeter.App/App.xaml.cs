@@ -32,6 +32,7 @@ public partial class App : Application
         builder.Services.Configure<MeterSettings>(builder.Configuration.GetSection("Meter"));
 
         PlayerClasses.Load(Path.Combine(AppContext.BaseDirectory, "data", "classes.json"));
+        PlayerClasses.EmblemFolder = AppPaths.In("Juego", "clases");
         if (Environment.ProcessPath is { } exe)
         {
             try

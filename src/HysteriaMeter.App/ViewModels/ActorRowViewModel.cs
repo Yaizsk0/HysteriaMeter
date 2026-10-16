@@ -32,6 +32,13 @@ public sealed partial class ActorRowViewModel : ObservableObject
 
     public bool HasClassIcon => ClassIcon is not null;
 
+    /// <summary>Emblema de la clase (imagen en Juego\clases); si está, reemplaza al rombo y al símbolo dibujado.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasClassEmblem))]
+    public partial string? ClassEmblem { get; set; }
+
+    public bool HasClassEmblem => ClassEmblem is not null;
+
     [ObservableProperty]
     public partial string ClassName { get; set; } = string.Empty;
 
@@ -154,6 +161,7 @@ public sealed partial class ActorRowViewModel : ObservableObject
     {
         var playerClass = PlayerClasses.Of(actor.ClassId);
         ClassIcon = playerClass?.Icon;
+        ClassEmblem = playerClass is null ? null : PlayerClasses.EmblemOf(actor.ClassId);
         ClassName = playerClass?.Name ?? string.Empty;
         Gear = showGear ? GearText(actor.ItemLevel, actor.CombatPower) : string.Empty;
         var value = tab.Metric(actor, bossOnly);

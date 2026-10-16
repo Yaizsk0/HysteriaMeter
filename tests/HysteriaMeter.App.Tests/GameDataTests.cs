@@ -48,6 +48,26 @@ public class GameDataTests
     }
 
     [Fact]
+    public void Class_emblems_come_from_the_folder_when_present()
+    {
+        var folder = Directory.CreateTempSubdirectory().FullName;
+        File.WriteAllBytes(Path.Combine(folder, "15.png"), [1]);
+        var previous = PlayerClasses.EmblemFolder;
+        try
+        {
+            PlayerClasses.EmblemFolder = folder;
+
+            Assert.Equal(Path.Combine(folder, "15.png"), PlayerClasses.EmblemOf(15));
+            Assert.Null(PlayerClasses.EmblemOf(11));
+            Assert.Null(PlayerClasses.EmblemOf(null));
+        }
+        finally
+        {
+            PlayerClasses.EmblemFolder = previous;
+        }
+    }
+
+    [Fact]
     public void Npc_files_are_merged_and_a_broken_one_is_ignored()
     {
         var folder = Directory.CreateTempSubdirectory().FullName;
