@@ -109,6 +109,10 @@ public sealed record MeterPreferences
 
     public string HotkeyMark { get; init; } = "Ctrl+Shift+M";
 
+    public string HotkeyMinimize { get; init; } = "Ctrl+Shift+N";
+
+    public string HotkeyPause { get; init; } = "Ctrl+Shift+P";
+
     // "TextFont" y no "Font": así las preferencias guardadas con la fuente vieja no pisan la nueva por defecto.
     public string TextFont { get; init; } = "Inter";
 }

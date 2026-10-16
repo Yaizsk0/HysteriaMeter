@@ -17,6 +17,8 @@ public partial class OverlayWindow : Window
     private const int ResetHotKey = 2;
     private const int ToggleVisibilityHotKey = 3;
     private const int MarkHotKey = 4;
+    private const int MinimizeHotKey = 5;
+    private const int PauseHotKey = 6;
     private const double MinZoom = 0.7;
     private const double MaxZoom = 2.0;
     private const double ZoomStep = 0.1;
@@ -160,12 +162,15 @@ public partial class OverlayWindow : Window
         (ResetHotKey, _viewModel.HotkeyReset),
         (ToggleVisibilityHotKey, _viewModel.HotkeyVisibility),
         (MarkHotKey, _viewModel.HotkeyMark),
+        (MinimizeHotKey, _viewModel.HotkeyMinimize),
+        (PauseHotKey, _viewModel.HotkeyPause),
     ];
 
     private void OnHotkeysChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(MeterViewModel.HotkeyClickThrough) or nameof(MeterViewModel.HotkeyReset)
-            or nameof(MeterViewModel.HotkeyVisibility) or nameof(MeterViewModel.HotkeyMark) or "Preferences" or "" or null)
+            or nameof(MeterViewModel.HotkeyVisibility) or nameof(MeterViewModel.HotkeyMark)
+            or nameof(MeterViewModel.HotkeyMinimize) or nameof(MeterViewModel.HotkeyPause) or "Preferences" or "" or null)
         {
             RegisterHotKeys();
         }
@@ -237,6 +242,16 @@ public partial class OverlayWindow : Window
                 break;
             case MarkHotKey:
                 _viewModel.MarkMomentCommand.Execute(null);
+                handled = true;
+                break;
+            case MinimizeHotKey:
+                var minimize = !_viewModel.IsMinimized;
+                ForAllWindows(w => w._viewModel.IsMinimized = minimize);
+                handled = true;
+                break;
+            case PauseHotKey:
+                var pause = !_viewModel.IsPaused;
+                ForAllWindows(w => w._viewModel.IsPaused = pause);
                 handled = true;
                 break;
             case ToggleVisibilityHotKey:
