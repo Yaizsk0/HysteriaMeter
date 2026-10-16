@@ -604,6 +604,19 @@ public sealed class WindowSmokeTests
     }
 
     [Fact]
+    public void Bug_report_has_the_diagnostics_but_no_webhook()
+    {
+        var preferences = new MeterPreferences { DiscordWebhook = "https://discord.com/api/webhooks/1/secreto" };
+        var report = BugReport.Build("v0.15.0 · abc1234", "Windows 11", "En combate", "frames 10\nconocidos 9", preferences);
+
+        Assert.Contains("v0.15.0 · abc1234", report);
+        Assert.Contains("frames 10 conocidos 9", report);
+        Assert.DoesNotContain("secreto", report);
+        Assert.StartsWith(BugReport.IssuesUrl + "?title=", BugReport.IssueUrl(report));
+        Assert.True(BugReport.IssueUrl(new string('x', 10_000)).Length < 3200);
+    }
+
+    [Fact]
     public void Rows_take_the_class_color_when_asked()
     {
         var row = new ActorRowViewModel();

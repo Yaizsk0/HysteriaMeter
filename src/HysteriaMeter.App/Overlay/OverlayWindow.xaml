@@ -829,6 +829,9 @@
                                        ToolTip="Frames: mensajes del juego leídos. Conocidos: los que el meter sabe interpretar. Errores o resincronizaciones altos indican un problema de lectura." />
                             <TextBlock Text="{Binding DataFolderHint, Mode=OneTime}" FontSize="11" Foreground="{StaticResource TextDim}" TextWrapping="Wrap" Margin="0,2,0,0"
                                        ToolTip="Para el modo portable, creá un archivo portable.txt junto a HysteriaMeter.exe" />
+                            <Button Content="Reportar un problema" Command="{Binding ReportProblemCommand}" HorizontalAlignment="Left" Margin="0,6,0,0" Cursor="Hand"
+                                    Foreground="{StaticResource Gold}" Background="Transparent" BorderBrush="{StaticResource GoldDim}" BorderThickness="1" Padding="8,2" FontSize="11"
+                                    ToolTip="Copia la versión y el diagnóstico (sin nombres de personajes) y abre un issue en GitHub para contar qué pasó" />
                         </StackPanel>
                     </ScrollViewer>
                 </Border>
