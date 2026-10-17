@@ -21,10 +21,13 @@
 //
 // Agregar un estado: una línea más en States con el nombre del PNG y una función que arma la ventana con las
 // propiedades reales del VM (nada de datos inventados). Cada estado arma su propia sesión: no dependen entre sí.
+// Una pantalla nueva puede traer sus estados en su propio archivo (UiSnapshotTests.<Pantalla>.cs, otra parte de esta
+// clase) con un campo "private static readonly State[] <Pantalla>States": se juntan todos y se ordenan por nombre.
 // Si un estado falla, los demás se generan igual y el test falla al final con la lista de los que no salieron.
 
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Windows;
 using System.Windows.Media;
@@ -41,7 +44,7 @@ using HysteriaMeter.Storage;
 
 namespace HysteriaMeter.App.Tests;
 
-public sealed class UiSnapshotTests
+public sealed partial class UiSnapshotTests
 {
     /// <summary>Hora fija para las peleas guardadas en el historial y el dungeon: los PNG salen iguales en cada corrida.</summary>
     private static readonly DateTimeOffset Base = new(2026, 10, 15, 21, 30, 0, TimeSpan.Zero);
@@ -157,6 +160,13 @@ public sealed class UiSnapshotTests
         }),
     ];
 
+    /// <summary>Los estados de todas las partes de la clase: cada campo estático State[], ordenados por nombre del PNG.</summary>
+    private static IEnumerable<State> AllStates() =>
+        typeof(UiSnapshotTests).GetFields(BindingFlags.NonPublic | BindingFlags.Static)
+            .Where(f => f.FieldType == typeof(State[]))
+            .SelectMany(f => (State[])f.GetValue(null)!)
+            .OrderBy(st => st.Name, StringComparer.Ordinal);
+
     [Fact]
     public void Generate_ui_snapshots()
     {
@@ -187,7 +197,7 @@ public sealed class UiSnapshotTests
             {
                 var harness = Harness.Create(database);
                 var renderer = new Renderer(folder, scale, backdrop);
-                foreach (var state in States.Where(st => only.Length == 0 || only.Any(o => st.Name.Contains(o, StringComparison.OrdinalIgnoreCase))))
+                foreach (var state in AllStates().Where(st => only.Length == 0 || only.Any(o => st.Name.Contains(o, StringComparison.OrdinalIgnoreCase))))
                 {
                     try
                     {
