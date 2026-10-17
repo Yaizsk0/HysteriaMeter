@@ -110,6 +110,8 @@ Rediseño, paso 1: la paleta nueva (fondo casi negro #0C0E13, acento ámbar #E8B
 
 Rediseño, paso 2: el historial abre en su propia ventana, con peleas agrupadas por entrada a dungeon, filtros de kills, bosses y últimos siete días, y una columna de progreso por boss. Podés dejarlo abierto mientras mirás una pelea en el overlay; las notas se guardan al cambiar de pelea y los filtros no ocultan intentos del cálculo de progreso.
 
+Rediseño, paso 5: el detalle separa skills, muertes y registro, y permite comparar jugadores o intentos guardados con curvas de DPS sobre el mismo eje de tiempo. Las marcas de muerte quedan en el segundo real; el registro abierto aparte conserva la pelea elegida y se pueden renombrar una skill o todas sus variantes.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).

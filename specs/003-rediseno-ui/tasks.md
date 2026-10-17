@@ -7,8 +7,8 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Historial: comprobar compilación, suite completa y capturas del arnés.
 - [X] Configuración: integrar navegación, todas las opciones, selector de red y conteos locales; combinar ciclo de vida con Historial.
 - [X] Configuración: comprobar compilación, suite completa y capturas de las ocho secciones y estados límite.
-- [ ] Detalle: integrar skills/muertes/log/comparación conservando datos y acciones.
-- [ ] Detalle: comprobar compilación, suite completa y capturas de sus estados.
+- [X] Detalle: integrar skills/muertes/log/comparación conservando datos y acciones.
+- [X] Detalle: comprobar compilación, suite completa y capturas de sus estados.
 - [X] Inicio: integrar bienvenida/tarjeta/bandeja/novedades con datos y acciones reales.
 - [X] Inicio: comprobar compilación, suite completa y capturas de sus estados.
 - [ ] Overlay: completar cabecera/filas/objetivo/estados/avisos/pastilla y conexiones del modelo.

@@ -102,8 +102,8 @@ public sealed partial class UiSnapshotTests
     /// </summary>
     private static ActorDetailViewModel SavedFightDetail(Harness h, string name)
     {
-        var vm = h.HistoryOpen();
-        var item = vm.History.First(i => i.Killed);
+        var vm = h.HistoryWindowOpen();
+        var item = vm.HistoryRuns.SelectMany(r => r.Fights).First(i => i.IsKill);
         Pump(vm.OpenEncounterCommand.ExecuteAsync(item));
         vm.ShowDetailCommand.Execute(vm.Actors.Single(a => a.Name == name));
         var detail = vm.Detail;
