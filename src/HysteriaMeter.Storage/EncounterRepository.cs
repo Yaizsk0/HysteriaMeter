@@ -77,7 +77,10 @@ public sealed class EncounterRepository(string databasePath)
         await AddColumnIfMissingAsync(connection, "encounters", "phases_json", "TEXT").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounter_actors", "item_level", "INTEGER").ConfigureAwait(false);
         await AddColumnIfMissingAsync(connection, "encounter_actors", "combat_power", "INTEGER").ConfigureAwait(false);
+        // Plantilla del objetivo: sin nombre en data/npcs.json, los intentos se agrupan por este ID. Las peleas viejas quedan en NULL.
+        await AddColumnIfMissingAsync(connection, "encounters", "target_npc_id", "INTEGER").ConfigureAwait(false);
         await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS ix_encounters_target ON encounters(target_name, started_at)").ConfigureAwait(false);
+        await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS ix_encounters_npc ON encounters(target_npc_id, started_at)").ConfigureAwait(false);
     }
 
     private static async Task AddColumnIfMissingAsync(SqliteConnection connection, string table, string column, string definition)
@@ -100,8 +103,9 @@ public sealed class EncounterRepository(string databasePath)
         await connection.ExecuteAsync(
             """
             INSERT OR REPLACE INTO encounters (id, started_at, ended_at, target_name, target_killed, total_damage, main_target_seconds, deaths_json,
-                                               zone_entered_at, marks_json, phases_json)
-            VALUES (@Id, @Start, @End, @TargetName, @TargetKilled, @TotalDamage, @MainTargetSeconds, @DeathsJson, @ZoneEnteredAt, @MarksJson, @PhasesJson)
+                                               zone_entered_at, marks_json, phases_json, target_npc_id)
+            VALUES (@Id, @Start, @End, @TargetName, @TargetKilled, @TotalDamage, @MainTargetSeconds, @DeathsJson, @ZoneEnteredAt, @MarksJson, @PhasesJson,
+                    @TargetNpcId)
             """,
             new
             {
@@ -116,6 +120,7 @@ public sealed class EncounterRepository(string databasePath)
                 ZoneEnteredAt = encounter.ZoneEnteredAt?.ToString("O", CultureInfo.InvariantCulture),
                 MarksJson = encounter.Marks is { Count: > 0 } marks ? JsonSerializer.Serialize(marks) : null,
                 PhasesJson = encounter.Phases is { Count: > 0 } phases ? JsonSerializer.Serialize(phases) : null,
+                TargetNpcId = (long?)encounter.TargetNpcId,
             },
             transaction).ConfigureAwait(false);
 
@@ -168,10 +173,12 @@ public sealed class EncounterRepository(string databasePath)
 
         // Intento: cuántas veces se peleó contra ese objetivo hasta esta pelea. Récord: el mejor DPS propio contra ese objetivo.
         // Los dos son por personaje: con varios personajes, cada uno compite contra sí mismo ("IS" compara también null).
+        // "Ese objetivo" es el mismo nombre o, sin nombre en data/npcs.json, la misma plantilla de NPC (el "NPC 2400123" del
+        // overlay). Sin nombre ni plantilla (peleas viejas) no hay con qué comparar: intento 0 y sin récord.
         // Las sumas de toda la party (daño, daño al objetivo principal, muertes) alcanzan para clasificar la pelea con
         // BossRules sin cargar cada una entera.
         var rows = await connection.QueryAsync<EncounterRow>(
-            """
+            $"""
             WITH loc AS (SELECT encounter_id, MAX(dps) AS dps, MAX(name) AS name FROM encounter_actors WHERE is_local = 1 GROUP BY encounter_id),
                  party AS (SELECT encounter_id, SUM(damage) AS damage, SUM(main_target_damage) AS main_damage, SUM(deaths) AS deaths
                            FROM encounter_actors GROUP BY encounter_id)
@@ -179,13 +186,14 @@ public sealed class EncounterRepository(string databasePath)
                    e.target_killed AS TargetKilled, e.total_damage AS TotalDamage, e.note AS Note,
                    l.dps AS LocalDps,
                    (SELECT MAX(l2.dps) FROM loc l2 JOIN encounters o ON o.id = l2.encounter_id
-                     WHERE o.target_name = e.target_name AND l2.name IS l.name) AS BestLocalDps,
+                     WHERE {SameTarget} AND l2.name IS l.name) AS BestLocalDps,
                    (SELECT COUNT(*) FROM encounters o LEFT JOIN loc l2 ON l2.encounter_id = o.id
-                     WHERE o.target_name = e.target_name AND o.started_at <= e.started_at AND l2.name IS l.name) AS Attempt,
+                     WHERE {SameTarget} AND o.started_at <= e.started_at AND l2.name IS l.name) AS Attempt,
                    e.zone_entered_at AS ZoneEnteredAt,
                    l.name AS LocalName,
                    e.main_target_seconds AS MainTargetSeconds,
-                   p.damage AS ActorsDamage, p.main_damage AS MainTargetDamage, p.deaths AS Deaths
+                   p.damage AS ActorsDamage, p.main_damage AS MainTargetDamage, p.deaths AS Deaths,
+                   e.target_npc_id AS TargetNpcId
             FROM encounters e LEFT JOIN loc l ON l.encounter_id = e.id LEFT JOIN party p ON p.encounter_id = e.id
             ORDER BY e.started_at DESC LIMIT @limit
             """,
@@ -199,15 +207,23 @@ public sealed class EncounterRepository(string databasePath)
             r.TotalDamage,
             r.Note,
             r.LocalDps,
-            r.TargetName is null ? 0 : (int)r.Attempt,
+            r.TargetName is null && r.TargetNpcId is null ? 0 : (int)r.Attempt,
             r.LocalDps is { } dps && r.BestLocalDps is { } best && dps >= best,
             r.ZoneEnteredAt,
             r.LocalName,
             r.MainTargetSeconds,
             r.ActorsDamage ?? 0,
             r.MainTargetDamage ?? 0,
-            r.Deaths is { } deaths ? (int)deaths : null))];
+            r.Deaths is { } deaths ? (int)deaths : null,
+            r.TargetNpcId is { } npc ? (uint)npc : null))];
     }
+
+    /// <summary>
+    /// La pelea <c>o</c> es contra el mismo objetivo que <c>e</c>: el mismo nombre o, si ninguna de las dos tiene nombre,
+    /// la misma plantilla de NPC. Con nombre y plantilla nulos no coincide con nada (<c>=</c> con NULL es falso).
+    /// </summary>
+    private const string SameTarget =
+        "(o.target_name = e.target_name OR (e.target_name IS NULL AND o.target_name IS NULL AND o.target_npc_id = e.target_npc_id))";
 
     /// <summary>
     /// Mejor DPS propio contra ese objetivo, sin contar la pelea <paramref name="excludeId"/>. <c>null</c> si no hay otra.
@@ -340,7 +356,8 @@ public sealed class EncounterRepository(string databasePath)
             """
             SELECT id AS Id, started_at AS StartedAt, ended_at AS EndedAt, target_name AS TargetName,
                    target_killed AS TargetKilled, total_damage AS TotalDamage, main_target_seconds AS MainTargetSeconds,
-                   deaths_json AS DeathsJson, zone_entered_at AS ZoneEnteredAt, marks_json AS MarksJson, phases_json AS PhasesJson
+                   deaths_json AS DeathsJson, zone_entered_at AS ZoneEnteredAt, marks_json AS MarksJson, phases_json AS PhasesJson,
+                   target_npc_id AS TargetNpcId
             FROM encounters WHERE id = @id
             """,
             new { id }).ConfigureAwait(false);
@@ -396,6 +413,7 @@ public sealed class EncounterRepository(string databasePath)
                 a.CombatPower))],
             encounter.MainTargetSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null,
             Deaths: encounter.DeathsJson is null ? null : JsonSerializer.Deserialize<DeathRecap[]>(encounter.DeathsJson),
+            TargetNpcId: encounter.TargetNpcId is { } npcId ? (uint)npcId : null,
             Marks: encounter.MarksJson is null ? null : JsonSerializer.Deserialize<int[]>(encounter.MarksJson),
             Phases: encounter.PhasesJson is null ? null : JsonSerializer.Deserialize<HealthPhase[]>(encounter.PhasesJson),
             ZoneEnteredAt: encounter.ZoneEnteredAt is null ? null : DateTimeOffset.Parse(encounter.ZoneEnteredAt, CultureInfo.InvariantCulture));
@@ -411,12 +429,13 @@ public sealed class EncounterRepository(string databasePath)
 }
 
 /// <param name="LocalDps">DPS del jugador local en esa pelea, si estuvo.</param>
-/// <param name="Attempt">Número de intento contra ese objetivo (1 = la primera vez); 0 sin objetivo con nombre.</param>
+/// <param name="Attempt">Número de intento contra ese objetivo (1 = la primera vez); 0 sin nombre ni plantilla de NPC.</param>
 /// <param name="IsRecord">Es el mejor DPS propio contra ese objetivo.</param>
 /// <param name="MainTargetSeconds">Cuánto aguantó el objetivo principal, si se midió.</param>
 /// <param name="ActorsDamage">Daño de toda la party, a cualquier objetivo.</param>
 /// <param name="MainTargetDamage">Daño de toda la party al objetivo principal.</param>
 /// <param name="Deaths">Muertes de toda la party en la pelea; <c>null</c> si no tiene jugadores guardados.</param>
+/// <param name="TargetNpcId">Plantilla del objetivo principal; <c>null</c> en las peleas guardadas antes de que se registrara.</param>
 public sealed record EncounterSummary(
     string Id,
     string StartedAt,
@@ -433,7 +452,8 @@ public sealed record EncounterSummary(
     double? MainTargetSeconds = null,
     long ActorsDamage = 0,
     long MainTargetDamage = 0,
-    int? Deaths = null);
+    int? Deaths = null,
+    uint? TargetNpcId = null);
 
 /// <summary>SQLite no tiene booleanos: la fila cruda trae <c>target_killed</c> como entero.</summary>
 /// <summary>
@@ -458,11 +478,12 @@ internal sealed class EncounterRow
     public long? ActorsDamage { get; set; }
     public long? MainTargetDamage { get; set; }
     public long? Deaths { get; set; }
+    public long? TargetNpcId { get; set; }
 }
 
 internal sealed record EncounterDetailRow(
     string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage, double? MainTargetSeconds, string? DeathsJson,
-    string? ZoneEnteredAt, string? MarksJson, string? PhasesJson);
+    string? ZoneEnteredAt, string? MarksJson, string? PhasesJson, long? TargetNpcId);
 
 internal sealed record ActorRow(
     long ActorId, string Name, long? ClassId, long IsLocal, long Damage, double Dps, long Hits, long Crits, long MaxHit, long Healing,

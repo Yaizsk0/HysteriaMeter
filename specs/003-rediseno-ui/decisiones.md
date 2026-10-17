@@ -54,6 +54,7 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 
 ## Objetivos sin nombre, intentos y wipes (datos reales)
 - data/npcs.json casi no trae nombres: el objetivo se identifica por su nombre o, sin nombre, por su plantilla de NPC con el mismo rótulo del overlay, "NPC 2400123" (`FightTarget.Key`/`Label` en Combat). Sin nombre ni plantilla (peleas guardadas antes de registrarla) es "Encuentro" y no se compara con nada. Los nombres "#entidad" de versiones viejas cuentan como sin nombre.
+- Storage guarda la plantilla en `encounters.target_npc_id` (migración aditiva, NULL en las peleas viejas). El intento N y el récord del historial cuentan por nombre o, si las dos peleas no tienen nombre, por plantilla; sin ninguno de los dos, intento 0 y sin récord.
 - BossRules: un wipe (pelea sin kill) puede ser de boss si tiene nombre **o plantilla**; sin ninguno de los dos es trash (no se puede probar que fue un wipe).
 - Modo dungeon: los intentos se agrupan por plantilla (o nombre); nunca se juntan peleas sin clave: cada una es su propio boss si fue kill ("Boss N" por su lugar en la run). Un kill cierra el boss: la misma plantilla después es otro boss ("NPC 2400123 (2)"). Wipes = intentos reales sin kill (antes era "intentos − 1", que inventaba wipes al juntar kills distintos). El DPS y la duración salen del intento que decide (el kill, o el último).
 
