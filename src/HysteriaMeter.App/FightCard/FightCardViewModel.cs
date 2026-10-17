@@ -29,6 +29,9 @@ public sealed partial class FightCardViewModel : ObservableObject
         Title = MeterViewModel.TitleOf(snapshot);
         Func<ActorSnapshot, double> metric = bossOnly ? a => a.MainTargetDps : a => a.Dps;
         Dps = ActorRowViewModel.Compact(metric(_local));
+        MetricHint = bossOnly
+            ? $"Compara el DPS de la pelea entera ({ActorRowViewModel.Compact(_local.Dps)}), el que guarda el historial; TU DPS cuenta solo el boss."
+            : null;
         var (rank, players) = RankOf(snapshot.Actors, metric);
         Rank = $"{rank} / {players}";
         TopSkill = TopSkillText(_local, session.SkillNames);
@@ -85,6 +88,12 @@ public sealed partial class FightCardViewModel : ObservableObject
     [ObservableProperty]
     public partial string PercentileHint { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Con "Solo boss", TU DPS cuenta solo el objetivo principal, pero la comparación y el percentil usan el DPS de la
+    /// pelea entera (lo que guarda el historial): este texto lo aclara en sus tooltips. <c>null</c> si son la misma métrica.
+    /// </summary>
+    public string? MetricHint { get; }
+
     /// <summary>"+8% vs tu intento anterior · mejor intento: 402k"; <c>null</c> si es tu primer intento contra este boss.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasComparison))]
@@ -129,7 +138,9 @@ public sealed partial class FightCardViewModel : ObservableObject
                 .. recent.Where(r => r.TargetName == target && r.LocalName == _local.Name && r.Id != id && r.LocalDps is > 0).Select(r => r.LocalDps!.Value),
                 dps,
             ];
-            PercentileHint = $"Entre tus {attempts.Count} intentos contra {target}";
+            PercentileHint = MetricHint is { } hint
+                ? $"Entre tus {attempts.Count} intentos contra {target}. {hint}"
+                : $"Entre tus {attempts.Count} intentos contra {target}";
             Percentile = attempts.Count >= 2 ? HistoryItem.PercentileOf(dps, attempts) : null;
         }
         catch (DbException)

@@ -75,7 +75,7 @@
 
             <!-- Comparación con tu intento anterior y skill top: cada línea solo si hay dato -->
             <StackPanel Margin="16,12,16,0">
-                <TextBlock Text="{Binding Comparison}" TextWrapping="Wrap" Margin="0,0,0,8" Visibility="{Binding HasComparison, Converter={StaticResource Visible}}">
+                <TextBlock Text="{Binding Comparison}" TextWrapping="Wrap" Margin="0,0,0,8" Visibility="{Binding HasComparison, Converter={StaticResource Visible}}" ToolTip="{Binding MetricHint}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{DynamicResource Success}" />

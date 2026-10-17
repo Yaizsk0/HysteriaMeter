@@ -1571,14 +1571,23 @@ public sealed partial class MeterViewModel : ObservableObject
             return;
         }
 
-        if ((RecordText(target, local.Dps, best) ?? VsPreviousText(local.Dps, previous)) is { } message)
+        if ((RecordText(target, local.Dps, best) ?? VsPreviousText(local.Dps, previous)) is not { } message)
         {
-            Alert(AlertSound.Info);
-            RecordMessage = message;
+            return;
+        }
+
+        Alert(AlertSound.Info);
+        // Si se abre la tarjeta de fin de pelea, ella ya dice "vs tu intento anterior" y el récord: el aviso no lo repite.
+        if (FinishedNotice(message, cardOpens: FightCardViewModel.CanShow(snapshot) && FightCardRequested is not null) is { } shown)
+        {
+            RecordMessage = shown;
             HasRecordMessage = true;
             _recordUntilUtc = DateTime.UtcNow + RecordNoticeDuration;
         }
     }
+
+    /// <summary>El aviso de récord o de comparación del overlay; ninguno cuando la tarjeta de fin de pelea lo muestra.</summary>
+    public static string? FinishedNotice(string message, bool cardOpens) => cardOpens ? null : message;
 
     /// <summary>
     /// El nombre del objetivo; si el juego no lo mandó y no está en data/npcs.json, "NPC 12345" para poder agregarlo.
