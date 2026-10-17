@@ -150,8 +150,10 @@ public sealed partial class ActorDetailViewModel
 
     private void UpdateComparison(EncounterSnapshot snapshot, ActorSnapshot actor)
     {
-        var others = snapshot.Actors.Where(a => a.Id != actor.Id).OrderByDescending(a => a.Dps).Select(a => new CompareOption(a.Id, Display(a.Name)))
-            .Concat(actor.IsLocalPlayer ? _past : []).ToList();
+        // Tus intentos guardados primero y después los jugadores, como el mock.
+        var others = (actor.IsLocalPlayer ? _past : [])
+            .Concat(snapshot.Actors.Where(a => a.Id != actor.Id).OrderByDescending(a => a.Dps).Select(a => new CompareOption(a.Id, Display(a.Name))))
+            .ToList();
         if (others.Count > 0)
         {
             others.Add(CompareOption.None);
@@ -280,7 +282,7 @@ public sealed partial class ActorDetailViewModel
             theirDeaths);
         var skills = SkillDiff(mine, snapshot.Duration, theirs, theirFight.Duration, names);
         Replace(CompareSkills, skills);
-        (InsightLead, InsightSkill, InsightTail) = Insight(mine, theirs, names, mine.IsLocalPlayer ? null : Name);
+        (InsightLead, InsightSkill, InsightTail) = Insight(mine, theirs, names, mine.IsLocalPlayer ? null : Name, mineDeaths, (int)snapshot.Duration.TotalSeconds);
     }
 
     /// <summary>"HOY 21:37" si la pelea fue hoy; si no, "12 OCT".</summary>
@@ -388,9 +390,11 @@ public sealed partial class ActorDetailViewModel
     /// <summary>
     /// La skill donde más daño se perdió contra el otro lado ("Perdiste más en X: 4 golpes menos (−3.6M).") o, si no se
     /// perdió en ninguna, donde más se ganó. Vacío si no hay diferencias. <paramref name="who"/> es el nombre del jugador
-    /// si no sos vos.
+    /// si no sos vos. Si se perdió y el jugador murió en la pelea (<paramref name="deathSeconds"/>), agrega el tramo
+    /// muerto como el mock: ", coincide con la muerte de 1:52 a 2:20".
     /// </summary>
-    public static (string Lead, string Skill, string Tail) Insight(ActorSnapshot mine, ActorSnapshot theirs, SkillNames names, string? who = null)
+    public static (string Lead, string Skill, string Tail) Insight(
+        ActorSnapshot mine, ActorSnapshot theirs, SkillNames names, string? who = null, IReadOnlyList<int>? deathSeconds = null, int fightSeconds = 0)
     {
         var a = Group(mine, names);
         var b = Group(theirs, names);
@@ -421,7 +425,34 @@ public sealed partial class ActorDetailViewModel
             _ => $"{(-pick.Hits).ToString(CultureInfo.CurrentCulture)} golpes menos",
         };
         var amount = (pick.Damage < 0 ? "−" : "+") + ActorRowViewModel.Compact(Math.Abs(pick.Damage));
-        return (lead, pick.Name, $": {hits} ({amount}).");
+        var death = pick.Damage < 0 ? DeathClause(deathSeconds ?? [], mine.Timeline, fightSeconds) : string.Empty;
+        return (lead, pick.Name, $": {hits} ({amount}){death}.");
+    }
+
+    /// <summary>Tramo muerto mínimo para nombrarlo: si volvió a pegar enseguida, la muerte no explica la diferencia.</summary>
+    public const int MinDeathSpanSeconds = 3;
+
+    /// <summary>
+    /// ", coincide con la muerte de 1:52 a 2:20": el tramo muerto más largo, de la muerte al siguiente golpe propio del
+    /// Timeline (la reaparición) o, si no volvió a pegar, al final de la pelea. Vacío sin muertes o si ningún tramo llega
+    /// a <see cref="MinDeathSpanSeconds"/>.
+    /// </summary>
+    public static string DeathClause(IReadOnlyList<int> deathSeconds, IReadOnlyList<long>? timeline, int fightSeconds)
+    {
+        var spans = deathSeconds.Select(death =>
+        {
+            var back = timeline is null ? -1 : Enumerable.Range(death + 1, Math.Max(0, timeline.Count - death - 1)).FirstOrDefault(i => timeline[i] > 0, -1);
+            return (Start: death, End: back >= 0 ? back : Math.Max(fightSeconds, death));
+        }).Where(s => s.End - s.Start >= MinDeathSpanSeconds).ToList();
+        if (spans.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var longest = spans.MaxBy(s => s.End - s.Start);
+        return $", coincide con la muerte de {Clock(longest.Start)} a {Clock(longest.End)}";
+
+        static string Clock(int seconds) => TimeSpan.FromSeconds(seconds).ToString(@"m\:ss", CultureInfo.InvariantCulture);
     }
 
     private static Dictionary<string, (long Damage, int Hits, uint? SkillId)> Group(ActorSnapshot actor, SkillNames names) =>

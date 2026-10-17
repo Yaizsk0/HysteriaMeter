@@ -609,7 +609,15 @@
 
                         <!-- Registro de la pelea, angosto, con la muerte que se ve marcada -->
                         <DockPanel Grid.Column="1" Margin="20,16">
-                            <TextBlock DockPanel.Dock="Top" Text="LOG DE COMBATE" Style="{StaticResource SectionLabel}" />
+                            <!-- El filtro "Solo …" es el mismo de la pestaña Log (lo comparten): acá también se ve y se puede sacar -->
+                            <DockPanel DockPanel.Dock="Top">
+                                <CheckBox x:Name="DeathsOnlyFocus" DockPanel.Dock="Right" Margin="12,0,0,0" VerticalAlignment="Center" IsChecked="{Binding Log.OnlyFocus}"
+                                          Visibility="{Binding HasLog, Converter={StaticResource Visible}}" FontSize="{StaticResource FontSizeSmall}"
+                                          ToolTip="Solo los golpes que hizo o recibió; sin marcar, los de todos">
+                                    <TextBlock Text="{Binding Log.FocusName, StringFormat='Solo {0}'}" />
+                                </CheckBox>
+                                <TextBlock Text="LOG DE COMBATE" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" />
+                            </DockPanel>
                             <TextBox DockPanel.Dock="Top" Margin="0,10,0,10" Style="{StaticResource LogFilterBox}" Tag="skill, jugador o crit"
                                      DataContext="{Binding Log}" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, FallbackValue=''}"
                                      IsEnabled="{Binding DataContext.HasLog, RelativeSource={RelativeSource AncestorType=Window}}">

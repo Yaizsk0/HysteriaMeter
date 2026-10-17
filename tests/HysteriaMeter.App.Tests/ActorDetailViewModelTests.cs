@@ -118,8 +118,8 @@ public class ActorDetailViewModelTests
         Assert.True(detail.HasPercentile);
         Assert.Equal(("67", 50, "entre tus 3 intentos"), (detail.Percentile, detail.PercentileTier, detail.PercentileHint));
 
-        // Los otros jugadores primero, después tus intentos y "Sin comparar" al final.
-        Assert.Equal(["Kaelis", "Tu intento anterior · 100", "Sin comparar"], detail.Others.Select(o => o.Name));
+        // Tus intentos primero (como el mock), después los otros jugadores y "Sin comparar" al final.
+        Assert.Equal(["Tu intento anterior · 100", "Kaelis", "Sin comparar"], detail.Others.Select(o => o.Name));
     }
 
     [Fact]
