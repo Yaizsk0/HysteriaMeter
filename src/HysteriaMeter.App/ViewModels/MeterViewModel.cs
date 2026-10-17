@@ -1874,7 +1874,10 @@ public sealed partial class MeterViewModel : ObservableObject
     [RelayCommand]
     private void ToggleCompact() => IsCompact = !IsCompact;
 
-    /// <summary>Esc: cierra el panel abierto; sin panel, deja la pelea vieja y vuelve a la actual.</summary>
+    /// <summary>
+    /// Esc, de lo que está más arriba a lo de abajo: cierra el panel abierto (es otra ventana, encima del overlay); si no
+    /// hay, cierra las novedades como "Entendido"; si tampoco, deja la pelea vieja y vuelve a la actual.
+    /// </summary>
     [RelayCommand]
     private void Escape()
     {
@@ -1882,6 +1885,12 @@ public sealed partial class MeterViewModel : ObservableObject
         {
             IsSettingsOpen = false;
             IsHistoryOpen = false;
+            return;
+        }
+
+        if (HasNotice)
+        {
+            DismissNotice();
             return;
         }
 

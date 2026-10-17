@@ -78,6 +78,9 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 ## Bandeja y novedades (Avisos)
 - Menú de bandeja: ToolStripProfessionalRenderer propio con los colores del mock (MenuBg, borde Stroke, hover AccentSoft, "Salir" en Danger). Texto de 13 px lógicos (9,75 pt), con la fuente elegida; IBM Plex Sans por defecto. Las fuentes embebidas se registran solo en memoria del proceso para que GDI las pueda medir y dibujar; se liberan al cambiar de fuente o disponer el menú. Se mantienen todas las opciones actuales. Se muestra el atajo configurado al lado de "Ocultar overlay".
 - Tarjeta de novedades: WindowBg con borde AccentLine, "NOVEDADES · vX.Y.Z" (AppVersion corta), lista de NewsFeed, botón "Entendido".
+  Flota sobre el cuerpo del overlay (debajo del encabezado) sin empujar las filas; su alto lo limita la ventana, la lista se
+  desplaza y "Entendido" queda siempre a la vista. En modo compacto o con menos de 280 px de cuerpo va apretada (sin "Qué
+  cambió", texto 12, botón de 32). Esc la cierra igual que "Entendido", después de cerrar un panel abierto.
 - Renombrar skill (si existe el flujo): diálogo con estilo del mock y "Aplicar a todas las variantes" marcado por defecto (se aplica al ID base).
 
 
