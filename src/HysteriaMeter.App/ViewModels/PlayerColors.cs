@@ -4,8 +4,8 @@ namespace HysteriaMeter.App.ViewModels;
 
 /// <summary>
 /// Un color por jugador para distinguir las filas de un vistazo. Sale del nombre, así cada jugador
-/// conserva su color entre peleas. El acento ámbar (Gold de Theme.xaml) queda reservado para el jugador local.
-/// Con "Colores por clase", el color sale de la clase (como en Details!), también para el local.
+/// conserva su color entre peleas. El acento del tema (Gold de Theme.xaml o el del tema elegido) queda reservado
+/// para el jugador local. Con "Colores por clase", el color sale de la clase (como en Details!), también para el local.
 /// </summary>
 public static class PlayerColors
 {
@@ -21,8 +21,8 @@ public static class PlayerColors
         Color.FromRgb(0x5A, 0xB4, 0xD8), // celeste
     ];
 
-    // Mismo valor que Gold en Themes/Theme.xaml (tema por defecto).
-    private static readonly Color Gold = Color.FromRgb(0xE8, 0xB0, 0x4A);
+    /// <summary>Gold de Themes/Theme.xaml (tema por defecto): el color del local hasta que App aplica el tema.</summary>
+    public static Color DefaultAccent { get; } = Color.FromRgb(0xE8, 0xB0, 0x4A);
 
     // Alfa de las barras: ~33 %, como las filas del mock del rediseño.
     private const byte BarAlpha = 0x55;
@@ -30,9 +30,20 @@ public static class PlayerColors
     private static readonly Brush[] Accents = Palette.Select(c => Freeze(new SolidColorBrush(c))).ToArray();
     private static readonly Brush[] Bars = Palette.Select(c => Freeze(new SolidColorBrush(Color.FromArgb(BarAlpha, c.R, c.G, c.B)))).ToArray();
 
-    public static Brush Local { get; } = Freeze(new SolidColorBrush(Gold));
+    public static Brush Local { get; private set; } = Freeze(new SolidColorBrush(DefaultAccent));
 
-    public static Brush LocalBar { get; } = Freeze(new SolidColorBrush(Color.FromArgb(BarAlpha, Gold.R, Gold.G, Gold.B)));
+    public static Brush LocalBar { get; private set; } = Freeze(new SolidColorBrush(Color.FromArgb(BarAlpha, DefaultAccent.R, DefaultAccent.G, DefaultAccent.B)));
+
+    /// <summary>
+    /// El jugador local toma el acento del tema (App lo llama cada vez que aplica uno): así la barra, el rombo y la línea
+    /// de su fila combinan con NameLocal y RowBorderLocal, que también siguen al acento. Las filas lo toman en su próxima
+    /// actualización.
+    /// </summary>
+    public static void UseAccent(Color accent)
+    {
+        Local = Freeze(new SolidColorBrush(accent));
+        LocalBar = Freeze(new SolidColorBrush(Color.FromArgb(BarAlpha, accent.R, accent.G, accent.B)));
+    }
 
     public static Brush For(string name) => Accents[IndexOf(name)];
 

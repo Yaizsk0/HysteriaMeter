@@ -109,8 +109,15 @@ public sealed class MeterSession
         return NewsFeed.NoticeFor(NewsFeed.Current, Preferences.LastSeenNews);
     }
 
-    /// <summary>Nombres de las propiedades de <see cref="MeterViewModel"/> que hay que refrescar en todas las ventanas.</summary>
+    /// <summary>
+    /// Nombres de las propiedades de <see cref="MeterViewModel"/> que hay que refrescar en todas las ventanas. La cadena
+    /// vacía significa que cambió todo (por ejemplo, al importar un perfil): ver <see cref="Touches"/>.
+    /// </summary>
     public event Action<IReadOnlyList<string>>? PreferencesChanged;
+
+    /// <summary>Si un aviso de <see cref="PreferencesChanged"/> incluye <paramref name="property"/> o es "cambió todo".</summary>
+    public static bool Touches(IReadOnlyList<string> changed, string property) =>
+        changed.Contains(property) || changed.Contains(string.Empty);
 
     /// <summary>Se reinició el encuentro: todas las ventanas vacían sus filas.</summary>
     public event Action? ResetRequested;

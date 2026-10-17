@@ -4,19 +4,21 @@
     <!--
         Sistema visual del rediseño. Referencia: los mocks redesign/project/*.dc.html (Main, Estados, Mini, Detalle,
         Muertes, Comparar, Historial, Config, Inicio, Avisos y Dungeon), que reemplazan a los aprobados el 2026-10-15
-        (hysteria-meter/mocks: filetes dorados, títulos en Cinzel).
+        (hysteria-meter/mocks: filetes dorados y títulos en Cinzel, que se sacó del ensamblado).
         Fondo #0C0E13, acento ámbar #E8B04A, filetes y filas en blanco translúcido, números y títulos en
         Barlow Semi Condensed y texto en Inter (los mocks usan Barlow Condensed e IBM Plex Sans). Las fuentes son OFL
-        y van embebidas (Assets/Fonts, con su licencia al lado). Cinzel queda en Assets, sin uso.
+        y van embebidas (Assets/Fonts, con su licencia al lado).
 
         Reglas:
         - "Gold" sigue siendo el nombre del acento: lo usan muchas vistas y MeterThemes lo cambia por tema.
           El tema por defecto se sigue llamando "Dorado" y es este.
-        - Dentro de Style y ControlTemplate, los colores que cambia un tema van con DynamicResource: WPF congela
-          los pinceles que quedan como valor de un Setter y después el tema no los puede cambiar en vivo.
-        - Los fondos y el acento los cambia el tema. Los alfas del acento (GoldDim, Accent*, RowBorderLocal, NameLocal)
-          llevan acá el valor del tema por defecto; MeterThemes.Apply los recalcula con el acento de cada tema
-          conservando el alfa.
+        - Los colores que cambia un tema van con DynamicResource, en los estilos y en las ventanas. Los pinceles de
+          este diccionario quedan congelados apenas se leen (los recursos de la App se sellan), así que MeterThemes.Apply
+          no los modifica: pone pinceles nuevos, y solo los ven las referencias DynamicResource. Una StaticResource se
+          queda con el color que había al abrir la ventana.
+        - Los fondos, el acento y los textos los cambia el tema. Los alfas del acento (GoldDim, Accent*, RowBorderLocal,
+          NameLocal) llevan acá el valor del tema por defecto; MeterThemes.Apply los recalcula con el acento de cada
+          tema conservando el alfa (el tema por defecto los usa tal cual).
         - Los neutros (filas, filetes, bordes) son blanco translúcido: sirven sobre cualquier fondo y no cambian con el tema.
         - Los colores semánticos (curación, peligro, kill, wipe, percentiles, estado de captura) no cambian con el tema.
         - WPF no tiene letter-spacing: las etiquetas en mayúsculas del mock (0,06 a 0,14 em) quedan sin espaciado.
@@ -26,15 +28,17 @@
     <BooleanToVisibilityConverter x:Key="Visible" />
 
     <!-- ===================== Fuentes ===================== -->
+    <!-- Los URI nombran el ensamblado (HysteriaMeter;component): "pack://application:,,,/Assets/..." busca en el
+         ensamblado de entrada, que bajo el testhost no es la app, y la fuente caería en una del sistema sin avisar. -->
     <!-- Números, títulos y nombres en las filas. Pesos embebidos: Normal, SemiBold y Bold
          (el 500 del mock pasa a Normal o SemiBold). -->
-    <FontFamily x:Key="NumberFont">pack://application:,,,/Assets/Fonts/#Barlow Semi Condensed</FontFamily>
-    <!-- Antes Cinzel. En el mock el logo "HYSTERIA" y los títulos van en Barlow. -->
-    <FontFamily x:Key="TitleFont">pack://application:,,,/Assets/Fonts/#Barlow Semi Condensed</FontFamily>
+    <FontFamily x:Key="NumberFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/#Barlow Semi Condensed</FontFamily>
+    <!-- En el mock el logo "HYSTERIA" y los títulos van en Barlow (antes, Cinzel). -->
+    <FontFamily x:Key="TitleFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/#Barlow Semi Condensed</FontFamily>
     <!-- Texto. Valor por defecto: App.xaml.cs lo reemplaza por la fuente elegida en Configuración
          (MeterPreferences.TextFont, con MeterViewModel.FontOf). Las ventanas lo usan con DynamicResource.
          Pesos: Normal, Medium, SemiBold y Bold. -->
-    <FontFamily x:Key="BodyFont">pack://application:,,,/Assets/Fonts/#Inter</FontFamily>
+    <FontFamily x:Key="BodyFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/#Inter</FontFamily>
 
     <!-- ===================== Tamaños de letra (px del mock = unidades WPF) ===================== -->
     <!-- Texto -->
@@ -97,11 +101,12 @@
     <SolidColorBrush x:Key="StrokeKbd" Color="#33FFFFFF" />     <!-- 20 %: tecla de atajo, línea central de Comparar -->
     <SolidColorBrush x:Key="ClassBadgeBg" Color="#59000000" />  <!-- 35 % negro: fondo del círculo de clase -->
 
-    <!-- ===================== Texto ===================== -->
+    <!-- ===================== Texto (lo cambia el tema) ===================== -->
     <SolidColorBrush x:Key="Text" Color="#E9E6DF" />            <!-- principal -->
     <SolidColorBrush x:Key="TextBright" Color="#F3F0E8" />      <!-- nombres en filas, nav seleccionado -->
     <SolidColorBrush x:Key="TextMuted" Color="#B5B0A5" />       <!-- secundario: %, pestañas inactivas, resúmenes -->
     <SolidColorBrush x:Key="TextDim" Color="#8E8A80" />         <!-- tenue: etiquetas, pies, encabezados -->
+    <!-- Texto sobre fondos de color: no cambia con el tema -->
     <SolidColorBrush x:Key="OnAccent" Color="#14110A" />        <!-- sobre el acento (botón primario, pestaña activa, RECIB. activa) -->
     <SolidColorBrush x:Key="OnHealing" Color="#0C1A10" />       <!-- sobre la pestaña CURA activa -->
     <SolidColorBrush x:Key="OnWipe" Color="#FFE9E6" />          <!-- sobre el segmento wipe -->
@@ -513,9 +518,10 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
+                    <!-- Sin Margin en PART_ContentHost: el Padding ya lo aplica el TextBox a su texto, y repetirlo acá lo duplicaba. -->
                     <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource RadiusControl}">
-                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" Focusable="False"
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
                                       VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                       HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
                     </Border>
@@ -646,6 +652,283 @@
         <Setter Property="TextElement.FontSize" Value="{StaticResource FontSizeCaption}" />
         <Setter Property="TextElement.Foreground" Value="{DynamicResource Text}" />
     </Style>
+
+    <!-- ===================== Controles de Windows con la paleta ===================== -->
+    <!-- ComboBox, CheckBox, Slider y ScrollBar con estilo implícito (al final de esta sección): todas las ventanas los
+         toman oscuros sin que cada pista defina el suyo. El estilo con clave sirve para BasedOn. -->
+
+    <!-- Fondo transparente que igual recibe clics: pista de la ScrollBar y lado vacío del Slider -->
+    <Style x:Key="PageRepeatButton" TargetType="RepeatButton">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Border Background="Transparent" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Opción de la lista desplegable: hover en AccentSoft, la elegida en el acento -->
+    <Style x:Key="DarkComboBoxItem" TargetType="ComboBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="Item" Background="Transparent" CornerRadius="{StaticResource RadiusSmall}" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource Gold}" />
+                        </Trigger>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Item" Property="Background" Value="{DynamicResource AccentSoft}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Selector ("Comparar con", placa de red, personaje). Como el select del mock Detalle: fondo InputBg, borde Stroke,
+         radio 6, padding 6 × 8. La lista abre en un menú (MenuPanel). Solo de lectura: no tiene modo IsEditable. -->
+    <Style x:Key="DarkComboBox" TargetType="ComboBox">
+        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+        <Setter Property="Background" Value="{DynamicResource InputBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Stroke}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+        <Setter Property="Padding" Value="8,5,28,5" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource DarkComboBoxItem}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <ToggleButton x:Name="Toggle" Focusable="False" ClickMode="Press"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                      Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                      BorderThickness="{TemplateBinding BorderThickness}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource RadiusControl}">
+                                        <Path x:Name="Arrow" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"
+                                              Data="M0,0 L4,4 L8,0" Stroke="{DynamicResource TextDim}" StrokeThickness="1.4" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource StrokeStrong}" />
+                                            <Setter TargetName="Arrow" Property="Stroke" Value="{DynamicResource Text}" />
+                                        </Trigger>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Gold}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <ContentPresenter IsHitTestVisible="False" Margin="{TemplateBinding Padding}" VerticalAlignment="Center" HorizontalAlignment="Left"
+                                          Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                          ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" />
+                        <Popup x:Name="PART_Popup" Placement="Bottom" VerticalOffset="4" AllowsTransparency="True" Focusable="False"
+                               PopupAnimation="None" IsOpen="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <Border Style="{StaticResource MenuPanel}" MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                    MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ScrollViewer>
+                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Casilla con el acento ("Aplicar a todas las variantes", "Solo X" del registro): 16 × 16, radio 4; marcada, fondo
+         Gold con la tilde en OnAccent, como el checkbox del mock Avisos. El texto va en Content. -->
+    <Style x:Key="AccentCheckBox" TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Border x:Name="Box" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center" CornerRadius="{StaticResource RadiusSmall}"
+                                Background="{DynamicResource InputBg}" BorderBrush="{DynamicResource StrokeStrong}" BorderThickness="1">
+                            <Path x:Name="Check" Data="M3,8 L6.5,11.5 L13,4.5" Stroke="{DynamicResource OnAccent}" StrokeThickness="2"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Margin="-1" Visibility="Collapsed" />
+                        </Border>
+                        <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Gold}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Text}" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{DynamicResource Gold}" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Gold}" />
+                            <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Slider horizontal de Configuración (alto de fila, máximo de jugadores): pista Track de 4 px, relleno Gold y perilla
+         TextBright de 16 px, como el range con accent-color del mock Config. Los pasos (TickFrequency, IsSnapToTickEnabled)
+         los pone cada uso. -->
+    <Style x:Key="AccentSlider" TargetType="Slider">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="MinHeight" Value="20" />
+        <Setter Property="IsMoveToPointEnabled" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid VerticalAlignment="Center">
+                        <Border Height="4" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource Track}" Margin="8,0" />
+                        <Track x:Name="PART_Track">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="Slider.DecreaseLarge" Focusable="False" IsTabStop="False">
+                                    <RepeatButton.Template>
+                                        <ControlTemplate TargetType="RepeatButton">
+                                            <Grid Background="Transparent">
+                                                <Border Height="4" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource Gold}" Margin="8,0,0,0" />
+                                            </Grid>
+                                        </ControlTemplate>
+                                    </RepeatButton.Template>
+                                </RepeatButton>
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Ellipse x:Name="Knob" Width="16" Height="16" Fill="{DynamicResource TextBright}" Stroke="{DynamicResource Gold}" StrokeThickness="2" />
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Knob" Property="Stroke" Value="{DynamicResource GoldBright}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="Slider.IncreaseLarge" Style="{StaticResource PageRepeatButton}" />
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Pulgar de la barra de desplazamiento: Stroke, más claro al pasar el mouse y al arrastrar -->
+    <Style x:Key="ScrollThumb" TargetType="Thumb">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border x:Name="Grip" Background="{DynamicResource StrokeStrong}" CornerRadius="3" />
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Grip" Property="Background" Value="{DynamicResource StrokeKbd}" />
+                        </Trigger>
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter TargetName="Grip" Property="Background" Value="{DynamicResource TextDim}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Barra de desplazamiento fina (8 px): pista transparente y pulgar redondeado, sin flechas. La pista sigue
+         respondiendo al clic (avanza una página). MinWidth/MinHeight en 0 para ganarle al ancho del sistema (17 px). -->
+    <Style x:Key="ThinScrollBar" TargetType="ScrollBar">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Width" Value="8" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="Margin" Value="2,0,0,0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid Background="{TemplateBinding Background}">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand" Style="{StaticResource PageRepeatButton}" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource ScrollThumb}" MinHeight="24" Margin="1,0" />
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand" Style="{StaticResource PageRepeatButton}" />
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Width" Value="Auto" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="Height" Value="8" />
+                <Setter Property="MinHeight" Value="0" />
+                <Setter Property="Margin" Value="0,2,0,0" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ScrollBar">
+                            <Grid Background="{TemplateBinding Background}">
+                                <Track x:Name="PART_Track">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Command="ScrollBar.PageLeftCommand" Style="{StaticResource PageRepeatButton}" />
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Style="{StaticResource ScrollThumb}" MinWidth="24" Margin="0,1" />
+                                    </Track.Thumb>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Command="ScrollBar.PageRightCommand" Style="{StaticResource PageRepeatButton}" />
+                                    </Track.IncreaseRepeatButton>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="ComboBox" BasedOn="{StaticResource DarkComboBox}" />
+    <Style TargetType="CheckBox" BasedOn="{StaticResource AccentCheckBox}" />
+    <Style TargetType="Slider" BasedOn="{StaticResource AccentSlider}" />
+    <Style TargetType="ScrollBar" BasedOn="{StaticResource ThinScrollBar}" />
 
     <!-- ===================== Tooltip ===================== -->
     <!-- Oscuro, como el de la fila del mock Estados. El tooltip rico de la fila agrega su propio margen (14 × 12). -->

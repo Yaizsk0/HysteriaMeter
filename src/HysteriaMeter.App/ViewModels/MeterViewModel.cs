@@ -825,9 +825,11 @@ public sealed partial class MeterViewModel : ObservableObject
     /// <summary>
     /// La familia de una fuente de texto elegible: las embebidas (<see cref="MeterPreferences.BundledFonts"/>) salen de
     /// Assets/Fonts y las demás del sistema. App.xaml.cs la usa para el recurso BodyFont de las ventanas.
+    /// El URI nombra el ensamblado ("HysteriaMeter;component"), como los de Theme.xaml: así resuelve también cuando el
+    /// ensamblado de entrada es otro (el testhost del arnés de capturas).
     /// </summary>
     public static FontFamily FontOf(string name) => MeterPreferences.BundledFonts.Contains(name)
-        ? new FontFamily(new Uri("pack://application:,,,/"), $"./Assets/Fonts/#{name}")
+        ? new FontFamily(new Uri("pack://application:,,,/HysteriaMeter;component/"), $"./Assets/Fonts/#{name}")
         : new FontFamily(name);
 
     public ObservableCollection<ActorRowViewModel> Actors { get; } = [];

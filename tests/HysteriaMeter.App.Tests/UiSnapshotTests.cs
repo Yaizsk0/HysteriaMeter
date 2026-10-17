@@ -11,7 +11,13 @@
 //   HYSTERIA_SNAPSHOTS_SOLO     estados a generar: partes del nombre separadas por coma (por ejemplo "01,detalle").
 //   HYSTERIA_SNAPSHOTS_ESCALA   1 por defecto; 2 para PNG al doble.
 //   HYSTERIA_SNAPSHOTS_CULTURA  es-AR por defecto ("38,4 %" como en los mocks).
-//   HYSTERIA_SNAPSHOTS_FONDO    color detrás de las ventanas translúcidas, por ejemplo #3A4A3F (el fondo de los mocks).
+//   HYSTERIA_SNAPSHOTS_FONDO    color detrás de las ventanas translúcidas. Por defecto #3A4A3F, el fondo de los mocks:
+//                               sin fondo, los visores componen el PNG sobre blanco y los paneles translúcidos se ven
+//                               grises. "ninguno" deja el PNG translúcido.
+//
+// Las fuentes (Barlow, Inter) salen del ensamblado de la app con URI "HysteriaMeter;component", que resuelven también
+// bajo el testhost. Antes de dibujar, el arnés comprueba que NumberFont, TitleFont y BodyFont sean las embebidas: si
+// cayeran en una fuente de reemplazo, los anchos y el aspecto de los PNG no serían los de la app.
 //
 // Agregar un estado: una línea más en States con el nombre del PNG y una función que arma la ventana con las
 // propiedades reales del VM (nada de datos inventados). Cada estado arma su propia sesión: no dependen entre sí.
@@ -164,7 +170,12 @@ public sealed class UiSnapshotTests
         Directory.CreateDirectory(folder);
         var scale = double.TryParse(Environment.GetEnvironmentVariable("HYSTERIA_SNAPSHOTS_ESCALA"), NumberStyles.Float, CultureInfo.InvariantCulture, out var s) && s > 0 ? s : 1;
         var culture = new CultureInfo(Environment.GetEnvironmentVariable("HYSTERIA_SNAPSHOTS_CULTURA") ?? "es-AR");
-        var backdrop = Environment.GetEnvironmentVariable("HYSTERIA_SNAPSHOTS_FONDO");
+        var backdrop = Environment.GetEnvironmentVariable("HYSTERIA_SNAPSHOTS_FONDO") switch
+        {
+            null or "" => "#3A4A3F",
+            "ninguno" => null,
+            var color => color,
+        };
         var only = (Environment.GetEnvironmentVariable("HYSTERIA_SNAPSHOTS_SOLO") ?? string.Empty)
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var database = Path.Combine(Path.GetTempPath(), $"hysteria-snapshots-{Guid.NewGuid():N}.db");
@@ -175,7 +186,7 @@ public sealed class UiSnapshotTests
             RunOnSta(culture, () =>
             {
                 var harness = Harness.Create(database);
-                var renderer = new Renderer(folder, scale, string.IsNullOrWhiteSpace(backdrop) ? null : backdrop);
+                var renderer = new Renderer(folder, scale, backdrop);
                 foreach (var state in States.Where(st => only.Length == 0 || only.Any(o => st.Name.Contains(o, StringComparison.OrdinalIgnoreCase))))
                 {
                     try
@@ -192,8 +203,7 @@ public sealed class UiSnapshotTests
         }
         finally
         {
-            // Igual que EncounterRepositoryTests: soltar el pool de SQLite y borrar la base temporal.
-            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            // El pool de SQLite ya lo soltó el hilo STA al apagarse; acá solo se borra la base temporal.
             foreach (var file in new[] { database, database + "-wal", database + "-shm" })
             {
                 File.Delete(file);
@@ -405,6 +415,7 @@ public sealed class UiSnapshotTests
         ExceptionDispatchInfo? failure = null;
         var thread = new Thread(() =>
         {
+            App? app = null;
             try
             {
                 // Los números del VM usan CurrentCulture; la app toma la del sistema. Acá se fija.
@@ -413,7 +424,6 @@ public sealed class UiSnapshotTests
                 // Con este contexto, los await con ConfigureAwait(true) vuelven a este hilo y no al ThreadPool.
                 SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
 
-                Application.ResourceAssembly ??= typeof(App).Assembly;
                 if (Application.Current is { } existing && existing.Dispatcher.Thread != Thread.CurrentThread)
                 {
                     throw new InvalidOperationException(
@@ -421,11 +431,12 @@ public sealed class UiSnapshotTests
                         "Correr este test solo: dotnet test --filter FullyQualifiedName~UiSnapshotTests");
                 }
 
-                var app = Application.Current as App ?? new App();
+                app = Application.Current as App ?? new App();
                 app.InitializeComponent();
                 // App.xaml usa OnMainWindowClose: cerrar la primera ventana encolaría el apagado del Dispatcher y,
                 // como acá se bombea la cola, cortaría la generación a la mitad.
                 app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                CheckFonts(app);
 
                 action();
             }
@@ -435,12 +446,66 @@ public sealed class UiSnapshotTests
             }
             finally
             {
-                Dispatcher.CurrentDispatcher.InvokeShutdown();
+                try
+                {
+                    ShutDown(app);
+                }
+                catch (Exception ex)
+                {
+                    // Una excepción que escapara del hilo tiraría abajo el testhost: se informa como fallo del test.
+                    failure ??= ExceptionDispatchInfo.Capture(ex);
+                }
             }
         });
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         thread.Join();
         failure?.Throw();
+    }
+
+    /// <summary>
+    /// Apaga todo en el hilo STA, antes de que termine: las ventanas que hayan quedado abiertas (un estado que falló a
+    /// mitad de camino), la App (Shutdown: con OnExplicitShutdown nadie más lo llama), el pool de SQLite y el
+    /// Dispatcher. Dispatcher.Run procesa la cola hasta el apagado y vuelve cuando terminó (OLE, render y ventanas
+    /// ocultas incluidos). Sin esto, el testhost a veces se caía al cerrar con un "Assert failure" del CLR.
+    /// </summary>
+    private static void ShutDown(App? app)
+    {
+        var dispatcher = Dispatcher.CurrentDispatcher;
+        if (app is not null)
+        {
+            foreach (var window in app.Windows.Cast<Window>().ToList())
+            {
+                window.Close();
+            }
+
+            app.Shutdown(); // encola el apagado de la App (Exit) con prioridad Normal
+        }
+
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        // SystemIdle: después del apagado de la App y de lo que quede en la cola.
+        dispatcher.BeginInvokeShutdown(DispatcherPriority.SystemIdle);
+        Dispatcher.Run();
+        if (!dispatcher.HasShutdownFinished)
+        {
+            throw new InvalidOperationException("El Dispatcher del arnés no terminó de apagarse.");
+        }
+    }
+
+    /// <summary>
+    /// Las tres fuentes del tema tienen que ser las embebidas. Si un URI no resuelve, WPF cae sin avisar en una fuente
+    /// del sistema y los PNG salen con otros anchos.
+    /// </summary>
+    private static void CheckFonts(Application app)
+    {
+        foreach (var (key, family) in new[] { ("NumberFont", "Barlow Semi Condensed"), ("TitleFont", "Barlow Semi Condensed"), ("BodyFont", "Inter") })
+        {
+            var font = (FontFamily)app.Resources[key];
+            var typeface = new Typeface(font, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+            if (!typeface.TryGetGlyphTypeface(out var glyphs) || !glyphs.FamilyNames.Values.Contains(family))
+            {
+                throw new InvalidOperationException($"{key} no es {family} (quedó {font.Source}): los PNG saldrían con una fuente de reemplazo.");
+            }
+        }
     }
 }

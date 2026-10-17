@@ -29,9 +29,10 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Rule}" BorderThickness="1">
+    <!-- Marco con el borde del acento (GoldDim), como WindowFrame; el fondo sigue translúcido hasta la pista de cada ventana. -->
+    <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource GoldDim}" BorderThickness="1">
         <DockPanel>
-            <DockPanel DockPanel.Dock="Top" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="SizeAll" Background="#14C9A25A">
+            <DockPanel DockPanel.Dock="Top" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="SizeAll" Background="Transparent">
                 <Border DockPanel.Dock="Bottom" Height="1" Background="{StaticResource Rule}" />
                 <Button DockPanel.Dock="Right" Click="OnCloseClick" ToolTip="Cerrar" Cursor="Hand" Width="26" Height="26" Margin="0,6,6,6"
                         Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextMuted}">
@@ -51,9 +52,9 @@
                 <StackPanel Style="{StaticResource Stat}"><TextBlock Text="ENTRADA" Style="{StaticResource StatLabel}" /><TextBlock Text="{Binding Entered}" Style="{StaticResource StatValue}" /></StackPanel>
                 <StackPanel Style="{StaticResource Stat}"><TextBlock Text="ÚLTIMA PELEA" Style="{StaticResource StatLabel}" /><TextBlock Text="{Binding Left}" Style="{StaticResource StatValue}" /></StackPanel>
                 <StackPanel Style="{StaticResource Stat}"><TextBlock Text="DURACIÓN" Style="{StaticResource StatLabel}" /><TextBlock Text="{Binding Duration}" Style="{StaticResource StatValue}" /></StackPanel>
-                <StackPanel Style="{StaticResource Stat}"><TextBlock Text="BOSSES" Style="{StaticResource StatLabel}" /><TextBlock Text="{Binding Bosses}" Style="{StaticResource StatValue}" Foreground="#7BD88F" /></StackPanel>
-                <StackPanel Style="{StaticResource Stat}"><TextBlock Text="WIPES" Style="{StaticResource StatLabel}" /><TextBlock Text="{Binding Wipes}" Style="{StaticResource StatValue}" Foreground="#F08A7E" /></StackPanel>
-                <StackPanel Style="{StaticResource Stat}"><TextBlock Text="MUERTES" Style="{StaticResource StatLabel}" /><TextBlock Text="{Binding Deaths}" Style="{StaticResource StatValue}" Foreground="#F08A7E" /></StackPanel>
+                <StackPanel Style="{StaticResource Stat}"><TextBlock Text="BOSSES" Style="{StaticResource StatLabel}" /><TextBlock Text="{Binding Bosses}" Style="{StaticResource StatValue}" Foreground="{StaticResource Success}" /></StackPanel>
+                <StackPanel Style="{StaticResource Stat}"><TextBlock Text="WIPES" Style="{StaticResource StatLabel}" /><TextBlock Text="{Binding Wipes}" Style="{StaticResource StatValue}" Foreground="{StaticResource Danger}" /></StackPanel>
+                <StackPanel Style="{StaticResource Stat}"><TextBlock Text="MUERTES" Style="{StaticResource StatLabel}" /><TextBlock Text="{Binding Deaths}" Style="{StaticResource StatValue}" Foreground="{StaticResource Danger}" /></StackPanel>
             </StackPanel>
 
             <!-- Línea de tiempo: trash gris, kill dorado, wipe rojo -->
@@ -62,7 +63,7 @@
                 <ItemsControl ItemsSource="{Binding Timeline}" Width="880" Height="26" HorizontalAlignment="Left">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <Canvas Background="#14FFFFFF" />
+                            <Canvas Background="{StaticResource Track}" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemContainerStyle>
@@ -73,7 +74,7 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="vm:SegmentItem">
                             <Border Width="{Binding Width}" Height="26" Background="{Binding Fill}" ToolTip="{Binding Tip}" CornerRadius="2">
-                                <TextBlock Text="{Binding Label}" FontSize="10" FontWeight="SemiBold" Foreground="#14110A" Margin="4,0"
+                                <TextBlock Text="{Binding Label}" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource OnAccent}" Margin="4,0"
                                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                             </Border>
                         </DataTemplate>
@@ -95,7 +96,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:BossCard">
-                                <Border Width="290" Margin="0,0,12,12" Padding="12,10" Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="1" CornerRadius="6">
+                                <Border Width="290" Margin="0,0,12,12" Style="{StaticResource CardPanel}">
                                     <StackPanel>
                                         <DockPanel>
                                             <TextBlock DockPanel.Dock="Right" Text="{Binding Result}" Foreground="{Binding ResultBrush}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center" />
@@ -106,11 +107,11 @@
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate DataType="vm:BossPlayerRow">
                                                     <Grid Height="22" Margin="0,0,0,2">
-                                                        <Border Background="#08FFFFFF" />
+                                                        <Border Background="{StaticResource Row}" />
                                                         <Border Width="{Binding BarWidth}" HorizontalAlignment="Left" Background="{Binding Bar}" />
                                                         <DockPanel Margin="6,0">
                                                             <TextBlock DockPanel.Dock="Right" Text="{Binding Dps}" FontWeight="Bold" Foreground="{StaticResource TextBright}" VerticalAlignment="Center" />
-                                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Skulls}" Foreground="#F08A7E" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Skulls}" Foreground="{StaticResource Danger}" Margin="0,0,8,0" VerticalAlignment="Center" />
                                                             <TextBlock x:Name="PlayerName" Text="{Binding Name}" Foreground="{StaticResource Text}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                                         </DockPanel>
                                                     </Grid>
@@ -128,7 +129,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <!-- Tabla: DPS y muertes por jugador y boss -->
+                    <!-- Tabla: DPS y muertes por jugador y boss. Filas sin fondo, separadas por un filete (Rule), como el mock. -->
                     <TextBlock Text="MUERTES Y DPS POR JUGADOR Y BOSS" Style="{StaticResource StatLabel}" Margin="0,6,0,4" />
                     <StackPanel Orientation="Horizontal" Margin="6,0,0,4">
                         <TextBlock Text="JUGADOR" Width="150" Style="{StaticResource StatLabel}" />
@@ -146,7 +147,7 @@
                     <ItemsControl ItemsSource="{Binding Rows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:PlayerRow">
-                                <Border Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="0,0,0,1" Padding="6,5">
+                                <Border BorderBrush="{StaticResource Rule}" BorderThickness="0,0,0,1" Padding="6,5">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding Name}" Width="150" FontWeight="SemiBold" Foreground="{Binding Color}" TextTrimming="CharacterEllipsis" />
                                         <ItemsControl ItemsSource="{Binding Cells}">
@@ -157,7 +158,7 @@
                                                 <DataTemplate><TextBlock Text="{Binding}" Width="130" Foreground="{StaticResource Text}" /></DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
-                                        <TextBlock Text="{Binding Deaths}" Width="80" Foreground="#F08A7E" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding Deaths}" Width="80" Foreground="{StaticResource Danger}" FontWeight="SemiBold" />
                                         <TextBlock Text="{Binding Dps}" Width="80" Foreground="{StaticResource TextBright}" FontWeight="SemiBold" />
                                     </StackPanel>
                                 </Border>

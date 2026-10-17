@@ -29,29 +29,45 @@ public static class MeterThemes
     public static MeterTheme Of(string? name) => All.FirstOrDefault(t => t.Name == name) ?? All[0];
 
     /// <summary>
-    /// Pone los colores del tema en los recursos de la aplicación. Las ventanas que se abren después lo toman entero;
-    /// en las abiertas cambian los pinceles que se pueden modificar.
-    /// Las claves derivadas del acento (<see cref="AccentDerived"/>) que el tema no define toman el color de su
-    /// <c>Gold</c> con el alfa del valor por defecto: así todo el sistema sigue al acento sin repetirlo en cada tema.
+    /// Colores de <c>Theme.xaml</c> tal como se cargaron: la base de cada tema y la paleta entera de "Dorado". App.OnStartup
+    /// los guarda con <see cref="Snapshot"/> antes de aplicar el tema elegido; hasta entonces (y en los tests) está vacío.
+    /// Sirve, por ejemplo, para la vista previa de los temas en Configuración (<see cref="Resolve"/>).
     /// </summary>
-    public static void Apply(ResourceDictionary resources, string? name, IReadOnlyDictionary<string, Color> defaults)
+    public static IReadOnlyDictionary<string, Color> Defaults { get; set; } = new Dictionary<string, Color>();
+
+    /// <summary>
+    /// La paleta completa de un tema, sin tocar recursos: sus colores y, para las claves que no define, los de
+    /// <paramref name="defaults"/>. Las claves derivadas del acento (<see cref="AccentDerived"/>) que el tema no define toman
+    /// su <c>Gold</c> con el alfa del valor por defecto: así todo el sistema sigue al acento sin repetirlo en cada tema.
+    /// "Dorado" no define <c>Gold</c>: usa los valores de <c>Theme.xaml</c> tal cual, derivadas incluidas.
+    /// </summary>
+    public static IReadOnlyDictionary<string, Color> Resolve(string? name, IReadOnlyDictionary<string, Color> defaults)
     {
         var theme = Of(name);
-        Color? accent = theme.Colors.TryGetValue("Gold", out var a) ? a : defaults.TryGetValue("Gold", out var d) ? d : null;
-        foreach (var (key, fallback) in defaults)
+        Color? accent = theme.Colors.TryGetValue("Gold", out var a) ? a : null;
+        return defaults.ToDictionary(p => p.Key, p =>
+            theme.Colors.TryGetValue(p.Key, out var c) ? c
+            : accent is { } gold && AccentDerived.Contains(p.Key) ? Color.FromArgb(p.Value.A, gold.R, gold.G, gold.B)
+            : p.Value);
+    }
+
+    /// <summary>
+    /// Pone los colores del tema (<see cref="Resolve"/>) en los recursos de la aplicación y devuelve la paleta aplicada.
+    /// Siempre con pinceles nuevos: los de Theme.xaml quedan congelados apenas se leen (los recursos de la App se
+    /// sellan), así que no se pueden modificar. Por eso el cambio solo llega a las referencias DynamicResource y a las
+    /// ventanas que se abren después; una StaticResource se queda con el color que tenía al abrirse la ventana.
+    /// </summary>
+    public static IReadOnlyDictionary<string, Color> Apply(ResourceDictionary resources, string? name, IReadOnlyDictionary<string, Color> defaults)
+    {
+        var palette = Resolve(name, defaults);
+        foreach (var (key, color) in palette)
         {
-            var color = theme.Colors.TryGetValue(key, out var c) ? c
-                : accent is { } gold && AccentDerived.Contains(key) ? Color.FromArgb(fallback.A, gold.R, gold.G, gold.B)
-                : fallback;
-            if (resources[key] is SolidColorBrush { IsFrozen: false } brush)
-            {
-                brush.Color = color;
-            }
-            else
-            {
-                resources[key] = new SolidColorBrush(color);
-            }
+            var brush = new SolidColorBrush(color);
+            brush.Freeze();
+            resources[key] = brush;
         }
+
+        return palette;
     }
 
     /// <summary>Los colores originales de <c>Theme.xaml</c>, para volver al tema por defecto sin reiniciar.</summary>
