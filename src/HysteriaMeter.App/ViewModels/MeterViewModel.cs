@@ -1303,18 +1303,14 @@ public sealed partial class MeterViewModel : ObservableObject
         DetailRequested?.Invoke();
     }
 
+    /// <summary>La configuración tapa las filas del overlay; el historial es otra ventana y puede seguir abierto.</summary>
     [RelayCommand]
-    private void ToggleSettings()
-    {
-        IsSettingsOpen = !IsSettingsOpen;
-        IsHistoryOpen &= !IsSettingsOpen;
-    }
+    private void ToggleSettings() => IsSettingsOpen = !IsSettingsOpen;
 
     [RelayCommand]
     private async Task ToggleHistoryAsync()
     {
         IsHistoryOpen = !IsHistoryOpen;
-        IsSettingsOpen &= !IsHistoryOpen;
         if (!IsHistoryOpen)
         {
             return;
@@ -1645,7 +1641,9 @@ public sealed partial class MeterViewModel : ObservableObject
         IsViewingHistory = true;
         HistoryLabel = $"HISTORIAL · {item.When}";
 
-        // La ventana del historial queda abierta: la fila se marca (PinnedHistoryId) y el overlay muestra la pelea.
+        // La ventana del historial queda abierta: la fila se marca (PinnedHistoryId) y el overlay muestra la pelea,
+        // sin la configuración tapándola.
+        IsSettingsOpen = false;
         Refresh();
     }
 
@@ -1691,7 +1689,6 @@ public sealed partial class MeterViewModel : ObservableObject
         IsViewingHistory = true;
         HistoryLabel = "DEMO · datos de prueba";
         IsSettingsOpen = false;
-        IsHistoryOpen = false;
         Refresh();
     }
 
@@ -1724,7 +1721,6 @@ public sealed partial class MeterViewModel : ObservableObject
         IsViewingHistory = true;
         HistoryLabel = $"ARCHIVO · {Path.GetFileNameWithoutExtension(path)}";
         IsSettingsOpen = false;
-        IsHistoryOpen = false;
         ExportMessage = string.Empty;
         Refresh();
         return true;

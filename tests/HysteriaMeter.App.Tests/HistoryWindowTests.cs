@@ -68,6 +68,7 @@ public sealed class HistoryWindowTests
                 // Una run con su resumen y la pelea suelta de hace 10 días.
                 Assert.True(vm.IsHistoryOpen);
                 Assert.Equal("4 peleas · 1 run", vm.HistoryCountText);
+                Assert.False(vm.HasHistoryMoreText); // entran todas en la lista
                 Assert.Equal(2, vm.HistoryRuns.Count);
                 var run = vm.HistoryRuns[0];
                 Assert.True(run.CanSummarize);
@@ -97,10 +98,16 @@ public sealed class HistoryWindowTests
                 vm.HistorySearch = string.Empty;
                 Assert.False(vm.HasHistoryEmptyText);
 
-                // Abrir una pelea deja la ventana abierta, marca la fila y grafica ese boss.
+                // La configuración del overlay no cierra la ventana del historial.
+                vm.ToggleSettingsCommand.Execute(null);
+                Assert.True(vm.IsHistoryOpen);
+
+                // Abrir una pelea deja la ventana abierta, marca la fila, grafica ese boss y saca la configuración de
+                // encima de las filas del overlay.
                 var kill = vm.HistoryRuns[0].Fights[0];
                 Pump(vm.OpenEncounterCommand.ExecuteAsync(kill));
                 Assert.True(vm.IsHistoryOpen);
+                Assert.False(vm.IsSettingsOpen);
                 Assert.Equal(kill.Id, vm.PinnedHistoryId);
                 Assert.True(vm.HasProgress);
                 Assert.Equal("1 / 3", vm.Progress.Kills);
