@@ -218,30 +218,22 @@
                                                                 </TextBlock>
                                                             </Border>
 
-                                                            <!-- El objetivo cede el ancho; intento y nota conservan su espacio propio. La nota completa va al tooltip. -->
-                                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                </Grid.ColumnDefinitions>
-                                                                <TextBlock TextTrimming="CharacterEllipsis" FontWeight="SemiBold">
-                                                                    <Run Foreground="{DynamicResource Gold}"><Run.Style>
-                                                                        <Style TargetType="Run">
-                                                                            <Setter Property="Text" Value="" />
-                                                                            <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding IsRecord}" Value="True">
-                                                                                    <Setter Property="Text" Value="★ " />
-                                                                                </DataTrigger>
-                                                                            </Style.Triggers>
-                                                                        </Style>
-                                                                    </Run.Style></Run><Run Text="{Binding Target, Mode=OneWay}" />
-                                                                </TextBlock>
-                                                                <TextBlock Grid.Column="1" Text="{Binding AttemptLabel}" Margin="8,0,0,0"
-                                                                           FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextDim}" />
-                                                            </Grid>
-                                                            <TextBlock Text="{Binding Note}" Visibility="{Binding HasNote, Converter={StaticResource Visible}}" FontSize="{StaticResource FontSizeCaption}" FontStyle="Italic" Foreground="{DynamicResource TextMuted}" TextTrimming="CharacterEllipsis" />
-                                                            </StackPanel>
+                                                            <!-- Objetivo, intento y nota en la misma línea, como el mock (gap 8). Si no entra, se recorta
+                                                                 desde el final: primero la nota, que va completa en el tooltip de la fila. -->
+                                                            <TextBlock Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                                                                <Run Foreground="{DynamicResource Gold}" FontWeight="SemiBold"><Run.Style>
+                                                                    <Style TargetType="Run">
+                                                                        <Setter Property="Text" Value="" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsRecord}" Value="True">
+                                                                                <Setter Property="Text" Value="★ " />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Run.Style></Run><Run Text="{Binding TargetText, Mode=OneWay}" FontWeight="SemiBold" /><Run
+                                                                    Text="{Binding AttemptInline, Mode=OneWay}" FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextDim}" /><Run
+                                                                    Text="{Binding NoteInline, Mode=OneWay}" FontSize="{StaticResource FontSizeCaption}" FontStyle="Italic" Foreground="{DynamicResource TextMuted}" />
+                                                            </TextBlock>
 
                                                             <TextBlock Grid.Column="2" Style="{StaticResource Cell}" Text="{Binding DurationText}" Foreground="{DynamicResource TextMuted}" />
 

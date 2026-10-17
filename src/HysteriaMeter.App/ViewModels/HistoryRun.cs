@@ -87,16 +87,21 @@ public sealed record HistoryRun(
             CanSummarize: false, shown[0], shown);
     }
 
-    /// <summary>"2/3 bosses · 1 wipe": bosses derrotados sobre bosses distintos intentados y cuántos wipes hubo.</summary>
+    /// <summary>
+    /// "2/3 bosses · 1 wipe": bosses derrotados sobre bosses distintos intentados y cuántos wipes hubo. Un boss es un
+    /// nombre o una plantilla ("NPC 2400123"); las kills viejas sin ninguno de los dos cuentan cada una por separado.
+    /// </summary>
     public static string BossesText(IReadOnlyCollection<HistoryItem> fights)
     {
-        var bosses = fights.Where(f => !f.IsTrash).Select(f => f.Target).Distinct(StringComparer.Ordinal).Count();
+        static string BossKey(HistoryItem f) => f.HasTarget ? f.Target : "#" + f.Id;
+
+        var bosses = fights.Where(f => !f.IsTrash).Select(BossKey).Distinct(StringComparer.Ordinal).Count();
         if (bosses == 0)
         {
             return "sin bosses";
         }
 
-        var killed = fights.Where(f => f.IsKill).Select(f => f.Target).Distinct(StringComparer.Ordinal).Count();
+        var killed = fights.Where(f => f.IsKill).Select(BossKey).Distinct(StringComparer.Ordinal).Count();
         var wipes = fights.Count(f => f.IsWipe);
         var wipesText = wipes switch
         {
@@ -144,7 +149,9 @@ public sealed record BossProgress(
 
     public const string PickText = "Abrí una pelea contra un boss, o buscá uno, para ver tu DPS intento por intento.";
 
-    public const string NoNameText = "Esta pelea no tiene el nombre del objetivo: no hay intentos con qué compararla.";
+    public const string NoNameText = "Esta pelea no tiene el nombre ni la plantilla del objetivo: no hay intentos con qué compararla.";
+
+    public const string TrashText = "Esta pelea es trash: el progreso se arma con tus intentos contra un boss.";
 
     public bool HasData => Bars.Count > 0;
 
@@ -152,7 +159,8 @@ public sealed record BossProgress(
 
     /// <summary>
     /// El boss de la fila seleccionada; sin selección, el que deja el filtro si deja uno solo (como el progreso de antes).
-    /// La serie usa todos los intentos cargados contra ese objetivo y personaje, sin que Solo kills quite los wipes.
+    /// La serie usa todos los intentos cargados contra ese objetivo (nombre o plantilla) y personaje, sin que Solo kills
+    /// quite los wipes. El trash no entra: no es un intento contra un boss.
     /// </summary>
     public static BossProgress For(IReadOnlyList<HistoryItem> matchingNewestFirst, HistoryItem? selected, DateTimeOffset now, IReadOnlyList<HistoryItem>? allNewestFirst = null)
     {
@@ -160,15 +168,20 @@ public sealed record BossProgress(
         string? character;
         if (selected is not null)
         {
-            if (selected.Target == "Encuentro")
+            if (!selected.HasTarget)
             {
                 return Empty(NoNameText);
             }
 
+            if (selected.IsTrash)
+            {
+                return Empty(TrashText);
+            }
+
             (target, character) = (selected.Target, selected.Character);
         }
-        else if (matchingNewestFirst.Where(i => i.LocalDps is > 0).ToList() is { Count: > 0 } candidates
-            && candidates.Select(i => (i.Target, i.Character)).Distinct().Count() == 1 && candidates[0].Target != "Encuentro")
+        else if (matchingNewestFirst.Where(i => i.LocalDps is > 0 && !i.IsTrash).ToList() is { Count: > 0 } candidates
+            && candidates.Select(i => (i.Target, i.Character)).Distinct().Count() == 1 && candidates[0].HasTarget)
         {
             (target, character) = (candidates[0].Target, candidates[0].Character);
         }
@@ -178,7 +191,8 @@ public sealed record BossProgress(
         }
 
         var title = $"{target.ToUpper(CultureInfo.CurrentCulture)} · {Header}";
-        var series = (allNewestFirst ?? matchingNewestFirst).Where(i => i.Target == target && i.Character == character && i.LocalDps is > 0).Reverse().ToList();
+        var series = (allNewestFirst ?? matchingNewestFirst)
+            .Where(i => i.Target == target && i.Character == character && i.LocalDps is > 0 && !i.IsTrash).Reverse().ToList();
         if (series.Count == 0)
         {
             return Empty($"No hay peleas tuyas contra {target} con estos filtros.", title);
