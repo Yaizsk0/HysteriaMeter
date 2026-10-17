@@ -206,7 +206,7 @@ public sealed record HistoryItem(
         new[]
         {
             $"{When} · daño total {Total}{(Deaths is > 0 and var d ? $" · {d} {(d == 1 ? "muerte" : "muertes")}" : string.Empty)}",
-            string.Join(" ", new[] { IsRecord ? "★ récord personal" : string.Empty, VsBest, FastestTag, CharacterTag }.Where(t => t.Length > 0)).TrimStart('·', ' '),
+            string.Join(" ", new[] { IsRecord ? "★ récord personal" : string.Empty, AttemptLabel, VsBest, FastestTag, CharacterTag }.Where(t => t.Length > 0)).TrimStart('·', ' '),
             HasNote ? $"Nota: {Note}" : string.Empty,
         }.Where(line => line.Length > 0));
 

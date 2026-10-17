@@ -37,6 +37,23 @@ public sealed class ThemeTests
     }
 
     [Fact]
+    public void Barlow_fonts_resolve_the_requested_weight()
+    {
+        RunOnSta(() =>
+        {
+            var theme = LoadTheme();
+            foreach (var family in new[] { (FontFamily)theme["NumberFont"], (FontFamily)theme["TitleFont"], MeterViewModel.FontOf("Barlow Semi Condensed") })
+            {
+                foreach (var weight in new[] { FontWeights.Normal, FontWeights.SemiBold, FontWeights.Bold })
+                {
+                    var typeface = new Typeface(family, FontStyles.Normal, weight, FontStretches.Normal);
+                    Assert.True(typeface.TryGetGlyphTypeface(out var glyph));
+                    Assert.Equal(weight, glyph.Weight);
+                }
+            }
+        });
+    }
+    [Fact]
     public void Colors_repeated_in_code_match_theme_xaml()
     {
         RunOnSta(() =>

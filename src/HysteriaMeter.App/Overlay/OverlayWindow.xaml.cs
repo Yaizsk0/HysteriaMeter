@@ -43,6 +43,13 @@ public partial class OverlayWindow : Window
         _viewModel.CopyImageRequested += CopyImage;
         _viewModel.SaveImageRequested += SaveImage;
         _viewModel.PropertyChanged += OnViewModelChanged;
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!IsVisible)
+            {
+                _viewModel.IsHistoryOpen = false;
+            }
+        };
 
         // Una ventana cerrada no puede ser dueña de otra: se suelta del view model al cerrarse.
         Closed += (_, _) =>

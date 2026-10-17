@@ -89,6 +89,9 @@ public sealed class EncounterRepository(string databasePath)
         }
     }
 
+    /// <summary>Una pelea terminó de guardarse; los consumidores pueden volver a consultar sin adelantar al commit.</summary>
+    public event Action? Saved;
+
     public async Task SaveAsync(EncounterSnapshot encounter, CancellationToken cancellationToken = default)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
@@ -156,6 +159,7 @@ public sealed class EncounterRepository(string databasePath)
             transaction).ConfigureAwait(false);
 
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        Saved?.Invoke();
     }
 
     public async Task<IReadOnlyList<EncounterSummary>> ListRecentAsync(int limit = 50, CancellationToken cancellationToken = default)

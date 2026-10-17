@@ -435,6 +435,14 @@ public sealed partial class MeterViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsFullView))]
     public partial bool IsMinimized { get; set; }
 
+    partial void OnIsMinimizedChanged(bool value)
+    {
+        if (value)
+        {
+            IsHistoryOpen = false;
+        }
+    }
+
     public bool IsFullView => !IsMinimized;
 
     /// <summary>"12.3k · #2 de 6": tu DPS y tu puesto, o el DPS de la party si no estás en la pelea.</summary>
@@ -910,7 +918,7 @@ public sealed partial class MeterViewModel : ObservableObject
     /// ensamblado de entrada es otro (el testhost del arnés de capturas).
     /// </summary>
     public static FontFamily FontOf(string name) => MeterPreferences.BundledFonts.Contains(name)
-        ? new FontFamily(new Uri("pack://application:,,,/HysteriaMeter;component/"), $"./Assets/Fonts/#{name}")
+        ? new FontFamily(new Uri("pack://application:,,,/HysteriaMeter;component/"), $"./Assets/Fonts/#{(name == "Barlow Semi Condensed" ? "Barlow" : name)}")
         : new FontFamily(name);
 
     public ObservableCollection<ActorRowViewModel> Actors { get; } = [];
@@ -1002,6 +1010,14 @@ public sealed partial class MeterViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsClickThrough { get; set; }
 
+    partial void OnIsClickThroughChanged(bool value)
+    {
+        if (value)
+        {
+            IsHistoryOpen = false;
+        }
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDamageTab), nameof(IsHealingTab), nameof(IsTakenTab), nameof(SecondColumnHeader), nameof(RateUnit), nameof(ShowHealingColumn))]
     public partial MeterTab Tab { get; set; }
@@ -1047,9 +1063,36 @@ public sealed partial class MeterViewModel : ObservableObject
     /// <summary>Encabezado de la segunda columna numérica: HPS con daño y curación juntos, si no el total.</summary>
     public string SecondColumnHeader => ShowHealingColumn ? "HPS" : "TOTAL";
 
-    public void Start() => _timer.Start();
+    private bool _started;
 
-    public void Stop() => _timer.Stop();
+    public void Start()
+    {
+        if (!_started && _history is not null)
+        {
+            _history.Saved += OnHistorySaved;
+        }
+
+        _started = true;
+        _timer.Start();
+    }
+
+    public void Stop()
+    {
+        _started = false;
+        _timer.Stop();
+        if (_history is not null)
+        {
+            _history.Saved -= OnHistorySaved;
+        }
+    }
+
+    private void OnHistorySaved() => _timer.Dispatcher.InvokeAsync(async () =>
+    {
+        if (_started && IsHistoryOpen)
+        {
+            await ReloadHistoryAsync().ConfigureAwait(true);
+        }
+    });
 
     partial void OnTabChanged(MeterTab value) => Refresh();
 
@@ -1316,11 +1359,24 @@ public sealed partial class MeterViewModel : ObservableObject
             return;
         }
 
+        await ReloadHistoryAsync().ConfigureAwait(true);
+    }
+
+    private int _historyReload;
+
+    private async Task ReloadHistoryAsync()
+    {
+        var reload = ++_historyReload;
         if (_history is not null)
         {
             try
             {
                 var saved = (await _history.ListRecentAsync(HistoryLimit).ConfigureAwait(true)).Select(HistoryItem.From).ToList();
+                if (reload != _historyReload)
+                {
+                    return;
+                }
+
                 _allHistory = [.. HistoryItem.WithDeltas(HistoryItem.WithCharacterTags(HistoryItem.WithComparisons(saved)))];
             }
             catch (DbException)
@@ -1389,7 +1445,7 @@ public sealed partial class MeterViewModel : ObservableObject
     private void UpdateBossProgress()
     {
         var selected = PinnedHistoryId is { } id ? _allHistory.Find(i => i.Id == id) : null;
-        Progress = BossProgress.For(_matchingHistory, selected, HistoryClock());
+        Progress = BossProgress.For(_matchingHistory, selected, HistoryClock(), _allHistory);
         HasProgress = Progress.HasData;
     }
 
@@ -1401,13 +1457,14 @@ public sealed partial class MeterViewModel : ObservableObject
             return;
         }
 
+        var note = string.IsNullOrWhiteSpace(CurrentNote) ? null : CurrentNote.Trim();
         try
         {
-            await _history.SetNoteAsync(id, CurrentNote).ConfigureAwait(true);
+            await _history.SetNoteAsync(id, note).ConfigureAwait(true);
             var index = _allHistory.FindIndex(i => i.Id == id);
             if (index >= 0)
             {
-                _allHistory[index] = _allHistory[index] with { Note = string.IsNullOrWhiteSpace(CurrentNote) ? null : CurrentNote.Trim() };
+                _allHistory[index] = _allHistory[index] with { Note = note };
             }
         }
         catch (DbException)
@@ -1434,7 +1491,7 @@ public sealed partial class MeterViewModel : ObservableObject
         try
         {
             await _history.DeleteAsync(id).ConfigureAwait(true);
-            _allHistory.RemoveAll(i => i.Id == id);
+            await ReloadHistoryAsync().ConfigureAwait(true);
         }
         catch (DbException)
         {
@@ -1602,6 +1659,7 @@ public sealed partial class MeterViewModel : ObservableObject
         var next = index + step;
         if (next < 0)
         {
+            await SaveNoteAsync().ConfigureAwait(true);
             BackToLive();
         }
         else if (next < items.Count)
@@ -1616,6 +1674,11 @@ public sealed partial class MeterViewModel : ObservableObject
         if (item is null || _history is null)
         {
             return;
+        }
+
+        if (CanEditNote && PinnedHistoryId is not null)
+        {
+            await SaveNoteAsync().ConfigureAwait(true);
         }
 
         EncounterSnapshot? snapshot;
@@ -1636,7 +1699,7 @@ public sealed partial class MeterViewModel : ObservableObject
         _pinned = snapshot;
         _pinnedAt = DateTimeOffset.Now;
         PinnedHistoryId = item.Id;
-        CurrentNote = item.Note ?? string.Empty;
+        CurrentNote = (_allHistory.Find(i => i.Id == item.Id) ?? item).Note ?? string.Empty;
         CanEditNote = true;
         IsViewingHistory = true;
         HistoryLabel = $"HISTORIAL · {item.When}";

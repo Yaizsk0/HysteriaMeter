@@ -32,9 +32,9 @@
          ensamblado de entrada, que bajo el testhost no es la app, y la fuente caería en una del sistema sin avisar. -->
     <!-- Números, títulos y nombres en las filas. Pesos embebidos: Normal, SemiBold y Bold
          (el 500 del mock pasa a Normal o SemiBold). -->
-    <FontFamily x:Key="NumberFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/#Barlow Semi Condensed</FontFamily>
+    <FontFamily x:Key="NumberFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/#Barlow</FontFamily>
     <!-- En el mock el logo "HYSTERIA" y los títulos van en Barlow (antes, Cinzel). -->
-    <FontFamily x:Key="TitleFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/#Barlow Semi Condensed</FontFamily>
+    <FontFamily x:Key="TitleFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/#Barlow</FontFamily>
     <!-- Texto. Valor por defecto: App.xaml.cs lo reemplaza por la fuente elegida en Configuración
          (MeterPreferences.TextFont, con MeterViewModel.FontOf). Las ventanas lo usan con DynamicResource.
          Pesos: Normal, Medium, SemiBold y Bold. -->

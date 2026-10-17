@@ -152,9 +152,9 @@ public sealed record BossProgress(
 
     /// <summary>
     /// El boss de la fila seleccionada; sin selección, el que deja el filtro si deja uno solo (como el progreso de antes).
-    /// La serie son las peleas que pasan el filtro contra ese objetivo y con ese personaje, con mi DPS.
+    /// La serie usa todos los intentos cargados contra ese objetivo y personaje, sin que Solo kills quite los wipes.
     /// </summary>
-    public static BossProgress For(IReadOnlyList<HistoryItem> matchingNewestFirst, HistoryItem? selected, DateTimeOffset now)
+    public static BossProgress For(IReadOnlyList<HistoryItem> matchingNewestFirst, HistoryItem? selected, DateTimeOffset now, IReadOnlyList<HistoryItem>? allNewestFirst = null)
     {
         string target;
         string? character;
@@ -167,10 +167,10 @@ public sealed record BossProgress(
 
             (target, character) = (selected.Target, selected.Character);
         }
-        else if (HistoryItem.Progress(matchingNewestFirst) is { } single)
+        else if (matchingNewestFirst.Where(i => i.LocalDps is > 0).ToList() is { Count: > 0 } candidates
+            && candidates.Select(i => (i.Target, i.Character)).Distinct().Count() == 1 && candidates[0].Target != "Encuentro")
         {
-            target = single.Target;
-            character = matchingNewestFirst.First(i => i.LocalDps is > 0).Character;
+            (target, character) = (candidates[0].Target, candidates[0].Character);
         }
         else
         {
@@ -178,7 +178,7 @@ public sealed record BossProgress(
         }
 
         var title = $"{target.ToUpper(CultureInfo.CurrentCulture)} · {Header}";
-        var series = matchingNewestFirst.Where(i => i.Target == target && i.Character == character && i.LocalDps is > 0).Reverse().ToList();
+        var series = (allNewestFirst ?? matchingNewestFirst).Where(i => i.Target == target && i.Character == character && i.LocalDps is > 0).Reverse().ToList();
         if (series.Count == 0)
         {
             return Empty($"No hay peleas tuyas contra {target} con estos filtros.", title);
