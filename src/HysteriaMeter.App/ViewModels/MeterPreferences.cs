@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using HysteriaMeter.Combat;
 
 namespace HysteriaMeter.App.ViewModels;
@@ -5,6 +6,20 @@ namespace HysteriaMeter.App.ViewModels;
 /// <summary>Opciones que el usuario cambia desde el panel de configuración del overlay.</summary>
 public sealed record MeterPreferences
 {
+    public MeterPreferences()
+    {
+    }
+
+    /// <summary>Migra la densidad antigua solo al leer JSON sin versión; las ediciones posteriores admiten 24.</summary>
+    [JsonConstructor]
+    public MeterPreferences(int rowHeight = 30, int rowHeightVersion = 0)
+    {
+        RowHeight = rowHeightVersion == 0 && rowHeight == 24 ? 22 : rowHeight;
+    }
+
+    /// <summary>Se guarda con las preferencias y perfiles para no repetir la migración de 24 a 22 al reabrirlos.</summary>
+    public int RowHeightVersion { get; } = 1;
+
     /// <summary>Fuentes embebidas en la app (Assets/Fonts); las demás vienen con Windows.</summary>
     public static IReadOnlyList<string> BundledFonts { get; } = ["Inter", "Barlow Semi Condensed"];
 
@@ -25,7 +40,7 @@ public sealed record MeterPreferences
     public int RefreshMs { get; init; } = 250;
 
     /// <summary>Alto de cada fila en píxeles (Details: "bar height").</summary>
-    public static IReadOnlyList<int> RowHeightOptions { get; } = [24, 30, 36];
+    public static IReadOnlyList<int> RowHeightOptions { get; } = [22, 30, 36];
 
     public int RowHeight { get; init; } = 30;
 
@@ -80,14 +95,14 @@ public sealed record MeterPreferences
     /// <summary>Un sonido de Windows con las alertas: récord, prueba de DPS terminada y enrage que no se llega.</summary>
     public bool Sounds { get; init; }
 
-    /// <summary>Item level y power de cada jugador al lado de su nombre.</summary>
-    public bool ShowGear { get; init; } = true;
+    /// <summary>Item level y power de cada jugador al lado de su nombre. Apagado de entrada: el tooltip de la fila los muestra igual.</summary>
+    public bool ShowGear { get; init; }
 
-    /// <summary>Barras y rombo del color de la clase (como Details!) en vez de un color por jugador.</summary>
-    public bool ColorByClass { get; init; }
+    /// <summary>Barras y rombo del color de la clase (como Details!) en vez de un color por jugador. Prendido de entrada en las instalaciones nuevas.</summary>
+    public bool ColorByClass { get; init; } = true;
 
-    /// <summary>Columnas a la derecha del DPS: total (o HPS) y porcentaje.</summary>
-    public bool ShowTotalColumn { get; init; } = true;
+    /// <summary>Columnas a la derecha del DPS: total (o HPS) y porcentaje. De entrada solo el porcentaje: el total queda en el tooltip de la fila.</summary>
+    public bool ShowTotalColumn { get; init; }
 
     public bool ShowShareColumn { get; init; } = true;
 

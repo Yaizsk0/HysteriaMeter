@@ -12,6 +12,9 @@ namespace HysteriaMeter.App.ViewModels;
 public sealed class MeterSession
 {
     private readonly Action<MeterPreferences> _save;
+    private readonly Lock _runGate = new();
+    private readonly List<RunFight> _runFights = [];
+    private DateTimeOffset? _runZone;
 
     public MeterSession(
         CombatEngine engine,
@@ -62,6 +65,18 @@ public sealed class MeterSession
 
     private async void OnEncounterFinished(EncounterSnapshot snapshot)
     {
+        // La run es compartida: una ventana nueva también debe ver sus peleas anteriores.
+        lock (_runGate)
+        {
+            if (snapshot.ZoneEnteredAt != _runZone)
+            {
+                _runFights.Clear();
+                _runZone = snapshot.ZoneEnteredAt;
+            }
+
+            _runFights.Add(RunFight.From(snapshot));
+        }
+
         if (!Preferences.DiscordOnKill || !snapshot.TargetKilled || !DiscordWebhook.IsValidUrl(Preferences.DiscordWebhook))
         {
             return;
@@ -78,6 +93,15 @@ public sealed class MeterSession
     }
 
     public CombatEngine Engine { get; }
+
+    /// <summary>Tramos ya terminados de esta entrada, copiados para leerlos desde el hilo de UI.</summary>
+    public List<RunFight> RunFights(DateTimeOffset? zone)
+    {
+        lock (_runGate)
+        {
+            return zone == _runZone ? [.. _runFights] : [];
+        }
+    }
 
     /// <summary>Reproduce el sonido de una alerta; <c>null</c> en pruebas.</summary>
     public Action<AlertSound>? PlaySound { get; init; }
@@ -149,6 +173,12 @@ public sealed class MeterSession
     public void Reset()
     {
         Engine.Reset();
+        lock (_runGate)
+        {
+            _runFights.Clear();
+            _runZone = null;
+        }
+
         ResetRequested?.Invoke();
     }
 }

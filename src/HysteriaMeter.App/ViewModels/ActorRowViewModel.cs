@@ -17,7 +17,7 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial string Name { get; set; } = string.Empty;
 
-    /// <summary>Nombre con la marca "(vos)" para el jugador local, como en el mock.</summary>
+    /// <summary>Nombre con la marca de muertes ("✝"). Tu fila se distingue por el color y el contorno, no por el texto.</summary>
     [ObservableProperty]
     public partial string DisplayName { get; set; } = string.Empty;
 
@@ -40,7 +40,19 @@ public sealed partial class ActorRowViewModel : ObservableObject
     public bool HasClassEmblem => ClassEmblem is not null;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasClass))]
     public partial string ClassName { get; set; } = string.Empty;
+
+    /// <summary>Se sabe la clase (por sus skills): el círculo lleva su inicial y su color.</summary>
+    public bool HasClass => ClassName.Length > 0;
+
+    /// <summary>Letra del círculo de la fila: la inicial de la clase o, si todavía no se sabe, la del nombre.</summary>
+    [ObservableProperty]
+    public partial string BadgeText { get; set; } = string.Empty;
+
+    /// <summary>Color del círculo y del nombre de la clase en el tooltip: el de la clase o, sin clase, el del jugador.</summary>
+    [ObservableProperty]
+    public partial Brush BadgeBrush { get; set; } = PlayerColors.Local;
 
     /// <summary>"2130 · 93.1k": item level y power, o vacío si no llegaron (o se ocultaron).</summary>
     [ObservableProperty]
@@ -96,6 +108,31 @@ public sealed partial class ActorRowViewModel : ObservableObject
     /// <summary>Golpe más alto de la pelea (columna "MÁX").</summary>
     [ObservableProperty]
     public partial string MaxHitText { get; set; } = "–";
+
+    /// <summary>Qué es el total en el tooltip: "Daño", "Curación" o "Recibido", según la pestaña.</summary>
+    [ObservableProperty]
+    public partial string ValueLabel { get; set; } = "Daño";
+
+    /// <summary>DPS de los últimos <see cref="RecentSeconds"/> s para el tooltip, aunque la columna "10 s" esté oculta.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasRecentTip))]
+    public partial string RecentTip { get; set; } = string.Empty;
+
+    public bool HasRecentTip => RecentTip.Length > 0;
+
+    /// <summary>La skill que más daño hizo, con su nombre de data/skills.json (o "Skill 12345"); vacío sin skills.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasTopSkill))]
+    public partial string TopSkill { get; set; } = string.Empty;
+
+    public bool HasTopSkill => TopSkill.Length > 0;
+
+    /// <summary>Item level y power para el tooltip, aunque estén ocultos al lado del nombre.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasTipGear))]
+    public partial string TipGear { get; set; } = string.Empty;
+
+    public bool HasTipGear => TipGear.Length > 0;
 
     public const int RecentSeconds = 10;
 
@@ -163,14 +200,16 @@ public sealed partial class ActorRowViewModel : ObservableObject
         ClassIcon = playerClass?.Icon;
         ClassEmblem = playerClass is null ? null : PlayerClasses.EmblemOf(actor.ClassId);
         ClassName = playerClass?.Name ?? string.Empty;
-        Gear = showGear ? GearText(actor.ItemLevel, actor.CombatPower) : string.Empty;
+        TipGear = GearText(actor.ItemLevel, actor.CombatPower);
+        Gear = showGear ? TipGear : string.Empty;
         var value = tab.Metric(actor, bossOnly);
 
         Id = actor.Id;
         Rank = rank;
         Name = actor.Name;
-        DisplayName = (actor.IsLocalPlayer ? $"{actor.Name} (vos)" : actor.Name) + DeathMark(actor.Deaths);
+        DisplayName = actor.Name + DeathMark(actor.Deaths);
         Initial = InitialOf(actor.Name);
+        BadgeText = playerClass is null ? Initial : InitialOf(playerClass.Name);
         if (colorByClass && playerClass is not null)
         {
             Accent = PlayerColors.ForClass(playerClass.Color);
@@ -181,6 +220,14 @@ public sealed partial class ActorRowViewModel : ObservableObject
             Accent = actor.IsLocalPlayer ? PlayerColors.Local : PlayerColors.For(actor.Name);
             BarFill = actor.IsLocalPlayer ? PlayerColors.LocalBar : PlayerColors.BarFor(actor.Name);
         }
+
+        BadgeBrush = playerClass is null ? Accent : PlayerColors.ForClass(playerClass.Color);
+        ValueLabel = tab switch
+        {
+            MeterTab.Healing => "Curación",
+            MeterTab.Taken => "Recibido",
+            _ => "Daño",
+        };
 
         IsLocalPlayer = actor.IsLocalPlayer;
         PerSecond = Compact(tab switch
@@ -213,9 +260,12 @@ public sealed partial class ActorRowViewModel : ObservableObject
         _ => $" ✝{deaths}",
     };
 
-    /// <summary>"52%" sin decimales ni espacio: entra en la columna angosta del overlay.</summary>
-    internal static string FormatShare(double share) =>
-        (share * 100).ToString("0", CultureInfo.CurrentCulture) + "%";
+    /// <summary>"31,5 %": un decimal, con el formato de porcentaje de la cultura (entra en la columna de 40 px).</summary>
+    public static string FormatShare(double share) => share.ToString("P1", CultureInfo.CurrentCulture);
+
+    /// <summary>Nombre de la skill que más daño hizo; vacío si no hay skills.</summary>
+    public static string TopSkillOf(ActorSnapshot actor, SkillNames names) =>
+        actor.Skills.Count == 0 ? string.Empty : names.Of(actor.Skills.MaxBy(s => s.Damage)!.SkillId);
 
     internal static string InitialOf(string name) =>
         name.Length > 0 && char.IsLetter(name[0]) ? char.ToUpper(name[0], CultureInfo.CurrentCulture).ToString() : "?";

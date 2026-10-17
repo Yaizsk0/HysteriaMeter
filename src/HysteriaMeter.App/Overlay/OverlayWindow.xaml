@@ -8,13 +8,13 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MeterViewModel}"
         Title="Hysteria Meter"
-        Width="356" Height="300" MinWidth="260" MaxWidth="900" MinHeight="150" MaxHeight="1400"
+        Width="380" Height="300" MinWidth="260" MaxWidth="900" MinHeight="150" MaxHeight="1400"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="NoResize" ShowInTaskbar="True"
         FontFamily="{Binding Font}" FontSize="13" Opacity="{Binding EffectiveOpacity}" MouseEnter="OnMouseEnterWindow" MouseLeave="OnMouseLeaveWindow" Foreground="{StaticResource Text}"
         TextOptions.TextFormattingMode="Display">
 
-    <!-- Referencia visual: mocks/Main.dc.html (aprobado por Mati el 2026-10-15). -->
+    <!-- Referencia visual: redesign/project/Main, Estados, Mini, Avisos e Inicio.dc.html (DECISIONES.md). -->
     <Window.InputBindings>
         <KeyBinding Key="Escape" Command="{Binding EscapeCommand}" />
         <KeyBinding Key="Left" Modifiers="Alt" Command="{Binding OlderFightCommand}" />
@@ -171,120 +171,140 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <conv:RoundedClipConverter x:Key="RoundedClip" />
+        <Style x:Key="LiveIcon" TargetType="Button" BasedOn="{StaticResource ButtonIcon}">
+            <Setter Property="Width" Value="24" /><Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0" />
+        </Style>
+        <Style x:Key="LiveMenuItem" TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            <Setter Property="FontFamily" Value="{DynamicResource BodyFont}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="8,7" />
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="MenuItem">
+                <Border x:Name="ItemFrame" Background="Transparent" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="14"/></Grid.ColumnDefinitions>
+                        <TextBlock x:Name="Check" Text="✓" Visibility="Collapsed" Foreground="{DynamicResource Gold}" />
+                        <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" />
+                        <TextBlock x:Name="Arrow" Grid.Column="2" Text="›" Visibility="Collapsed" />
+                        <Popup x:Name="PART_Popup" Placement="Right" IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}" AllowsTransparency="True" Focusable="False">
+                            <Border Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="5"><ItemsPresenter/></Border>
+                        </Popup>
+                    </Grid>
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsHighlighted" Value="True"><Setter TargetName="ItemFrame" Property="Background" Value="{DynamicResource AccentSoft}"/></Trigger>
+                    <Trigger Property="IsChecked" Value="True"><Setter TargetName="Check" Property="Visibility" Value="Visible"/></Trigger>
+                    <Trigger Property="HasItems" Value="True"><Setter TargetName="Arrow" Property="Visibility" Value="Visible"/></Trigger>
+                    <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+        <Style x:Key="CaptureCard" TargetType="Border" BasedOn="{StaticResource CardPanel}">
+            <Setter Property="Margin" Value="10,12" /><Setter Property="Padding" Value="14,12"/>
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+        <Style x:Key="RowNumber" TargetType="TextBlock" BasedOn="{StaticResource NumberText}">
+            <Setter Property="VerticalAlignment" Value="Center"/><Setter Property="TextAlignment" Value="Right"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/><Setter Property="FontSize" Value="11"/>
+        </Style>
+        <DataTemplate x:Key="LiveBadge">
+            <Grid Width="20" Height="20" ToolTip="{Binding ClassName}">
+                <Border x:Name="Badge" CornerRadius="10" Background="{DynamicResource ClassBadgeBg}" BorderBrush="{Binding BadgeBrush}" BorderThickness="1">
+                    <TextBlock Text="{Binding BadgeText}" Foreground="{Binding BadgeBrush}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <Image x:Name="Emblem" Width="20" Height="20" Visibility="Collapsed" RenderOptions.BitmapScalingMode="HighQuality"/>
+            </Grid>
+            <DataTemplate.Triggers><DataTrigger Binding="{Binding HasClassEmblem}" Value="True">
+                <Setter TargetName="Badge" Property="Visibility" Value="Collapsed"/>
+                <Setter TargetName="Emblem" Property="Source" Value="{Binding ClassEmblem}"/>
+                <Setter TargetName="Emblem" Property="Visibility" Value="Visible"/>
+            </DataTrigger></DataTemplate.Triggers>
+        </DataTemplate>
     </Window.Resources>
 
-    <!-- Ctrl + rueda del mouse cambia el zoom (escala de todo el overlay). -->
+
+    <!-- El zoom afecta toda la ventana; los avisos no participan del tamaño ni de la imagen exportada. -->
     <Grid x:Name="Root" PreviewMouseWheel="OnPreviewMouseWheel" AllowDrop="True" DragOver="OnRootDragOver" Drop="OnRootDrop">
-        <Grid.LayoutTransform>
-            <ScaleTransform x:Name="Zoom" ScaleX="1" ScaleY="1" />
-        </Grid.LayoutTransform>
-        <!-- Overlay completo; minimizado queda solo la pastilla de abajo -->
+        <Grid.LayoutTransform><ScaleTransform x:Name="Zoom" ScaleX="1" ScaleY="1"/></Grid.LayoutTransform>
         <Grid Visibility="{Binding IsFullView, Converter={StaticResource Visible}}">
-        <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource GoldDim}" BorderThickness="1" CornerRadius="2">
-            <DockPanel>
-                <!-- Encabezado: se arrastra la ventana desde acá -->
-                <!-- Sin degradé (DECISIONES): el fondo transparente solo está para que el arrastre tome los clics. -->
-                <DockPanel DockPanel.Dock="Top" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="{Binding CanMoveWindow, Converter={StaticResource MoveCursor}}" Background="Transparent">
-                    <Border DockPanel.Dock="Bottom" Height="1" Background="{StaticResource Rule}" />
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,6,6,6">
-                        <Button Style="{StaticResource IconButton}" Click="OnLockClick" ToolTip="Bloquear overlay (Ctrl+Shift+L para desbloquear)">
-                            <Path Style="{StaticResource Icon}" Data="M5,11 H19 V21 H5 Z M8,11 V7 A4,4 0 0 1 16,7 V11" />
-                        </Button>
-                        <Button Style="{StaticResource IconButton}" Command="{Binding ResetCommand}" ToolTip="Reiniciar encuentro">
-                            <Path Style="{StaticResource Icon}" Data="M3,12 A9,9 0 1 0 6,5.3 L3,8 M3,3 V8 H8" />
-                        </Button>
-                        <Button Style="{StaticResource IconButton}" Command="{Binding NewWindowCommand}" ToolTip="Nueva ventana (por ejemplo, una de curación al lado de la de daño)">
-                            <Path Style="{StaticResource Icon}" Data="M12,5 V19 M5,12 H19" />
-                        </Button>
-                        <Button Style="{StaticResource IconButton}" Command="{Binding CopySummaryCommand}" ToolTip="Copiar resumen (para pegar en el chat)">
-                            <Path Style="{StaticResource Icon}" Data="M9,9 H20 V20 H9 Z M5,15 H4 V4 H15 V5" />
-                        </Button>
-                        <Button Style="{StaticResource IconButton}" Command="{Binding ToggleHistoryCommand}" ToolTip="Historial de peleas (Alt+← abre la anterior sin entrar)">
-                            <Path Style="{StaticResource Icon}" Data="M12,3 A9,9 0 1 1 3,12 M3,12 A9,9 0 0 1 12,3 M12,7 V12 L15.5,14" />
-                        </Button>
-                        <Button Style="{StaticResource IconButton}" Command="{Binding ToggleSettingsCommand}" ToolTip="Configuración">
-                            <Path Style="{StaticResource Icon}" Data="M12,9 A3,3 0 1 0 12.01,9 Z M12,2 V5 M12,19 V22 M2,12 H5 M19,12 H22 M4.9,4.9 L7,7 M17,17 L19.1,19.1 M4.9,19.1 L7,17 M17,7 L19.1,4.9" />
-                        </Button>
-                        <Button Style="{StaticResource IconButton}" Command="{Binding ToggleMinimizedCommand}" ToolTip="Minimizar a una pastilla con tu DPS">
-                            <Path Style="{StaticResource Icon}" Data="M6,17 H18" />
-                        </Button>
-                        <Button Style="{StaticResource IconButton}" Click="OnCloseClick" ToolTip="Cerrar">
-                            <Path Style="{StaticResource Icon}" Data="M6,6 L18,18 M18,6 L6,18" />
-                        </Button>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="10,6,0,6" VerticalAlignment="Center">
-                        <Path Width="16" Height="16" Stretch="Uniform" Stroke="{StaticResource Gold}" StrokeThickness="1.6" StrokeLineJoin="Round"
-                              Data="M12,2 L20,7 V17 L12,22 L4,17 V7 Z M12,7 V17 M8,9.5 L16,14.5 M16,9.5 L8,14.5" />
-                        <TextBlock Text="HYSTERIA" Margin="8,0,0,0" FontFamily="{StaticResource TitleFont}" FontWeight="Bold" FontSize="13" Foreground="{StaticResource Gold}" VerticalAlignment="Center" ToolTip="{Binding Version}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0">
-                        <!-- Grabando a .pcap -->
-                        <TextBlock Text="● REC" FontSize="10" FontWeight="Bold" Foreground="#E0524A" Margin="0,0,8,0" VerticalAlignment="Center"
-                                   Visibility="{Binding IsRecording, Converter={StaticResource Visible}}" ToolTip="{Binding RecordingHint}" />
-                        <!-- Verde mientras hay combate; gris con el último encuentro terminado. -->
-                        <!-- Rojo si se cortó la captura y ámbar si no llega tráfico del juego. -->
-                        <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center" ToolTip="{Binding StatusText}">
-                            <Ellipse.Style>
-                                <Style TargetType="Ellipse">
-                                    <Setter Property="Fill" Value="#5C6774" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding StatusKind}" Value="live">
-                                            <Setter Property="Fill" Value="#4CD964" />
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding StatusKind}" Value="warn">
-                                            <Setter Property="Fill" Value="#E0A84A" />
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding StatusKind}" Value="error">
-                                            <Setter Property="Fill" Value="#E0524A" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Ellipse.Style>
-                        </Ellipse>
-                        <!-- Pausa: congela lo que se ve, la pelea sigue contando -->
-                        <Button Command="{Binding TogglePauseCommand}" Cursor="Hand" Background="Transparent" BorderThickness="0" Padding="2,0" Margin="0,0,6,0"
-                                Foreground="{StaticResource TextDim}" FontSize="11" VerticalAlignment="Center">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Setter Property="Content" Value="❚❚" />
-                                    <Setter Property="ToolTip" Value="Pausar: congela lo que ves (la pelea sigue contando)" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsPaused}" Value="True">
-                                            <Setter Property="Content" Value="▶ PAUSA" />
-                                            <Setter Property="Foreground" Value="{StaticResource Gold}" />
-                                            <Setter Property="ToolTip" Value="Seguir mostrando en vivo" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <TextBlock Text="{Binding Elapsed}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    </StackPanel>
-                </DockPanel>
-
-                <!-- Bienvenida del primer arranque o novedades después de actualizar -->
-                <Border DockPanel.Dock="Top" Background="{DynamicResource AccentSoft}" BorderBrush="{DynamicResource GoldDim}" BorderThickness="0,0,0,1" Padding="10,6"
-                        Visibility="{Binding HasNotice, Converter={StaticResource Visible}}">
-                    <DockPanel>
-                        <Button DockPanel.Dock="Bottom" Content="Entendido" Command="{Binding DismissNoticeCommand}" HorizontalAlignment="Right" Cursor="Hand"
-                                Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" FontSize="11" FontWeight="Bold" Padding="4,2" Margin="0,4,0,0" />
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding NoticeTitle}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Gold}" Margin="0,0,0,3" />
-                        <ItemsControl ItemsSource="{Binding NoticeLines}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding StringFormat='• {0}'}" FontSize="11" TextWrapping="Wrap" Margin="0,1" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </DockPanel>
-                </Border>
-
-                <!-- Récord personal al terminar una pelea -->
-                <Border DockPanel.Dock="Top" Background="{DynamicResource AccentTint}" BorderBrush="{DynamicResource GoldDim}" BorderThickness="0,0,0,1" Padding="10,4"
-                        Visibility="{Binding HasRecordMessage, Converter={StaticResource Visible}}">
-                    <TextBlock Text="{Binding RecordMessage}" FontSize="12" FontWeight="Bold" Foreground="{StaticResource Gold}" TextTrimming="CharacterEllipsis" />
-                </Border>
-
+            <Border x:Name="LiveFrame" Background="{DynamicResource Panel}" BorderThickness="1" CornerRadius="10">
+                <Border.Style><Style TargetType="Border"><Setter Property="BorderBrush" Value="{DynamicResource GoldDim}"/>
+                    <Style.Triggers><DataTrigger Binding="{Binding IsPauseBannerVisible}" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource AccentStrong}"/></DataTrigger></Style.Triggers>
+                </Style></Border.Style>
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Rule}" BorderThickness="0,0,0,1" Padding="10,8">
+                        <WrapPanel Background="Transparent" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="{Binding CanMoveWindow, Converter={StaticResource MoveCursor}}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Path Width="12" Height="14" Stretch="Fill" Stroke="{DynamicResource Gold}" StrokeThickness="1.6" Data="M8,1 L14,8 L8,15 L2,8 Z"/>
+                                    <TextBlock Text="HYSTERIA" Style="{StaticResource LogoText}" Margin="7,0,6,0" VerticalAlignment="Center" ToolTip="{Binding Version}"/>
+                                    <Border Style="{StaticResource SegmentBar}" Visibility="{Binding IsExpanded, Converter={StaticResource Visible}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton Style="{StaticResource SegmentTab}" GroupName="MeterTab" Content="DPS" IsChecked="{Binding IsDamageTab}" Padding="6,3"/>
+                                            <RadioButton Style="{StaticResource SegmentTabHealing}" GroupName="MeterTab" Content="CURA" IsChecked="{Binding IsHealingTab}" Padding="6,3"/>
+                                            <RadioButton Style="{StaticResource SegmentTabTaken}" GroupName="MeterTab" Content="RECIB." IsChecked="{Binding IsTakenTab}" Padding="6,3" ToolTip="Daño recibido de los monstruos; pendiente de validar contra Combat Analysis"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0">
+                                <TextBlock Text="● REC" FontSize="9" FontWeight="Bold" Foreground="{DynamicResource DangerStrong}" VerticalAlignment="Center" Margin="0,0,4,0" Visibility="{Binding IsRecording, Converter={StaticResource Visible}}" ToolTip="{Binding RecordingHint}"/>
+                                <Ellipse Width="6" Height="6" Margin="0,0,5,0" ToolTip="{Binding StatusText}">
+                                    <Ellipse.Style><Style TargetType="Ellipse"><Setter Property="Fill" Value="{DynamicResource StatusIdle}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding StatusKind}" Value="live"><Setter Property="Fill" Value="{DynamicResource StatusLive}"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding StatusKind}" Value="ready"><Setter Property="Fill" Value="{DynamicResource StatusLive}"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding StatusKind}" Value="warn"><Setter Property="Fill" Value="{DynamicResource StatusWarn}"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding StatusKind}" Value="error"><Setter Property="Fill" Value="{DynamicResource StatusError}"/></DataTrigger>
+                                        </Style.Triggers>
+                                    </Style></Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Text="{Binding Elapsed}" Style="{StaticResource NumberStrong}" FontSize="15" VerticalAlignment="Center" Visibility="{Binding ShowClock, Converter={StaticResource Visible}}"/>
+                                <TextBlock Text="{Binding StatusLabel}" FontSize="10" Foreground="{DynamicResource TextMuted}" MaxWidth="70" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding StatusText}">
+                                    <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding ShowClock}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                                </TextBlock>
+                                <Button Style="{StaticResource LiveIcon}" Command="{Binding TogglePauseCommand}" ToolTip="Pausar o seguir: la pelea sigue contando" AutomationProperties.Name="Pausar o seguir">
+                                    <TextBlock FontSize="12"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Text" Value="Ⅱ"/><Style.Triggers><DataTrigger Binding="{Binding IsPaused}" Value="True"><Setter Property="Text" Value="▶"/><Setter Property="Foreground" Value="{DynamicResource Gold}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+                                </Button>
+                                <Button Style="{StaticResource LiveIcon}" Command="{Binding ToggleSettingsCommand}" ToolTip="Configuración" AutomationProperties.Name="Configuración">
+                                    <Path Style="{StaticResource Icon}" Data="M12,9 A3,3 0 1 0 12.01,9 Z M12,2 V5 M12,19 V22 M2,12 H5 M19,12 H22 M4.9,4.9 L7,7 M17,17 L19.1,19.1 M4.9,19.1 L7,17 M17,7 L19.1,4.9"/>
+                                </Button>
+                                <Button x:Name="MoreButton" Style="{StaticResource LiveIcon}" Content="⋯" ToolTip="Más opciones" Click="OnMoreClick" AutomationProperties.Name="Más opciones">
+                                    <Button.ContextMenu>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}" FontFamily="{DynamicResource BodyFont}" ItemContainerStyle="{StaticResource LiveMenuItem}">
+                                            <ContextMenu.Resources><Style TargetType="MenuItem" BasedOn="{StaticResource LiveMenuItem}"/><Style TargetType="Separator"><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Separator"><Border Height="1" Background="{DynamicResource Track}" Margin="5,4"/></ControlTemplate></Setter.Value></Setter></Style></ContextMenu.Resources>
+                                            <ContextMenu.Template><ControlTemplate TargetType="ContextMenu"><Border Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="5" MinWidth="195"><StackPanel IsItemsHost="True"/></Border></ControlTemplate></ContextMenu.Template>
+                                            <MenuItem Header="Historial" Command="{Binding ToggleHistoryCommand}"/>
+                                            <MenuItem Header="Reiniciar" Command="{Binding ResetCommand}"/>
+                                            <MenuItem Header="Copiar resumen" Command="{Binding CopySummaryCommand}"/>
+                                            <MenuItem Header="Nueva ventana" Command="{Binding NewWindowCommand}"/>
+                                            <Separator/>
+                                            <MenuItem Header="Segmento">
+                                                <MenuItem Header="PELEA" IsCheckable="True" IsChecked="{Binding IsFightView}"/>
+                                                <MenuItem Header="RUN" IsCheckable="True" IsChecked="{Binding IsRunChip}"/>
+                                                <MenuItem Header="SESIÓN" IsCheckable="True" IsChecked="{Binding IsSessionChip}"/>
+                                            </MenuItem>
+                                            <MenuItem Header="Modo compacto" IsCheckable="True" IsChecked="{Binding IsCompact}"/>
+                                            <MenuItem Header="Bloquear clics" IsCheckable="True" IsChecked="{Binding IsClickThrough, Mode=OneWay}" Click="OnLockClick"/>
+                                            <MenuItem Header="Minimizar" Command="{Binding ToggleMinimizedCommand}"/>
+                                            <Separator/><MenuItem Header="Cerrar" Click="OnCloseClick"/>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                </Button>
+                            </StackPanel>
+                        </WrapPanel>
+                    </Border>
+                    <Border DockPanel.Dock="Top" Background="{DynamicResource AccentSoft}" Padding="10,7" Visibility="{Binding IsPauseBannerVisible, Converter={StaticResource Visible}}">
+                        <TextBlock Text="Ⅱ  Pausado · la pelea sigue contando" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Gold}" TextWrapping="Wrap"/>
+                    </Border>
+                    <Border x:Name="NewsCard" DockPanel.Dock="Top" Background="{DynamicResource WindowBg}" BorderBrush="{DynamicResource AccentLine}" BorderThickness="0,0,0,1" Padding="14,12" Visibility="{Binding HasNotice, Converter={StaticResource Visible}}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding NoticeKicker}" Style="{StaticResource Eyebrow}"/>
+                            <TextBlock Text="{Binding NoticeHeading}" Style="{StaticResource WindowTitle}" FontSize="22" Margin="0,4,0,6" Visibility="{Binding HasNoticeHeading, Converter={StaticResource Visible}}"/>
+                            <ItemsControl ItemsSource="{Binding NoticeLines}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding StringFormat='• {0}'}" FontSize="12" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" Margin="0,2"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                            <Button Content="Entendido" Style="{StaticResource ButtonSoft}" Command="{Binding DismissNoticeCommand}" HorizontalAlignment="Right" Margin="0,8,0,0" Padding="12,5"/>
+                        </StackPanel>
+                    </Border>
                 <!-- Mirando un encuentro guardado -->
                 <Border DockPanel.Dock="Top" Background="{DynamicResource AccentSoft}" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,0,0,1" Padding="10,3"
                         Visibility="{Binding IsViewingHistory, Converter={StaticResource Visible}}">
@@ -306,253 +326,169 @@
                     </DockPanel>
                 </Border>
 
-                <!-- Objetivo principal -->
-                <DockPanel DockPanel.Dock="Top" Margin="10,8,10,6" Visibility="{Binding IsExpanded, Converter={StaticResource Visible}}">
-                    <!-- Vida del objetivo principal, como en el mock: "6.11M / 9.86M · 62%" y una barra fina debajo -->
-                    <Grid DockPanel.Dock="Bottom" Height="4" Margin="0,5,0,0" Visibility="{Binding HasTargetHealth, Converter={StaticResource Visible}}">
-                        <Border Background="{StaticResource HealthTrack}" BorderBrush="{StaticResource HealthTrackBorder}" BorderThickness="1" />
-                        <Border Background="{StaticResource Health}" Margin="1" RenderTransformOrigin="0,0.5">
-                            <Border.RenderTransform>
-                                <ScaleTransform ScaleX="{Binding TargetHealthRatio}" />
-                            </Border.RenderTransform>
-                        </Border>
-                    </Grid>
-                    <TextBlock DockPanel.Dock="Right" Text="{Binding TargetHealthText}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" ToolTip="{Binding TargetHealthCheck}"
-                               Visibility="{Binding HasTargetHealth, Converter={StaticResource Visible}}">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
-                                <Style.Triggers>
-                                    <!-- Al ritmo actual el boss muere después del enrage -->
-                                    <DataTrigger Binding="{Binding IsEnrageDanger}" Value="True">
-                                        <Setter Property="Foreground" Value="#FFE0605A" />
-                                        <Setter Property="FontWeight" Value="SemiBold" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                    <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="14"
-                               Foreground="{StaticResource TextBright}" TextTrimming="CharacterEllipsis" />
-                </DockPanel>
 
-                <!-- Pestañas -->
-                <Border DockPanel.Dock="Top" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,0,0,1" Padding="10,0" Visibility="{Binding IsExpanded, Converter={StaticResource Visible}}">
-                    <DockPanel>
-                        <!-- Segmento: la pelea actual o la sesión entera (como Current/Overall de Details!) -->
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" TextElement.FontSize="11">
-                            <RadioButton Style="{StaticResource Tab}" GroupName="Segment" Content="PELEA" IsChecked="{Binding IsFightView}"
-                                         ToolTip="La pelea actual (o la última que terminó)" />
-                            <RadioButton Style="{StaticResource Tab}" GroupName="Segment" Content="RUN" IsChecked="{Binding IsRunChip}"
-                                         ToolTip="Todas las peleas desde que entraste a la dungeon: trash y bosses juntos, con el tiempo de la run" />
-                            <RadioButton Style="{StaticResource Tab}" GroupName="Segment" Content="SESIÓN" IsChecked="{Binding IsSessionChip}"
-                                         ToolTip="Todas las peleas desde el último reinicio, con el DPS sobre el tiempo en combate" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="DAÑO" IsChecked="{Binding IsDamageTab}" />
-                            <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="CURACIÓN" IsChecked="{Binding IsHealingTab}" />
-                            <RadioButton Style="{StaticResource Tab}" GroupName="MeterTab" Content="RECIBIDO" IsChecked="{Binding IsTakenTab}"
-                                         ToolTip="Daño que le hicieron los monstruos a cada uno (sin validar contra Combat Analysis todavía)" />
-                        </StackPanel>
-                    </DockPanel>
-                </Border>
-
-                <!-- Pie -->
-                <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource RuleDim}" BorderThickness="0,1,0,0" Padding="10,6,18,6" Visibility="{Binding IsExpanded, Converter={StaticResource Visible}}">
-                    <DockPanel TextElement.FontSize="12" TextElement.Foreground="{StaticResource TextDim}">
-                        <TextBlock DockPanel.Dock="Right">
-                            <Run Text="Crít." />
-                            <Run Text="{Binding CritRate, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
-                            <Run Text="· Máx." />
-                            <Run Text="{Binding MaxHit, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
-                        </TextBlock>
-                        <TextBlock>
-                            <Run Text="Party" />
-                            <Run Text="{Binding PartyPerSecond, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" />
-                            <Run Text="{Binding RateUnit, Mode=OneWay}" />
-                            <Run Text="·" />
-                            <Run Text="{Binding PartyTotal, Mode=OneWay}" />
-                        </TextBlock>
-                    </DockPanel>
-                </Border>
-
-                <!-- Encabezado de columnas, alineado con las filas (margen 6 + borde 1 + 8) -->
-                <Grid DockPanel.Dock="Top" Margin="15,5,15,0" TextElement.FontSize="11" TextElement.Foreground="{StaticResource TextDim}" Visibility="{Binding IsExpanded, Converter={StaticResource Visible}}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="46" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="58" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="1" Text="JUGADOR" />
-                    <TextBlock Grid.Column="2" Text="{Binding RateUnit}" HorizontalAlignment="Right" />
-                    <TextBlock Grid.Column="3" Text="{Binding SecondColumnHeader}" Width="58" TextAlignment="Right"
-                               Visibility="{Binding ShowTotalColumn, Converter={StaticResource Visible}}" />
-                    <TextBlock Grid.Column="4" Text="%" Width="42" TextAlignment="Right"
-                               Visibility="{Binding ShowShareColumn, Converter={StaticResource Visible}}" />
-                    <TextBlock Grid.Column="5" Text="10 s" Width="50" TextAlignment="Right" ToolTip="DPS de los últimos 10 segundos"
-                               Visibility="{Binding ShowRecentColumn, Converter={StaticResource Visible}}" />
-                    <TextBlock Grid.Column="6" Text="CRIT" Width="42" TextAlignment="Right" ToolTip="Porcentaje de golpes críticos"
-                               Visibility="{Binding ShowCritColumn, Converter={StaticResource Visible}}" />
-                    <TextBlock Grid.Column="7" Text="MÁX" Width="50" TextAlignment="Right" ToolTip="Golpe más alto de la pelea"
-                               Visibility="{Binding ShowMaxHitColumn, Converter={StaticResource Visible}}" />
-                </Grid>
-
-                <!-- Filas: ocupan el resto del alto; si no entran, se desplazan con la rueda. -->
-                <Grid>
-                <TextBlock Text="{Binding EmptyText}" Margin="10,10" TextWrapping="Wrap" VerticalAlignment="Top" Foreground="{StaticResource TextDim}"
-                           Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
-                <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl ItemsSource="{Binding Actors}" Margin="6,3,6,8">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="vm:ActorRowViewModel">
-                            <Border x:Name="Row" Height="{Binding DataContext.RowHeight, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,0,0,3" Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="1"
-                                    ToolTip="{Binding Breakdown}" Cursor="Hand" MouseLeftButtonUp="OnRowClick">
-                                <Grid>
-                                    <!-- Barra proporcional al primero -->
-                                    <Rectangle x:Name="Bar" Fill="{Binding BarFill}" HorizontalAlignment="Stretch">
-                                        <Rectangle.RenderTransform>
-                                            <ScaleTransform ScaleX="{Binding Bar}" />
-                                        </Rectangle.RenderTransform>
-                                    </Rectangle>
-                                    <!-- DPS de los últimos 30 s, tenue detrás del texto -->
-                                    <Polyline Points="{Binding Spark}" Stretch="Fill" Stroke="{Binding Accent}" StrokeThickness="1" Opacity="0.35"
-                                              Margin="0,5" IsHitTestVisible="False" />
-                                    <Grid Margin="8,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="18" />
-                                            <ColumnDefinition Width="28" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="58" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Grid Grid.Column="0">
-                                            <TextBlock Text="{Binding Rank}" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
-                                            <!-- Subió o bajó de puesto hace un momento -->
-                                            <TextBlock Text="{Binding Trend}" FontSize="7" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,2,0">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#E0524A" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Trend}" Value="▲">
-                                                                <Setter Property="Foreground" Value="#7FD08A" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </Grid>
-                                        <!-- Rombo de clase: por ahora la inicial; el color de clase llega cuando decodifiquemos la clase. -->
-                                        <Grid Grid.Column="1" Width="20" Height="20" HorizontalAlignment="Left">
-                                            <Border x:Name="Diamond" Width="14" Height="14" BorderBrush="{Binding Accent}" BorderThickness="1" RenderTransformOrigin="0.5,0.5">
-                                                <Border.RenderTransform>
-                                                    <RotateTransform Angle="45" />
-                                                </Border.RenderTransform>
-                                            </Border>
-                                            <TextBlock x:Name="InitialText" Text="{Binding Initial}" FontSize="11" FontWeight="Bold" Foreground="{Binding Accent}"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            <!-- Símbolo de la clase (deducida por sus skills); tapa la inicial cuando se sabe -->
-                                            <Path x:Name="ClassPath" Data="{Binding ClassIcon}" Fill="{Binding Accent}" Width="10" Height="10" Stretch="Uniform"
-                                                  HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="{Binding ClassName}"
-                                                  Visibility="{Binding HasClassIcon, Converter={StaticResource Visible}}" />
-                                            <Image x:Name="ClassEmblemImage" Width="20" Height="20" ToolTip="{Binding ClassName}" Visibility="Collapsed"
-                                                   RenderOptions.BitmapScalingMode="HighQuality" />
-                                        </Grid>
-                                        <DockPanel Grid.Column="2" VerticalAlignment="Center">
-                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Gear}" FontSize="11" Margin="6,0,4,0" Foreground="{StaticResource TextDim}"
-                                                       VerticalAlignment="Center" ToolTip="Item level · power"
-                                                       Visibility="{Binding HasGear, Converter={StaticResource Visible}}" />
-                                            <TextBlock x:Name="NameText" Text="{Binding DisplayName}" FontSize="{Binding DataContext.RowNameSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="SemiBold"
-                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                        </DockPanel>
-                                        <TextBlock x:Name="PerSecondText" Grid.Column="3" Text="{Binding PerSecond}" FontSize="{Binding DataContext.RowNameSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="Bold" Foreground="{StaticResource TextBright}"
-                                                   HorizontalAlignment="Right" VerticalAlignment="Center" />
-                                        <!-- Total, o HPS cuando daño y curación van juntos -->
-                                        <TextBlock x:Name="TotalText" Grid.Column="4" Text="{Binding Total}" Foreground="{StaticResource TextMuted}" Width="58" TextAlignment="Right" VerticalAlignment="Center"
-                                                   Visibility="{Binding DataContext.ShowTotalColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}" />
-                                        <TextBlock Grid.Column="5" Text="{Binding Share}" Foreground="{StaticResource TextMuted}" Width="42" TextAlignment="Right" VerticalAlignment="Center"
-                                                   Visibility="{Binding DataContext.ShowShareColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}" />
-                                        <TextBlock Grid.Column="6" Text="{Binding Recent}" Foreground="{StaticResource TextMuted}" Width="50" TextAlignment="Right" VerticalAlignment="Center"
-                                                   Visibility="{Binding DataContext.ShowRecentColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}" />
-                                        <TextBlock Grid.Column="7" Text="{Binding Crit}" Foreground="{StaticResource TextMuted}" Width="42" TextAlignment="Right" VerticalAlignment="Center"
-                                                   Visibility="{Binding DataContext.ShowCritColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}" />
-                                        <TextBlock Grid.Column="8" Text="{Binding MaxHitText}" Foreground="{StaticResource TextMuted}" Width="50" TextAlignment="Right" VerticalAlignment="Center"
-                                                   Visibility="{Binding DataContext.ShowMaxHitColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}" />
-                                    </Grid>
+                    <Border x:Name="TargetBlock" DockPanel.Dock="Top" BorderBrush="{DynamicResource Rule}" BorderThickness="0,0,0,1" Padding="12,9,12,10">
+                        <Border.Style><Style TargetType="Border"><Style.Triggers>
+                            <DataTrigger Binding="{Binding HasFight}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                            <DataTrigger Binding="{Binding IsCompact}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                        </Style.Triggers></Style></Border.Style>
+                        <Grid>
+                            <StackPanel><StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding ShowRunBlock}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding TargetHealthPercent}" ToolTip="{Binding TargetHealthTip}" Style="{StaticResource NumberStrong}" FontSize="15" Foreground="{DynamicResource GoldBright}" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="{Binding HasTargetHealth, Converter={StaticResource Visible}}"/>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding AttemptText}" FontSize="11" Foreground="{DynamicResource TextDim}" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="{Binding HasAttempt, Converter={StaticResource Visible}}"/>
+                                    <TextBlock Text="{Binding Title}" Style="{StaticResource NumberStrong}" FontSize="17" TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                                <Grid Height="5" Margin="0,6,0,0" Visibility="{Binding HasTargetHealth, Converter={StaticResource Visible}}">
+                                    <Border Background="{DynamicResource HealthTrack}" CornerRadius="3"/>
+                                    <Border Background="{StaticResource Health}" CornerRadius="3" RenderTransformOrigin="0,0.5"><Border.RenderTransform><ScaleTransform ScaleX="{Binding TargetHealthRatio}"/></Border.RenderTransform></Border>
                                 </Grid>
+                                <DockPanel Margin="0,6,0,0" TextElement.FontSize="11" TextElement.Foreground="{DynamicResource TextDim}">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding EnrageText}" Visibility="{Binding HasEnrage, Converter={StaticResource Visible}}"/>
+                                    <TextBlock Text="{Binding PartyRateText}"/>
+                                </DockPanel>
+                            </StackPanel>
+                            <StackPanel Visibility="{Binding ShowRunBlock, Converter={StaticResource Visible}}">
+                                <DockPanel><TextBlock DockPanel.Dock="Right" Text="{Binding RunElapsed}" Style="{StaticResource NumberText}" FontSize="14" Foreground="{DynamicResource TextMuted}"/><TextBlock Text="{Binding RunHeader}" Style="{StaticResource NumberStrong}" FontSize="17"/></DockPanel>
+                                <ItemsControl ItemsSource="{Binding RunChips}" Margin="0,6,0,0"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate><DataTemplate><Border x:Name="Chip" Background="{DynamicResource TagNeutralBg}" CornerRadius="4" Padding="6,2" Margin="0,0,4,3"><TextBlock x:Name="ChipText" Text="{Binding Text}" FontSize="10" Foreground="{DynamicResource TextMuted}"/></Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding Kind}" Value="Kill"><Setter TargetName="Chip" Property="Background" Value="{DynamicResource SuccessSoft}"/><Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource Success}"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding Kind}" Value="Wipe"><Setter TargetName="Chip" Property="Background" Value="{DynamicResource DangerSoft}"/><Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource Danger}"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding Kind}" Value="Current"><Setter TargetName="Chip" Property="Background" Value="{DynamicResource AccentTint}"/><Setter TargetName="ChipText" Property="Foreground" Value="{DynamicResource Gold}"/></DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate></ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Rule}" BorderThickness="0,1,0,0" Padding="12,7,18,7" Visibility="{Binding ShowFooter, Converter={StaticResource Visible}}">
+                        <WrapPanel TextElement.FontSize="11" TextElement.Foreground="{DynamicResource TextDim}">
+                            <TextBlock ToolTip="{Binding FooterTip}" Margin="0,0,10,0"><Run Text="Total "/><Run Text="{Binding PartyTotal, Mode=OneWay}"/><Run Text=" · "/><Run Text="{Binding PlayersText, Mode=OneWay}"/></TextBlock>
+                            <TextBlock Text="Clic en una fila: detalle" Foreground="{DynamicResource TextMuted}"/>
+                        </WrapPanel>
+                    </Border>
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding PauseHint}" FontSize="11" Foreground="{DynamicResource TextDim}" Margin="10,6,10,8" Visibility="{Binding IsPauseBannerVisible, Converter={StaticResource Visible}}"/>
+                    <Grid>
+                        <StackPanel x:Name="WaitingCard" Margin="16,28" HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="{Binding ShowWaitingCard, Converter={StaticResource Visible}}">
+                            <TextBlock Text="{Binding WaitingTitle}" Style="{StaticResource NumberStrong}" FontSize="18" TextWrapping="Wrap" TextAlignment="Center"/>
+                            <TextBlock Text="{Binding WaitingDetail}" FontSize="12" Foreground="{DynamicResource TextDim}" Margin="0,6,0,0" TextWrapping="Wrap" TextAlignment="Center"/>
+                        </StackPanel>
+                        <Border x:Name="NpcapCard" Style="{StaticResource CaptureCard}" BorderBrush="{DynamicResource DangerBorder}" Visibility="{Binding ShowNpcapCard, Converter={StaticResource Visible}}">
+                            <StackPanel><TextBlock Text="No se encontró Npcap" Foreground="{DynamicResource Danger}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="Instalá Npcap con la compatibilidad WinPcap y reiniciá el meter." Foreground="{DynamicResource TextMuted}" FontSize="12" Margin="0,6,0,8" TextWrapping="Wrap"/>
+                                <Button Content="Descargar Npcap ↗" Style="{StaticResource ButtonLink}" Command="{Binding OpenNpcapDownloadCommand}" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Border>
+                        <Border x:Name="TrafficCard" Style="{StaticResource CaptureCard}" BorderBrush="{DynamicResource Warning}" Visibility="{Binding ShowTrafficCard, Converter={StaticResource Visible}}">
+                            <StackPanel><TextBlock Text="Capturando, pero no llega nada de AION 2" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="Abrí el juego y revisá la placa de red si usás una VPN." FontSize="12" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" Margin="0,6,0,10"/>
+                                <Button Content="Elegir placa de red" Style="{StaticResource ButtonGhost}" Command="{Binding OpenCaptureSettingsCommand}" HorizontalAlignment="Left" Padding="10,6"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CaptureCard}" BorderBrush="{DynamicResource DangerBorder}" Visibility="{Binding ShowFailedCard, Converter={StaticResource Visible}}">
+                            <StackPanel><TextBlock Text="La captura se detuvo" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource Danger}"/><TextBlock Text="{Binding FailedDetail}" FontSize="12" Foreground="{DynamicResource TextMuted}" Margin="0,6,0,8" TextWrapping="Wrap"/><Button Content="Reportar un problema" Style="{StaticResource ButtonLink}" Command="{Binding ReportProblemCommand}" HorizontalAlignment="Left"/></StackPanel>
+                        </Border>
+                        <TextBlock Text="{Binding EmptyTabText}" Margin="16,20" Foreground="{DynamicResource TextDim}" TextAlignment="Center" VerticalAlignment="Top" Visibility="{Binding ShowEmptyTabText, Converter={StaticResource Visible}}"/>
+                        <ScrollViewer x:Name="ActorScroller" VerticalScrollBarVisibility="Hidden" Visibility="{Binding HasFight, Converter={StaticResource Visible}}">
+                            <ScrollViewer.Style><Style TargetType="ScrollViewer">
+                                <Setter Property="HorizontalScrollBarVisibility" Value="Disabled"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsPauseBannerVisible}" Value="True"><Setter Property="Opacity" Value="0.6"/></DataTrigger>
+                                    <DataTrigger Binding="{Binding ShowColumnHeaders}" Value="True"><Setter Property="HorizontalScrollBarVisibility" Value="Auto"/></DataTrigger>
+                                </Style.Triggers>
+                            </Style></ScrollViewer.Style>
+                            <!-- Cabecera y filas comparten desplazamiento cuando las columnas elegidas no entran. -->
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top" Margin="15,5,15,0" TextElement.FontSize="10" TextElement.Foreground="{DynamicResource TextDim}" Visibility="{Binding ShowColumnHeaders, Converter={StaticResource Visible}}">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="50"/><ColumnDefinition Width="*"/><ColumnDefinition Width="58"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="1" Text="JUGADOR"/><TextBlock Grid.Column="2" Text="{Binding RateUnit}" TextAlignment="Right"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding SecondColumnHeader}" Width="58" TextAlignment="Right" Visibility="{Binding ShowTotalColumn, Converter={StaticResource Visible}}"/>
+                                    <TextBlock Grid.Column="4" Text="10 s" Width="50" TextAlignment="Right" Visibility="{Binding ShowRecentColumn, Converter={StaticResource Visible}}"/>
+                                    <TextBlock Grid.Column="5" Text="CRIT" Width="42" TextAlignment="Right" Visibility="{Binding ShowCritColumn, Converter={StaticResource Visible}}"/>
+                                    <TextBlock Grid.Column="6" Text="MÁX" Width="50" TextAlignment="Right" Visibility="{Binding ShowMaxHitColumn, Converter={StaticResource Visible}}"/>
+                                    <TextBlock Grid.Column="7" Text="%" Width="46" TextAlignment="Right" Visibility="{Binding ShowShareColumn, Converter={StaticResource Visible}}"/>
+                                </Grid>
+                            <ItemsControl ItemsSource="{Binding Actors}" Margin="6,6,6,8">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:ActorRowViewModel">
+                                        <Border x:Name="Row" Height="{Binding DataContext.RowHeight, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,0,0,3" Background="{DynamicResource Row}" BorderBrush="Transparent" BorderThickness="1" CornerRadius="5" Cursor="Hand" MouseLeftButtonUp="OnRowClick">
+                                            <Border.ToolTip><ToolTip Style="{StaticResource ToolTipDark}" FontFamily="{DynamicResource BodyFont}" MaxWidth="330">
+                                                <StackPanel Margin="4,2">
+                                                    <DockPanel><TextBlock DockPanel.Dock="Right" Text="{Binding ClassName}" Foreground="{Binding BadgeBrush}" FontSize="12" Margin="16,0,0,0"/><TextBlock Text="{Binding Name}" Style="{StaticResource NumberStrong}" FontSize="17"/></DockPanel>
+                                                    <DockPanel Margin="0,8,0,0"><TextBlock Text="{Binding Total}" DockPanel.Dock="Right"/><TextBlock Text="{Binding ValueLabel}" Foreground="{DynamicResource TextMuted}"/></DockPanel>
+                                                    <DockPanel Margin="0,5,0,0" Visibility="{Binding HasRecentTip, Converter={StaticResource Visible}}"><TextBlock Text="{Binding RecentTip}" DockPanel.Dock="Right"/><TextBlock Text="DPS últimos 10 s" Foreground="{DynamicResource TextMuted}"/></DockPanel>
+                                                    <DockPanel Margin="0,5,0,0"><TextBlock Text="{Binding Crit}" DockPanel.Dock="Right"/><TextBlock Text="Críticos" Foreground="{DynamicResource TextMuted}"/></DockPanel>
+                                                    <TextBlock Margin="0,5,0,0" TextWrapping="Wrap" Visibility="{Binding HasTopSkill, Converter={StaticResource Visible}}"><Run Text="Skill top · " Foreground="{DynamicResource TextMuted}"/><Run Text="{Binding TopSkill, Mode=OneWay}"/></TextBlock>
+                                                    <TextBlock Text="{Binding TipGear, StringFormat='iLvl · Power: {0}'}" Foreground="{DynamicResource TextMuted}" Margin="0,5,0,0" Visibility="{Binding HasTipGear, Converter={StaticResource Visible}}"/>
+                                                    <TextBlock Text="{Binding Breakdown}" Foreground="{DynamicResource TextDim}" FontSize="10" Margin="0,7,0,0" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </ToolTip></Border.ToolTip>
+                                            <Grid x:Name="RowContent">
+                                                <Grid.Clip><MultiBinding Converter="{StaticResource RoundedClip}"><Binding Path="ActualWidth" ElementName="RowContent"/><Binding Path="ActualHeight" ElementName="RowContent"/><Binding Path="CornerRadius" ElementName="Row"/></MultiBinding></Grid.Clip>
+                                                <Rectangle Fill="{Binding BarFill}"><Rectangle.RenderTransform><ScaleTransform ScaleX="{Binding Bar}"/></Rectangle.RenderTransform></Rectangle>
+                                                <Polyline Points="{Binding Spark}" Stretch="Fill" Stroke="{Binding Accent}" StrokeThickness="1" Opacity="0.35" Margin="0,5" IsHitTestVisible="False"/>
+                                                <Grid Margin="6,0,9,0">
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="14"/><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="58"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Rank}" Style="{StaticResource RowNumber}" FontSize="13" Foreground="{DynamicResource TextDim}"/>
+                                                    <ContentControl Grid.Column="1" Content="{Binding}" ContentTemplate="{StaticResource LiveBadge}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                    <DockPanel Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0">
+                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Gear}" FontSize="11" Foreground="{DynamicResource TextDim}" Margin="5,0,0,0" Visibility="{Binding HasGear, Converter={StaticResource Visible}}"/>
+                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Trend}" FontSize="10" Margin="5,0,0,0"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Danger}"/><Style.Triggers><DataTrigger Binding="{Binding Trend}" Value="▲"><Setter Property="Foreground" Value="{DynamicResource Success}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+                                                        <TextBlock x:Name="NameText" Text="{Binding DisplayName}" FontSize="{Binding DataContext.RowNameSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="SemiBold" Foreground="{DynamicResource TextBright}" TextTrimming="CharacterEllipsis"/>
+                                                    </DockPanel>
+                                                    <TextBlock x:Name="PerSecondText" Grid.Column="3" Text="{Binding PerSecond}" Style="{StaticResource RowNumber}" FontSize="{Binding DataContext.RowValueSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="Bold" Foreground="{DynamicResource Text}"/>
+                                                    <TextBlock x:Name="TotalText" Grid.Column="4" Text="{Binding Total}" Style="{StaticResource RowNumber}" Width="58" Visibility="{Binding DataContext.ShowTotalColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}"/>
+                                                    <TextBlock Grid.Column="5" Text="{Binding Recent}" Style="{StaticResource RowNumber}" Width="50" Visibility="{Binding DataContext.ShowRecentColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}"/>
+                                                    <TextBlock Grid.Column="6" Text="{Binding Crit}" Style="{StaticResource RowNumber}" Width="42" Visibility="{Binding DataContext.ShowCritColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}"/>
+                                                    <TextBlock Grid.Column="7" Text="{Binding MaxHitText}" Style="{StaticResource RowNumber}" Width="50" Visibility="{Binding DataContext.ShowMaxHitColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}"/>
+                                                    <TextBlock Grid.Column="8" Text="{Binding Share}" Style="{StaticResource RowNumber}" Width="46" Visibility="{Binding DataContext.ShowShareColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}"/>
+                                                </Grid>
+                                            </Grid>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding DataContext.ShowHealingColumn, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"><Setter TargetName="TotalText" Property="Text" Value="{Binding HealingPerSecond}"/><Setter TargetName="TotalText" Property="Foreground" Value="{DynamicResource Healing}"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding DataContext.IsCompact, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"><Setter TargetName="Row" Property="Height" Value="22"/><Setter TargetName="Row" Property="CornerRadius" Value="4"/><Setter TargetName="Row" Property="Margin" Value="0,0,0,2"/><Setter TargetName="NameText" Property="FontSize" Value="13"/><Setter TargetName="PerSecondText" Property="FontSize" Value="13"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding IsLocalPlayer}" Value="True"><Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource RowBorderLocal}"/><Setter TargetName="NameText" Property="Foreground" Value="{DynamicResource NameLocal}"/></DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            </DockPanel>
+                        </ScrollViewer>
+
+                        <!-- Avisos superpuestos: no desplazan las filas; solo la ventana principal. -->
+                        <StackPanel x:Name="ToastLayer" VerticalAlignment="Top" Margin="10,8" Visibility="{Binding ShowsToasts, Converter={StaticResource Visible}}">
+                            <Border Style="{StaticResource ToastPanel}" Margin="0,0,0,5" Visibility="{Binding HasBossNotice, Converter={StaticResource Visible}}">
+                                <StackPanel><TextBlock Text="BOSS DETECTADO" Style="{StaticResource Eyebrow}"/><TextBlock Text="{Binding BossNoticeName}" Style="{StaticResource NumberStrong}" FontSize="18" Margin="0,4,0,3"/><TextBlock Text="{Binding BossNoticeDetail}" FontSize="11" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap"/></StackPanel>
                             </Border>
-                            <DataTemplate.Triggers>
-                                <DataTrigger Binding="{Binding DataContext.ShowHealingColumn, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                    <Setter TargetName="TotalText" Property="Text" Value="{Binding HealingPerSecond}" />
-                                    <Setter TargetName="TotalText" Property="Foreground" Value="{StaticResource Healing}" />
-                                </DataTrigger>
-                                <!-- Compacto: filas más bajas para que entren más jugadores -->
-                                <DataTrigger Binding="{Binding DataContext.IsCompact, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                    <Setter TargetName="Row" Property="Height" Value="22" />
-                                    <Setter TargetName="Row" Property="Margin" Value="0,0,0,2" />
-                                    <Setter TargetName="NameText" Property="FontSize" Value="13" />
-                                    <Setter TargetName="PerSecondText" Property="FontSize" Value="13" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding HasClassIcon}" Value="True">
-                                    <Setter TargetName="InitialText" Property="Visibility" Value="Collapsed" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding HasClassEmblem}" Value="True">
-                                    <Setter TargetName="ClassEmblemImage" Property="Source" Value="{Binding ClassEmblem}" />
-                                    <Setter TargetName="ClassEmblemImage" Property="Visibility" Value="Visible" />
-                                    <Setter TargetName="ClassPath" Property="Visibility" Value="Collapsed" />
-                                    <Setter TargetName="Diamond" Property="Visibility" Value="Collapsed" />
-                                    <Setter TargetName="InitialText" Property="Visibility" Value="Collapsed" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding IsLocalPlayer}" Value="True">
-                                    <Setter TargetName="Row" Property="BorderBrush" Value="{StaticResource RowBorderLocal}" />
-                                    <Setter TargetName="NameText" Property="Foreground" Value="{StaticResource NameLocal}" />
-                                </DataTrigger>
-                            </DataTemplate.Triggers>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                </ScrollViewer>
+                            <Border Style="{StaticResource ToastPanel}" Background="{DynamicResource AlertBg}" BorderBrush="{DynamicResource DangerStrong}" Margin="0,0,0,5" Visibility="{Binding IsEnrageDanger, Converter={StaticResource Visible}}">
+                                <StackPanel><TextBlock Text="{Binding EnrageAlertTitle}" Foreground="{DynamicResource OnDanger}" FontSize="13" FontWeight="Bold"/><TextBlock Text="{Binding EnrageAlertDetail}" Foreground="{DynamicResource OnDanger}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/></StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource ToastPanel}" BorderBrush="{DynamicResource SuccessLine}" Margin="0,0,0,5" Visibility="{Binding HasSavedNotice, Converter={StaticResource Visible}}">
+                                <DockPanel><Button DockPanel.Dock="Right" Content="Abrir" Command="{Binding OpenExportsCommand}" Style="{StaticResource ButtonLink}"/><TextBlock Text="{Binding SavedNoticeText}" ToolTip="{Binding SavedNoticePath}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center"/></DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource ToastPanel}" Margin="0,0,0,5" Visibility="{Binding HasRecordMessage, Converter={StaticResource Visible}}"><TextBlock Text="{Binding RecordMessage}" Foreground="{DynamicResource Gold}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/></Border>
+                            <Border Style="{StaticResource ToastPanel}" BorderBrush="{DynamicResource Warning}" Visibility="{Binding ShowPatchNotice, Converter={StaticResource Visible}}">
+                                <StackPanel><TextBlock Text="Puede que el juego se haya actualizado" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="Llegan paquetes, pero no se reconocen. Revisá si hay una versión nueva del meter." FontSize="12" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" Margin="0,5,0,6"/><Button Content="Reportar un problema" Command="{Binding ReportProblemCommand}" Style="{StaticResource ButtonLink}" HorizontalAlignment="Left"/></StackPanel>
+                            </Border>
+                        </StackPanel>
 
-
-                </Grid>
-
-            </DockPanel>
-        </Border>
-
-        <!-- Agarradera para cambiar ancho y alto. -->
-        <Thumb HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="14" Height="14" Margin="0,0,1,1"
-               Visibility="{Binding CanMoveWindow, Converter={StaticResource Visible}}"
-               Cursor="SizeNWSE" DragDelta="OnResizeDragDelta" ToolTip="Arrastrá para cambiar el tamaño · Ctrl + rueda para el zoom">
-            <Thumb.Template>
-                <ControlTemplate TargetType="Thumb">
-                    <Grid Background="Transparent">
-                        <Path Data="M13,3 L3,13 M13,8 L8,13 M13,12 L12,13" Stroke="{StaticResource GoldDim}" StrokeThickness="1.2" />
                     </Grid>
-                </ControlTemplate>
-            </Thumb.Template>
-        </Thumb>
-
+                </DockPanel>
+            </Border>
+            <Thumb HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="14" Height="14" Margin="0,0,3,3" Visibility="{Binding CanMoveWindow, Converter={StaticResource Visible}}" Cursor="SizeNWSE" DragDelta="OnResizeDragDelta" ToolTip="Arrastrá para cambiar el tamaño · Ctrl + rueda para el zoom">
+                <Thumb.Template><ControlTemplate TargetType="Thumb"><Grid Background="Transparent"><Path Data="M13,3 L3,13 M13,8 L8,13 M13,12 L12,13" Stroke="{DynamicResource TextDim}" StrokeThickness="1"/></Grid></ControlTemplate></Thumb.Template>
+            </Thumb>
         </Grid>
-
-        <!-- Minimizado (como Ember): una pastilla con tu DPS y tu puesto; se arrastra y el botón la vuelve a abrir -->
-        <Border HorizontalAlignment="Left" VerticalAlignment="Top" Background="{StaticResource Panel}" BorderBrush="{StaticResource GoldDim}" BorderThickness="1"
-                CornerRadius="2" Padding="8,4,4,4" Cursor="{Binding CanMoveWindow, Converter={StaticResource MoveCursor}}" MouseLeftButtonDown="OnHeaderMouseDown"
-                Visibility="{Binding IsMinimized, Converter={StaticResource Visible}}">
+        <Border HorizontalAlignment="Left" VerticalAlignment="Top" Background="{DynamicResource PanelRaised}" BorderBrush="{DynamicResource AccentLine}" BorderThickness="1" CornerRadius="20" Padding="10,6,6,6" Cursor="{Binding CanMoveWindow, Converter={StaticResource MoveCursor}}" MouseLeftButtonDown="OnHeaderMouseDown" Visibility="{Binding IsMinimized, Converter={StaticResource Visible}}">
             <StackPanel Orientation="Horizontal">
-                <Path Width="12" Height="12" Stretch="Uniform" Stroke="{StaticResource Gold}" StrokeThickness="1.6" StrokeLineJoin="Round" VerticalAlignment="Center"
-                      Data="M12,2 L20,7 V17 L12,22 L4,17 V7 Z M12,7 V17 M8,9.5 L16,14.5 M16,9.5 L8,14.5" />
-                <TextBlock Text="{Binding MinimizedText}" Margin="6,0,6,0" FontWeight="Bold" Foreground="{StaticResource TextBright}" VerticalAlignment="Center" />
-                <Button Style="{StaticResource IconButton}" Command="{Binding ToggleMinimizedCommand}" ToolTip="Abrir el overlay" Width="20" Height="20">
-                    <Path Style="{StaticResource Icon}" Data="M5,5 H19 V19 H5 Z" />
-                </Button>
+                <ContentControl Content="{Binding PillRow}" ContentTemplate="{StaticResource LiveBadge}" VerticalAlignment="Center" Visibility="{Binding HasPillRow, Converter={StaticResource Visible}}"/>
+                <TextBlock Text="{Binding PillRow.PerSecond}" Style="{StaticResource NumberStrong}" FontSize="19" Margin="8,0,4,0" VerticalAlignment="Center" Visibility="{Binding HasPillRow, Converter={StaticResource Visible}}"/>
+                <TextBlock Text="{Binding RateUnit}" Foreground="{DynamicResource TextDim}" FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center" Visibility="{Binding HasPillRow, Converter={StaticResource Visible}}"/>
+                <TextBlock Text="{Binding PillRankText}" Foreground="{DynamicResource TextMuted}" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" Visibility="{Binding HasPillRow, Converter={StaticResource Visible}}"/>
+                <TextBlock Text="{Binding MinimizedText}" Foreground="{DynamicResource TextMuted}" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"><TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding HasPillRow}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+                <Button Style="{StaticResource LiveIcon}" Content="↗" Command="{Binding ToggleMinimizedCommand}" ToolTip="Abrir el overlay"/>
             </StackPanel>
         </Border>
     </Grid>
