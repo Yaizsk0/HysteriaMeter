@@ -13,24 +13,39 @@ public static class BossRules
     /// Pelea contra un boss: marcado en data/npcs.json, o un objetivo que se llevó la mayor parte del daño.
     /// En un pull de trash el daño se reparte entre varios bichos.
     /// </summary>
-    public static bool LooksLikeBossFight(EncounterSnapshot snapshot)
-    {
-        var total = snapshot.Actors.Sum(a => a.Damage);
-        return snapshot.TargetIsBoss || (total > 0 && snapshot.Actors.Sum(a => a.MainTargetDamage) >= total * BossFightShare);
-    }
+    public static bool LooksLikeBossFight(EncounterSnapshot snapshot) =>
+        LooksLikeBossFight(snapshot.TargetIsBoss, snapshot.Actors.Sum(a => a.Damage), snapshot.Actors.Sum(a => a.MainTargetDamage));
+
+    /// <summary>La misma regla con las sumas de daño de la party, como las trae una pelea guardada sin cargarla entera.</summary>
+    public static bool LooksLikeBossFight(bool targetIsBoss, long actorsDamage, long mainTargetDamage) =>
+        targetIsBoss || (actorsDamage > 0 && mainTargetDamage >= actorsDamage * BossFightShare);
 
     /// <summary>Un boss derrotado: marcado como boss en data/npcs.json, o un objetivo que aguantó al menos 30 s.</summary>
     public static bool IsBossKill(EncounterSnapshot snapshot) =>
-        snapshot.TargetKilled && (snapshot.TargetIsBoss || (snapshot.MainTargetDuration ?? snapshot.Duration) >= BossKillMinDuration);
+        IsBossKill(snapshot.TargetKilled, snapshot.TargetIsBoss, snapshot.Duration, snapshot.MainTargetDuration);
+
+    public static bool IsBossKill(bool killed, bool targetIsBoss, TimeSpan duration, TimeSpan? mainTargetDuration) =>
+        killed && (targetIsBoss || (mainTargetDuration ?? duration) >= BossKillMinDuration);
 
     /// <summary>
     /// Intento contra un boss (kill o wipe). Un objetivo que no murió cuenta si se llevó la mayor parte del daño
     /// y la pelea duró lo que dura un boss; si no, es trash.
     /// </summary>
     public static bool IsBossAttempt(EncounterSnapshot snapshot) =>
-        IsBossKill(snapshot)
-        || (!snapshot.TargetKilled && snapshot.TargetName is not null && LooksLikeBossFight(snapshot)
-            && (snapshot.TargetIsBoss || snapshot.Duration >= BossKillMinDuration));
+        IsBossAttempt(
+            snapshot.TargetKilled, snapshot.TargetName is not null, snapshot.TargetIsBoss, snapshot.Duration, snapshot.MainTargetDuration,
+            snapshot.Actors.Sum(a => a.Damage), snapshot.Actors.Sum(a => a.MainTargetDamage));
+
+    /// <summary>La misma regla con los datos sueltos de una pelea guardada (historial).</summary>
+    public static bool IsBossAttempt(
+        bool killed, bool hasTargetName, bool targetIsBoss, TimeSpan duration, TimeSpan? mainTargetDuration, long actorsDamage, long mainTargetDamage) =>
+        IsBossKill(killed, targetIsBoss, duration, mainTargetDuration)
+        || (!killed && hasTargetName && LooksLikeBossFight(targetIsBoss, actorsDamage, mainTargetDamage)
+            && (targetIsBoss || duration >= BossKillMinDuration));
+
+    /// <summary>Trash, kill o wipe, como la línea de tiempo del modo dungeon y las insignias del historial.</summary>
+    public static RunSegmentKind Classify(bool isBossAttempt, bool killed) =>
+        !isBossAttempt ? RunSegmentKind.Trash : killed ? RunSegmentKind.Kill : RunSegmentKind.Wipe;
 }
 
 public enum RunSegmentKind
@@ -101,7 +116,7 @@ public sealed record DungeonSummary(
 
         var timeline = ordered.Select(f =>
         {
-            var kind = !BossRules.IsBossAttempt(f) ? RunSegmentKind.Trash : f.TargetKilled ? RunSegmentKind.Kill : RunSegmentKind.Wipe;
+            var kind = BossRules.Classify(BossRules.IsBossAttempt(f), f.TargetKilled);
             var label = kind == RunSegmentKind.Trash ? "Trash" : f.TargetName ?? "Boss";
             return new RunSegment(kind, label, (f.Start - start).TotalSeconds, f.Duration.TotalSeconds);
         }).ToList();

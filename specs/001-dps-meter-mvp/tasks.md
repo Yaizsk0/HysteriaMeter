@@ -77,7 +77,7 @@ description: "Tareas del MVP de Hysteria Meter"
 - [X] T033 [US4] `EncounterRepository` (SQLite) + test en `src/HysteriaMeter.Storage/`
 - [X] T034a [P] [US4] `KillPacketDecoder` (muerte + nombre del que mata) + test
 - [ ] T034 [P] [US4] `HealDecoder` + test
-- [ ] T035 [US4] Vista de historial con los últimos encuentros
+- [X] T035 [US4] Vista de historial con los últimos encuentros
 
 ## Phase 8: Polish
 

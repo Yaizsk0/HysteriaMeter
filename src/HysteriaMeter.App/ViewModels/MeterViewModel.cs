@@ -137,25 +137,100 @@ public sealed partial class MeterViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsSettingsOpen { get; set; }
 
+    /// <summary>La ventana del historial está abierta: la abre y la cierra la ventana dueña (OverlayWindow).</summary>
     [ObservableProperty]
     public partial bool IsHistoryOpen { get; set; }
 
-    /// <summary>Encuentros guardados que pasan el filtro, del más nuevo al más viejo. Se cargan al abrir el panel.</summary>
-    public ObservableCollection<HistoryItem> History { get; } = [];
+    /// <summary>
+    /// Encuentros guardados que pasan el filtro, del más nuevo al más viejo y agrupados por run, como los lista la
+    /// ventana del historial. Se cargan al abrir el historial.
+    /// </summary>
+    public ObservableCollection<HistoryRun> HistoryRuns { get; } = [];
+
+    /// <summary>"142 peleas · 31 runs": lo que deja el filtro.</summary>
+    [ObservableProperty]
+    public partial string HistoryCountText { get; set; } = string.Empty;
+
+    /// <summary>Por qué la lista está vacía (no hay peleas guardadas o nada coincide); vacío si hay peleas para mostrar.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasHistoryEmptyText))]
+    public partial string HistoryEmptyText { get; set; } = string.Empty;
+
+    public bool HasHistoryEmptyText => HistoryEmptyText.Length > 0;
+
+    /// <summary>Al pie de la lista, si el filtro deja más peleas de las que se muestran; vacío si entran todas.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasHistoryMoreText))]
+    public partial string HistoryMoreText { get; set; } = string.Empty;
+
+    public bool HasHistoryMoreText => HistoryMoreText.Length > 0;
+
+    /// <summary>Peleas que se cargan al abrir el historial (y que recorren Alt+← y Alt+→).</summary>
+    public const int HistoryLimit = 200;
 
     private List<HistoryItem> _allHistory = [];
+    private List<HistoryItem> _matchingHistory = [];
     private readonly RankTrends _rankTrends = new();
 
-    /// <summary>Búsqueda del panel de historial: objetivo o nota.</summary>
+    /// <summary>Reloj del historial ("Esta semana", "hace 3 semanas"). Las pruebas lo fijan.</summary>
+    public Func<DateTimeOffset> HistoryClock { get; set; } = () => DateTimeOffset.Now;
+
+    /// <summary>Búsqueda del historial: objetivo o nota.</summary>
     [ObservableProperty]
     public partial string HistorySearch { get; set; } = string.Empty;
 
+    /// <summary>Chip elegido: Todas, Solo kills, Solo bosses o Esta semana.</summary>
     [ObservableProperty]
-    public partial bool OnlyKills { get; set; }
+    public partial HistoryFilter HistoryFilter { get; set; }
 
     partial void OnHistorySearchChanged(string value) => ApplyHistoryFilter();
 
-    partial void OnOnlyKillsChanged(bool value) => ApplyHistoryFilter();
+    partial void OnHistoryFilterChanged(HistoryFilter value)
+    {
+        OnPropertyChanged(nameof(FilterAll));
+        OnPropertyChanged(nameof(OnlyKills));
+        OnPropertyChanged(nameof(FilterBosses));
+        OnPropertyChanged(nameof(FilterThisWeek));
+        ApplyHistoryFilter();
+    }
+
+    // Un bool por chip para los RadioButton (como ScopeMe/ScopeParty): solo el que se marca cambia el filtro.
+    public bool FilterAll
+    {
+        get => HistoryFilter == HistoryFilter.All;
+        set => SetFilter(value, HistoryFilter.All);
+    }
+
+    /// <summary>"Solo kills": los bosses derrotados (✓). Era el "Derrotados" del panel viejo.</summary>
+    public bool OnlyKills
+    {
+        get => HistoryFilter == HistoryFilter.Kills;
+        set => SetFilter(value, HistoryFilter.Kills);
+    }
+
+    public bool FilterBosses
+    {
+        get => HistoryFilter == HistoryFilter.Bosses;
+        set => SetFilter(value, HistoryFilter.Bosses);
+    }
+
+    public bool FilterThisWeek
+    {
+        get => HistoryFilter == HistoryFilter.ThisWeek;
+        set => SetFilter(value, HistoryFilter.ThisWeek);
+    }
+
+    private void SetFilter(bool selected, HistoryFilter filter)
+    {
+        if (selected)
+        {
+            HistoryFilter = filter;
+        }
+        else if (HistoryFilter == filter)
+        {
+            HistoryFilter = HistoryFilter.All;
+        }
+    }
 
     /// <summary>"Todos" y cada personaje con peleas guardadas; el filtro aparece con más de un personaje.</summary>
     public ObservableCollection<string> HistoryCharacters { get; } = [];
@@ -168,8 +243,14 @@ public sealed partial class MeterViewModel : ObservableObject
 
     partial void OnSelectedCharacterChanged(string value) => ApplyHistoryFilter();
 
-    // Pelea guardada que se está mirando (para la nota y para borrarla).
-    private string? _pinnedId;
+    /// <summary>
+    /// Pelea guardada que se está mirando (para la nota y para borrarla). En la ventana del historial es la fila marcada
+    /// y la que elige el boss de "TU PROGRESO".
+    /// </summary>
+    [ObservableProperty]
+    public partial string? PinnedHistoryId { get; private set; }
+
+    partial void OnPinnedHistoryIdChanged(string? value) => UpdateBossProgress();
 
     /// <summary>Nota de la pelea guardada que se está mirando; se guarda al salir del cuadro de texto.</summary>
     [ObservableProperty]
@@ -353,6 +434,14 @@ public sealed partial class MeterViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsFullView))]
     public partial bool IsMinimized { get; set; }
+
+    partial void OnIsMinimizedChanged(bool value)
+    {
+        if (value)
+        {
+            IsHistoryOpen = false;
+        }
+    }
 
     public bool IsFullView => !IsMinimized;
 
@@ -729,7 +818,7 @@ public sealed partial class MeterViewModel : ObservableObject
 
         _practiceDoneId = current.Id;
         _pinned = current;
-        _pinnedId = null;
+        PinnedHistoryId = null;
         _pinnedAt = DateTimeOffset.Now;
         CanEditNote = false;
         IsViewingHistory = true;
@@ -829,7 +918,7 @@ public sealed partial class MeterViewModel : ObservableObject
     /// ensamblado de entrada es otro (el testhost del arnés de capturas).
     /// </summary>
     public static FontFamily FontOf(string name) => MeterPreferences.BundledFonts.Contains(name)
-        ? new FontFamily(new Uri("pack://application:,,,/HysteriaMeter;component/"), $"./Assets/Fonts/#{name}")
+        ? new FontFamily(new Uri("pack://application:,,,/HysteriaMeter;component/"), $"./Assets/Fonts/#{(name == "Barlow Semi Condensed" ? "Barlow" : name)}")
         : new FontFamily(name);
 
     public ObservableCollection<ActorRowViewModel> Actors { get; } = [];
@@ -921,6 +1010,14 @@ public sealed partial class MeterViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsClickThrough { get; set; }
 
+    partial void OnIsClickThroughChanged(bool value)
+    {
+        if (value)
+        {
+            IsHistoryOpen = false;
+        }
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDamageTab), nameof(IsHealingTab), nameof(IsTakenTab), nameof(SecondColumnHeader), nameof(RateUnit), nameof(ShowHealingColumn))]
     public partial MeterTab Tab { get; set; }
@@ -966,9 +1063,36 @@ public sealed partial class MeterViewModel : ObservableObject
     /// <summary>Encabezado de la segunda columna numérica: HPS con daño y curación juntos, si no el total.</summary>
     public string SecondColumnHeader => ShowHealingColumn ? "HPS" : "TOTAL";
 
-    public void Start() => _timer.Start();
+    private bool _started;
 
-    public void Stop() => _timer.Stop();
+    public void Start()
+    {
+        if (!_started && _history is not null)
+        {
+            _history.Saved += OnHistorySaved;
+        }
+
+        _started = true;
+        _timer.Start();
+    }
+
+    public void Stop()
+    {
+        _started = false;
+        _timer.Stop();
+        if (_history is not null)
+        {
+            _history.Saved -= OnHistorySaved;
+        }
+    }
+
+    private void OnHistorySaved() => _timer.Dispatcher.InvokeAsync(async () =>
+    {
+        if (_started && IsHistoryOpen)
+        {
+            await ReloadHistoryAsync().ConfigureAwait(true);
+        }
+    });
 
     partial void OnTabChanged(MeterTab value) => Refresh();
 
@@ -1081,8 +1205,9 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         await Task.Delay(KillImageDelay).ConfigureAwait(true);
 
-        // Solo si se ve esa pelea completa: en pausa, minimizado o con un panel abierto la imagen no serviría.
-        if (_shown?.Id == snapshot.Id && IsFullView && !IsSettingsOpen && !IsHistoryOpen)
+        // Solo si se ve esa pelea completa: en pausa, minimizado o con la configuración abierta la imagen no serviría
+        // (el historial es otra ventana y no tapa las filas).
+        if (_shown?.Id == snapshot.Id && IsFullView && !IsSettingsOpen)
         {
             SaveImageRequested?.Invoke(KillImagePath(snapshot));
         }
@@ -1184,12 +1309,14 @@ public sealed partial class MeterViewModel : ObservableObject
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{ExportFolder}\"") { UseShellExecute = true });
     }
 
-    /// <summary>Cierra los paneles para que la imagen muestre las filas y le pide a la vista que la copie.</summary>
+    /// <summary>
+    /// Cierra la configuración para que la imagen muestre las filas y le pide a la vista que la copie. El historial
+    /// es otra ventana y no tapa las filas: queda abierto.
+    /// </summary>
     [RelayCommand]
     private void CopyImage()
     {
         IsSettingsOpen = false;
-        IsHistoryOpen = false;
         CopyImageRequested?.Invoke();
     }
 
@@ -1219,31 +1346,44 @@ public sealed partial class MeterViewModel : ObservableObject
         DetailRequested?.Invoke();
     }
 
+    /// <summary>La configuración tapa las filas del overlay; el historial es otra ventana y puede seguir abierto.</summary>
     [RelayCommand]
-    private void ToggleSettings()
-    {
-        IsSettingsOpen = !IsSettingsOpen;
-        IsHistoryOpen &= !IsSettingsOpen;
-    }
+    private void ToggleSettings() => IsSettingsOpen = !IsSettingsOpen;
 
     [RelayCommand]
     private async Task ToggleHistoryAsync()
     {
         IsHistoryOpen = !IsHistoryOpen;
-        IsSettingsOpen &= !IsHistoryOpen;
-        if (!IsHistoryOpen || _history is null)
+        if (!IsHistoryOpen)
         {
             return;
         }
 
-        try
+        await ReloadHistoryAsync().ConfigureAwait(true);
+    }
+
+    private int _historyReload;
+
+    private async Task ReloadHistoryAsync()
+    {
+        var reload = ++_historyReload;
+        if (_history is not null)
         {
-            _allHistory = [.. HistoryItem.WithCharacterTags(HistoryItem.WithComparisons([.. (await _history.ListRecentAsync(200).ConfigureAwait(true)).Select(HistoryItem.From)]))];
-        }
-        catch (DbException)
-        {
-            // La base todavía no está lista (la inicializa el pipeline al arrancar): el panel queda vacío.
-            _allHistory = [];
+            try
+            {
+                var saved = (await _history.ListRecentAsync(HistoryLimit).ConfigureAwait(true)).Select(HistoryItem.From).ToList();
+                if (reload != _historyReload)
+                {
+                    return;
+                }
+
+                _allHistory = [.. HistoryItem.WithDeltas(HistoryItem.WithCharacterTags(HistoryItem.WithComparisons(saved)))];
+            }
+            catch (DbException)
+            {
+                // La base todavía no está lista (la inicializa el pipeline al arrancar): el historial queda vacío.
+                _allHistory = [];
+            }
         }
 
         UpdateHistoryCharacters();
@@ -1265,73 +1405,77 @@ public sealed partial class MeterViewModel : ObservableObject
         SelectedCharacter = HistoryCharacters.Contains(selected) ? selected : HistoryItem.AllCharacters;
     }
 
-    /// <summary>Línea de mi DPS a lo largo de los intentos, cuando la búsqueda deja un solo boss.</summary>
+    /// <summary>Columna "TU PROGRESO": el boss de la fila marcada, o el que deja el filtro si deja uno solo.</summary>
     [ObservableProperty]
-    public partial PointCollection ProgressPoints { get; set; } = [];
+    public partial BossProgress Progress { get; set; } = BossProgress.Empty(BossProgress.PickText);
 
     [ObservableProperty]
     public partial bool HasProgress { get; set; }
-
-    [ObservableProperty]
-    public partial string ProgressText { get; set; } = string.Empty;
-
-    private void UpdateProgress((string Target, IReadOnlyList<double> Dps)? progress, TimeSpan? fastestKill)
-    {
-        HasProgress = progress is not null;
-        if (progress is not { } p)
-        {
-            return;
-        }
-
-        var peak = p.Dps.Max();
-        var points = new PointCollection(p.Dps.Count);
-        for (var i = 0; i < p.Dps.Count; i++)
-        {
-            points.Add(new System.Windows.Point(i, peak - p.Dps[i]));
-        }
-
-        points.Freeze();
-        ProgressPoints = points;
-        ProgressText = ProgressSummary(p.Target, p.Dps, fastestKill);
-    }
 
     /// <summary>"Tarka · 8 intentos · último 11.2k · mejor 12.4k · kill más rápida 2:25".</summary>
     public static string ProgressSummary(string target, IReadOnlyList<double> dps, TimeSpan? fastestKill = null) =>
         $"{target} · {dps.Count} intentos · último {ActorRowViewModel.Compact(dps[^1])} · mejor {ActorRowViewModel.Compact(dps.Max())}"
         + (fastestKill is { } kill ? $" · kill más rápida {kill.ToString(@"m\:ss", CultureInfo.InvariantCulture)}" : string.Empty);
 
+    /// <summary>Peleas visibles en la lista; el conteo, las runs y el progreso usan todas las que coinciden.</summary>
+    private const int HistoryVisible = 60;
+
     private void ApplyHistoryFilter()
     {
-        History.Clear();
-        var visible = _allHistory.Where(i => i.Matches(HistorySearch, OnlyKills, SelectedCharacter)).Take(60).ToList();
-        foreach (var item in HistoryItem.WithRuns(visible, _allHistory))
+        var now = HistoryClock();
+        _matchingHistory = [.. _allHistory.Where(i => i.Matches(HistorySearch, HistoryFilter, SelectedCharacter, now))];
+        var visible = _matchingHistory.Take(HistoryVisible).ToList();
+
+        HistoryRuns.Clear();
+        foreach (var run in HistoryRun.Group(visible, _allHistory))
         {
-            History.Add(item);
+            HistoryRuns.Add(run);
         }
 
-        var matching = _allHistory.Where(i => i.Matches(HistorySearch, OnlyKills, SelectedCharacter)).ToList();
-        UpdateProgress(HistoryItem.Progress(matching), HistoryItem.FastestKill(matching));
+        HistoryCountText = HistoryRun.CountText(_matchingHistory);
+        HistoryMoreText = _matchingHistory.Count > visible.Count
+            ? $"Se muestran las {visible.Count} peleas más nuevas de {_matchingHistory.Count}: buscá o filtrá para ver las anteriores."
+            : string.Empty;
+        HistoryEmptyText = _allHistory.Count == 0
+            ? "Todavía no hay peleas guardadas: cada pelea aparece acá cuando termina."
+            : _matchingHistory.Count == 0 ? "Ninguna pelea coincide con la búsqueda o el filtro." : string.Empty;
+        UpdateBossProgress();
+    }
+
+    private void UpdateBossProgress()
+    {
+        var selected = PinnedHistoryId is { } id ? _allHistory.Find(i => i.Id == id) : null;
+        Progress = BossProgress.For(_matchingHistory, selected, HistoryClock(), _allHistory);
+        HasProgress = Progress.HasData;
     }
 
     [RelayCommand]
     private async Task SaveNoteAsync()
     {
-        if (_pinnedId is null || _history is null)
+        if (PinnedHistoryId is not { } id || _history is null)
         {
             return;
         }
 
+        var note = string.IsNullOrWhiteSpace(CurrentNote) ? null : CurrentNote.Trim();
         try
         {
-            await _history.SetNoteAsync(_pinnedId, CurrentNote).ConfigureAwait(true);
-            var index = _allHistory.FindIndex(i => i.Id == _pinnedId);
+            await _history.SetNoteAsync(id, note).ConfigureAwait(true);
+            var index = _allHistory.FindIndex(i => i.Id == id);
             if (index >= 0)
             {
-                _allHistory[index] = _allHistory[index] with { Note = string.IsNullOrWhiteSpace(CurrentNote) ? null : CurrentNote.Trim() };
+                _allHistory[index] = _allHistory[index] with { Note = note };
             }
         }
         catch (DbException)
         {
+            return;
+        }
+
+        // Con la ventana del historial abierta, la nota nueva se ve en su fila.
+        if (IsHistoryOpen)
+        {
+            ApplyHistoryFilter();
         }
     }
 
@@ -1339,15 +1483,15 @@ public sealed partial class MeterViewModel : ObservableObject
     [RelayCommand]
     private async Task DeleteEncounterAsync()
     {
-        if (_pinnedId is null || _history is null)
+        if (PinnedHistoryId is not { } id || _history is null)
         {
             return;
         }
 
         try
         {
-            await _history.DeleteAsync(_pinnedId).ConfigureAwait(true);
-            _allHistory.RemoveAll(i => i.Id == _pinnedId);
+            await _history.DeleteAsync(id).ConfigureAwait(true);
+            await ReloadHistoryAsync().ConfigureAwait(true);
         }
         catch (DbException)
         {
@@ -1355,6 +1499,11 @@ public sealed partial class MeterViewModel : ObservableObject
         }
 
         BackToLive();
+        if (IsHistoryOpen)
+        {
+            UpdateHistoryCharacters();
+            ApplyHistoryFilter();
+        }
     }
 
     private async Task CleanupHistoryAsync()
@@ -1490,7 +1639,7 @@ public sealed partial class MeterViewModel : ObservableObject
 
     private async Task StepFightAsync(int step)
     {
-        if (_history is null || (_pinnedId is null && step < 0))
+        if (_history is null || (PinnedHistoryId is null && step < 0))
         {
             return;
         }
@@ -1498,7 +1647,7 @@ public sealed partial class MeterViewModel : ObservableObject
         List<HistoryItem> items;
         try
         {
-            items = [.. (await _history.ListRecentAsync(200).ConfigureAwait(true)).Select(HistoryItem.From)];
+            items = [.. (await _history.ListRecentAsync(HistoryLimit).ConfigureAwait(true)).Select(HistoryItem.From)];
         }
         catch (DbException)
         {
@@ -1506,10 +1655,11 @@ public sealed partial class MeterViewModel : ObservableObject
         }
 
         // La lista va de la más nueva a la más vieja; desde el vivo (o una pelea abierta de archivo) la anterior es la primera.
-        var index = _pinnedId is null ? -1 : items.FindIndex(i => i.Id == _pinnedId);
+        var index = PinnedHistoryId is null ? -1 : items.FindIndex(i => i.Id == PinnedHistoryId);
         var next = index + step;
         if (next < 0)
         {
+            await SaveNoteAsync().ConfigureAwait(true);
             BackToLive();
         }
         else if (next < items.Count)
@@ -1524,6 +1674,11 @@ public sealed partial class MeterViewModel : ObservableObject
         if (item is null || _history is null)
         {
             return;
+        }
+
+        if (CanEditNote && PinnedHistoryId is not null)
+        {
+            await SaveNoteAsync().ConfigureAwait(true);
         }
 
         EncounterSnapshot? snapshot;
@@ -1543,16 +1698,18 @@ public sealed partial class MeterViewModel : ObservableObject
 
         _pinned = snapshot;
         _pinnedAt = DateTimeOffset.Now;
-        _pinnedId = item.Id;
-        CurrentNote = item.Note ?? string.Empty;
+        PinnedHistoryId = item.Id;
+        CurrentNote = (_allHistory.Find(i => i.Id == item.Id) ?? item).Note ?? string.Empty;
         CanEditNote = true;
         IsViewingHistory = true;
         HistoryLabel = $"HISTORIAL · {item.When}";
-        IsHistoryOpen = false;
+
+        // La ventana del historial queda abierta: la fila se marca (PinnedHistoryId) y el overlay muestra la pelea,
+        // sin la configuración tapándola.
+        IsSettingsOpen = false;
         Refresh();
     }
 
-    /// <summary>Muestra una pelea inventada para acomodar el overlay sin combatir.</summary>
     /// <summary>Pide abrir el modo dungeon con el resumen de una run.</summary>
     public event Action<DungeonSummaryViewModel>? RunSummaryRequested;
 
@@ -1585,16 +1742,16 @@ public sealed partial class MeterViewModel : ObservableObject
         RunSummaryRequested?.Invoke(new DungeonSummaryViewModel(DungeonSummary.From(fights, entered)));
     }
 
+    /// <summary>Muestra una pelea inventada para acomodar el overlay sin combatir.</summary>
     [RelayCommand]
     private void ShowDemo()
     {
         _pinned = DemoEncounter.Create(DateTimeOffset.Now);
-        _pinnedId = null;
+        PinnedHistoryId = null;
         CanEditNote = false;
         IsViewingHistory = true;
         HistoryLabel = "DEMO · datos de prueba";
         IsSettingsOpen = false;
-        IsHistoryOpen = false;
         Refresh();
     }
 
@@ -1622,12 +1779,11 @@ public sealed partial class MeterViewModel : ObservableObject
         }
 
         _pinned = snapshot;
-        _pinnedId = null;
+        PinnedHistoryId = null;
         CanEditNote = false;
         IsViewingHistory = true;
         HistoryLabel = $"ARCHIVO · {Path.GetFileNameWithoutExtension(path)}";
         IsSettingsOpen = false;
-        IsHistoryOpen = false;
         ExportMessage = string.Empty;
         Refresh();
         return true;
@@ -1657,7 +1813,7 @@ public sealed partial class MeterViewModel : ObservableObject
     private void BackToLive()
     {
         _pinned = null;
-        _pinnedId = null;
+        PinnedHistoryId = null;
         CanEditNote = false;
         IsViewingHistory = false;
         Refresh();
@@ -1689,7 +1845,7 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         _lastFinished = null;
         _pinned = null;
-        _pinnedId = null;
+        PinnedHistoryId = null;
         CanEditNote = false;
         _shown = null;
         IsViewingHistory = false;
@@ -1774,7 +1930,7 @@ public sealed partial class MeterViewModel : ObservableObject
     private void Refresh()
     {
         var current = _engine.CurrentSnapshot();
-        if (_pinnedId is not null && Preferences.AutoBackToLive && current is not null && current.Start.ToLocalTime() > _pinnedAt)
+        if (PinnedHistoryId is not null && Preferences.AutoBackToLive && current is not null && current.Start.ToLocalTime() > _pinnedAt)
         {
             BackToLive();
             return;

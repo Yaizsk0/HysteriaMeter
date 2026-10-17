@@ -104,6 +104,8 @@ Modo dungeon: en el historial, cada run (peleas con la misma entrada a la zona) 
 
 Rediseño, paso 1: la paleta nueva (fondo casi negro #0C0E13, acento ámbar #E8B04A, filetes y filas en blanco translúcido), números y títulos en Barlow Semi Condensed y la fuente elegida en configuración también en el detalle, el registro y el modo dungeon. Los temas Mínimo, Abismo y Carmesí siguen con su acento, que ahora tiñe también los bordes y resaltados. Para revisar la interfaz sin el juego abierto hay un arnés de capturas: `HYSTERIA_SNAPSHOTS=<carpeta> dotnet test tests/HysteriaMeter.App.Tests --filter "FullyQualifiedName~UiSnapshotTests"` guarda un PNG por ventana y estado con datos de prueba.
 
+Rediseño, paso 2: el historial abre en su propia ventana, con peleas agrupadas por entrada a dungeon, filtros de kills, bosses y últimos siete días, y una columna de progreso por boss. Podés dejarlo abierto mientras mirás una pelea en el overlay; las notas se guardan al cambiar de pelea y los filtros no ocultan intentos del cálculo de progreso.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
