@@ -49,7 +49,8 @@ public sealed partial class FightCardViewModel : ObservableObject
     /// <summary>"Guardar captura": el overlay guarda su imagen en esta ruta.</summary>
     public event Action<string>? SaveRequested;
 
-    public Guid FightId => _snapshot.Id;
+    /// <summary>La pelea de la tarjeta: "Ver detalle" y "Guardar captura" actúan sobre ella, no sobre lo que muestre el overlay.</summary>
+    public EncounterSnapshot Fight => _snapshot;
 
     /// <summary>"BOSS DERROTADO · 4:12".</summary>
     public string Eyebrow { get; }
@@ -61,7 +62,7 @@ public sealed partial class FightCardViewModel : ObservableObject
     /// <summary>"2 / 6": tu puesto entre los que hicieron daño, con la misma métrica que TU DPS.</summary>
     public string Rank { get; }
 
-    /// <summary>"Tu skill top: Bittercold Wind (21,4%)", sumando las variantes de una skill (mismo nombre base).</summary>
+    /// <summary>"Tu skill top: Bittercold Wind (21,4%)", sumando las variantes de una skill (misma skill base).</summary>
     public string? TopSkill { get; }
 
     public bool HasTopSkill => TopSkill is not null;
@@ -137,8 +138,8 @@ public sealed partial class FightCardViewModel : ObservableObject
         }
     }
 
-    /// <summary>Empezó otra pelea: la tarjeta de la anterior ya no corresponde.</summary>
-    public bool IsStale() => _session.Engine.CurrentSnapshot() is { } current && current.Id != _snapshot.Id;
+    /// <summary>Empezó otra pelea: la tarjeta de la anterior ya no corresponde. Solo mira el id (sin armar un snapshot).</summary>
+    public bool IsStale() => _session.Engine.CurrentEncounterId() is { } current && current != _snapshot.Id;
 
     /// <summary>Suelta la sesión (la ventana lo llama al cerrarse).</summary>
     public void Detach() => _session.ResetRequested -= OnReset;
@@ -162,15 +163,25 @@ public sealed partial class FightCardViewModel : ObservableObject
         return (1 + actors.Count(a => !a.IsLocalPlayer && metric(a) > mine), actors.Count(a => a.IsLocalPlayer || metric(a) > 0));
     }
 
-    /// <summary>La skill que más daño hizo, juntando las variantes con el mismo nombre; <c>null</c> sin skills.</summary>
+    /// <summary>
+    /// La skill que más daño hizo, juntando las variantes de la misma skill base (SkillNames.BaseOf), tengan nombre o
+    /// no. El nombre es el de la base; si la base no tiene, el de la variante que más pegó (o "Skill 15280000").
+    /// <c>null</c> sin skills.
+    /// </summary>
     public static string? TopSkillText(ActorSnapshot actor, SkillNames names)
     {
         var top = actor.Skills
-            .GroupBy(s => names.Of(s.SkillId), StringComparer.Ordinal)
-            .Select(g => (Name: g.Key, Share: g.Sum(s => s.Share)))
+            .GroupBy(s => SkillNames.BaseOf(s.SkillId) ?? s.SkillId)
+            .Select(g => (Name: GroupName(g.Key, g, names), Share: g.Sum(s => s.Share)))
             .OrderByDescending(g => g.Share)
             .FirstOrDefault();
         return top.Name is null ? null : $"Tu skill top: {top.Name} ({(top.Share * 100).ToString("0.0", CultureInfo.CurrentCulture)}%)";
+    }
+
+    private static string GroupName(uint baseId, IEnumerable<SkillSnapshot> variants, SkillNames names)
+    {
+        var named = variants.OrderByDescending(s => s.Share).Select(s => s.SkillId).Prepend(baseId).FirstOrDefault(names.IsNamed, baseId);
+        return names.Of(named);
     }
 
     /// <summary>

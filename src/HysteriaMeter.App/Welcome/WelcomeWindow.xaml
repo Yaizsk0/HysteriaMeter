@@ -64,16 +64,13 @@
 
             <!-- Ayuda: los consejos que antes mostraba el banner de bienvenida del overlay -->
             <Border Margin="0,18,0,0" Padding="0,14,0,0" BorderBrush="{DynamicResource Rule}" BorderThickness="0,1,0,0">
-                <StackPanel>
-                    <TextBlock Text="CONSEJOS" Style="{StaticResource SectionLabel}" />
-                    <ItemsControl ItemsSource="{Binding Tips}" Focusable="False">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}" Margin="0,4,0,0" FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource TextDim}" TextWrapping="Wrap" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
+                <ItemsControl ItemsSource="{Binding Tips}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource TextDim}" TextWrapping="Wrap" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </Border>
 
             <StackPanel Orientation="Horizontal" Margin="0,22,0,0">

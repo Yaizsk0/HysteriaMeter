@@ -4,6 +4,7 @@ using System.Drawing.Drawing2D;
 using System.Windows;
 using HysteriaMeter.App.ViewModels;
 using DPoint = System.Drawing.Point;
+using DrawingSystemColors = System.Drawing.SystemColors;
 using Forms = System.Windows.Forms;
 
 namespace HysteriaMeter.App.Overlay;
@@ -127,7 +128,8 @@ public sealed class TrayIcon : IDisposable
 
     /// <summary>
     /// Abre el historial o la configuración en la ventana principal, con el mismo comando que su botón del encabezado.
-    /// Si ya estaba abierto no lo cierra; si el overlay estaba oculto o minimizado, lo muestra entero.
+    /// Si ya estaba abierto no lo cierra; si el overlay estaba oculto o minimizado, lo muestra entero. Si dejaba pasar
+    /// los clics al juego, se desbloquea (todas las ventanas, como el candado): si no, el panel no se podría usar.
     /// </summary>
     private static void OpenPanel(OverlayWindows windows, bool history)
     {
@@ -137,6 +139,11 @@ public sealed class TrayIcon : IDisposable
         }
 
         ShowAll(windows, show: true);
+        if (main.IsClickThrough)
+        {
+            windows.ForEach(w => w.SetClickThrough(false));
+        }
+
         main.IsMinimized = false;
         if (history && !main.IsHistoryOpen)
         {
@@ -222,24 +229,25 @@ public sealed class TrayIcon : IDisposable
 }
 
 /// <summary>
-/// Colores del menú de la bandeja, leídos del tema (Theme.xaml, con lo que cambie MeterThemes) cada vez que se abre.
-/// WinForms no mezcla transparencias sobre el fondo: los colores con alfa se pasan a opacos sobre MenuBg.
+/// Colores del menú de la bandeja, leídos del tema (Theme.xaml, con lo que cambie MeterThemes) al crearlo y cada vez
+/// que se abre: MenuBg, Stroke, Track, AccentSoft, Text, TextDim y Danger. WinForms no mezcla transparencias sobre el
+/// fondo: los colores con alfa se pasan a opacos sobre MenuBg.
 /// </summary>
 public sealed class TrayMenuColors : Forms.ProfessionalColorTable
 {
-    // Valores de Theme.xaml, por si no hay App (vista previa): MenuBg, Stroke, Track, AccentSoft, Text, TextDim, Danger.
-    private static readonly Color DefaultMenuBg = Color.FromArgb(0x1A, 0x1E, 0x27);
-
     public TrayMenuColors()
     {
         UseSystemColors = false;
-        Background = DefaultMenuBg;
-        Border = TrayIcon.Blend(Color.FromArgb(0x1F, 0xFF, 0xFF, 0xFF), DefaultMenuBg);
-        Separator = TrayIcon.Blend(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF), DefaultMenuBg);
-        Hover = TrayIcon.Blend(Color.FromArgb(0x24, 0xE8, 0xB0, 0x4A), DefaultMenuBg);
-        Text = Color.FromArgb(0xE9, 0xE6, 0xDF);
-        TextDim = Color.FromArgb(0x8E, 0x8A, 0x80);
-        Danger = Color.FromArgb(0xF0, 0x8A, 0x7E);
+
+        // Sin App (una vista previa suelta) no hay tema: quedan los colores de menú de Windows, sin copiar la paleta.
+        Background = DrawingSystemColors.Menu;
+        Border = DrawingSystemColors.ControlDark;
+        Separator = DrawingSystemColors.ControlLight;
+        Hover = DrawingSystemColors.MenuHighlight;
+        Text = DrawingSystemColors.MenuText;
+        TextDim = DrawingSystemColors.GrayText;
+        Danger = DrawingSystemColors.MenuText;
+        Refresh();
     }
 
     public Color Background { get; private set; }
@@ -264,7 +272,7 @@ public sealed class TrayMenuColors : Forms.ProfessionalColorTable
             return;
         }
 
-        Background = Opaque(Find(app, "MenuBg") ?? Background, DefaultMenuBg);
+        Background = Opaque(Find(app, "MenuBg") ?? Background, DrawingSystemColors.Menu);
         Border = Find(app, "Stroke") is { } stroke ? TrayIcon.Blend(stroke, Background) : Border;
         Separator = Find(app, "Track") is { } track ? TrayIcon.Blend(track, Background) : Separator;
         Hover = Find(app, "AccentSoft") is { } soft ? TrayIcon.Blend(soft, Background) : Hover;

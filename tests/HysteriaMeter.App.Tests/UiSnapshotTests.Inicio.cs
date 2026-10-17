@@ -1,5 +1,6 @@
 // Estados del arnés para la bienvenida (mock Inicio) y la tarjeta de fin de pelea (mock Mini). Ver UiSnapshotTests.cs.
 
+using System.IO;
 using HysteriaMeter.App.FightCard;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.App.ViewModels;
@@ -17,8 +18,8 @@ public sealed partial class UiSnapshotTests
 
     /// <summary>
     /// Bienvenida y tarjeta de fin de pelea. Reemplazan al viejo "14-bienvenida" (el banner del overlay, que ya no existe).
-    /// Los datos del juego salen de la carpeta Juego real de la máquina (la misma que lee la app): en otra PC los
-    /// números cambian o el paso queda en "Revisar", pero nunca son inventados.
+    /// Los datos del juego salen de archivos de prueba temporales, contados por GameDataSummary.Read como en la app.
+    /// No dependen de la instalación del usuario.
     /// </summary>
     private static readonly State[] InicioStates =
     [
@@ -62,6 +63,31 @@ public sealed partial class UiSnapshotTests
         }),
     ];
 
-    private static WelcomeWindow Welcome(MeterSession session, CaptureSetup capture) =>
-        new(new WelcomeViewModel(session, capture, GameDataSummary.Read(AppPaths.In("Juego"))));
+    private static WelcomeWindow Welcome(MeterSession session, CaptureSetup capture)
+    {
+        // Ruta estable para que el texto de los PNG sea reproducible. Solo se borra la carpeta que crea este estado.
+        var folder = Path.Combine(Path.GetTempPath(), "hysteria-ui-inicio-fixture", "Juego");
+        if (Directory.Exists(folder))
+        {
+            throw new IOException($"La carpeta de prueba ya existe: {folder}");
+        }
+
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(folder, "iconos"));
+            Directory.CreateDirectory(Path.Combine(folder, "clases"));
+            File.WriteAllText(Path.Combine(folder, "skills.json"), """{"skills":{"15280000":"Bittercold Wind","15290000":"Frost Arrow"}}""");
+            File.WriteAllBytes(Path.Combine(folder, "iconos", "15280000.png"), [0]);
+            File.WriteAllBytes(Path.Combine(folder, "iconos", "15290000.png"), [0]);
+            File.WriteAllBytes(Path.Combine(folder, "clases", "1.png"), [0]);
+            return new WelcomeWindow(new WelcomeViewModel(session, capture, GameDataSummary.Read(folder)));
+        }
+        finally
+        {
+            if (Directory.Exists(folder))
+            {
+                Directory.Delete(folder, recursive: true);
+            }
+        }
+    }
 }

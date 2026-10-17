@@ -111,11 +111,11 @@ public sealed partial class WelcomeViewModel : ObservableObject
 
     public static IReadOnlyList<string> TipsFor(MeterPreferences preferences) =>
     [
-        "Entrá al juego y pegale a algo: el punto del encabezado se pone verde en combate.",
-        "Clic en una fila: detalle por skill. Doble clic en el encabezado: modo compacto.",
-        preferences.HotkeyClickThrough is { Length: > 0 } key
-            ? $"{key} deja pasar los clics al juego; el engranaje abre la configuración."
-            : "El engranaje abre la configuración.",
+        "Clic en una fila: detalle · Doble clic en el encabezado: compacto · "
+            + (preferences.HotkeyClickThrough is { Length: > 0 } key
+                ? $"{key}: dejar pasar clics · "
+                : string.Empty)
+            + "El engranaje abre la configuración.",
     ];
 
     private IReadOnlyList<SetupStep> BuildSteps() =>

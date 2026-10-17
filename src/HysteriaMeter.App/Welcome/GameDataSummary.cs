@@ -1,5 +1,5 @@
 using System.IO;
-using System.Text.Json;
+using HysteriaMeter.App.ViewModels;
 
 namespace HysteriaMeter.App.Welcome;
 
@@ -23,24 +23,17 @@ public sealed record GameDataSummary(string Folder, bool HasSkillFile, int Skill
             CountPngs(Path.Combine(folder, "clases")));
     }
 
-    /// <summary>Las mismas reglas que SkillNames.Load: <c>{"skills": {"id": "nombre"}}</c>, con comentarios y comas finales.</summary>
+    /// <summary>
+    /// Las skills con nombre que carga la app de ese archivo: lo cuenta SkillNames con su propia lectura, así el número
+    /// no se aparta de lo que se ve en el meter. Un archivo que no se puede leer da 0.
+    /// </summary>
     public static int CountSkills(string path)
     {
         try
         {
-            if (!File.Exists(path))
-            {
-                return 0;
-            }
-
-            using var document = JsonDocument.Parse(File.ReadAllText(path), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
-            return document.RootElement.ValueKind == JsonValueKind.Object
-                && document.RootElement.TryGetProperty("skills", out var skills)
-                && skills.ValueKind == JsonValueKind.Object
-                ? skills.EnumerateObject().Count(e => uint.TryParse(e.Name, out _) && e.Value.ValueKind == JsonValueKind.String && e.Value.GetString() is { Length: > 0 })
-                : 0;
+            return SkillNames.CountIn(path);
         }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return 0;
         }

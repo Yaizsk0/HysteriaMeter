@@ -140,8 +140,8 @@ public sealed class InicioTests
     [Fact]
     public void Welcome_tips_use_the_configured_hotkey()
     {
-        Assert.Contains(WelcomeViewModel.TipsFor(new MeterPreferences { HotkeyClickThrough = "Ctrl+Alt+P" }), t => t.StartsWith("Ctrl+Alt+P ", StringComparison.Ordinal));
-        Assert.Contains("El engranaje abre la configuración.", WelcomeViewModel.TipsFor(new MeterPreferences { HotkeyClickThrough = string.Empty }));
+        Assert.Contains("Ctrl+Alt+P:", Assert.Single(WelcomeViewModel.TipsFor(new MeterPreferences { HotkeyClickThrough = "Ctrl+Alt+P" })), StringComparison.Ordinal);
+        Assert.EndsWith("El engranaje abre la configuración.", Assert.Single(WelcomeViewModel.TipsFor(new MeterPreferences { HotkeyClickThrough = string.Empty })), StringComparison.Ordinal);
     }
 
     [Fact]

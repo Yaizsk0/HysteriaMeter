@@ -24,7 +24,13 @@ public sealed class SkillNames(IReadOnlyDictionary<uint, string> names)
         : BaseOf(skillId) is { } baseId && (Custom.TryGetValue(baseId, out name) || names.TryGetValue(baseId, out name)) ? name
         : $"Skill {skillId}";
 
-    private static uint? BaseOf(uint skillId) =>
+    /// <summary>Si tiene nombre (propio, puesto por el usuario o el de su base); si no, <see cref="Of"/> da "Skill 12345".</summary>
+    public bool IsNamed(uint skillId) =>
+        Custom.ContainsKey(skillId) || names.ContainsKey(skillId)
+        || (BaseOf(skillId) is { } baseId && (Custom.ContainsKey(baseId) || names.ContainsKey(baseId)));
+
+    /// <summary>La skill base de una variante de clase (15280143 → 15280000); <c>null</c> si ya es la base o no es de clase.</summary>
+    public static uint? BaseOf(uint skillId) =>
         skillId / 1_000_000 is >= 11 and <= 18 && skillId % 10_000 != 0 ? skillId / 10_000 * 10_000 : null;
 
     /// <summary>Una copia propia, para no tocar la tabla compartida (por ejemplo <see cref="Empty"/>) al poner nombres.</summary>
@@ -99,6 +105,9 @@ public sealed class SkillNames(IReadOnlyDictionary<uint, string> names)
         return names.Count == 0 ? Empty : new SkillNames(names);
     }
 
+    /// <summary>Cuántas skills con nombre carga <see cref="Load"/> de ese archivo (la bienvenida las cuenta así).</summary>
+    public static int CountIn(string path) => Read(path).Count;
+
     private static Dictionary<uint, string> Read(string path)
     {
         var names = new Dictionary<uint, string>();
@@ -110,11 +119,14 @@ public sealed class SkillNames(IReadOnlyDictionary<uint, string> names)
         try
         {
             using var document = JsonDocument.Parse(File.ReadAllText(path), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
-            if (document.RootElement.TryGetProperty("skills", out var skills))
+            if (document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("skills", out var skills)
+                && skills.ValueKind == JsonValueKind.Object)
             {
                 foreach (var entry in skills.EnumerateObject())
                 {
-                    if (uint.TryParse(entry.Name, out var id) && entry.Value.GetString() is { Length: > 0 } name)
+                    // Un valor que no es texto (un número, un objeto) se saltea: GetString lanzaría.
+                    if (uint.TryParse(entry.Name, out var id) && entry.Value.ValueKind == JsonValueKind.String && entry.Value.GetString() is { Length: > 0 } name)
                     {
                         names[id] = name;
                     }
