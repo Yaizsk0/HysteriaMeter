@@ -52,6 +52,11 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 - Panel lateral "TU PROGRESO": del boss de la fila seleccionada (o del filtro si deja uno); sin selección, estado vacío con texto. Gráfico con color por percentil real. KILLS k/n = kills/peleas contra ese objetivo con tu DPS.
 - Contador "N peleas · M runs" de lo filtrado. Estados vacíos con texto.
 
+## Objetivos sin nombre, intentos y wipes (datos reales)
+- data/npcs.json casi no trae nombres: el objetivo se identifica por su nombre o, sin nombre, por su plantilla de NPC con el mismo rótulo del overlay, "NPC 2400123" (`FightTarget.Key`/`Label` en Combat). Sin nombre ni plantilla (peleas guardadas antes de registrarla) es "Encuentro" y no se compara con nada. Los nombres "#entidad" de versiones viejas cuentan como sin nombre.
+- BossRules: un wipe (pelea sin kill) puede ser de boss si tiene nombre **o plantilla**; sin ninguno de los dos es trash (no se puede probar que fue un wipe).
+- Modo dungeon: los intentos se agrupan por plantilla (o nombre); nunca se juntan peleas sin clave: cada una es su propio boss si fue kill ("Boss N" por su lugar en la run). Un kill cierra el boss: la misma plantilla después es otro boss ("NPC 2400123 (2)"). Wipes = intentos reales sin kill (antes era "intentos − 1", que inventaba wipes al juntar kills distintos). El DPS y la duración salen del intento que decide (el kill, o el último).
+
 ## Configuración (ventana propia)
 - `ConfigWindow` (≈1040×700) con nav a la izquierda: Apariencia (como el mock), Columnas, Alertas y sonidos, Atajos, Captura, Datos del juego, Historial, Diagnóstico. Todos los controles actuales se reparten ahí con el estilo del mock (toggles 36×20, chips, slider). Se borra el panel de configuración del overlay.
 - Opacidad con la semántica actual. Máximo de jugadores: slider 4–24 + opción "Todos" (0). Alto de fila: 22–40 en pasos de 2; compacto sigue forzando 22.

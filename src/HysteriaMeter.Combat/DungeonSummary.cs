@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace HysteriaMeter.Combat;
 
 /// <summary>Cómo distinguir un boss de los bichos normales, con lo que trae una pelea guardada.</summary>
@@ -28,19 +30,23 @@ public static class BossRules
         killed && (targetIsBoss || (mainTargetDuration ?? duration) >= BossKillMinDuration);
 
     /// <summary>
-    /// Intento contra un boss (kill o wipe). Un objetivo que no murió cuenta si se llevó la mayor parte del daño
-    /// y la pelea duró lo que dura un boss; si no, es trash.
+    /// Intento contra un boss (kill o wipe). Un objetivo que no murió cuenta si tiene nombre o plantilla de NPC, se llevó
+    /// la mayor parte del daño y la pelea duró lo que dura un boss; si no, es trash.
     /// </summary>
     public static bool IsBossAttempt(EncounterSnapshot snapshot) =>
         IsBossAttempt(
-            snapshot.TargetKilled, snapshot.TargetName is not null, snapshot.TargetIsBoss, snapshot.Duration, snapshot.MainTargetDuration,
+            snapshot.TargetKilled, FightTarget.Key(snapshot) is not null, snapshot.TargetIsBoss, snapshot.Duration, snapshot.MainTargetDuration,
             snapshot.Actors.Sum(a => a.Damage), snapshot.Actors.Sum(a => a.MainTargetDamage));
 
-    /// <summary>La misma regla con los datos sueltos de una pelea guardada (historial).</summary>
+    /// <summary>
+    /// La misma regla con los datos sueltos de una pelea guardada (historial). <paramref name="hasTarget"/>: el objetivo
+    /// tiene nombre o plantilla de NPC (<see cref="FightTarget.Key(string?, uint?)"/>). Sin ninguno de los dos, un wipe
+    /// no se distingue de un pull de trash y cuenta como trash.
+    /// </summary>
     public static bool IsBossAttempt(
-        bool killed, bool hasTargetName, bool targetIsBoss, TimeSpan duration, TimeSpan? mainTargetDuration, long actorsDamage, long mainTargetDamage) =>
+        bool killed, bool hasTarget, bool targetIsBoss, TimeSpan duration, TimeSpan? mainTargetDuration, long actorsDamage, long mainTargetDamage) =>
         IsBossKill(killed, targetIsBoss, duration, mainTargetDuration)
-        || (!killed && hasTargetName && LooksLikeBossFight(targetIsBoss, actorsDamage, mainTargetDamage)
+        || (!killed && hasTarget && LooksLikeBossFight(targetIsBoss, actorsDamage, mainTargetDamage)
             && (targetIsBoss || duration >= BossKillMinDuration));
 
     /// <summary>Trash, kill o wipe, como la línea de tiempo del modo dungeon y las insignias del historial.</summary>
@@ -55,13 +61,25 @@ public enum RunSegmentKind
     Wipe,
 }
 
-/// <summary>Un tramo de la línea de tiempo de la run, en segundos desde la entrada.</summary>
-public sealed record RunSegment(RunSegmentKind Kind, string Label, double StartSecond, double Seconds);
+/// <summary>
+/// Un tramo de la línea de tiempo de la run, en segundos desde la entrada. <paramref name="Label"/> es "Trash" o el nombre
+/// del boss como en su tarjeta; <paramref name="FightId"/> es la pelea guardada de ese tramo.
+/// </summary>
+public sealed record RunSegment(RunSegmentKind Kind, string Label, double StartSecond, double Seconds, Guid FightId = default);
 
 /// <summary>Un jugador en un boss: DPS del intento que cuenta (el kill, o el último) y muertes sumando todos los intentos.</summary>
 public sealed record BossPlayerLine(string Name, int? ClassId, bool IsLocalPlayer, double Dps, int Deaths);
 
-/// <summary>Un boss de la run con todos sus intentos.</summary>
+/// <summary>
+/// Un intento contra un boss que no terminó en kill: cuánto duró y la fase más baja que se vio
+/// (<paramref name="BelowPercent"/>: la vida bajó del 75, 50 o 25 %; <c>null</c> si no bajó del 75 % o no se midió).
+/// </summary>
+public sealed record BossWipe(Guid FightId, TimeSpan Duration, int? BelowPercent);
+
+/// <summary>
+/// Un boss de la run con todos sus intentos. <paramref name="DecidingId"/> es el intento que cuenta (el kill, o el último),
+/// el que dan el DPS y la duración. <paramref name="WipeList"/> son los intentos sin kill: solo esos son wipes.
+/// </summary>
 public sealed record BossSummary(
     string Name,
     int Attempts,
@@ -69,9 +87,11 @@ public sealed record BossSummary(
     TimeSpan Duration,
     double PartyDps,
     int Deaths,
-    IReadOnlyList<BossPlayerLine> Players)
+    IReadOnlyList<BossPlayerLine> Players,
+    Guid DecidingId,
+    IReadOnlyList<BossWipe> WipeList)
 {
-    public int Wipes => Killed ? Attempts - 1 : Attempts;
+    public int Wipes => WipeList.Count;
 }
 
 /// <summary>Un jugador en toda la run: DPS sobre el tiempo de combate y muertes en todas las peleas.</summary>
@@ -94,8 +114,10 @@ public sealed record DungeonSummary(
     public int Deaths => Players.Sum(p => p.Deaths);
 
     /// <summary>
-    /// Arma el resumen con las peleas de una misma entrada. Los intentos se agrupan por boss (plantilla de NPC, o nombre)
-    /// en el orden en que aparecieron.
+    /// Arma el resumen con las peleas de una misma entrada. Los intentos se agrupan por boss (plantilla de NPC o, sin
+    /// plantilla, nombre) en el orden en que aparecieron; un kill cierra el boss y otra pelea contra la misma plantilla
+    /// después es otro boss. Una pelea sin plantilla ni nombre (guardada antes de registrar la plantilla) no se junta con
+    /// ninguna: es su propio boss si fue kill, y trash si no (no hay cómo saber que fue un wipe).
     /// </summary>
     public static DungeonSummary From(IEnumerable<EncounterSnapshot> fights, DateTimeOffset? entered = null)
     {
@@ -109,16 +131,34 @@ public sealed record DungeonSummary(
         var start = entered is { } e && e <= ordered[0].Start ? e : ordered[0].Start;
         var end = ordered.Max(f => f.End);
 
-        var bosses = ordered.Where(BossRules.IsBossAttempt)
-            .GroupBy(f => f.TargetNpcId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? f.TargetName!, StringComparer.Ordinal)
-            .Select(Boss)
-            .ToList();
+        var groups = new List<List<EncounterSnapshot>>();
+        var open = new Dictionary<string, List<EncounterSnapshot>>(StringComparer.Ordinal);
+        foreach (var fight in ordered.Where(BossRules.IsBossAttempt))
+        {
+            var key = GroupKey(fight);
+            if (!open.TryGetValue(key, out var attempts))
+            {
+                attempts = [];
+                open[key] = attempts;
+                groups.Add(attempts);
+            }
+
+            attempts.Add(fight);
+            if (fight.TargetKilled)
+            {
+                open.Remove(key);
+            }
+        }
+
+        var names = BossNames(groups);
+        var bosses = groups.Select((g, i) => Boss(names[i], g)).ToList();
+        var bossOf = groups.SelectMany((g, i) => g.Select(f => (f.Id, Name: names[i]))).ToDictionary(x => x.Id, x => x.Name);
 
         var timeline = ordered.Select(f =>
         {
-            var kind = BossRules.Classify(BossRules.IsBossAttempt(f), f.TargetKilled);
-            var label = kind == RunSegmentKind.Trash ? "Trash" : f.TargetName ?? "Boss";
-            return new RunSegment(kind, label, (f.Start - start).TotalSeconds, f.Duration.TotalSeconds);
+            var kind = BossRules.Classify(bossOf.ContainsKey(f.Id), f.TargetKilled);
+            var label = bossOf.GetValueOrDefault(f.Id) ?? "Trash";
+            return new RunSegment(kind, label, (f.Start - start).TotalSeconds, f.Duration.TotalSeconds, f.Id);
         }).ToList();
 
         var players = ordered.SelectMany(f => f.Actors.Select(a => (Fight: f, Actor: a)))
@@ -139,10 +179,36 @@ public sealed record DungeonSummary(
         return new DungeonSummary(start, end, bosses, players, timeline);
     }
 
-    private static BossSummary Boss(IEnumerable<EncounterSnapshot> attempts)
+    /// <summary>La plantilla primero (dos plantillas con el mismo nombre son dos bosses); sin plantilla ni nombre, la pelea sola.</summary>
+    private static string GroupKey(EncounterSnapshot fight) =>
+        fight.TargetNpcId is { } npc ? "npc:" + npc.ToString(CultureInfo.InvariantCulture)
+        : FightTarget.Name(fight.TargetName) is { } name ? "nombre:" + name
+        : "pelea:" + fight.Id.ToString("N");
+
+    /// <summary>
+    /// El nombre de cada boss como en el overlay ("Kromede", "NPC 2400123"); sin nombre ni plantilla, "Boss N" por su
+    /// lugar en la run. Si el mismo nombre vuelve (otra plantilla, u otra vez después del kill), "Kromede (2)".
+    /// </summary>
+    private static List<string> BossNames(List<List<EncounterSnapshot>> groups)
     {
-        var list = attempts.ToList();
-        var deciding = list.LastOrDefault(f => f.TargetKilled) ?? list[^1];
+        var seen = new Dictionary<string, int>(StringComparer.Ordinal);
+        var names = new List<string>(groups.Count);
+        for (var i = 0; i < groups.Count; i++)
+        {
+            var name = FightTarget.Key(Deciding(groups[i])) ?? $"Boss {(i + 1).ToString(CultureInfo.InvariantCulture)}";
+            var count = seen.GetValueOrDefault(name) + 1;
+            seen[name] = count;
+            names.Add(count == 1 ? name : $"{name} ({count.ToString(CultureInfo.InvariantCulture)})");
+        }
+
+        return names;
+    }
+
+    private static EncounterSnapshot Deciding(List<EncounterSnapshot> attempts) => attempts.LastOrDefault(f => f.TargetKilled) ?? attempts[^1];
+
+    private static BossSummary Boss(string name, List<EncounterSnapshot> list)
+    {
+        var deciding = Deciding(list);
         var duration = deciding.MainTargetDuration ?? deciding.Duration;
         var deaths = list.SelectMany(f => f.Actors).GroupBy(a => a.Name, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.Sum(a => a.Deaths), StringComparer.Ordinal);
@@ -154,13 +220,18 @@ public sealed record DungeonSummary(
             .OrderByDescending(p => p.Dps)
             .ToList();
         var partyDamage = deciding.Actors.Sum(a => a.MainTargetDamage > 0 ? a.MainTargetDamage : a.Damage);
+        var wipes = list.Where(f => !f.TargetKilled)
+            .Select(f => new BossWipe(f.Id, f.MainTargetDuration ?? f.Duration, f.Phases is { Count: > 0 } phases ? phases.Min(p => p.Percent) : null))
+            .ToList();
         return new BossSummary(
-            deciding.TargetName ?? "Boss",
+            name,
             list.Count,
             deciding.TargetKilled,
             duration,
             partyDamage / Math.Max(duration.TotalSeconds, 1),
             deaths.Values.Sum(),
-            players);
+            players,
+            deciding.Id,
+            wipes);
     }
 }
