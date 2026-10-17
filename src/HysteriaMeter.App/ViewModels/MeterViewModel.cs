@@ -1578,7 +1578,9 @@ public sealed partial class MeterViewModel : ObservableObject
 
         Alert(AlertSound.Info);
         // Si se abre la tarjeta de fin de pelea, ella ya dice "vs tu intento anterior" y el récord: el aviso no lo repite.
-        if (FinishedNotice(message, cardOpens: FightCardViewModel.CanShow(snapshot) && FightCardRequested is not null) is { } shown)
+        // La tarjeta sale solo en la ventana que muestra los avisos (ShowsToasts, la principal), como en ShowFightCard.
+        var cardOpens = FightCardViewModel.CanShow(snapshot) && ShowsToasts && FightCardRequested is not null;
+        if (FinishedNotice(message, cardOpens) is { } shown)
         {
             RecordMessage = shown;
             HasRecordMessage = true;
