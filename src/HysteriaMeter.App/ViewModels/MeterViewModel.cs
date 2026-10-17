@@ -312,7 +312,7 @@ public sealed partial class MeterViewModel : ObservableObject
     public int RowHeight
     {
         get => Preferences.RowHeight;
-        set => Update(Preferences with { RowHeight = value }, nameof(RowHeight), nameof(RowNameSize), nameof(RowValueSize));
+        set => Update(Preferences with { RowHeight = value }, nameof(RowHeight), nameof(RowNameSize), nameof(RowValueSize), nameof(RowCornerRadius), nameof(RowGap));
     }
 
     /// <summary>Letra del nombre acorde al alto de la fila (la del DPS es <see cref="RowValueSize"/>).</summary>

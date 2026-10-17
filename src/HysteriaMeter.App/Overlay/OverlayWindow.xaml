@@ -223,6 +223,10 @@
                             <DataTrigger Binding="{Binding IsPauseBannerVisible}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
                         </Style.Triggers></Style></Border.Style>
                         <Grid x:Name="LiveHeaderGrid" Background="Transparent" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="{Binding CanMoveWindow, Converter={StaticResource MoveCursor}}">
+                            <!-- En modo compacto la franja no muestra las pestañas: el tooltip dice cómo salir y dónde cambiarlas. -->
+                            <Grid.Style><Style TargetType="Grid"><Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCompact}" Value="True"><Setter Property="ToolTip" Value="Modo compacto: doble clic acá o ⋯ › Modo compacto para salir. La pestaña se cambia en ⋯ › Pestaña."/></DataTrigger>
+                            </Style.Triggers></Style></Grid.Style>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
@@ -410,16 +414,25 @@
                             <ItemsControl ItemsSource="{Binding Actors}" Margin="6,6,6,8">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:ActorRowViewModel">
-                                        <Border x:Name="Row" Height="{Binding DataContext.RowHeight, RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,0,0,3" Background="{DynamicResource Row}" BorderBrush="Transparent" BorderThickness="1" CornerRadius="5" Cursor="Hand" MouseLeftButtonUp="OnRowClick">
+                                        <Border x:Name="Row" Height="{Binding DataContext.RowHeight, RelativeSource={RelativeSource AncestorType=Window}}" Margin="{Binding DataContext.RowGap, RelativeSource={RelativeSource AncestorType=Window}}" Background="{DynamicResource Row}" BorderBrush="Transparent" BorderThickness="1" CornerRadius="{Binding DataContext.RowCornerRadius, RelativeSource={RelativeSource AncestorType=Window}}" Cursor="Hand" MouseLeftButtonUp="OnRowClick">
                                             <Border.ToolTip><ToolTip Style="{StaticResource ToolTipDark}" FontFamily="{DynamicResource BodyFont}" MaxWidth="330">
                                                 <StackPanel Margin="4,2">
-                                                    <DockPanel><TextBlock DockPanel.Dock="Right" Text="{Binding ClassName}" Foreground="{Binding BadgeBrush}" FontSize="12" Margin="16,0,0,0"/><TextBlock Text="{Binding Name}" Style="{StaticResource NumberStrong}" FontSize="17"/></DockPanel>
-                                                    <DockPanel Margin="0,8,0,0"><TextBlock Text="{Binding Total}" DockPanel.Dock="Right"/><TextBlock Text="{Binding ValueLabel}" Foreground="{DynamicResource TextMuted}"/></DockPanel>
-                                                    <DockPanel Margin="0,5,0,0" Visibility="{Binding HasRecentTip, Converter={StaticResource Visible}}"><TextBlock Text="{Binding RecentTip}" DockPanel.Dock="Right"/><TextBlock Text="DPS últimos 10 s" Foreground="{DynamicResource TextMuted}"/></DockPanel>
-                                                    <DockPanel Margin="0,5,0,0"><TextBlock Text="{Binding Crit}" DockPanel.Dock="Right"/><TextBlock Text="Críticos" Foreground="{DynamicResource TextMuted}"/></DockPanel>
-                                                    <TextBlock Margin="0,5,0,0" TextWrapping="Wrap" Visibility="{Binding HasTopSkill, Converter={StaticResource Visible}}"><Run Text="Skill top · " Foreground="{DynamicResource TextMuted}"/><Run Text="{Binding TopSkill, Mode=OneWay}"/></TextBlock>
-                                                    <TextBlock Text="{Binding TipGear, StringFormat='iLvl · Power: {0}'}" Foreground="{DynamicResource TextMuted}" Margin="0,5,0,0" Visibility="{Binding HasTipGear, Converter={StaticResource Visible}}"/>
-                                                    <TextBlock Text="{Binding Breakdown}" Foreground="{DynamicResource TextDim}" FontSize="10" Margin="0,7,0,0" TextWrapping="Wrap"/>
+                                                    <TextBlock Style="{StaticResource NumberStrong}" FontSize="17" TextWrapping="Wrap"><Run Text="{Binding Name, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding ClassName, Mode=OneWay}" FontFamily="{DynamicResource BodyFont}" FontSize="12" FontWeight="Medium" Foreground="{Binding BadgeBrush}"/></TextBlock>
+                                                    <Grid TextElement.FontSize="12">
+                                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                                        <TextBlock Text="{Binding ValueLabel}" Foreground="{DynamicResource TextDim}" Margin="0,6,18,0"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Total}" TextAlignment="Right" Margin="0,6,0,0"/>
+                                                        <TextBlock Grid.Row="1" Text="DPS últimos 10 s" Foreground="{DynamicResource TextDim}" Margin="0,6,18,0" Visibility="{Binding HasRecentTip, Converter={StaticResource Visible}}"/>
+                                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding RecentTip}" TextAlignment="Right" Margin="0,6,0,0" Visibility="{Binding HasRecentTip, Converter={StaticResource Visible}}"/>
+                                                        <TextBlock Grid.Row="2" Text="Críticos" Foreground="{DynamicResource TextDim}" Margin="0,6,18,0" Visibility="{Binding HasCrit, Converter={StaticResource Visible}}"/>
+                                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Crit}" TextAlignment="Right" Margin="0,6,0,0" Visibility="{Binding HasCrit, Converter={StaticResource Visible}}"/>
+                                                        <TextBlock Grid.Row="3" Text="Skill top" Foreground="{DynamicResource TextDim}" Margin="0,6,18,0" Visibility="{Binding HasTopSkill, Converter={StaticResource Visible}}"/>
+                                                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding TopSkill}" TextAlignment="Right" TextWrapping="Wrap" Margin="0,6,0,0" Visibility="{Binding HasTopSkill, Converter={StaticResource Visible}}"/>
+                                                        <TextBlock Grid.Row="4" Text="iLvl · Power" Foreground="{DynamicResource TextDim}" Margin="0,6,18,0" Visibility="{Binding HasTipGear, Converter={StaticResource Visible}}"/>
+                                                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding TipGear}" TextAlignment="Right" Margin="0,6,0,0" Visibility="{Binding HasTipGear, Converter={StaticResource Visible}}"/>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding Breakdown}" Foreground="{DynamicResource TextDim}" FontSize="10" Margin="0,8,0,0" TextWrapping="Wrap"/>
                                                 </StackPanel>
                                             </ToolTip></Border.ToolTip>
                                             <Grid x:Name="RowContent">

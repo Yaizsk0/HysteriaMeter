@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Windows;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -104,6 +105,8 @@ public sealed partial class MeterViewModel
         {
             OnPropertyChanged(nameof(ShowColumnHeaders));
             OnPropertyChanged(nameof(RowValueSize));
+            OnPropertyChanged(nameof(RowCornerRadius));
+            OnPropertyChanged(nameof(RowGap));
             OnPropertyChanged(nameof(PauseHint));
         };
         PropertyChanged += OnLivePropertyChanged;
@@ -588,7 +591,18 @@ public sealed partial class MeterViewModel
     /// <summary>Letra del nombre: 13 en filas de hasta 24 px, 18 desde 36 y 16 en el medio (la del mock).</summary>
     public static double RowNameSizeFor(int rowHeight) => rowHeight switch { <= 24 => 13, >= 36 => 18, _ => 16 };
 
-    public static double RowValueSizeFor(int rowHeight) => rowHeight switch { <= 24 => 14, >= 36 => 19, _ => 17 };
+    /// <summary>Letra del DPS: 13 en la densidad compacta, 18 en la cómoda y 17 en el medio (mocks Main y Estados).</summary>
+    public static double RowValueSizeFor(int rowHeight) => rowHeight switch { <= 24 => 13, >= 36 => 18, _ => 17 };
+
+    /// <summary>Radio de la fila: 4 en la densidad compacta (hasta 24 px) y 5 en las demás, como el mock Estados.</summary>
+    public CornerRadius RowCornerRadius => RowCornerRadiusFor(Preferences.RowHeight);
+
+    /// <summary>Separación debajo de cada fila: 2 px en la densidad compacta y 3 en las demás.</summary>
+    public Thickness RowGap => RowGapFor(Preferences.RowHeight);
+
+    public static CornerRadius RowCornerRadiusFor(int rowHeight) => new(rowHeight <= 24 ? 4 : 5);
+
+    public static Thickness RowGapFor(int rowHeight) => new(0, 0, 0, rowHeight <= 24 ? 2 : 3);
 
     /// <summary>El encabezado de columnas sobra con solo DPS y %: aparece cuando hay alguna columna opcional.</summary>
     public bool ShowColumnHeaders => IsExpanded && (ShowTotalColumn || ShowRecentColumn || ShowCritColumn || ShowMaxHitColumn);

@@ -107,7 +107,11 @@ public sealed partial class ActorRowViewModel : ObservableObject
 
     /// <summary>Porcentaje de golpes críticos (columna "CRIT").</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCrit))]
     public partial string Crit { get; set; } = "–";
+
+    /// <summary>El tooltip omite "Críticos" cuando no hay dato ("–", como en CURA y RECIB.).</summary>
+    public bool HasCrit => Crit.Length > 0 && Crit != "–";
 
     /// <summary>Golpe más alto de la pelea (columna "MÁX").</summary>
     [ObservableProperty]

@@ -37,6 +37,52 @@ public sealed class OverlayVisualTests
         });
     }
 
+    [Theory]
+    [InlineData(22, 13, 4, 2)]
+    [InlineData(30, 17, 5, 3)]
+    [InlineData(36, 18, 5, 3)]
+    public void Each_density_uses_the_mock_radius_gap_and_dps_size(int rowHeight, double dps, double radius, double gap)
+    {
+        Assert.Equal(dps, MeterViewModel.RowValueSizeFor(rowHeight));
+        Assert.Equal(new System.Windows.CornerRadius(radius), MeterViewModel.RowCornerRadiusFor(rowHeight));
+        Assert.Equal(new System.Windows.Thickness(0, 0, 0, gap), MeterViewModel.RowGapFor(rowHeight));
+    }
+
+    [Fact]
+    public void Changing_the_density_notifies_radius_and_gap()
+    {
+        RunOnSta(() =>
+        {
+            var meter = Meter(new MeterPreferences { RowHeight = 30 });
+            var changed = new List<string?>();
+            meter.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+            meter.RowHeight = 22;
+
+            Assert.Contains(nameof(MeterViewModel.RowCornerRadius), changed);
+            Assert.Contains(nameof(MeterViewModel.RowGap), changed);
+            Assert.Equal(new System.Windows.CornerRadius(4), meter.RowCornerRadius);
+        });
+    }
+
+    [Fact]
+    public void Tooltip_hides_crits_when_there_is_no_value()
+    {
+        var row = new ActorRowViewModel();
+        Assert.False(row.HasCrit);
+
+        var changed = new List<string?>();
+        row.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        // El meter la llena solo en DPS y cuando hubo golpes.
+        row.Crit = "12 %";
+        Assert.True(row.HasCrit);
+        Assert.Contains(nameof(ActorRowViewModel.HasCrit), changed);
+
+        row.Crit = "\u2013";
+        Assert.False(row.HasCrit);
+    }
+
     private static ActorSnapshot Actor(int deaths) =>
         new(7, "Tharos", null, false, 3000, 300, 1, 10, 2, 900, 0, [], Deaths: deaths);
 
