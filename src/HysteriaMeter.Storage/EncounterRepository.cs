@@ -164,9 +164,13 @@ public sealed class EncounterRepository(string databasePath)
 
         // Intento: cuántas veces se peleó contra ese objetivo hasta esta pelea. Récord: el mejor DPS propio contra ese objetivo.
         // Los dos son por personaje: con varios personajes, cada uno compite contra sí mismo ("IS" compara también null).
+        // Las sumas de toda la party (daño, daño al objetivo principal, muertes) alcanzan para clasificar la pelea con
+        // BossRules sin cargar cada una entera.
         var rows = await connection.QueryAsync<EncounterRow>(
             """
-            WITH loc AS (SELECT encounter_id, MAX(dps) AS dps, MAX(name) AS name FROM encounter_actors WHERE is_local = 1 GROUP BY encounter_id)
+            WITH loc AS (SELECT encounter_id, MAX(dps) AS dps, MAX(name) AS name FROM encounter_actors WHERE is_local = 1 GROUP BY encounter_id),
+                 party AS (SELECT encounter_id, SUM(damage) AS damage, SUM(main_target_damage) AS main_damage, SUM(deaths) AS deaths
+                           FROM encounter_actors GROUP BY encounter_id)
             SELECT e.id AS Id, e.started_at AS StartedAt, e.ended_at AS EndedAt, e.target_name AS TargetName,
                    e.target_killed AS TargetKilled, e.total_damage AS TotalDamage, e.note AS Note,
                    l.dps AS LocalDps,
@@ -175,8 +179,11 @@ public sealed class EncounterRepository(string databasePath)
                    (SELECT COUNT(*) FROM encounters o LEFT JOIN loc l2 ON l2.encounter_id = o.id
                      WHERE o.target_name = e.target_name AND o.started_at <= e.started_at AND l2.name IS l.name) AS Attempt,
                    e.zone_entered_at AS ZoneEnteredAt,
-                   l.name AS LocalName
-            FROM encounters e LEFT JOIN loc l ON l.encounter_id = e.id ORDER BY e.started_at DESC LIMIT @limit
+                   l.name AS LocalName,
+                   e.main_target_seconds AS MainTargetSeconds,
+                   p.damage AS ActorsDamage, p.main_damage AS MainTargetDamage, p.deaths AS Deaths
+            FROM encounters e LEFT JOIN loc l ON l.encounter_id = e.id LEFT JOIN party p ON p.encounter_id = e.id
+            ORDER BY e.started_at DESC LIMIT @limit
             """,
             new { limit }).ConfigureAwait(false);
         return [.. rows.Select(r => new EncounterSummary(
@@ -191,7 +198,11 @@ public sealed class EncounterRepository(string databasePath)
             r.TargetName is null ? 0 : (int)r.Attempt,
             r.LocalDps is { } dps && r.BestLocalDps is { } best && dps >= best,
             r.ZoneEnteredAt,
-            r.LocalName))];
+            r.LocalName,
+            r.MainTargetSeconds,
+            r.ActorsDamage ?? 0,
+            r.MainTargetDamage ?? 0,
+            r.Deaths is { } deaths ? (int)deaths : null))];
     }
 
     /// <summary>
@@ -365,6 +376,10 @@ public sealed class EncounterRepository(string databasePath)
 /// <param name="LocalDps">DPS del jugador local en esa pelea, si estuvo.</param>
 /// <param name="Attempt">Número de intento contra ese objetivo (1 = la primera vez); 0 sin objetivo con nombre.</param>
 /// <param name="IsRecord">Es el mejor DPS propio contra ese objetivo.</param>
+/// <param name="MainTargetSeconds">Cuánto aguantó el objetivo principal, si se midió.</param>
+/// <param name="ActorsDamage">Daño de toda la party, a cualquier objetivo.</param>
+/// <param name="MainTargetDamage">Daño de toda la party al objetivo principal.</param>
+/// <param name="Deaths">Muertes de toda la party en la pelea; <c>null</c> si no tiene jugadores guardados.</param>
 public sealed record EncounterSummary(
     string Id,
     string StartedAt,
@@ -377,7 +392,11 @@ public sealed record EncounterSummary(
     int Attempt = 0,
     bool IsRecord = false,
     string? ZoneEnteredAt = null,
-    string? LocalName = null);
+    string? LocalName = null,
+    double? MainTargetSeconds = null,
+    long ActorsDamage = 0,
+    long MainTargetDamage = 0,
+    int? Deaths = null);
 
 /// <summary>SQLite no tiene booleanos: la fila cruda trae <c>target_killed</c> como entero.</summary>
 /// <summary>
@@ -398,6 +417,10 @@ internal sealed class EncounterRow
     public long Attempt { get; set; }
     public string? ZoneEnteredAt { get; set; }
     public string? LocalName { get; set; }
+    public double? MainTargetSeconds { get; set; }
+    public long? ActorsDamage { get; set; }
+    public long? MainTargetDamage { get; set; }
+    public long? Deaths { get; set; }
 }
 
 internal sealed record EncounterDetailRow(

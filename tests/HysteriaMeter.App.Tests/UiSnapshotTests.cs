@@ -59,8 +59,9 @@ public sealed partial class UiSnapshotTests
     /// Los estados, en orden. Estados del mock que hoy no se pueden armar (no hay datos o la UI no existe todavía):
     /// "Intento N" y "Enrage en" (la demo no trae TargetEnrageSeconds y el TTK solo sale de Refresh en vivo),
     /// overheal, pestañas Skills/Muertes/Log del detalle (ActorDetailViewModel no tiene propiedad de pestaña),
-    /// tarjeta de fin de pelea, avisos dentro del overlay, ventanas propias de Historial, Configuración y Bienvenida,
-    /// y la pantalla "sin Npcap". Cuando existan, se agregan acá.
+    /// tarjeta de fin de pelea, avisos dentro del overlay, ventanas propias de Configuración y Bienvenida,
+    /// y la pantalla "sin Npcap". Cuando existan, se agregan acá. La ventana del historial trae sus estados en
+    /// UiSnapshotTests.Historial.cs (06 y 07).
     /// </summary>
     private static readonly State[] States =
     [
@@ -79,15 +80,6 @@ public sealed partial class UiSnapshotTests
             var vm = Live(h.Demo());
             vm.IsPaused = true;
             return Overlay(vm, width: 480);
-        }),
-
-        // Historial por el camino real: ToggleHistory lee la base temporal; OpenEncounter fija la pelea guardada.
-        new("06-historial-abierto", h => Overlay(h.HistoryOpen())),
-        new("07-historial-pelea-abierta", h =>
-        {
-            var vm = h.HistoryOpen();
-            Pump(vm.OpenEncounterCommand.ExecuteAsync(vm.History[0]));
-            return Overlay(vm);
         }),
 
         // Configuración: con el panel abierto, UpdateStatus también llena Diagnostics.
@@ -266,7 +258,7 @@ public sealed partial class UiSnapshotTests
     }
 
     /// <summary>Lo compartido entre estados: la base temporal del historial. Todo lo demás lo arma cada estado.</summary>
-    private sealed class Harness
+    private sealed partial class Harness
     {
         private readonly EncounterRepository _history;
 
@@ -316,14 +308,6 @@ public sealed partial class UiSnapshotTests
         {
             var vm = new MeterViewModel(Session(preferences), tab, compact: compact, runView: runView);
             vm.ShowDemoCommand.Execute(null);
-            return vm;
-        }
-
-        public MeterViewModel HistoryOpen()
-        {
-            var vm = new MeterViewModel(Session());
-            Pump(vm.ToggleHistoryCommand.ExecuteAsync(null));
-            Assert.NotEmpty(vm.History);
             return vm;
         }
 

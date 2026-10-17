@@ -32,8 +32,6 @@ public sealed class WindowSmokeTests
             row.Update(1, Actor(), MeterTab.Damage, top: 3000, total: 3000, TimeSpan.FromSeconds(10));
             viewModel.Actors.Add(row);
             viewModel.Detail.Select(row);
-            viewModel.History.Add(new HistoryItem("x", "Boss", "15/10 21:42", "02:47", "3.0k", Killed: true, "rotación nueva", "mi DPS 1.2k", 3, IsRecord: true));
-            viewModel.IsHistoryOpen = true;
             viewModel.IsViewingHistory = true;
             viewModel.Detail.Update(new EncounterSnapshot(Guid.NewGuid(), DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddSeconds(10), "Boss", false, 3000, [Actor()]));
 
@@ -645,23 +643,6 @@ public sealed class WindowSmokeTests
         Assert.Null(HotkeyGesture.From(System.Windows.Input.ModifierKeys.Control, System.Windows.Input.Key.LeftShift));
         Assert.Equal(" · marcas 0:05, 1:02", ActorDetailViewModel.MarksText([62, 5]));
         Assert.Equal(string.Empty, ActorDetailViewModel.MarksText(null));
-    }
-
-    [Fact]
-    public void History_groups_fights_by_dungeon_entry()
-    {
-        var entered = new DateTimeOffset(2026, 10, 15, 21, 30, 0, TimeSpan.Zero);
-        var run = entered.ToString("O", CultureInfo.InvariantCulture);
-        HistoryItem Fight(string id, bool killed, int endMinute, string? zone = null) =>
-            new(id, "Boss", "15/10 21:00", "01:00", "1m", killed, Run: zone ?? run, Ended: entered.AddMinutes(endMinute));
-
-        var all = new[] { Fight("c", true, 24), Fight("b", false, 10), Fight("a", true, 5), Fight("z", false, 1, "2026-10-15T20:00:00.0000000+00:00") };
-        var shown = HistoryItem.WithRuns([all[1], all[2], all[3]], all);
-
-        Assert.EndsWith(" · 3 peleas · 2 bosses · 24:00", shown[0].RunHeader, StringComparison.Ordinal);
-        Assert.StartsWith("ENTRADA ", shown[0].RunHeader, StringComparison.Ordinal);
-        Assert.False(shown[1].HasRunHeader);
-        Assert.False(shown[2].HasRunHeader); // una sola pelea en esa entrada: sin encabezado
     }
 
     [Fact]

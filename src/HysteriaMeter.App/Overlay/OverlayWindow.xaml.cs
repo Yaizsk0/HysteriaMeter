@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls.Primitives;
@@ -6,6 +7,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using HysteriaMeter.App.Detail;
+using HysteriaMeter.App.History;
 using HysteriaMeter.App.Interop;
 using HysteriaMeter.App.ViewModels;
 
@@ -26,6 +28,7 @@ public partial class OverlayWindow : Window
     private readonly MeterViewModel _viewModel;
     private readonly OverlayWindows? _windows;
     private DetailWindow? _detail;
+    private HistoryWindow? _historyWindow;
 
     /// <param name="windows">Gestor de ventanas; <c>null</c> en pruebas, sin atajos globales.</param>
     public OverlayWindow(MeterViewModel viewModel, OverlayLayout? layout = null, OverlayWindows? windows = null)
@@ -39,6 +42,7 @@ public partial class OverlayWindow : Window
         _viewModel.RunSummaryRequested += ShowRunSummary;
         _viewModel.CopyImageRequested += CopyImage;
         _viewModel.SaveImageRequested += SaveImage;
+        _viewModel.PropertyChanged += OnViewModelChanged;
 
         // Una ventana cerrada no puede ser dueña de otra: se suelta del view model al cerrarse.
         Closed += (_, _) =>
@@ -48,6 +52,7 @@ public partial class OverlayWindow : Window
             _viewModel.RunSummaryRequested -= ShowRunSummary;
             _viewModel.CopyImageRequested -= CopyImage;
             _viewModel.SaveImageRequested -= SaveImage;
+            _viewModel.PropertyChanged -= OnViewModelChanged;
         };
     }
 
@@ -141,6 +146,42 @@ public partial class OverlayWindow : Window
 
     private void ShowRunSummary(DungeonSummaryViewModel summary) =>
         new Dungeon.DungeonWindow(summary) { Owner = this }.Show();
+
+    /// <summary>El historial es su propia ventana: se abre y se cierra siguiendo IsHistoryOpen.</summary>
+    private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(MeterViewModel.IsHistoryOpen))
+        {
+            return;
+        }
+
+        if (_viewModel.IsHistoryOpen)
+        {
+            ShowHistory();
+        }
+        else
+        {
+            _historyWindow?.Close();
+        }
+    }
+
+    private void ShowHistory()
+    {
+        if (_historyWindow is null)
+        {
+            _historyWindow = new HistoryWindow(_viewModel) { Owner = this };
+
+            // Cerrarla con la X o con Esc también apaga IsHistoryOpen, así el botón del overlay la vuelve a abrir.
+            _historyWindow.Closed += (_, _) =>
+            {
+                _historyWindow = null;
+                _viewModel.IsHistoryOpen = false;
+            };
+            _historyWindow.Show();
+        }
+
+        _historyWindow.Activate();
+    }
 
     private void RestoreLayout(OverlayLayout? layout)
     {
