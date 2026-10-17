@@ -8,7 +8,7 @@ Diseño: [decisiones.md](decisiones.md), recuperado de la sesión de Claude del 
 - [X] Historial: integrar ventana, corregir notas/progreso/visibilidad y verificar con SQLite y capturas.
 - [ ] Detalle: integrar skills, muertes, log y comparación; revisar regresiones y capturas.
 - [X] Configuración: terminar navegación, selector de placa y preferencias; verificar opciones existentes.
-- [ ] Inicio: terminar bienvenida, tarjeta de kill y bandeja; verificar capturas y datos reales.
+- [X] Inicio: terminar bienvenida, tarjeta de kill y bandeja; verificar capturas y datos reales.
 - [ ] Overlay: completar XAML y conexiones del modelo, estados, avisos y pastilla.
 - [ ] Integración: un PR por mejora, README y novedades, compilación y tests; integrar solo con CI verde.
 

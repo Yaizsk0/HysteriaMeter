@@ -113,6 +113,57 @@ public sealed class InicioResumeTests
         Assert.True(vm.IsMinimized);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Card_image_keeps_the_independent_auxiliary_windows_open(bool renderFails)
+    {
+        var vm = new MeterViewModel(Session()) { IsSettingsOpen = true, IsHistoryOpen = true };
+        string Render()
+        {
+            Assert.True(vm.IsSettingsOpen && vm.IsHistoryOpen);
+            Assert.True(vm.IsFullView);
+            Assert.False(vm.IsViewingHistory);
+            if (renderFails)
+            {
+                throw new IOException("Fallo de render para verificar restauración");
+            }
+
+            return "Imagen guardada";
+        }
+
+        if (renderFails)
+        {
+            Assert.Throws<IOException>(() => vm.SaveFightImage(Fight(), Render));
+        }
+        else
+        {
+            Assert.Equal("Imagen guardada", vm.SaveFightImage(Fight(), Render));
+        }
+
+        Assert.True(vm.IsSettingsOpen && vm.IsHistoryOpen);
+        Assert.True(vm.IsViewingHistory);
+    }
+
+    [Fact]
+    public void Config_and_welcome_count_the_same_names_as_the_meter()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), $"hysteria-game-data-integration-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(folder);
+        try
+        {
+            var file = Path.Combine(folder, "skills.json");
+            File.WriteAllText(file, """{"skills":{"15280000":"Primero","15280000":"Último","15290000":42}}""");
+            Assert.Equal(1, HysteriaMeter.App.Config.GameDataSummary.Read(folder).Skills);
+            Assert.Equal(1, GameDataSummary.Read(folder).Skills);
+            Assert.Equal("Último", SkillNames.Load(file).Of(15280000));
+        }
+        finally
+        {
+            File.Delete(Path.Combine(folder, "skills.json"));
+            Directory.Delete(folder);
+        }
+    }
     [Fact]
     public void Top_skill_groups_unnamed_variants_by_base_id()
     {

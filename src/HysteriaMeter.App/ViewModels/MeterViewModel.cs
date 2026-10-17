@@ -1826,8 +1826,6 @@ public sealed partial class MeterViewModel : ObservableObject
         CanEditNote = false;
         IsViewingHistory = true;
         HistoryLabel = $"FIN DE PELEA · {TitleOf(fight)}";
-        IsSettingsOpen = false;
-        IsHistoryOpen = false;
         Refresh();
     }
 
@@ -1852,22 +1850,22 @@ public sealed partial class MeterViewModel : ObservableObject
 
     /// <summary>
     /// "Guardar captura" de la tarjeta: la misma imagen que la automática al derrotar un boss (esa pelea, con el overlay
-    /// entero y sin paneles). Si el overlay muestra otra cosa, primero fija la pelea (<see cref="ShowFight"/>) y ahí
-    /// queda. La pastilla, los paneles y la franja de pelea fijada se esconden solo mientras <paramref name="render"/>
+    /// entero). Si el overlay muestra otra cosa, primero fija la pelea (<see cref="ShowFight"/>) y ahí
+    /// queda. La pastilla y la franja de pelea fijada se esconden solo mientras <paramref name="render"/>
     /// dibuja; devuelve lo que devuelve <paramref name="render"/> (el mensaje de la tarjeta).
     /// </summary>
     public string SaveFightImage(EncounterSnapshot fight, Func<string> render)
     {
         ShowFight(fight);
-        var view = (IsMinimized, IsSettingsOpen, IsHistoryOpen, IsViewingHistory);
-        (IsMinimized, IsSettingsOpen, IsHistoryOpen, IsViewingHistory) = (false, false, false, false);
+        var view = (IsMinimized, IsViewingHistory);
+        (IsMinimized, IsViewingHistory) = (false, false);
         try
         {
             return render();
         }
         finally
         {
-            (IsMinimized, IsSettingsOpen, IsHistoryOpen, IsViewingHistory) = view;
+            (IsMinimized, IsViewingHistory) = view;
         }
     }
 

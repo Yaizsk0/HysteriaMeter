@@ -54,20 +54,14 @@ public partial class OverlayWindow : Window
             {
                 _viewModel.IsHistoryOpen = false;
                 _viewModel.IsSettingsOpen = false;
+                _fightCard?.Close();
             }
         };
         _viewModel.FightCardRequested += ShowFightCard;
         _viewModel.PropertyChanged += OnMinimizedChanged;
 
-        // La tarjeta de fin de pelea acompaña al overlay: se va si se oculta (WPF no oculta las ventanas con dueño) y
-        // se vuelve a pegar si se mueve. Esc la cierra primero, porque ella no toma el foco.
-        IsVisibleChanged += (_, _) =>
-        {
-            if (!IsVisible)
-            {
-                _fightCard?.Close();
-            }
-        };
+        // La tarjeta acompaña al overlay al moverse; el manejador común de visibilidad la cierra al ocultarlo.
+        // Esc la cierra primero, porque ella no toma el foco.
         LocationChanged += (_, _) => PlaceFightCard();
         PreviewKeyDown += OnPreviewKeyDown;
 

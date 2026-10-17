@@ -1,5 +1,5 @@
 using System.IO;
-using System.Text.Json;
+using HysteriaMeter.App.ViewModels;
 
 namespace HysteriaMeter.App.Config;
 
@@ -17,24 +17,16 @@ public sealed record GameDataSummary(string Folder, bool Exists, int Skills, int
         CountImages(Path.Combine(folder, "iconos")),
         CountImages(Path.Combine(folder, "clases")));
 
-    /// <summary>Entradas de <c>{"skills": {"id": "nombre"}}</c> con ID numérico y nombre, como las toma SkillNames.</summary>
+    /// <summary>Las mismas entradas que cargan SkillNames y la bienvenida, incluidos IDs repetidos.</summary>
     private static int CountSkills(string path)
     {
-        if (!File.Exists(path))
-        {
-            return 0;
-        }
-
         try
         {
-            using var document = JsonDocument.Parse(File.ReadAllText(path), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
-            return document.RootElement.ValueKind == JsonValueKind.Object && document.RootElement.TryGetProperty("skills", out var skills) && skills.ValueKind == JsonValueKind.Object
-                ? skills.EnumerateObject().Count(e => uint.TryParse(e.Name, out _) && e.Value.ValueKind == JsonValueKind.String && e.Value.GetString() is { Length: > 0 })
-                : 0;
+            return SkillNames.CountIn(path);
         }
-        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // Mal escrito o bloqueado: el meter tampoco lo usa, así que no cuenta.
+            // Un archivo bloqueado no impide abrir la configuración.
             return 0;
         }
     }

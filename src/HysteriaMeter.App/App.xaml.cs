@@ -142,7 +142,7 @@ public partial class App : Application
     private void ShowWelcome(MeterSession session)
     {
         var capture = _host!.Services.GetRequiredService<IOptions<CaptureSettings>>().Value;
-        var welcome = new WelcomeViewModel(session, CaptureSetup.From(capture), GameDataSummary.Read(AppPaths.In("Juego")));
+        var welcome = new WelcomeViewModel(session, CaptureSetup.From(capture), Welcome.GameDataSummary.Read(AppPaths.In("Juego")));
         new WelcomeWindow(welcome) { Owner = MainWindow }.Show();
     }
 
