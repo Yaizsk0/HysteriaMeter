@@ -14,7 +14,7 @@ namespace HysteriaMeter.App.Tests;
 /// Carga las ventanas con sus plantillas expandidas: un recurso que falta o un binding mal escrito en XAML
 /// compila igual y recién explota al abrir la app, así que esto lo atrapa en el CI.
 /// </summary>
-public sealed class WindowSmokeTests
+public sealed partial class WindowSmokeTests
 {
     [Fact]
     public void Overlay_and_detail_windows_load_with_rows()
@@ -24,6 +24,8 @@ public sealed class WindowSmokeTests
             Application.ResourceAssembly ??= typeof(App).Assembly;
             var app = Application.Current as App ?? new App();
             app.InitializeComponent();
+            // La regresión de Owner muestra ventanas fuera de pantalla; cerrar la última no debe apagar el arnés.
+            app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty, new MeterPreferences(), _ => { });
             var viewModel = new MeterViewModel(session);
@@ -69,6 +71,7 @@ public sealed class WindowSmokeTests
             Assert.True(viewModel.IsViewingHistory);
             viewModel.EscapeCommand.Execute(null);
             Assert.False(viewModel.IsViewingHistory);
+            ConfigWindowLoads(viewModel);
 
             // Fijar posición vale para todas las ventanas y saca la agarradera.
             viewModel.LockPosition = true;

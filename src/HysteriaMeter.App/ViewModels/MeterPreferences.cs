@@ -133,6 +133,15 @@ public sealed record MeterPreferences
 
     public string HotkeyPause { get; init; } = "Ctrl+Shift+P";
 
+    /// <summary>Rota la pestaña de la ventana principal (DPS → CURA → RECIB.). Sin atajo de fábrica.</summary>
+    public string HotkeyTab { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Placa de red de la captura (su <c>Name</c> de Npcap); vacío = automática. Se lee al abrir el meter: un cambio
+    /// se aplica al reiniciarlo.
+    /// </summary>
+    public string CaptureDevice { get; init; } = string.Empty;
+
     // "TextFont" y no "Font": así las preferencias guardadas con la fuente vieja no pisan la nueva por defecto.
     public string TextFont { get; init; } = "Inter";
 }

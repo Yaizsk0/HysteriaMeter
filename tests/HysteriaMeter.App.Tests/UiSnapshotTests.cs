@@ -59,9 +59,8 @@ public sealed partial class UiSnapshotTests
     /// Los estados, en orden. Estados del mock que hoy no se pueden armar (no hay datos o la UI no existe todavía):
     /// "Intento N" y "Enrage en" (la demo no trae TargetEnrageSeconds y el TTK solo sale de Refresh en vivo),
     /// overheal, pestañas Skills/Muertes/Log del detalle (ActorDetailViewModel no tiene propiedad de pestaña),
-    /// tarjeta de fin de pelea, avisos dentro del overlay, ventanas propias de Configuración y Bienvenida,
-    /// y la pantalla "sin Npcap". Cuando existan, se agregan acá. La ventana del historial trae sus estados en
-    /// UiSnapshotTests.Historial.cs (06 y 07).
+    /// tarjeta de fin de pelea, avisos dentro del overlay, Bienvenida y la pantalla "sin Npcap".
+    /// Historial y Configuración traen sus estados en sus archivos parciales del arnés.
     /// </summary>
     private static readonly State[] States =
     [
@@ -82,13 +81,7 @@ public sealed partial class UiSnapshotTests
             return Overlay(vm, width: 480);
         }),
 
-        // Configuración: con el panel abierto, UpdateStatus también llena Diagnostics.
-        new("08-configuracion", h =>
-        {
-            var vm = new MeterViewModel(h.Session());
-            vm.ToggleSettingsCommand.Execute(null);
-            return Overlay(Refreshed(vm));
-        }),
+        // Configuración e Historial: ventanas propias, con sus estados en los archivos parciales.
 
         // Minimizado: la pastilla muestra MinimizedText, que ShowDemo ya calculó.
         new("09-minimizado", h =>

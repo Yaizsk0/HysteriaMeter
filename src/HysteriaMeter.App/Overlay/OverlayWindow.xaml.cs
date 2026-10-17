@@ -21,6 +21,7 @@ public partial class OverlayWindow : Window
     private const int MarkHotKey = 4;
     private const int MinimizeHotKey = 5;
     private const int PauseHotKey = 6;
+    private const int TabHotKey = 7;
     private const double MinZoom = 0.7;
     private const double MaxZoom = 2.0;
     private const double ZoomStep = 0.1;
@@ -29,6 +30,7 @@ public partial class OverlayWindow : Window
     private readonly OverlayWindows? _windows;
     private DetailWindow? _detail;
     private HistoryWindow? _historyWindow;
+    private Config.ConfigWindow? _config;
 
     /// <param name="windows">Gestor de ventanas; <c>null</c> en pruebas, sin atajos globales.</param>
     public OverlayWindow(MeterViewModel viewModel, OverlayLayout? layout = null, OverlayWindows? windows = null)
@@ -43,11 +45,13 @@ public partial class OverlayWindow : Window
         _viewModel.CopyImageRequested += CopyImage;
         _viewModel.SaveImageRequested += SaveImage;
         _viewModel.PropertyChanged += OnViewModelChanged;
+        _viewModel.PropertyChanged += OnSettingsOpenChanged;
         IsVisibleChanged += (_, _) =>
         {
             if (!IsVisible)
             {
                 _viewModel.IsHistoryOpen = false;
+                _viewModel.IsSettingsOpen = false;
             }
         };
 
@@ -60,6 +64,8 @@ public partial class OverlayWindow : Window
             _viewModel.CopyImageRequested -= CopyImage;
             _viewModel.SaveImageRequested -= SaveImage;
             _viewModel.PropertyChanged -= OnViewModelChanged;
+            _viewModel.PropertyChanged -= OnSettingsOpenChanged;
+            _config?.Close();
         };
     }
 
@@ -190,6 +196,48 @@ public partial class OverlayWindow : Window
         _historyWindow.Activate();
     }
 
+    /// <summary>El engranaje (ToggleSettings) y Esc abren y cierran la configuración, que va en su propia ventana.</summary>
+    private void OnSettingsOpenChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(MeterViewModel.IsSettingsOpen))
+        {
+            return;
+        }
+
+        if (!_viewModel.IsSettingsOpen)
+        {
+            _config?.Close();
+            return;
+        }
+
+        // Una ventana que nunca se mostró (las de los tests) no puede ser dueña de otra: ahí no se abre nada.
+        if (new WindowInteropHelper(this).Handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        if (_config is null)
+        {
+            _config = new Config.ConfigWindow(_viewModel, _viewModel.SettingsSection) { Owner = this };
+            var placement = Config.ConfigWindow.Placement(
+                new Rect(Left, Top, ActualWidth, ActualHeight), ScreenWorkArea(),
+                new Size(_config.Width, _config.Height), new Size(_config.MinWidth, _config.MinHeight));
+            _config.Left = placement.Left;
+            _config.Top = placement.Top;
+            _config.Width = placement.Width;
+            _config.Height = placement.Height;
+            _config.Closed += (_, _) =>
+            {
+                // Primero se suelta: así IsSettingsOpen = false no vuelve a cerrar una ventana que ya se está cerrando.
+                _config = null;
+                _viewModel.IsSettingsOpen = false;
+            };
+            _config.Show();
+        }
+
+        _config.Activate();
+    }
+
     private void RestoreLayout(OverlayLayout? layout)
     {
         if (layout is null)
@@ -254,13 +302,15 @@ public partial class OverlayWindow : Window
         (MarkHotKey, _viewModel.HotkeyMark),
         (MinimizeHotKey, _viewModel.HotkeyMinimize),
         (PauseHotKey, _viewModel.HotkeyPause),
+        (TabHotKey, _viewModel.HotkeyTab),
     ];
 
     private void OnHotkeysChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(MeterViewModel.HotkeyClickThrough) or nameof(MeterViewModel.HotkeyReset)
             or nameof(MeterViewModel.HotkeyVisibility) or nameof(MeterViewModel.HotkeyMark)
-            or nameof(MeterViewModel.HotkeyMinimize) or nameof(MeterViewModel.HotkeyPause) or "Preferences" or "" or null)
+            or nameof(MeterViewModel.HotkeyMinimize) or nameof(MeterViewModel.HotkeyPause) or nameof(MeterViewModel.HotkeyTab)
+            or "Preferences" or "" or null)
         {
             RegisterHotKeys();
         }
@@ -284,33 +334,6 @@ public partial class OverlayWindow : Window
         {
             _viewModel.HotkeyMessage = $"{string.Join(", ", taken)}: lo usa otro programa, elegí otra combinación";
         }
-    }
-
-    /// <summary>Captura la combinación apretada en la caja del atajo; Borrar o Supr lo saca.</summary>
-    private void OnHotkeyKeyDown(object sender, KeyEventArgs e)
-    {
-        if (sender is not System.Windows.Controls.TextBox box)
-        {
-            return;
-        }
-
-        var key = e.Key == Key.System ? e.SystemKey : e.Key;
-        if (key is Key.Tab or Key.Escape)
-        {
-            return;
-        }
-
-        e.Handled = true;
-        string? text = key is Key.Back or Key.Delete && Keyboard.Modifiers == ModifierKeys.None
-            ? string.Empty
-            : HotkeyGesture.From(Keyboard.Modifiers, key)?.ToString();
-        if (text is null)
-        {
-            return;
-        }
-
-        box.Text = text;
-        box.GetBindingExpression(System.Windows.Controls.TextBox.TextProperty)?.UpdateSource();
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -342,6 +365,11 @@ public partial class OverlayWindow : Window
             case PauseHotKey:
                 var pause = !_viewModel.IsPaused;
                 ForAllWindows(w => w._viewModel.IsPaused = pause);
+                handled = true;
+                break;
+            case TabHotKey:
+                // Solo la ventana principal: las demás suelen ser de una pestaña fija (por ejemplo, una de curación).
+                _viewModel.CycleTabCommand.Execute(null);
                 handled = true;
                 break;
             case ToggleVisibilityHotKey:
@@ -410,21 +438,6 @@ public partial class OverlayWindow : Window
         var handle = new WindowInteropHelper(this).Handle;
         var area = System.Windows.Forms.Screen.FromHandle(handle).WorkingArea;
         return new Rect(area.Left / dpi.DpiScaleX, area.Top / dpi.DpiScaleY, area.Width / dpi.DpiScaleX, area.Height / dpi.DpiScaleY);
-    }
-
-    private void OnOpenFightClick(object sender, RoutedEventArgs e)
-    {
-        Directory.CreateDirectory(MeterViewModel.ExportFolder);
-        var dialog = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = "Abrir pelea",
-            Filter = "Pelea de Hysteria Meter (*.json)|*.json",
-            InitialDirectory = MeterViewModel.ExportFolder,
-        };
-        if (dialog.ShowDialog(this) == true)
-        {
-            _viewModel.OpenSharedFile(dialog.FileName);
-        }
     }
 
     private static string? DroppedJson(DragEventArgs e) =>
