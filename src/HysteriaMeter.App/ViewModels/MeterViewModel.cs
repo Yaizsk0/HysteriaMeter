@@ -1813,7 +1813,8 @@ public sealed partial class MeterViewModel : ObservableObject
     /// </summary>
     public void ShowFight(EncounterSnapshot fight)
     {
-        if (_shown?.Id == fight.Id)
+        // La pausa puede dejar una instantánea anterior con el mismo ID: solo la misma instancia ya está al día.
+        if (ReferenceEquals(_shown, fight))
         {
             return;
         }

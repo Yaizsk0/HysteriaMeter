@@ -82,6 +82,38 @@ public sealed class InicioResumeTests
     }
 
     [Fact]
+    public void Card_image_refreshes_a_paused_snapshot_of_the_same_fight()
+    {
+        var session = Session();
+        var vm = new MeterViewModel(session);
+        var engine = session.Engine;
+        engine.Apply(new LocalPlayerEvent(Start, 1, "Yo"));
+        engine.Apply(new DamageEvent(Start, 1, 900, 100, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(Start.AddSeconds(5), 1, 900, 100, 1000, HitModifiers.None));
+        vm.BossOnly = false; // Refresca el vivo antes de pausar: 2000 de daño en 5 s.
+        Assert.Equal("400", Assert.Single(vm.Actors).PerSecond);
+        vm.IsPaused = true;
+        vm.IsMinimized = true;
+
+        EncounterSnapshot? finished = null;
+        engine.EncounterFinished += fight => finished = fight;
+        engine.Apply(new DamageEvent(Start.AddSeconds(10), 1, 900, 100, 4000, HitModifiers.None));
+        engine.Tick(Start.AddSeconds(20));
+        Assert.NotNull(finished);
+        Assert.Equal(6000, Assert.Single(finished.Actors).Damage);
+
+        Assert.Equal("Captura guardada", vm.SaveFightImage(finished, () =>
+        {
+            Assert.Equal("600", Assert.Single(vm.Actors).PerSecond);
+            Assert.False(vm.IsMinimized || vm.IsSettingsOpen || vm.IsHistoryOpen || vm.IsViewingHistory);
+            return "Captura guardada";
+        }));
+
+        Assert.True(vm.IsPaused);
+        Assert.True(vm.IsMinimized);
+    }
+
+    [Fact]
     public void Top_skill_groups_unnamed_variants_by_base_id()
     {
         var actor = Fight().Actors[0] with
