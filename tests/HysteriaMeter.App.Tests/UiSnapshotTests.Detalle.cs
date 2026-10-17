@@ -73,10 +73,15 @@ public sealed partial class UiSnapshotTests
         }),
 
         // Registro aparte, con el mismo registro de la pelea guardada.
-        new("25-registro", _ =>
+        new("25-registro", h =>
         {
-            var death = DemoEncounter.Create(SavedFightEnd).Deaths![0];
-            return new LogWindow(new LogViewModel(() => SavedFightLog, SkillNames.Empty, death.ActorId, death.Name));
+            var detail = SavedFightDetail(h, "Tharos");
+            LogViewModel? log = null;
+            detail.LogRequested += value => log = value;
+            detail.OpenLogCommand.Execute(null);
+            Assert.NotNull(log);
+            Assert.Contains(log.Lines, line => line.IsDeath && line.Time == "01:11.0");
+            return new LogWindow(log);
         }),
     ];
 

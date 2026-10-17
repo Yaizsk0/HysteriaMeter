@@ -9,8 +9,9 @@ Diseño: [decisiones.md](decisiones.md), recuperado de la sesión de Claude del 
 - [X] Detalle: integrar skills, muertes, log y comparación; revisar regresiones y capturas.
 - [X] Configuración: terminar navegación, selector de placa y preferencias; verificar opciones existentes.
 - [X] Inicio: terminar bienvenida, tarjeta de kill y bandeja; verificar capturas y datos reales.
-- [ ] Overlay: completar XAML y conexiones del modelo, estados, avisos y pastilla.
-- [ ] Integración: un PR por mejora, README y novedades, compilación y tests; integrar solo con CI verde.
+- [X] Overlay: completar XAML y conexiones del modelo, estados, avisos y pastilla.
+- [X] Integración local: combinar las cinco pistas, actualizar README, compilar, probar y revisar las capturas.
+- [ ] Publicación: un PR por mejora, novedades con el número real e integración solo con CI verde.
 
 ## Coordinación
 

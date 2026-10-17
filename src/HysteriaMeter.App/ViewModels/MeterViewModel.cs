@@ -1833,21 +1833,21 @@ public sealed partial class MeterViewModel : ObservableObject
     /// <summary>
     /// "Guardar captura" de la tarjeta: la misma imagen que la automática al derrotar un boss (esa pelea, con el overlay
     /// entero). Si el overlay muestra otra cosa, primero fija la pelea (<see cref="ShowFight"/>) y ahí
-    /// queda. La pastilla y la franja de pelea fijada se esconden solo mientras <paramref name="render"/>
+    /// queda. La pastilla, la franja de pelea fijada y el estilo de pausa se esconden solo mientras <paramref name="render"/>
     /// dibuja; devuelve lo que devuelve <paramref name="render"/> (el mensaje de la tarjeta).
     /// </summary>
     public string SaveFightImage(EncounterSnapshot fight, Func<string> render)
     {
         ShowFight(fight);
-        var view = (IsMinimized, IsViewingHistory);
-        (IsMinimized, IsViewingHistory) = (false, false);
+        var view = (IsMinimized, IsViewingHistory, IsPaused);
+        (IsMinimized, IsViewingHistory, IsPaused) = (false, false, false);
         try
         {
             return render();
         }
         finally
         {
-            (IsMinimized, IsViewingHistory) = view;
+            (IsMinimized, IsViewingHistory, IsPaused) = view;
         }
     }
 
