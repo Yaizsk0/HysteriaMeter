@@ -6,7 +6,7 @@ Diseño: [decisiones.md](decisiones.md), recuperado de la sesión de Claude del 
 
 - [X] Recuperar las cinco pistas y sus revisiones sin perder cambios locales.
 - [X] Historial: integrar ventana, corregir notas/progreso/visibilidad y verificar con SQLite y capturas.
-- [ ] Detalle: integrar skills, muertes, log y comparación; revisar regresiones y capturas.
+- [X] Detalle: integrar skills, muertes, log y comparación; revisar regresiones y capturas.
 - [X] Configuración: terminar navegación, selector de placa y preferencias; verificar opciones existentes.
 - [X] Inicio: terminar bienvenida, tarjeta de kill y bandeja; verificar capturas y datos reales.
 - [ ] Overlay: completar XAML y conexiones del modelo, estados, avisos y pastilla.

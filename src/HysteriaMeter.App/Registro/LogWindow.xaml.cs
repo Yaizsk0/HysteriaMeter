@@ -23,7 +23,7 @@ public partial class LogWindow : Window
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
 
-    /// <summary>Esc cierra la ventana (si una caja de texto no lo usó antes, como al renombrar una skill).</summary>
+    /// <summary>Esc cierra la ventana (si el filtro tiene texto, el primer Esc lo vacía).</summary>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);

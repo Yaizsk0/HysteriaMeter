@@ -84,6 +84,7 @@ public sealed partial class MeterViewModel : ObservableObject
             LogSource = session.Engine.CombatLog,
             NicknameOf = name => Preferences.Nicknames.GetValueOrDefault(name),
             PastAttempts = LoadPastAttemptsAsync,
+            PastDps = ActorDetailViewModel.PastDpsFrom(session.History),
         };
         Detail.SkillRenamed += (skillId, name) =>
             Update(Preferences with { SkillAliases = SkillNames.With(Preferences.SkillAliases, skillId, name) }, nameof(Preferences));

@@ -42,6 +42,7 @@
     { "id": 70, "text": "Rediseño, paso 1: colores y tipografía nuevos en todas las ventanas." },
     {"id": 71, "text": "Rediseño, paso 2: historial en una ventana propia, con runs, filtros y progreso por boss."},
     {"id": 72, "text": "Rediseño, paso 3: configuración en una ventana propia con ocho secciones y navegación más clara."},
-    {"id": 73, "text": "Rediseño, paso 4: bienvenida con estado real de la captura y tarjeta de resultado al derrotar un boss."}
+    {"id": 73, "text": "Rediseño, paso 4: bienvenida con estado real de la captura y tarjeta de resultado al derrotar un boss."},
+    {"id": 74, "text": "Rediseño, paso 5: pestañas de skills, muertes y registro, y comparación de jugadores e intentos."}
   ]
 }
