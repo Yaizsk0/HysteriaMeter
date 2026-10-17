@@ -4,7 +4,7 @@ namespace HysteriaMeter.App.ViewModels;
 
 /// <summary>
 /// Un color por jugador para distinguir las filas de un vistazo. Sale del nombre, así cada jugador
-/// conserva su color entre peleas. El dorado queda reservado para el jugador local.
+/// conserva su color entre peleas. El acento ámbar (Gold de Theme.xaml) queda reservado para el jugador local.
 /// Con "Colores por clase", el color sale de la clase (como en Details!), también para el local.
 /// </summary>
 public static class PlayerColors
@@ -21,14 +21,18 @@ public static class PlayerColors
         Color.FromRgb(0x5A, 0xB4, 0xD8), // celeste
     ];
 
-    private static readonly Color Gold = Color.FromRgb(0xE8, 0xCF, 0x8F);
+    // Mismo valor que Gold en Themes/Theme.xaml (tema por defecto).
+    private static readonly Color Gold = Color.FromRgb(0xE8, 0xB0, 0x4A);
+
+    // Alfa de las barras: ~33 %, como las filas del mock del rediseño.
+    private const byte BarAlpha = 0x55;
 
     private static readonly Brush[] Accents = Palette.Select(c => Freeze(new SolidColorBrush(c))).ToArray();
-    private static readonly Brush[] Bars = Palette.Select(c => Freeze(new SolidColorBrush(Color.FromArgb(0x8C, c.R, c.G, c.B)))).ToArray();
+    private static readonly Brush[] Bars = Palette.Select(c => Freeze(new SolidColorBrush(Color.FromArgb(BarAlpha, c.R, c.G, c.B)))).ToArray();
 
     public static Brush Local { get; } = Freeze(new SolidColorBrush(Gold));
 
-    public static Brush LocalBar { get; } = Freeze(new SolidColorBrush(Color.FromArgb(0x8C, 0xC9, 0xA2, 0x5A)));
+    public static Brush LocalBar { get; } = Freeze(new SolidColorBrush(Color.FromArgb(BarAlpha, Gold.R, Gold.G, Gold.B)));
 
     public static Brush For(string name) => Accents[IndexOf(name)];
 
@@ -41,7 +45,7 @@ public static class PlayerColors
     public static Brush BarForClass(Color color) => OfColor(color).Bar;
 
     private static (Brush Accent, Brush Bar) OfColor(Color color) => ByColor.GetOrAdd(color, c =>
-        (Freeze(new SolidColorBrush(c)), Freeze(new SolidColorBrush(Color.FromArgb(0x8C, c.R, c.G, c.B)))));
+        (Freeze(new SolidColorBrush(c)), Freeze(new SolidColorBrush(Color.FromArgb(BarAlpha, c.R, c.G, c.B)))));
 
     /// <summary>FNV-1a: estable entre ejecuciones (string.GetHashCode cambia en cada proceso).</summary>
     internal static int IndexOf(string name)

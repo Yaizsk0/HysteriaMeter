@@ -820,9 +820,15 @@ public sealed partial class MeterViewModel : ObservableObject
         set => Update(Preferences with { TextFont = value }, nameof(FontName), nameof(Font));
     }
 
-    public FontFamily Font => MeterPreferences.BundledFonts.Contains(Preferences.TextFont)
-        ? new FontFamily(new Uri("pack://application:,,,/"), $"./Assets/Fonts/#{Preferences.TextFont}")
-        : new FontFamily(Preferences.TextFont);
+    public FontFamily Font => FontOf(Preferences.TextFont);
+
+    /// <summary>
+    /// La familia de una fuente de texto elegible: las embebidas (<see cref="MeterPreferences.BundledFonts"/>) salen de
+    /// Assets/Fonts y las demás del sistema. App.xaml.cs la usa para el recurso BodyFont de las ventanas.
+    /// </summary>
+    public static FontFamily FontOf(string name) => MeterPreferences.BundledFonts.Contains(name)
+        ? new FontFamily(new Uri("pack://application:,,,/"), $"./Assets/Fonts/#{name}")
+        : new FontFamily(name);
 
     public ObservableCollection<ActorRowViewModel> Actors { get; } = [];
 

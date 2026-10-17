@@ -78,15 +78,22 @@ public partial class App : Application
         _host = builder.Build();
         await _host.StartAsync().ConfigureAwait(true);
 
-        // Tema visual: se aplica antes de abrir las ventanas; al cambiarlo, se actualizan los colores que se pueden.
+        // Tema visual y fuente del texto: se aplican antes de abrir las ventanas; al cambiarlos, se actualizan los colores
+        // que se pueden y la fuente de las ventanas que usan BodyFont (DynamicResource).
         var session = _host.Services.GetRequiredService<MeterSession>();
         var themeDefaults = MeterThemes.Snapshot(Resources);
         MeterThemes.Apply(Resources, session.Preferences.Theme, themeDefaults);
+        Resources["BodyFont"] = MeterViewModel.FontOf(session.Preferences.TextFont);
         session.PreferencesChanged += names =>
         {
             if (names.Contains(nameof(MeterViewModel.SelectedTheme)))
             {
                 Dispatcher.InvokeAsync(() => MeterThemes.Apply(Resources, session.Preferences.Theme, themeDefaults));
+            }
+
+            if (names.Contains(nameof(MeterViewModel.FontName)))
+            {
+                Dispatcher.InvokeAsync(() => Resources["BodyFont"] = MeterViewModel.FontOf(session.Preferences.TextFont));
             }
         };
 

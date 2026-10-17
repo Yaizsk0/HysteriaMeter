@@ -11,7 +11,7 @@
         Width="700" Height="460" MinWidth="480" MinHeight="220"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="CanResizeWithGrip" ShowInTaskbar="False"
-        FontSize="12" Foreground="{StaticResource Text}"
+        FontSize="12" Foreground="{StaticResource Text}" FontFamily="{DynamicResource BodyFont}"
         TextOptions.TextFormattingMode="Display">
 
     <Window.Resources>

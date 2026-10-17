@@ -10,7 +10,7 @@
         Width="700" Height="600" MinWidth="520" MinHeight="220"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="CanResizeWithGrip" ShowInTaskbar="False"
-        FontSize="13" Foreground="{StaticResource Text}"
+        FontSize="13" Foreground="{StaticResource Text}" FontFamily="{DynamicResource BodyFont}"
         TextOptions.TextFormattingMode="Display">
 
     <!-- Referencia visual: mocks/Detalle.dc.html, sección "Desglose por skill". -->

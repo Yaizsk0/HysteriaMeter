@@ -10,7 +10,7 @@
         Width="960" Height="760" MinWidth="940" MinHeight="300"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="CanResizeWithGrip" ShowInTaskbar="False"
-        FontSize="13" Foreground="{StaticResource Text}"
+        FontSize="13" Foreground="{StaticResource Text}" FontFamily="{DynamicResource BodyFont}"
         TextOptions.TextFormattingMode="Display">
 
     <!-- Referencia visual: mock "Modo dungeon: resumen de la run". -->

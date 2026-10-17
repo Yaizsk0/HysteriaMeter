@@ -1,33 +1,675 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
     <!--
-        Paleta y fuentes de los mocks aprobados (hysteria-meter/mocks): paneles oscuros translúcidos,
-        filetes dorados, títulos en Cinzel y números en Barlow Semi Condensed. Las fuentes son OFL
-        y van embebidas (Assets/Fonts, con su licencia al lado). La fuente del texto la elige el usuario
-        en la configuración; Cinzel queda solo para el logo.
+        Sistema visual del rediseño. Referencia: los mocks redesign/project/*.dc.html (Main, Estados, Mini, Detalle,
+        Muertes, Comparar, Historial, Config, Inicio, Avisos y Dungeon), que reemplazan a los aprobados el 2026-10-15
+        (hysteria-meter/mocks: filetes dorados, títulos en Cinzel).
+        Fondo #0C0E13, acento ámbar #E8B04A, filetes y filas en blanco translúcido, números y títulos en
+        Barlow Semi Condensed y texto en Inter (los mocks usan Barlow Condensed e IBM Plex Sans). Las fuentes son OFL
+        y van embebidas (Assets/Fonts, con su licencia al lado). Cinzel queda en Assets, sin uso.
+
+        Reglas:
+        - "Gold" sigue siendo el nombre del acento: lo usan muchas vistas y MeterThemes lo cambia por tema.
+          El tema por defecto se sigue llamando "Dorado" y es este.
+        - Dentro de Style y ControlTemplate, los colores que cambia un tema van con DynamicResource: WPF congela
+          los pinceles que quedan como valor de un Setter y después el tema no los puede cambiar en vivo.
+        - Los fondos y el acento los cambia el tema. Los alfas del acento (GoldDim, Accent*, RowBorderLocal, NameLocal)
+          llevan acá el valor del tema por defecto; MeterThemes.Apply los recalcula con el acento de cada tema
+          conservando el alfa.
+        - Los neutros (filas, filetes, bordes) son blanco translúcido: sirven sobre cualquier fondo y no cambian con el tema.
+        - Los colores semánticos (curación, peligro, kill, wipe, percentiles, estado de captura) no cambian con el tema.
+        - WPF no tiene letter-spacing: las etiquetas en mayúsculas del mock (0,06 a 0,14 em) quedan sin espaciado.
+        - Ningún nombre choca con los estilos locales de las ventanas (Cell, Stat, Tab, Chips, Field, Option...).
     -->
-    <FontFamily x:Key="TitleFont">pack://application:,,,/Assets/Fonts/#Cinzel</FontFamily>
 
-    <SolidColorBrush x:Key="Panel" Color="#E60A0D14" />
-    <SolidColorBrush x:Key="PanelSolid" Color="#F70A0D14" />
-    <SolidColorBrush x:Key="Gold" Color="#E8CF8F" />
-    <SolidColorBrush x:Key="GoldDim" Color="#6B5A35" />
-    <SolidColorBrush x:Key="Rule" Color="#3A3222" />
-    <SolidColorBrush x:Key="RuleDim" Color="#2A2418" />
-
-    <SolidColorBrush x:Key="Text" Color="#E6E1D3" />
-    <SolidColorBrush x:Key="TextBright" Color="#F0E6CC" />
-    <SolidColorBrush x:Key="TextMuted" Color="#B9B19D" />
-    <SolidColorBrush x:Key="TextDim" Color="#A39C8A" />
-
-    <SolidColorBrush x:Key="Row" Color="#141922" />
-    <SolidColorBrush x:Key="RowBorder" Color="#222A35" />
-    <SolidColorBrush x:Key="RowBorderLocal" Color="#8A7442" />
-    <SolidColorBrush x:Key="NameLocal" Color="#F3D98F" />
-    <SolidColorBrush x:Key="Healing" Color="#7FD08A" />
     <BooleanToVisibilityConverter x:Key="Visible" />
-    <!-- Vida del boss, colores del mock -->
-    <SolidColorBrush x:Key="Health" Color="#C2463C" />
-    <SolidColorBrush x:Key="HealthTrack" Color="#241C1C" />
-    <SolidColorBrush x:Key="HealthTrackBorder" Color="#3A2A2A" />
+
+    <!-- ===================== Fuentes ===================== -->
+    <!-- Números, títulos y nombres en las filas. Pesos embebidos: Normal, SemiBold y Bold
+         (el 500 del mock pasa a Normal o SemiBold). -->
+    <FontFamily x:Key="NumberFont">pack://application:,,,/Assets/Fonts/#Barlow Semi Condensed</FontFamily>
+    <!-- Antes Cinzel. En el mock el logo "HYSTERIA" y los títulos van en Barlow. -->
+    <FontFamily x:Key="TitleFont">pack://application:,,,/Assets/Fonts/#Barlow Semi Condensed</FontFamily>
+    <!-- Texto. Valor por defecto: App.xaml.cs lo reemplaza por la fuente elegida en Configuración
+         (MeterPreferences.TextFont, con MeterViewModel.FontOf). Las ventanas lo usan con DynamicResource.
+         Pesos: Normal, Medium, SemiBold y Bold. -->
+    <FontFamily x:Key="BodyFont">pack://application:,,,/Assets/Fonts/#Inter</FontFamily>
+
+    <!-- ===================== Tamaños de letra (px del mock = unidades WPF) ===================== -->
+    <!-- Texto -->
+    <sys:Double x:Key="FontSizeMicro">10</sys:Double>       <!-- etiquetas de la tarjeta de fin de pelea, chips de la run, flags del log -->
+    <sys:Double x:Key="FontSizeCaption">11</sys:Double>     <!-- etiquetas de sección, encabezados de columna, pies, % y tendencia -->
+    <sys:Double x:Key="FontSizeSmall">12</sys:Double>       <!-- texto secundario, chips, links, tooltip -->
+    <sys:Double x:Key="FontSizeBody">13</sys:Double>        <!-- texto base, filas de tabla, botones -->
+    <sys:Double x:Key="FontSizeEmphasis">14</sys:Double>    <!-- frase de la muerte, input de renombrar -->
+    <!-- Números y títulos -->
+    <sys:Double x:Key="NumberSizeSmall">13</sys:Double>     <!-- puesto en la fila, logo -->
+    <sys:Double x:Key="NumberSizeTimer">15</sys:Double>     <!-- reloj y % de vida del boss -->
+    <sys:Double x:Key="NumberSizeRowName">16</sys:Double>   <!-- nombre en la fila, daño de una skill -->
+    <sys:Double x:Key="NumberSizeRowValue">17</sys:Double>  <!-- DPS de la fila, nombre del boss en el overlay -->
+    <sys:Double x:Key="NumberSizeCard">20</sys:Double>      <!-- título de tarjeta, alerta, número de la pastilla -->
+    <sys:Double x:Key="NumberSizeSection">22</sys:Double>   <!-- "Configuración", "Qué cambió", KPI del historial -->
+    <sys:Double x:Key="NumberSizeWindow">24</sys:Double>    <!-- título de ventana, KPI de fin de pelea -->
+    <sys:Double x:Key="NumberSizeKpi">26</sys:Double>       <!-- KPI del detalle -->
+    <sys:Double x:Key="NumberSizeHero">30</sys:Double>      <!-- bienvenida, nombre de la dungeon -->
+    <sys:Double x:Key="NumberSizeDisplay">34</sys:Double>   <!-- DPS grande de Comparar -->
+
+    <!-- ===================== Radios ===================== -->
+    <CornerRadius x:Key="RadiusWindow">10</CornerRadius>    <!-- ventanas y overlay -->
+    <CornerRadius x:Key="RadiusCard">8</CornerRadius>       <!-- tarjetas, avisos, menú, tooltip -->
+    <CornerRadius x:Key="RadiusControl">6</CornerRadius>    <!-- botones, inputs, contenedor segmentado, fila del historial -->
+    <CornerRadius x:Key="RadiusRow">5</CornerRadius>        <!-- filas del overlay y de las tablas -->
+    <CornerRadius x:Key="RadiusSmall">4</CornerRadius>      <!-- pestaña activa, insignias, ícono de skill, tecla -->
+    <CornerRadius x:Key="RadiusBar">3</CornerRadius>        <!-- barra de vida y pistas -->
+    <CornerRadius x:Key="RadiusPill">999</CornerRadius>     <!-- chips, pastilla, toggle (WPF lo achica a medio alto) -->
+
+    <!-- ===================== Espaciado ===================== -->
+    <Thickness x:Key="PaddingWindowHeader">20,16</Thickness>
+    <Thickness x:Key="PaddingOverlayHeader">10,8</Thickness>
+    <Thickness x:Key="PaddingCard">16,14</Thickness>
+    <Thickness x:Key="PaddingToast">14,12</Thickness>
+    <Thickness x:Key="PaddingDialog">18,16</Thickness>
+
+    <!-- ===================== Fondos (los cambia el tema) ===================== -->
+    <SolidColorBrush x:Key="WindowBg" Color="#0C0E13" />        <!-- ventanas grandes: opaco -->
+    <!-- Overlay en vivo: 86 %. La opacidad de Configuración sigue siendo la de toda la ventana (Window.Opacity). -->
+    <SolidColorBrush x:Key="Panel" Color="#DB0C0E13" />
+    <SolidColorBrush x:Key="PanelRaised" Color="#EB0C0E13" />   <!-- avisos y pastilla: 92 % (mock 0,88 a 0,92) -->
+    <SolidColorBrush x:Key="PanelSolid" Color="#F20C0E13" />    <!-- tooltip, fin de pelea, tapas del overlay: 95 % -->
+    <SolidColorBrush x:Key="Surface" Color="#0F1218" />         <!-- nav de Configuración, celdas KPI -->
+    <SolidColorBrush x:Key="CardBg" Color="#12151C" />          <!-- tarjetas, cabecera de tabla -->
+    <SolidColorBrush x:Key="InputBg" Color="#161A22" />         <!-- cajas de texto y selects -->
+    <SolidColorBrush x:Key="MenuBg" Color="#1A1E27" />          <!-- menús ("⋯" del overlay, bandeja) y teclas de atajo -->
+
+    <!-- ===================== Neutros: blanco translúcido, sirven con cualquier fondo ===================== -->
+    <SolidColorBrush x:Key="Row" Color="#08FFFFFF" />           <!-- 3 %: fila del overlay y del dungeon -->
+    <SolidColorBrush x:Key="RowSubtle" Color="#06FFFFFF" />     <!-- 2,5 %: filas de skills, historial, muertes, comparar -->
+    <SolidColorBrush x:Key="RowBorder" Color="#00FFFFFF" />     <!-- las filas del mock no tienen borde -->
+    <SolidColorBrush x:Key="RuleDim" Color="#0AFFFFFF" />       <!-- 4 %: separador entre líneas del log -->
+    <SolidColorBrush x:Key="SegmentBg" Color="#0DFFFFFF" />     <!-- 5 %: fondo de las pestañas segmentadas -->
+    <SolidColorBrush x:Key="Rule" Color="#0FFFFFFF" />          <!-- 6 %: filetes de cabecera, pie y columnas -->
+    <SolidColorBrush x:Key="TagNeutralBg" Color="#0FFFFFFF" />  <!-- 6 %: chip "Trash", insignia neutra -->
+    <SolidColorBrush x:Key="CardBorder" Color="#12FFFFFF" />    <!-- 7 %: borde de tarjeta -->
+    <SolidColorBrush x:Key="Track" Color="#14FFFFFF" />         <!-- 8 %: pista de barras, separador de menú, "sin combate" -->
+    <SolidColorBrush x:Key="Stroke" Color="#1FFFFFFF" />        <!-- 12 %: borde de inputs, chips, menú, tooltip -->
+    <SolidColorBrush x:Key="StrokeStrong" Color="#2EFFFFFF" />  <!-- 18 %: botón fantasma, borde de ícono de skill -->
+    <SolidColorBrush x:Key="StrokeKbd" Color="#33FFFFFF" />     <!-- 20 %: tecla de atajo, línea central de Comparar -->
+    <SolidColorBrush x:Key="ClassBadgeBg" Color="#59000000" />  <!-- 35 % negro: fondo del círculo de clase -->
+
+    <!-- ===================== Texto ===================== -->
+    <SolidColorBrush x:Key="Text" Color="#E9E6DF" />            <!-- principal -->
+    <SolidColorBrush x:Key="TextBright" Color="#F3F0E8" />      <!-- nombres en filas, nav seleccionado -->
+    <SolidColorBrush x:Key="TextMuted" Color="#B5B0A5" />       <!-- secundario: %, pestañas inactivas, resúmenes -->
+    <SolidColorBrush x:Key="TextDim" Color="#8E8A80" />         <!-- tenue: etiquetas, pies, encabezados -->
+    <SolidColorBrush x:Key="OnAccent" Color="#14110A" />        <!-- sobre el acento (botón primario, pestaña activa, RECIB. activa) -->
+    <SolidColorBrush x:Key="OnHealing" Color="#0C1A10" />       <!-- sobre la pestaña CURA activa -->
+    <SolidColorBrush x:Key="OnWipe" Color="#FFE9E6" />          <!-- sobre el segmento wipe -->
+    <SolidColorBrush x:Key="OnDanger" Color="#FFD2CC" />        <!-- sobre la alerta de enrage -->
+
+    <!-- ===================== Acento (lo cambia el tema; los alfas los deriva MeterThemes) ===================== -->
+    <SolidColorBrush x:Key="Gold" Color="#E8B04A" />            <!-- acento -->
+    <SolidColorBrush x:Key="GoldBright" Color="#F2C46D" />      <!-- hover de links y primarios, % de vida del boss -->
+    <SolidColorBrush x:Key="AccentFaint" Color="#14E8B04A" />   <!-- 8 %: fila seleccionada del historial, consejos -->
+    <SolidColorBrush x:Key="AccentSoft" Color="#24E8B04A" />    <!-- 14 % (mock 0,12 a 0,16): nav, pausa, hover de menú, chip activo, botón suave -->
+    <SolidColorBrush x:Key="AccentTint" Color="#2EE8B04A" />    <!-- 18 %: insignia "en curso", paso pendiente -->
+    <SolidColorBrush x:Key="GoldDim" Color="#47E8B04A" />       <!-- 28 % (mock 0,25 a 0,28): borde de ventanas y overlay -->
+    <SolidColorBrush x:Key="AccentLine" Color="#59E8B04A" />    <!-- 35 % (mock 0,35 a 0,4): pastilla, novedades, fin de pelea -->
+    <SolidColorBrush x:Key="AccentStrong" Color="#80E8B04A" />  <!-- 50 % (mock 0,45 a 0,6): chip activo, aviso de boss, pausa -->
+    <SolidColorBrush x:Key="RowBorderLocal" Color="#88E8B04A" /> <!-- contorno de tu fila -->
+    <SolidColorBrush x:Key="NameLocal" Color="#E8B04A" />       <!-- tu nombre en la fila -->
+
+    <!-- ===================== Semánticos (no cambian con el tema) ===================== -->
+    <SolidColorBrush x:Key="Success" Color="#7BD88F" />         <!-- delta +, tendencia ▲, kill, paso listo -->
+    <SolidColorBrush x:Key="SuccessSoft" Color="#2E7BD88F" />   <!-- 18 %: fondo de insignia KILL -->
+    <SolidColorBrush x:Key="SuccessLine" Color="#737BD88F" />   <!-- 45 %: borde de "captura guardada" -->
+    <SolidColorBrush x:Key="Healing" Color="#7BD88F" />         <!-- curación (HPS, pestaña CURA) -->
+    <SolidColorBrush x:Key="Danger" Color="#F08A7E" />          <!-- delta −, tendencia ▼, wipes, muertes, acciones destructivas, RECIB. activa -->
+    <SolidColorBrush x:Key="DangerSoft" Color="#2EF08A7E" />    <!-- 18 %: insignia de wipe -->
+    <SolidColorBrush x:Key="DangerLine" Color="#59F08A7E" />    <!-- 35 %: borde de la caja de muerte -->
+    <SolidColorBrush x:Key="DangerBorder" Color="#80F08A7E" />  <!-- 50 %: tarjeta "No se encontró Npcap" -->
+    <SolidColorBrush x:Key="DangerStrong" Color="#E8564A" />    <!-- vida baja, borde de enrage, REC -->
+    <SolidColorBrush x:Key="DeathCellText" Color="#F3C0B8" />   <!-- celda con ☠ en la tabla del dungeon -->
+    <SolidColorBrush x:Key="Wipe" Color="#C0392B" />            <!-- segmento wipe de la línea de tiempo -->
+    <SolidColorBrush x:Key="WipeSoft" Color="#1FC0392B" />      <!-- 12 %: fondo de "Lo mató…" -->
+    <SolidColorBrush x:Key="AlertBg" Color="#EB781410" />       <!-- fondo de la alerta de enrage -->
+    <SolidColorBrush x:Key="Warning" Color="#E8B04A" />         <!-- vida media, "sin tráfico" -->
+    <!-- Mismos valores que DungeonSummaryViewModel (KillBrush, WipeBrush, TrashBrush y la clase desconocida) -->
+    <SolidColorBrush x:Key="Kill" Color="#E8B04A" />            <!-- segmento kill de la línea de tiempo -->
+    <SolidColorBrush x:Key="Neutral" Color="#3A3F4A" />         <!-- segmento trash, toggle apagado -->
+    <SolidColorBrush x:Key="SkillIconEmpty" Color="#3A3D45" />  <!-- skill sin ícono -->
+    <SolidColorBrush x:Key="ClassUnknown" Color="#9A968C" />    <!-- clase desconocida (valor actual del dungeon, no está en el mock) -->
+
+    <!-- Punto de estado de la captura -->
+    <SolidColorBrush x:Key="StatusLive" Color="#7BD88F" />
+    <SolidColorBrush x:Key="StatusWarn" Color="#E8B04A" />
+    <SolidColorBrush x:Key="StatusError" Color="#E8564A" />
+    <SolidColorBrush x:Key="StatusIdle" Color="#5C6774" />      <!-- sin cambio: el mock no lo muestra -->
+
+    <!-- Vida del boss: barra de 5 px, radio 3, sin borde -->
+    <LinearGradientBrush x:Key="Health" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Color="#C0392B" Offset="0" />
+        <GradientStop Color="#E8564A" Offset="1" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="HealthTrack" Color="#14FFFFFF" />
+    <SolidColorBrush x:Key="HealthTrackBorder" Color="#00FFFFFF" />
+
+    <!-- Percentil (mismos umbrales y colores que HistoryItem.TierBrush; mantener los dos iguales) -->
+    <SolidColorBrush x:Key="Percentile0" Color="#9D9D9D" />     <!-- menos de 25 -->
+    <SolidColorBrush x:Key="Percentile25" Color="#4FD15C" />
+    <SolidColorBrush x:Key="Percentile50" Color="#4A90E8" />
+    <SolidColorBrush x:Key="Percentile75" Color="#B867F0" />
+    <SolidColorBrush x:Key="Percentile95" Color="#F0A04A" />
+    <SolidColorBrush x:Key="Percentile100" Color="#E8B04A" />
+
+    <!-- ===================== Sombras ===================== -->
+    <!-- Ponerlas en un Border detrás del contenido: un efecto sobre el texto le saca ClearType.
+         El panel del overlay NO lleva sombra (rompe los imanes, la captura de clics y la imagen exportada):
+         ShadowPanel es para las ventanas grandes. -->
+    <DropShadowEffect x:Key="ShadowPanel" Color="Black" BlurRadius="32" ShadowDepth="12" Direction="270" Opacity="0.45" />
+    <DropShadowEffect x:Key="ShadowMenu" Color="Black" BlurRadius="24" ShadowDepth="8" Direction="270" Opacity="0.5" />
+    <DropShadowEffect x:Key="GlowDanger" Color="#E8564A" BlurRadius="24" ShadowDepth="0" Opacity="0.45" />
+
+    <!-- ===================== Texto ===================== -->
+    <!-- Número con Barlow y cifras de ancho fijo, para que no bailen al actualizarse -->
+    <Style x:Key="NumberText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource NumberFont}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    </Style>
+    <Style x:Key="NumberStrong" TargetType="TextBlock" BasedOn="{StaticResource NumberText}">
+        <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style x:Key="KpiValue" TargetType="TextBlock" BasedOn="{StaticResource NumberStrong}">
+        <Setter Property="FontSize" Value="{StaticResource NumberSizeKpi}" />
+    </Style>
+    <Style x:Key="WindowTitle" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource TitleFont}" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="FontSize" Value="{StaticResource NumberSizeWindow}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    </Style>
+    <Style x:Key="LogoText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource TitleFont}" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="FontSize" Value="{StaticResource NumberSizeSmall}" />
+        <Setter Property="Foreground" Value="{DynamicResource Gold}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <!-- Etiqueta de sección o de KPI: "TEMA", "DAÑO TOTAL", encabezados de columna -->
+    <Style x:Key="SectionLabel" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+    </Style>
+    <!-- Antetítulo en el color del acento: "BOSS DERROTADO · 4:12", "NOVEDADES · v0.68" -->
+    <Style x:Key="Eyebrow" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource Gold}" />
+    </Style>
+    <Style x:Key="SecondaryText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+    </Style>
+
+    <!-- ===================== Botones ===================== -->
+    <!-- Base: el fondo y el borde salen de las propiedades del botón, así cada variante solo cambia colores -->
+    <Style x:Key="BaseButton" TargetType="Button">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="14,0" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource RadiusControl}"
+                            Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" RecognizesAccessKey="True" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Primario: "Ver detalle", "Entendido", "Copiar para Discord". En diálogos, MinHeight 44. -->
+    <Style x:Key="ButtonPrimary" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="Background" Value="{DynamicResource Gold}" />
+        <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="MinHeight" Value="40" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource GoldBright}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Fantasma: "Guardar captura", "Cancelar", "Exportar resumen" -->
+    <Style x:Key="ButtonGhost" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrong}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Track}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Suave: "Reportar un problema" -->
+    <Style x:Key="ButtonSoft" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
+        <Setter Property="Foreground" Value="{DynamicResource Gold}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+        <Setter Property="Padding" Value="12,0" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AccentTint}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Link: "Ver resumen de la run", "Abrir" -->
+    <Style x:Key="ButtonLink" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="Foreground" Value="{DynamicResource Gold}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource GoldBright}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Link destructivo: "Salir", "Borrar pelea" -->
+    <Style x:Key="ButtonDangerLink" TargetType="Button" BasedOn="{StaticResource ButtonLink}">
+        <Setter Property="Foreground" Value="{DynamicResource Danger}" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource DangerStrong}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Ícono de la cabecera (pausa, configuración, "⋯", cerrar): 24 × 24, tenue -->
+    <Style x:Key="ButtonIcon" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+        <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Text}" />
+                <Setter Property="Background" Value="{DynamicResource Track}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ===================== Pestañas segmentadas ===================== -->
+    <!-- Contenedor: Border Style="{StaticResource SegmentBar}" con un StackPanel horizontal de RadioButton adentro -->
+    <Style x:Key="SegmentBar" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource SegmentBg}" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusControl}" />
+        <Setter Property="Padding" Value="2" />
+    </Style>
+
+    <!-- Pestaña del overlay: DPS (activa en el acento) -->
+    <Style x:Key="SegmentTab" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Padding" Value="9,3" />
+        <Setter Property="Margin" Value="0,0,2,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusSmall}" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            </Trigger>
+            <!-- Va último para ganarle al hover -->
+            <Trigger Property="IsChecked" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Gold}" />
+                <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Pestaña de las ventanas grandes (Skills / Muertes / Log). Contenedor con Padding 3. -->
+    <Style x:Key="SegmentTabLarge" TargetType="RadioButton" BasedOn="{StaticResource SegmentTab}">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+        <Setter Property="Padding" Value="14,6" />
+    </Style>
+
+    <!-- Pestaña CURA: activa en verde con texto oscuro (mock "Pestaña cura") -->
+    <Style x:Key="SegmentTabHealing" TargetType="RadioButton" BasedOn="{StaticResource SegmentTab}">
+        <Style.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Healing}" />
+                <Setter Property="Foreground" Value="{DynamicResource OnHealing}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Pestaña RECIB.: activa en Danger con texto oscuro (decisión del rediseño) -->
+    <Style x:Key="SegmentTabTaken" TargetType="RadioButton" BasedOn="{StaticResource SegmentTab}">
+        <Style.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+                <Setter Property="Background" Value="{DynamicResource Danger}" />
+                <Setter Property="Foreground" Value="{DynamicResource OnAccent}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ===================== Chips ===================== -->
+    <!-- Chip de filtro (Todas / Solo kills / Solo bosses / Esta semana). Sirve para RadioButton y CheckBox. -->
+    <Style x:Key="FilterChip" TargetType="ToggleButton">
+        <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Stroke}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                            CornerRadius="{StaticResource RadiusPill}" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            </Trigger>
+            <Trigger Property="IsChecked" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
+                <Setter Property="Foreground" Value="{DynamicResource Gold}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource AccentStrong}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Lista de opciones como chips (fuente, opacidad, segundos...). Reemplaza al estilo local "Chips" del overlay. -->
+    <Style x:Key="ChipList" TargetType="ListBox">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemContainerStyle">
+            <Setter.Value>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource Stroke}" />
+                    <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+                    <Setter Property="Height" Value="32" />
+                    <Setter Property="Padding" Value="12,0" />
+                    <Setter Property="Margin" Value="0,0,8,8" />
+                    <Setter Property="Cursor" Value="Hand" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                                        CornerRadius="{StaticResource RadiusPill}" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter VerticalAlignment="Center" />
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource Text}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Gold}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource AccentStrong}" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===================== Insignias (Border con un TextBlock adentro) ===================== -->
+    <Style x:Key="TagNeutral" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource TagNeutralBg}" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+        <Setter Property="Padding" Value="6,2" />
+        <Setter Property="TextElement.FontSize" Value="{StaticResource FontSizeMicro}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource TextMuted}" />
+    </Style>
+    <Style x:Key="TagSuccess" TargetType="Border" BasedOn="{StaticResource TagNeutral}">
+        <Setter Property="Background" Value="{DynamicResource SuccessSoft}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Success}" />
+    </Style>
+    <Style x:Key="TagDanger" TargetType="Border" BasedOn="{StaticResource TagNeutral}">
+        <Setter Property="Background" Value="{DynamicResource DangerSoft}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Danger}" />
+    </Style>
+    <Style x:Key="TagAccent" TargetType="Border" BasedOn="{StaticResource TagNeutral}">
+        <Setter Property="Background" Value="{DynamicResource AccentTint}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Gold}" />
+    </Style>
+
+    <!-- ===================== Entrada de datos ===================== -->
+    <!-- Caja de texto: búsqueda, filtro del log, apodo, renombrar skill. Con foco, borde del acento. -->
+    <Style x:Key="InputBox" TargetType="TextBox">
+        <Setter Property="Background" Value="{DynamicResource InputBg}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Stroke}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CaretBrush" Value="{DynamicResource Gold}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource Gold}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource RadiusControl}">
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" Focusable="False"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Gold}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Interruptor de Configuración (36 × 20, perilla de 16). Sirve para CheckBox. El texto va en Content. -->
+    <Style x:Key="ToggleSwitch" TargetType="ToggleButton">
+        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <DockPanel Background="Transparent">
+                        <Border x:Name="Track" DockPanel.Dock="Left" Width="36" Height="20" Padding="2" Margin="0,0,12,0" VerticalAlignment="Center"
+                                CornerRadius="{StaticResource RadiusPill}" Background="{DynamicResource Neutral}">
+                            <Ellipse x:Name="Knob" Width="16" Height="16" Fill="{DynamicResource TextBright}" HorizontalAlignment="Left" />
+                        </Border>
+                        <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True" />
+                    </DockPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Track" Property="Background" Value="{DynamicResource Gold}" />
+                            <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Ítem de la navegación lateral de Configuración (RadioButton con GroupName) -->
+    <Style x:Key="NavItem" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="Margin" Value="0,0,0,2" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusControl}" Padding="{TemplateBinding Padding}">
+                        <DockPanel>
+                            <Border x:Name="Mark" Width="3" Height="16" CornerRadius="2" Margin="0,0,10,0" VerticalAlignment="Center" Background="Transparent" />
+                            <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True" />
+                        </DockPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Mark" Property="Background" Value="{DynamicResource Gold}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            </Trigger>
+            <Trigger Property="IsChecked" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AccentSoft}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextBright}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ===================== Paneles ===================== -->
+    <!-- Marco de las ventanas grandes. Ojo: el radio no recorta a los hijos; los que pinten fondo en las esquinas necesitan Clip. -->
+    <Style x:Key="WindowFrame" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource WindowBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource GoldDim}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusWindow}" />
+    </Style>
+    <!-- Marco del overlay en vivo (translúcido, sin sombra) -->
+    <Style x:Key="OverlayFrame" TargetType="Border" BasedOn="{StaticResource WindowFrame}">
+        <Setter Property="Background" Value="{DynamicResource Panel}" />
+    </Style>
+    <!-- Tarjeta: boss del dungeon, tema, atajo -->
+    <Style x:Key="CardPanel" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource CardBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+        <Setter Property="Padding" Value="{StaticResource PaddingCard}" />
+    </Style>
+    <!-- Aviso: boss detectado, captura guardada, récord (cambiar BorderBrush a SuccessLine o DangerStrong según el caso) -->
+    <Style x:Key="ToastPanel" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource PanelRaised}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentStrong}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+        <Setter Property="Padding" Value="{StaticResource PaddingToast}" />
+    </Style>
+    <!-- Menú desplegable ("⋯" del overlay): fondo MenuBg, borde Stroke, radio 8 -->
+    <Style x:Key="MenuPanel" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource MenuBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Stroke}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
+        <Setter Property="Padding" Value="4" />
+    </Style>
+    <!-- Tecla de atajo (kbd) -->
+    <Style x:Key="KeyCap" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource MenuBg}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource StrokeKbd}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+        <Setter Property="Padding" Value="7,3" />
+        <Setter Property="TextElement.FontSize" Value="{StaticResource FontSizeCaption}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource Text}" />
+    </Style>
+
+    <!-- ===================== Tooltip ===================== -->
+    <!-- Oscuro, como el de la fila del mock Estados. El tooltip rico de la fila agrega su propio margen (14 × 12). -->
+    <Style x:Key="ToolTipDark" TargetType="ToolTip">
+        <Setter Property="Background" Value="{DynamicResource PanelSolid}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Stroke}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontFamily" Value="{DynamicResource BodyFont}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="HasDropShadow" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource RadiusCard}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!-- Todos los tooltips de la app con el estilo oscuro. Va último: necesita ToolTipDark y BodyFont definidos arriba. -->
+    <Style TargetType="ToolTip" BasedOn="{StaticResource ToolTipDark}" />
 </ResourceDictionary>
