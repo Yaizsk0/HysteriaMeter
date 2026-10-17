@@ -41,7 +41,7 @@ El overlay arranca en vivo y toma solo el tráfico del proceso `AION2`. Para pro
 dotnet run --project src/HysteriaMeter.App -c Release -- --Capture:Mode=Replay --Capture:ReplayPath=C:\ruta\a\captura.pcap --Capture:ReplaySpeed=4
 ```
 
-Como en Details!, el botón + abre otra ventana del overlay: cada una elige su pestaña (DAÑO o CURACIÓN) y si muestra el HPS junto al daño, y todas se recuerdan con su posición. Cerrar la primera cierra la app. Al soltar una ventana cerca de un borde de la pantalla o de otra ventana del meter, se pega a ese borde (imanes; se apagan en configuración).
+Como en Details!, el menú ⋯ → Nueva ventana abre otro overlay: cada uno elige su pestaña (DPS, CURA o RECIB.) y si muestra el HPS junto al daño, y todas se recuerdan con su posición. Cerrar la primera cierra la app. Al soltar una ventana cerca de un borde de la pantalla o de otra ventana del meter, se pega a ese borde (imanes; se apagan en configuración).
 
 En la bandeja del sistema aparece un rombo dorado: clic para mostrar u ocultar el overlay (sirve aunque esté en modo atravesable) y clic derecho para reiniciar la pelea, abrir la carpeta de datos o salir.
 
@@ -51,7 +51,7 @@ En el primer arranque aparece una bienvenida con el estado real de Npcap, la cap
 
 Configuración se abre en una ventana propia con ocho secciones: Apariencia, Columnas, Alertas y sonidos, Atajos, Captura, Datos del juego, Historial y Diagnóstico. Los sliders ajustan filas, cantidad de jugadores (o Todos) y opacidad. Captura permite elegir la placa de red; el cambio se aplica al reiniciar el meter. Datos del juego muestra los archivos locales disponibles. El atajo opcional "Cambiar pestaña" rota DPS, CURA y RECIB. en la ventana principal. La configuración y el historial pueden quedar abiertos al copiar imágenes, mostrar barras de prueba o abrir peleas.
 
-El historial (botón del reloj) se puede buscar por boss o por nota y filtrar por derrotados. Cada pelea muestra tu DPS, el número de intento contra ese boss, tu percentil entre tus intentos con el color de Warcraft Logs (P100 dorado = tu mejor, naranja, violeta, azul, verde, gris) y una ★ si es tu récord; al batir un récord aparece un aviso dorado, y si no, al terminar la pelea el aviso dice cuánto mejoraste o empeoraste contra tu intento anterior ("+8% vs tu intento anterior"). Al abrir una pelea guardada se le puede escribir una nota o borrarla. Si la búsqueda deja un solo boss, arriba aparece la línea de tu DPS intento por intento, con el último, el mejor y la kill más rápida; esa pelea lleva la marca "⏱ kill más rápida". Con más de un personaje, récords, intentos, percentiles y el aviso "vs tu intento anterior" se cuentan por personaje, cada pelea dice con cuál fue y arriba aparece un selector para ver uno solo. En configuración se elige cuánto guardar: los bosses derrotados y las peleas con nota no se borran nunca.
+El historial (menú ⋯ → Historial) se puede buscar por boss o por nota y filtrar por derrotados. Cada pelea muestra tu DPS, el número de intento contra ese boss, tu percentil entre tus intentos con el color de Warcraft Logs (P100 dorado = tu mejor, naranja, violeta, azul, verde, gris) y una ★ si es tu récord; al batir un récord aparece un aviso dorado, y si no, al terminar la pelea el aviso dice cuánto mejoraste o empeoraste contra tu intento anterior ("+8% vs tu intento anterior"). Al abrir una pelea guardada se le puede escribir una nota o borrarla. Si la búsqueda deja un solo boss, arriba aparece la línea de tu DPS intento por intento, con el último, el mejor y la kill más rápida; esa pelea lleva la marca "⏱ kill más rápida". Con más de un personaje, récords, intentos, percentiles y el aviso "vs tu intento anterior" se cuentan por personaje, cada pelea dice con cuál fue y arriba aparece un selector para ver uno solo. En configuración se elige cuánto guardar: los bosses derrotados y las peleas con nota no se borran nunca.
 
 Con la vida del boss a la vista, el overlay estima en cuánto muere al ritmo actual de la party ("muere en 0:42"). Cada fila tiene detrás una línea tenue con el DPS de los últimos 30 segundos. En configuración se elige el formato de los números (2.04M, 2.0M o 2.040.321) y cada cuánto se refresca el overlay.
 
@@ -83,11 +83,11 @@ Como en Details!, en configuración se puede pintar cada fila con el color de su
 
 El botón ❚❚ del encabezado pausa el overlay: congela lo que ves (por ejemplo, para leer el resultado con calma) mientras la pelea sigue contando por detrás. La primera vez que abrís el meter aparece una bienvenida con lo básico, y después de cada actualización, la lista de novedades (`data/novedades.json`), una sola vez.
 
-En FILAS se elige el alto de cada fila (24, 30 o 36 px) y cuántos jugadores mostrar; si quedás fuera del corte, tu fila ocupa el último lugar con tu puesto real.
+En Apariencia se elige el alto de cada fila (22 a 40 px, de dos en dos) y cuántos jugadores mostrar; si quedás fuera del corte, tu fila ocupa el último lugar con tu puesto real.
 
 En TEMA hay cuatro estilos, como los de Ember: Dorado (el de siempre), Mínimo (gris, sin dorados), Abismo (violeta) y Carmesí.
 
-El botón — del encabezado minimiza el overlay a una pastilla con tu DPS y tu puesto ("12.3k · #2 de 6"), como Ember; se arrastra igual y el cuadradito lo vuelve a abrir.
+El menú ⋯ → Minimizar convierte el overlay a una pastilla con tu DPS y tu puesto ("12.3k · #2 de 6"), como Ember; se arrastra igual y el botón ↗ lo vuelve a abrir.
 
 Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: doble clic en una skill del detalle para ponerle nombre (queda guardado en tus preferencias), o cargalos en `data/skills.json` para toda la legión.
 
@@ -111,6 +111,8 @@ Rediseño, paso 1: la paleta nueva (fondo casi negro #0C0E13, acento ámbar #E8B
 Rediseño, paso 2: el historial abre en su propia ventana, con peleas agrupadas por entrada a dungeon, filtros de kills, bosses y últimos siete días, y una columna de progreso por boss. Podés dejarlo abierto mientras mirás una pelea en el overlay; las notas se guardan al cambiar de pelea y los filtros no ocultan intentos del cálculo de progreso.
 
 Rediseño, paso 5: el detalle separa skills, muertes y registro, y permite comparar jugadores o intentos guardados con curvas de DPS sobre el mismo eje de tiempo. Las marcas de muerte quedan en el segundo real; el registro abierto aparte conserva la pelea elegida y se pueden renombrar una skill o todas sus variantes.
+
+Rediseño, paso 6: el overlay incorpora pestañas DPS/CURA/RECIB., menú ⋯, filas con insignias de clase, HP con un decimal e intento histórico contra bosses. RUN muestra los tramos reales de la entrada. Las tarjetas explican los problemas de captura y abren Configuración en Captura. Los avisos de boss, enrage, récord y captura guardada se superponen a las filas y quedan fuera del PNG. El modo compacto y la pastilla conservan sus acciones; a 260 px el encabezado se adapta sin reducir la letra y las columnas opcionales comparten desplazamiento horizontal con sus títulos. Las preferencias antiguas de 24 px migran una vez a 22; luego se puede elegir y guardar 24 normalmente.
 
 ## Spec Kit
 

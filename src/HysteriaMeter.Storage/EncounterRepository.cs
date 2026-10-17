@@ -279,6 +279,23 @@ public sealed class EncounterRepository(string databasePath)
         return (previous, best);
     }
 
+    /// <summary>
+    /// Cuántas peleas guardadas contra ese objetivo empezaron antes de <paramref name="before"/>, sin contar <paramref name="excludeId"/>:
+    /// el overlay muestra "Intento N" (N = esto + 1) mientras la pelea todavía no se guardó. Por personaje, como el intento del historial.
+    /// </summary>
+    public async Task<int> CountEarlierAttemptsAsync(string targetName, DateTimeOffset before, string excludeId, string? localName = null, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var count = await connection.ExecuteScalarAsync<long>(
+            """
+            WITH loc AS (SELECT encounter_id, MAX(name) AS name FROM encounter_actors WHERE is_local = 1 GROUP BY encounter_id)
+            SELECT COUNT(*) FROM encounters o LEFT JOIN loc l ON l.encounter_id = o.id
+            WHERE o.target_name = @targetName AND o.started_at < @before AND o.id <> @excludeId AND l.name IS @localName
+            """,
+            new { targetName, before = before.ToString("O", CultureInfo.InvariantCulture), excludeId, localName }).ConfigureAwait(false);
+        return (int)count;
+    }
+
     /// <summary>Guarda (o borra, con texto vacío) la nota de una pelea.</summary>
     public async Task SetNoteAsync(string id, string? note, CancellationToken cancellationToken = default)
     {

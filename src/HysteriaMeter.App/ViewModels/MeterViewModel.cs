@@ -139,6 +139,7 @@ public sealed partial class MeterViewModel : ObservableObject
             OnPropertyChanged(nameof(IsRecording));
             OnPropertyChanged(nameof(RecordingHint));
         };
+        InitializeLive(dispatcher);
     }
 
     private MeterPreferences Preferences => _session.Preferences;
@@ -311,11 +312,11 @@ public sealed partial class MeterViewModel : ObservableObject
     public int RowHeight
     {
         get => Preferences.RowHeight;
-        set => Update(Preferences with { RowHeight = value }, nameof(RowHeight), nameof(RowNameSize));
+        set => Update(Preferences with { RowHeight = value }, nameof(RowHeight), nameof(RowNameSize), nameof(RowValueSize));
     }
 
-    /// <summary>Letra del nombre y del DPS acorde al alto de la fila.</summary>
-    public double RowNameSize => Preferences.RowHeight switch { <= 24 => 13, >= 36 => 17, _ => 15 };
+    /// <summary>Letra del nombre acorde al alto de la fila (la del DPS es <see cref="RowValueSize"/>).</summary>
+    public double RowNameSize => RowNameSizeFor(Preferences.RowHeight);
 
     public int MaxRows
     {
@@ -914,7 +915,10 @@ public sealed partial class MeterViewModel : ObservableObject
 
     public bool IsExpanded => !IsCompact;
 
-    /// <summary>Estado de la captura: "live", "idle", "warn" o "error" (color del punto del encabezado).</summary>
+    /// <summary>
+    /// Estado de la captura: "live" (en combate), "ready" (capturando, sin combate), "idle" (buscando el juego),
+    /// "warn" o "error" (color del punto del encabezado).
+    /// </summary>
     [ObservableProperty]
     public partial string StatusKind { get; set; } = "idle";
 
@@ -1565,29 +1569,6 @@ public sealed partial class MeterViewModel : ObservableObject
         }
     }
 
-    private void UpdateEnrage(EncounterSnapshot snapshot, TimeSpan? timeToKill)
-    {
-        if (!IsLive || !HasTargetHealth || snapshot.TargetEnrageSeconds is not { } enrage)
-        {
-            IsEnrageDanger = false;
-            return;
-        }
-
-        var (text, danger) = Enrage(enrage, snapshot.MainTargetDuration ?? snapshot.Duration, timeToKill);
-        TargetHealthText += text;
-        IsEnrageDanger = danger;
-        if (danger && _enrageWarnedId != snapshot.Id)
-        {
-            _enrageWarnedId = snapshot.Id;
-            RecordMessage = timeToKill is { } kill
-                ? $"No llegan al enrage: al ritmo actual muere en {kill.ToString(@"m\:ss", CultureInfo.InvariantCulture)}"
-                : "¡Enrage!";
-            HasRecordMessage = true;
-            _recordUntilUtc = DateTime.UtcNow + MarkNoticeDuration * 2;
-            Alert(AlertSound.Warning);
-        }
-    }
-
     /// <summary>
     /// El nombre del objetivo; si el juego no lo mandó y no está en data/npcs.json, "NPC 12345" para poder agregarlo.
     /// </summary>
@@ -1852,21 +1833,21 @@ public sealed partial class MeterViewModel : ObservableObject
     /// <summary>
     /// "Guardar captura" de la tarjeta: la misma imagen que la automática al derrotar un boss (esa pelea, con el overlay
     /// entero). Si el overlay muestra otra cosa, primero fija la pelea (<see cref="ShowFight"/>) y ahí
-    /// queda. La pastilla y la franja de pelea fijada se esconden solo mientras <paramref name="render"/>
+    /// queda. La pastilla, la franja de pelea fijada y el estilo de pausa se esconden solo mientras <paramref name="render"/>
     /// dibuja; devuelve lo que devuelve <paramref name="render"/> (el mensaje de la tarjeta).
     /// </summary>
     public string SaveFightImage(EncounterSnapshot fight, Func<string> render)
     {
         ShowFight(fight);
-        var view = (IsMinimized, IsViewingHistory);
-        (IsMinimized, IsViewingHistory) = (false, false);
+        var view = (IsMinimized, IsViewingHistory, IsPaused);
+        (IsMinimized, IsViewingHistory, IsPaused) = (false, false, false);
         try
         {
             return render();
         }
         finally
         {
-            (IsMinimized, IsViewingHistory) = view;
+            (IsMinimized, IsViewingHistory, IsPaused) = view;
         }
     }
 
@@ -1970,6 +1951,7 @@ public sealed partial class MeterViewModel : ObservableObject
             CaptureState.Failed => "error",
             CaptureState.NoTraffic => "warn",
             _ when inCombat => "live",
+            CaptureState.Capturing => "ready",
             _ => "idle",
         };
         var decoder = _session.Decoder;
@@ -1979,14 +1961,16 @@ public sealed partial class MeterViewModel : ObservableObject
             Diagnostics = DescribeDecoder(frames, unknown, errors, decoder.Resyncs);
         }
 
-        if (state == CaptureState.Capturing && PatchSuspected(frames, unknown, errors))
+        var patch = state == CaptureState.Capturing && PatchSuspected(frames, unknown, errors);
+        if (patch)
         {
             StatusText = "El juego pudo haberse actualizado: no se reconocen los paquetes. Revisá si hay una versión nueva del meter.";
             StatusKind = "warn";
         }
 
-        EmptyText = StatusKind is "live" or "idle" ? "Esperando el primer golpe…" : StatusText;
+        EmptyText = StatusKind is not ("warn" or "error") ? "Esperando el primer golpe…" : StatusText;
         OnPropertyChanged(nameof(EffectiveOpacity));
+        UpdateLiveStatus(state, now, patch);
     }
 
     /// <summary>
@@ -2014,7 +1998,7 @@ public sealed partial class MeterViewModel : ObservableObject
 
         var ratio = Math.Clamp((double)health.Hp / health.MaxHp, 0, 1);
         TargetHealthRatio = ratio;
-        TargetHealthText = $"{ActorRowViewModel.Compact(health.Hp)} / {ActorRowViewModel.Compact(health.MaxHp)} · {ratio.ToString("P0", CultureInfo.CurrentCulture)}";
+        TargetHealthText = $"{ActorRowViewModel.Compact(health.Hp)} / {ActorRowViewModel.Compact(health.MaxHp)}";
     }
 
     private void Refresh()
@@ -2030,6 +2014,7 @@ public sealed partial class MeterViewModel : ObservableObject
         UpdateStatus(current is not null);
         CheckPractice(current);
         IsLive = _pinned is null && current is not null;
+        TrackLive(current);
         if (_pinned is null && IsRunView)
         {
             current = _engine.RunSnapshot();
@@ -2047,6 +2032,7 @@ public sealed partial class MeterViewModel : ObservableObject
         var snapshot = _pinned ?? current ?? _lastFinished;
         if (snapshot is null)
         {
+            ShowNothing();
             return;
         }
 
@@ -2112,6 +2098,10 @@ public sealed partial class MeterViewModel : ObservableObject
             Actors[i].HealingPerSecond = combined && rows[i].Healing > 0
                 ? ActorRowViewModel.Compact(rows[i].Healing / snapshot.Duration.TotalSeconds)
                 : "–";
+            Actors[i].RecentTip = Tab == MeterTab.Damage
+                ? ActorRowViewModel.Compact(ActorRowViewModel.RecentDps(rows[i].Timeline, snapshot.Duration))
+                : string.Empty;
+            Actors[i].TopSkill = Tab == MeterTab.Damage ? ActorRowViewModel.TopSkillOf(rows[i], _session.SkillNames) : string.Empty;
         }
 
         while (Actors.Count > rows.Count)
@@ -2121,6 +2111,7 @@ public sealed partial class MeterViewModel : ObservableObject
 
         IsEmpty = Actors.Count == 0;
         MinimizedText = MinimizedSummary(Actors, PartyPerSecond, ranked.Count);
+        UpdateLive(real, ranked.Count);
         if (Detail.ActorId is not null)
         {
             Detail.Update(real);

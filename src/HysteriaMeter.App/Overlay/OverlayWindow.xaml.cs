@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -41,7 +42,11 @@ public partial class OverlayWindow : Window
         DataContext = _viewModel = viewModel;
         _windows = windows;
         RestoreLayout(layout);
-        Loaded += (_, _) => _viewModel.Start();
+        Loaded += (_, _) =>
+        {
+            _viewModel.ShowsToasts = _windows is null || IsMain;
+            _viewModel.Start();
+        };
         _viewModel.DetailRequested += ShowDetail;
         _viewModel.RunSummaryRequested += ShowRunSummary;
         _viewModel.CopyImageRequested += CopyImage;
@@ -136,6 +141,7 @@ public partial class OverlayWindow : Window
             encoder.Frames.Add(BitmapFrame.Create(bitmap));
             using var file = File.Create(path);
             encoder.Save(file);
+            _viewModel.ShowSavedImage(path);
             return $"Imagen guardada: {Path.GetFileName(path)}";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -146,6 +152,26 @@ public partial class OverlayWindow : Window
 
     /// <summary>El overlay dibujado al tamaño real en pantalla; <c>null</c> si todavía no tiene tamaño.</summary>
     private RenderTargetBitmap? RenderOverlay()
+    {
+        // El PNG comparte las filas: los avisos transitorios nunca tapan el resultado del combate.
+        // SetCurrentValue conserva los bindings, que vuelven a su estado original incluso si falla el render.
+        var toastVisibility = ToastLayer.Visibility;
+        var newsVisibility = NewsCard.Visibility;
+        ToastLayer.SetCurrentValue(VisibilityProperty, Visibility.Collapsed);
+        NewsCard.SetCurrentValue(VisibilityProperty, Visibility.Collapsed);
+        try
+        {
+            return RenderOverlayContent();
+        }
+        finally
+        {
+            ToastLayer.SetCurrentValue(VisibilityProperty, toastVisibility);
+            NewsCard.SetCurrentValue(VisibilityProperty, newsVisibility);
+            Root.UpdateLayout();
+        }
+    }
+
+    private RenderTargetBitmap? RenderOverlayContent()
     {
         Root.UpdateLayout();
         var dpi = VisualTreeHelper.GetDpi(this);
@@ -614,6 +640,18 @@ public partial class OverlayWindow : Window
     }
 
     private void OnLockClick(object sender, RoutedEventArgs e) => ForAllWindows(w => w.ToggleClickThrough());
+
+    private void OnMoreClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { ContextMenu: { } menu } button)
+        {
+            menu.PlacementTarget = button;
+            menu.Placement = PlacementMode.Bottom;
+            menu.IsOpen = true;
+        }
+
+        e.Handled = true;
+    }
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
 }

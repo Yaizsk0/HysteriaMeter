@@ -116,6 +116,52 @@ public sealed class InicioResumeTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
+    public void Card_image_suppresses_pause_styling_and_restores_pause_even_after_render_failure(bool renderFails)
+    {
+        var session = Session();
+        var vm = new MeterViewModel(session);
+        var engine = session.Engine;
+        engine.Apply(new LocalPlayerEvent(Start, 1, "Yo"));
+        engine.Apply(new DamageEvent(Start, 1, 900, 100, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(Start.AddSeconds(5), 1, 900, 100, 1000, HitModifiers.None));
+        vm.BossOnly = false;
+        Assert.Equal("400", Assert.Single(vm.Actors).PerSecond);
+        vm.IsPaused = true;
+        vm.IsMinimized = true;
+        engine.Apply(new DamageEvent(Start.AddSeconds(10), 1, 900, 100, 4000, HitModifiers.None));
+        var final = engine.CurrentSnapshot()!;
+
+        string Render()
+        {
+            Assert.False(vm.IsPauseBannerVisible);
+            Assert.False(vm.IsPaused);
+            Assert.False(vm.IsMinimized || vm.IsViewingHistory);
+            Assert.Equal("600", Assert.Single(vm.Actors).PerSecond);
+            if (renderFails)
+            {
+                throw new IOException("Fallo de render para verificar restauración de pausa");
+            }
+
+            return "Captura guardada";
+        }
+
+        if (renderFails)
+        {
+            Assert.Throws<IOException>(() => vm.SaveFightImage(final, Render));
+        }
+        else
+        {
+            Assert.Equal("Captura guardada", vm.SaveFightImage(final, Render));
+        }
+
+        Assert.True(vm.IsPaused);
+        Assert.True(vm.IsMinimized);
+        Assert.True(vm.IsViewingHistory);
+        Assert.Equal("600", Assert.Single(vm.Actors).PerSecond);
+    }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
     public void Card_image_keeps_the_independent_auxiliary_windows_open(bool renderFails)
     {
         var vm = new MeterViewModel(Session()) { IsSettingsOpen = true, IsHistoryOpen = true };
