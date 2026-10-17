@@ -705,12 +705,13 @@ public sealed partial class WindowSmokeTests
     }
 
     [Fact]
-    public void Startup_notice_welcomes_new_users_and_lists_unseen_news()
+    public void Startup_notice_lists_unseen_news()
     {
         var news = NewsFeed.Parse("""{ "news": [ { "id": 35, "text": "Vieja" }, { "id": 37, "text": "Nueva" }, { "id": "x" } ] }""");
 
         Assert.Equal([37, 35], news.Select(n => n.Id));
-        Assert.Equal(NewsFeed.WelcomeTitle, NewsFeed.NoticeFor(news, 0)!.Title);
+        // La bienvenida ya no sale por este aviso (es su propia ventana): con 0 vistas son todas novedades.
+        Assert.Equal(["Nueva", "Vieja"], NewsFeed.NoticeFor(news, 0)!.Lines);
         Assert.Equal(["Nueva"], NewsFeed.NoticeFor(news, 35)!.Lines);
         Assert.Equal(37, NewsFeed.NoticeFor(news, 1)!.LatestId);
         Assert.Null(NewsFeed.NoticeFor(news, 37));

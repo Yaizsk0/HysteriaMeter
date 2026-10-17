@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HysteriaMeter.App.FightCard;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.Combat;
 using HysteriaMeter.Storage;
@@ -104,6 +105,18 @@ public sealed partial class MeterViewModel : ObservableObject
             {
                 dispatcher.InvokeAsync(() => SaveKillImageAsync(snapshot));
             }
+
+            if (FightCardViewModel.CanShow(snapshot))
+            {
+                // La tarjeta se suscribe a la sesión: se crea solo si hay una ventana que la muestre (y la suelte).
+                dispatcher.InvokeAsync(() =>
+                {
+                    if (FightCardRequested is { } show)
+                    {
+                        show(new FightCardViewModel(snapshot, _session, BossOnly && LooksLikeBossFight(snapshot)));
+                    }
+                });
+            }
         };
         _session.PreferencesChanged += names =>
         {
@@ -133,6 +146,9 @@ public sealed partial class MeterViewModel : ObservableObject
 
     /// <summary>La ventana pide abrir otra (botón +).</summary>
     public event Action? NewWindowRequested;
+
+    /// <summary>Se derrotó un boss: la ventana principal muestra la tarjeta de fin de pelea.</summary>
+    public event Action<FightCardViewModel>? FightCardRequested;
 
     /// <summary>La ventana de configuración (Config/ConfigWindow) de esta ventana está abierta.</summary>
     [ObservableProperty]

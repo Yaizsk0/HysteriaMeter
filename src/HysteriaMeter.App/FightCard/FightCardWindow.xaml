@@ -1,0 +1,103 @@
+<Window x:Class="HysteriaMeter.App.FightCard.FightCardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:HysteriaMeter.App.FightCard"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance local:FightCardViewModel}"
+        Title="{Binding Title}"
+        Width="380" SizeToContent="Height" WindowStartupLocation="Manual"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ShowActivated="False" ResizeMode="NoResize" ShowInTaskbar="False"
+        FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource Text}" FontFamily="{DynamicResource BodyFont}"
+        TextOptions.TextFormattingMode="Display">
+
+    <!-- Referencia visual: mock "Mini" (Mini.dc.html), tarjeta de fin de pelea. -->
+    <Window.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding CloseCommand}" />
+    </Window.InputBindings>
+    <Window.Resources>
+        <Style x:Key="KpiCell" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Surface}" />
+            <Setter Property="Padding" Value="14,10" />
+        </Style>
+        <Style x:Key="KpiLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{StaticResource FontSizeMicro}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+        </Style>
+        <Style x:Key="KpiNumber" TargetType="TextBlock" BasedOn="{StaticResource NumberStrong}">
+            <Setter Property="FontSize" Value="{StaticResource NumberSizeWindow}" />
+            <Setter Property="Foreground" Value="{DynamicResource Text}" />
+        </Style>
+    </Window.Resources>
+
+    <Border Background="{DynamicResource PanelSolid}" BorderBrush="{DynamicResource AccentLine}" BorderThickness="1" CornerRadius="{StaticResource RadiusWindow}">
+        <StackPanel>
+            <!-- Encabezado: qué pasó y contra quién; el ✕ es discreto, arriba a la derecha -->
+            <Border BorderBrush="{DynamicResource Rule}" BorderThickness="0,0,0,1" Padding="16,14,10,10">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource ButtonIcon}" VerticalAlignment="Top" Margin="8,-4,0,0"
+                            Command="{Binding CloseCommand}" ToolTip="Cerrar (Esc)">
+                        <Path Width="9" Height="9" Stretch="Uniform" StrokeThickness="1.6" Data="M6,6 L18,18 M18,6 L6,18"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                    </Button>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Eyebrow}" Style="{StaticResource Eyebrow}" />
+                        <TextBlock Text="{Binding Title}" Margin="0,4,0,0" FontFamily="{StaticResource TitleFont}" FontWeight="Bold"
+                                   FontSize="{StaticResource NumberSizeWindow}" Foreground="{DynamicResource Text}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- KPIs separados por filetes de 1 px; sin percentil (menos de 2 intentos) quedan dos columnas -->
+            <UniformGrid Rows="1" Background="{DynamicResource Rule}">
+                <Border Style="{StaticResource KpiCell}">
+                    <StackPanel>
+                        <TextBlock Text="TU DPS" Style="{StaticResource KpiLabel}" />
+                        <TextBlock Text="{Binding Dps}" Style="{StaticResource KpiNumber}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource KpiCell}" Margin="1,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="PUESTO" Style="{StaticResource KpiLabel}" />
+                        <TextBlock Text="{Binding Rank}" Style="{StaticResource KpiNumber}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource KpiCell}" Margin="1,0,0,0" ToolTip="{Binding PercentileHint}"
+                        Visibility="{Binding HasPercentile, Converter={StaticResource Visible}}">
+                    <StackPanel>
+                        <TextBlock Text="PERCENTIL" Style="{StaticResource KpiLabel}" />
+                        <TextBlock Text="{Binding PercentileText}" Style="{StaticResource KpiNumber}" Foreground="{Binding PercentileBrush}" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <!-- Comparación con tu intento anterior y skill top: cada línea solo si hay dato -->
+            <StackPanel Margin="16,12,16,0">
+                <TextBlock Text="{Binding Comparison}" TextWrapping="Wrap" Margin="0,0,0,8" Visibility="{Binding HasComparison, Converter={StaticResource Visible}}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource Success}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsImprovement}" Value="False">
+                                    <Setter Property="Foreground" Value="{DynamicResource Danger}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Text="{Binding TopSkill}" Style="{StaticResource SecondaryText}" TextTrimming="CharacterEllipsis"
+                           Visibility="{Binding HasTopSkill, Converter={StaticResource Visible}}" />
+            </StackPanel>
+
+            <UniformGrid Rows="1" Margin="16,12,16,14">
+                <Button Content="Ver detalle" Style="{StaticResource ButtonPrimary}" MinHeight="44" Margin="0,0,4,0" Command="{Binding ShowDetailCommand}" />
+                <Button Content="Guardar captura" Style="{StaticResource ButtonGhost}" MinHeight="44" Margin="4,0,0,0" Command="{Binding SaveCaptureCommand}"
+                        ToolTip="{Binding CapturePath}" />
+            </UniformGrid>
+            <TextBlock Text="{Binding SaveMessage}" Style="{StaticResource SecondaryText}" Margin="16,-4,16,12" TextWrapping="Wrap"
+                       Visibility="{Binding HasSaveMessage, Converter={StaticResource Visible}}" />
+        </StackPanel>
+    </Border>
+</Window>

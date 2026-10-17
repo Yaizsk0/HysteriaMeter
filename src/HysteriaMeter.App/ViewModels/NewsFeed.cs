@@ -6,25 +6,19 @@ namespace HysteriaMeter.App.ViewModels;
 /// <summary>Una novedad del meter; el número crece con cada una (se usa el del PR).</summary>
 public sealed record NewsItem(int Id, string Text);
 
-/// <summary>Lo que se muestra al abrir el meter: la bienvenida la primera vez o las novedades desde la última vez.</summary>
+/// <summary>Lo que se muestra al abrir el meter después de actualizarlo: las novedades desde la última vez.</summary>
 public sealed record StartupNotice(string Title, IReadOnlyList<string> Lines, int LatestId);
 
 /// <summary>
 /// Novedades de <c>data/novedades.json</c>, como el "qué cambió" de Ember: al actualizar se ven una vez y listo.
+/// La bienvenida del primer arranque ya no pasa por acá: es su propia ventana (Welcome/WelcomeWindow).
 /// </summary>
 public static class NewsFeed
 {
-    public const string WelcomeTitle = "BIENVENIDO A HYSTERIA METER";
-
-    public static IReadOnlyList<string> WelcomeLines { get; } =
-    [
-        "Necesitás Npcap instalado (npcap.com, modo compatible con WinPcap). El meter solo lee el tráfico: no toca el juego.",
-        "Entrá al juego y pegale a algo: el punto del encabezado se pone verde en combate.",
-        "Clic en una fila: detalle por skill. Doble clic en el encabezado: modo compacto.",
-        "Ctrl+Shift+L deja pasar los clics al juego; el engranaje abre la configuración.",
-    ];
-
     public static IReadOnlyList<NewsItem> Current { get; private set; } = [];
+
+    /// <summary>La novedad más nueva (0 si no hay): quien recién instala ya la cuenta como vista.</summary>
+    public static int LatestId(IReadOnlyList<NewsItem> items) => items.Count > 0 ? items.Max(i => i.Id) : 0;
 
     public static void Load(string path)
     {
@@ -65,17 +59,12 @@ public static class NewsFeed
     }
 
     /// <summary>
-    /// La primera vez (<paramref name="lastSeen"/> 0) da la bienvenida; después, las novedades más nuevas que la última
-    /// vista (hasta 6). <c>null</c> si no hay nada que mostrar.
+    /// Las novedades más nuevas que la última vista (hasta 6). <c>null</c> si no hay nada que mostrar. Con
+    /// <paramref name="lastSeen"/> 0 son todas: a quien recién instala, App.xaml.cs ya le marca la última como vista.
     /// </summary>
     public static StartupNotice? NoticeFor(IReadOnlyList<NewsItem> items, int lastSeen)
     {
-        var latest = items.Count > 0 ? items.Max(i => i.Id) : 0;
-        if (lastSeen <= 0)
-        {
-            return new StartupNotice(WelcomeTitle, WelcomeLines, Math.Max(latest, 1));
-        }
-
+        var latest = LatestId(items);
         var unseen = items.Where(i => i.Id > lastSeen).OrderByDescending(i => i.Id).Take(6).Select(i => i.Text).ToList();
         return unseen.Count == 0 ? null : new StartupNotice("NOVEDADES", unseen, latest);
     }

@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using HysteriaMeter.App.Detail;
 using HysteriaMeter.App.History;
+using HysteriaMeter.App.FightCard;
 using HysteriaMeter.App.Interop;
 using HysteriaMeter.App.ViewModels;
 
@@ -31,6 +32,7 @@ public partial class OverlayWindow : Window
     private DetailWindow? _detail;
     private HistoryWindow? _historyWindow;
     private Config.ConfigWindow? _config;
+    private FightCardWindow? _fightCard;
 
     /// <param name="windows">Gestor de ventanas; <c>null</c> en pruebas, sin atajos globales.</param>
     public OverlayWindow(MeterViewModel viewModel, OverlayLayout? layout = null, OverlayWindows? windows = null)
@@ -54,6 +56,7 @@ public partial class OverlayWindow : Window
                 _viewModel.IsSettingsOpen = false;
             }
         };
+        _viewModel.FightCardRequested += ShowFightCard;
 
         // Una ventana cerrada no puede ser dueña de otra: se suelta del view model al cerrarse.
         Closed += (_, _) =>
@@ -66,6 +69,7 @@ public partial class OverlayWindow : Window
             _viewModel.PropertyChanged -= OnViewModelChanged;
             _viewModel.PropertyChanged -= OnSettingsOpenChanged;
             _config?.Close();
+            _viewModel.FightCardRequested -= ShowFightCard;
         };
     }
 
@@ -147,6 +151,7 @@ public partial class OverlayWindow : Window
 
     private void ShowDetail()
     {
+        _fightCard?.Close();
         if (_detail is null)
         {
             _detail = new DetailWindow(_viewModel.Detail) { Owner = this };
@@ -155,6 +160,60 @@ public partial class OverlayWindow : Window
         }
 
         _detail.Activate();
+    }
+
+    /// <summary>
+    /// Tarjeta de fin de pelea al derrotar un boss: solo la ventana principal (y si se ve), debajo del overlay o de la
+    /// pastilla. Si el overlay deja pasar los clics, la tarjeta también.
+    /// </summary>
+    private void ShowFightCard(FightCardViewModel card)
+    {
+        if ((_windows is not null && !IsMain) || !IsVisible)
+        {
+            card.Detach();
+            return;
+        }
+
+        _fightCard?.Close();
+        card.DetailRequested += () =>
+        {
+            if (_viewModel.Actors.FirstOrDefault(a => a.IsLocalPlayer) is { } me)
+            {
+                _viewModel.ShowDetailCommand.Execute(me);
+            }
+        };
+        card.SaveRequested += path =>
+        {
+            SaveImage(path);
+            card.SaveMessage = _viewModel.ExportMessage;
+        };
+
+        var window = new FightCardWindow(card, _viewModel.IsClickThrough) { Owner = this };
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_fightCard, window))
+            {
+                _fightCard = null;
+            }
+        };
+        _fightCard = window;
+        window.PlaceNear(VisibleBounds(), ScreenWorkArea());
+        window.Show();
+        _ = card.LoadAsync();
+    }
+
+    /// <summary>Lo que se ve del overlay (entero, o solo la pastilla si está minimizado), en coordenadas de pantalla.</summary>
+    private Rect VisibleBounds()
+    {
+        var bounds = Rect.Empty;
+        foreach (var child in Root.Children.OfType<FrameworkElement>().Where(c => c.IsVisible))
+        {
+            bounds.Union(child.TransformToAncestor(this).TransformBounds(new Rect(child.RenderSize)));
+        }
+
+        return bounds.IsEmpty
+            ? new Rect(Left, Top, ActualWidth, ActualHeight)
+            : new Rect(Left + bounds.X, Top + bounds.Y, bounds.Width, bounds.Height);
     }
 
     private void ShowRunSummary(DungeonSummaryViewModel summary) =>

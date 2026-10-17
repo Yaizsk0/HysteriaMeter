@@ -4,6 +4,7 @@ using HysteriaMeter.App.Config;
 using HysteriaMeter.App.Overlay;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.App.ViewModels;
+using HysteriaMeter.App.Welcome;
 using HysteriaMeter.Combat;
 using HysteriaMeter.Storage;
 using Microsoft.Extensions.Configuration;
@@ -78,8 +79,11 @@ public partial class App : Application
             sp.GetRequiredService<CombatEngine>(),
             sp.GetRequiredService<CaptureRecorder>(),
             SkillNames.Load(AppPaths.In("Juego", "skills.json"), Path.Combine(AppContext.BaseDirectory, "data", "skills.json")).WithIcons(AppPaths.In("Juego", "iconos")),
-            // Quien ya tenía preferencias guardadas no es nuevo: ve las novedades en vez de la bienvenida.
-            UserStore.Load<MeterPreferences>(PreferencesFile) is { } saved ? saved with { LastSeenNews = Math.Max(saved.LastSeenNews, 1) } : new MeterPreferences(),
+            // Quien ya tenía preferencias guardadas no es nuevo: ve las novedades al actualizar. Quien llega sin
+            // preferencias ve la bienvenida (su propia ventana) y no la lista de novedades de versiones que no usó.
+            UserStore.Load<MeterPreferences>(PreferencesFile) is { } saved
+                ? saved with { LastSeenNews = Math.Max(saved.LastSeenNews, 1) }
+                : new MeterPreferences { WelcomeDone = false, LastSeenNews = NewsFeed.LatestId(NewsFeed.Current) },
             preferences => UserStore.Save(PreferencesFile, preferences),
             sp.GetRequiredService<EncounterRepository>(),
             sp.GetRequiredService<CaptureStatus>(),
@@ -116,6 +120,10 @@ public partial class App : Application
         MainWindow = _host.Services.GetRequiredService<OverlayWindows>().OpenSaved();
         // El host lo desecha al salir (saca el icono de la bandeja).
         _host.Services.GetRequiredService<TrayIcon>();
+        if (!session.Preferences.WelcomeDone)
+        {
+            ShowWelcome(session);
+        }
 
         // Limpieza del historial según lo elegido en configuración; si la base falla, se intenta en la próxima sesión.
         try
@@ -125,6 +133,17 @@ public partial class App : Application
         catch (System.Data.Common.DbException)
         {
         }
+    }
+
+    /// <summary>
+    /// Bienvenida del primer arranque, encima del overlay. La captura ya corre (MeterPipeline arrancó con el host): la
+    /// ventana solo muestra cómo viene y no frena el resto del arranque.
+    /// </summary>
+    private void ShowWelcome(MeterSession session)
+    {
+        var capture = _host!.Services.GetRequiredService<IOptions<CaptureSettings>>().Value;
+        var welcome = new WelcomeViewModel(session, CaptureSetup.From(capture), GameDataSummary.Read(AppPaths.In("Juego")));
+        new WelcomeWindow(welcome) { Owner = MainWindow }.Show();
     }
 
     private void ApplyTheme(string? name)

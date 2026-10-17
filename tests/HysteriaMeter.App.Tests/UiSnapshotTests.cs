@@ -98,9 +98,6 @@ public sealed partial class UiSnapshotTests
         new($"12-filas-{DenseRows}px", h => Overlay(Live(h.Demo(preferences: new MeterPreferences { LastSeenNews = 1, RowHeight = DenseRows })))),
         new($"13-filas-{LooseRows}px", h => Overlay(Live(h.Demo(preferences: new MeterPreferences { LastSeenNews = 1, RowHeight = LooseRows })))),
 
-        // Bienvenida: sesión nueva con LastSeenNews = 0; la primera ventana recibe el aviso de NewsFeed.
-        new("14-bienvenida", h => Overlay(Refreshed(new MeterViewModel(h.Session(new MeterPreferences()))))),
-
         // Sin tráfico: la captura arrancó hace 30 s y nunca vio paquetes (el silencio es de 15 s).
         new("15-sin-trafico", h => Overlay(Refreshed(new MeterViewModel(
             h.Session(status: new CaptureStatus(DateTime.UtcNow.AddSeconds(-30))))))),
