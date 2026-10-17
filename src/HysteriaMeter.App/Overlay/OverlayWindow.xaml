@@ -84,48 +84,7 @@
             </Setter>
         </Style>
 
-
-        <!-- Lista de opciones como chips (fuente, opacidad) -->
-        <Style x:Key="Chips" TargetType="ListBox">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="ItemsPanel">
-                <Setter.Value>
-                    <ItemsPanelTemplate>
-                        <WrapPanel />
-                    </ItemsPanelTemplate>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="ItemContainerStyle">
-                <Setter.Value>
-                    <Style TargetType="ListBoxItem">
-                        <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
-                        <Setter Property="Cursor" Value="Hand" />
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="ListBoxItem">
-                                    <Border x:Name="Chip" Margin="0,0,6,6" Padding="8,3" BorderBrush="{StaticResource Stroke}" BorderThickness="1" Background="{StaticResource Row}">
-                                        <ContentPresenter />
-                                    </Border>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource Gold}" />
-                                            <Setter Property="Foreground" Value="{StaticResource Gold}" />
-                                        </Trigger>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource GoldDim}" />
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Cuadros de texto del overlay: búsqueda del historial y nota de la pelea. -->
+        <!-- Cuadro de texto del overlay: la nota de la pelea. -->
         <Style x:Key="Field" TargetType="TextBox">
             <Setter Property="Background" Value="#33000000" />
             <Setter Property="Foreground" Value="{StaticResource Text}" />
@@ -134,42 +93,6 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="4,2" />
             <Setter Property="FontSize" Value="12" />
-        </Style>
-
-        <Style x:Key="SettingsHeader" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="{StaticResource TextDim}" />
-            <Setter Property="Margin" Value="0,8,0,4" />
-        </Style>
-
-        <!-- Casilla y opción con el estilo del overlay; sirve para CheckBox y RadioButton. -->
-        <Style x:Key="Option" TargetType="ToggleButton">
-            <Setter Property="Foreground" Value="{StaticResource Text}" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Margin" Value="0,2" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ToggleButton">
-                        <StackPanel Orientation="Horizontal" Background="Transparent">
-                            <Grid Width="14" Height="14" Margin="0,0,8,0" VerticalAlignment="Center">
-                                <Border x:Name="Box" BorderBrush="{DynamicResource AccentStrong}" BorderThickness="1" Background="{StaticResource Row}" />
-                                <Border x:Name="Mark" Margin="3" Background="{DynamicResource Gold}" Visibility="Collapsed" />
-                            </Grid>
-                            <ContentPresenter VerticalAlignment="Center" />
-                        </StackPanel>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Mark" Property="Visibility" Value="Visible" />
-                                <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Gold}" />
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Gold}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
         </Style>
 
         <conv:RoundedClipConverter x:Key="RoundedClip" />
