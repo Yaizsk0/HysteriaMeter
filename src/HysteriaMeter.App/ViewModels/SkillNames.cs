@@ -16,12 +16,14 @@ public sealed class SkillNames(IReadOnlyDictionary<uint, string> names)
 
     /// <summary>
     /// El nombre exacto o, si no está, el de la skill base: en las skills de clase (11xxxxxx a 18xxxxxx) los últimos
-    /// cuatro dígitos son nivel y variante (Bittercold Wind 15280143 → 15280000).
+    /// cuatro dígitos son nivel y variante (Bittercold Wind 15280143 → 15280000). Lo que puso el usuario va primero,
+    /// también el nombre de la base ("Aplicar a todas las variantes" del detalle): pisa al de la variante en el archivo.
     /// </summary>
     public string Of(uint skillId) =>
         Custom.TryGetValue(skillId, out var custom) ? custom
+        : BaseOf(skillId) is { } userBase && Custom.TryGetValue(userBase, out custom) ? custom
         : names.TryGetValue(skillId, out var name) ? name
-        : BaseOf(skillId) is { } baseId && (Custom.TryGetValue(baseId, out name) || names.TryGetValue(baseId, out name)) ? name
+        : BaseOf(skillId) is { } baseId && names.TryGetValue(baseId, out name) ? name
         : $"Skill {skillId}";
 
     /// <summary>Si tiene nombre (propio, puesto por el usuario o el de su base); si no, <see cref="Of"/> da "Skill 12345".</summary>

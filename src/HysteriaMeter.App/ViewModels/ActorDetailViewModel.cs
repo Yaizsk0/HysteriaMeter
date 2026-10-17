@@ -1,36 +1,17 @@
 using System.Collections.ObjectModel;
+using System.Data.Common;
 using System.Globalization;
-using System.Windows;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using HysteriaMeter.Combat;
+using HysteriaMeter.Storage;
 
 namespace HysteriaMeter.App.ViewModels;
 
-/// <summary>Una muerte del jugador elegido, para la sección MUERTES del detalle.</summary>
-public sealed record DeathItem(string When, string Summary, string LastHits);
-
-/// <summary>Otro jugador de la pelea o, con <paramref name="Saved"/>, uno de tus intentos guardados contra el mismo objetivo.</summary>
-public sealed record CompareOption(ulong Id, string Name, ActorSnapshot? Saved = null, IReadOnlyList<HealthPhase>? SavedPhases = null)
-{
-    /// <summary>Ids reservados para los intentos guardados: no chocan con entidades del juego.</summary>
-    public const ulong PreviousAttemptId = ulong.MaxValue;
-
-    public const ulong BestAttemptId = ulong.MaxValue - 1;
-
-    /// <summary>"Tu intento anterior · 12.3k" con tu fila de esa pelea; <c>null</c> si la pelea no tiene jugador local.</summary>
-    public static CompareOption? Attempt(ulong id, string label, EncounterSnapshot? saved) =>
-        saved?.Actors.FirstOrDefault(a => a.IsLocalPlayer) is { } me
-            ? new CompareOption(id, $"{label} · {ActorRowViewModel.Compact(me.Dps)}", me, saved.Phases)
-            : null;
-
-    public override string ToString() => Name;
-}
-
-/// <summary>Una fila de la comparación: qué se mide, el valor de cada uno y si el elegido gana.</summary>
-public sealed record CompareRow(string Label, string Mine, string Theirs, bool MineBetter, bool TheirsBetter);
-
-/// <summary>Desglose por skill de un jugador (referencia: mocks/Detalle.dc.html). Se refresca con el overlay.</summary>
+/// <summary>
+/// Detalle de un jugador (referencia: mocks Detalle, Muertes y Comparar del rediseño): KPIs, DPS en el tiempo, pestañas
+/// Skills / Muertes / Log y la vista Comparar. Se refresca con el overlay.
+/// </summary>
 public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableObject
 {
     /// <summary>De dónde sale el registro de la pelea (el motor); <c>null</c> en pruebas.</summary>
@@ -40,6 +21,9 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
 
     /// <summary>Apodo puesto a un nombre real, o <c>null</c>.</summary>
     public Func<string, string?>? NicknameOf { get; set; }
+
+    /// <summary>Hora actual, para "HOY 21:37" en Comparar (el arnés de capturas la fija).</summary>
+    public Func<DateTimeOffset> Now { get; set; } = () => DateTimeOffset.Now;
 
     /// <summary>El usuario cambió el apodo (nombre real, apodo; vacío para sacarlo).</summary>
     public event Action<string, string>? NicknameChanged;
@@ -61,43 +45,6 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         }
     }
 
-    /// <summary>Skill que se está renombrando (doble clic en su fila); <c>null</c> si ninguna.</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsRenamingSkill), nameof(RenamingSkillLabel))]
-    public partial SkillRowViewModel? RenamingSkill { get; set; }
-
-    public bool IsRenamingSkill => RenamingSkill is not null;
-
-    public string RenamingSkillLabel => RenamingSkill is { } skill ? $"Nombre para la skill {skill.SkillId}:" : string.Empty;
-
-    [ObservableProperty]
-    public partial string SkillNameDraft { get; set; } = string.Empty;
-
-    /// <summary>Se guardó un nombre de skill (vacío lo saca); lo persiste quien guarda las preferencias.</summary>
-    public event Action<uint, string>? SkillRenamed;
-
-    [CommunityToolkit.Mvvm.Input.RelayCommand]
-    private void StartRenameSkill(SkillRowViewModel? skill)
-    {
-        RenamingSkill = skill;
-        SkillNameDraft = skill is null || skill.Name.StartsWith("Skill ", StringComparison.Ordinal) ? string.Empty : skill.Name;
-    }
-
-    [CommunityToolkit.Mvvm.Input.RelayCommand]
-    private void SaveSkillName()
-    {
-        if (RenamingSkill is { } skill)
-        {
-            SkillRenamed?.Invoke(skill.SkillId, SkillNameDraft);
-            skill.Name = names.Of(skill.SkillId);
-        }
-
-        RenamingSkill = null;
-    }
-
-    [CommunityToolkit.Mvvm.Input.RelayCommand]
-    private void CancelSkillRename() => RenamingSkill = null;
-
     /// <summary>La vista abre el registro filtrado por este jugador.</summary>
     public event Action<LogViewModel>? LogRequested;
 
@@ -106,66 +53,52 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     {
         if (LogSource is { } source)
         {
-            LogRequested?.Invoke(new LogViewModel(source, names, ActorId, Name));
+            LogRequested?.Invoke(new LogViewModel(source, names, ActorId, Name, BrushOf));
         }
     }
 
-    [ObservableProperty]
-    public partial string DamageTaken { get; set; } = "–";
+    // ===================== Pestañas =====================
 
     [ObservableProperty]
-    public partial string DeathCount { get; set; } = "0";
+    [NotifyPropertyChangedFor(nameof(IsSkillsTab), nameof(IsDeathsTab), nameof(IsLogTab))]
+    public partial DetailTab Tab { get; set; }
 
-    public ObservableCollection<DeathItem> Deaths { get; } = [];
-
-    /// <summary>Consejos de la pelea (solo para el jugador local).</summary>
-    public ObservableCollection<string> Advice { get; } = [];
-
-    [ObservableProperty]
-    public partial bool HasAdvice { get; set; }
-
-    /// <summary>Los demás jugadores de la pelea, para el selector "Comparar con".</summary>
-    public ObservableCollection<CompareOption> Others { get; } = [];
-
-    [ObservableProperty]
-    public partial CompareOption? CompareWith { get; set; }
-
-    public ObservableCollection<CompareRow> Comparison { get; } = [];
-
-    /// <summary>Carga tu intento anterior y tu mejor intento contra el objetivo de la pelea, para compararte; <c>null</c> sin historial.</summary>
-    public Func<EncounterSnapshot, Task<IReadOnlyList<CompareOption>>>? PastAttempts { get; set; }
-
-    private IReadOnlyList<CompareOption> _past = [];
-    private Guid? _pastFor;
-
-    [ObservableProperty]
-    public partial bool HasComparison { get; set; }
-
-    private EncounterSnapshot? _last;
-
-    // Mientras se rearma la lista de jugadores, el ComboBox escribe null en CompareWith: no hay que reaccionar.
-    private bool _rebuildingOthers;
-
-    partial void OnCompareWithChanged(CompareOption? value)
+    // Mientras se compara no hay pestaña marcada: elegir una sale de la comparación.
+    public bool IsSkillsTab
     {
-        if (!_rebuildingOthers && _last is { } snapshot)
+        get => !HasComparison && Tab == DetailTab.Skills;
+        set => Pick(DetailTab.Skills, value);
+    }
+
+    public bool IsDeathsTab
+    {
+        get => !HasComparison && Tab == DetailTab.Deaths;
+        set => Pick(DetailTab.Deaths, value);
+    }
+
+    public bool IsLogTab
+    {
+        get => !HasComparison && Tab == DetailTab.Log;
+        set => Pick(DetailTab.Log, value);
+    }
+
+    private void Pick(DetailTab tab, bool value)
+    {
+        if (!value)
         {
-            Update(snapshot);
+            return;
+        }
+
+        Tab = tab;
+        if (HasComparison)
+        {
+            CompareWith = null;
         }
     }
 
-    /// <summary>Porcentaje del tiempo pegando, del primer golpe al último.</summary>
-    [ObservableProperty]
-    public partial string Uptime { get; set; } = "–";
+    partial void OnTabChanged(DetailTab value) => RefreshLog(force: true);
 
-    [ObservableProperty]
-    public partial string DeadTime { get; set; } = "–";
-
-    [ObservableProperty]
-    public partial string DeadTimeHint { get; set; } = string.Empty;
-
-    [ObservableProperty]
-    public partial bool HasDeaths { get; set; }
+    // ===================== Cabecera =====================
 
     /// <summary>Jugador elegido; <c>null</c> si no hay ninguno.</summary>
     public ulong? ActorId { get; private set; }
@@ -173,8 +106,23 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     [ObservableProperty]
     public partial string Name { get; set; } = string.Empty;
 
+    /// <summary>Emblema de la clase (Juego\clases); sin él, el avatar lleva una letra.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasClassEmblem))]
+    public partial string? ClassEmblem { get; set; }
+
+    public bool HasClassEmblem => ClassEmblem is not null;
+
+    /// <summary>Inicial de la clase o, si todavía no se sabe, la del nombre.</summary>
+    [ObservableProperty]
+    public partial string AvatarLetter { get; set; } = "?";
+
+    // Clase con la que se armó el avatar: el emblema se busca en disco solo cuando cambia.
+    private (bool Done, int? ClassId) _avatarFor;
+
     /// <summary>"Templario · iLvl 2130 · power 93.1k", con lo que se sepa.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Subtitle))]
     public partial string Profile { get; set; } = string.Empty;
 
     public static string ProfileText(ActorSnapshot actor) =>
@@ -186,7 +134,14 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         }.Where(part => part is not null));
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Subtitle))]
     public partial string Target { get; set; } = string.Empty;
+
+    /// <summary>Debajo del nombre: el perfil y contra quién fue la pelea.</summary>
+    public string Subtitle => string.Join(" · ", new[] { Profile, Target }.Where(part => part.Length > 0));
+
+    [ObservableProperty]
+    public partial bool IsMissing { get; set; }
 
     [ObservableProperty]
     public partial Brush Accent { get; set; } = PlayerColors.Local;
@@ -194,14 +149,56 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     [ObservableProperty]
     public partial Brush BarFill { get; set; } = PlayerColors.LocalBar;
 
+    // ===================== KPIs y línea secundaria =====================
+
     [ObservableProperty]
     public partial string Dps { get; set; } = "–";
 
+    /// <summary>"+8% vs intento anterior" (solo para vos, con un intento guardado) o vacío.</summary>
     [ObservableProperty]
-    public partial string ActiveDps { get; set; } = "–";
+    public partial Delta DpsDelta { get; set; } = Delta.None;
 
     [ObservableProperty]
     public partial string Total { get; set; } = "–";
+
+    /// <summary>"27,1 % del party".</summary>
+    [ObservableProperty]
+    public partial string ShareText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string CritRate { get; set; } = "–";
+
+    [ObservableProperty]
+    public partial Delta CritDelta { get; set; } = Delta.None;
+
+    /// <summary>Golpes por la espalda contra el objetivo principal (los modificadores solo se cuentan contra él).</summary>
+    [ObservableProperty]
+    public partial string BackRate { get; set; } = "–";
+
+    [ObservableProperty]
+    public partial Delta BackDelta { get; set; } = Delta.None;
+
+    /// <summary>Percentil de tu DPS entre tus intentos guardados contra el mismo objetivo, contando esta pelea.</summary>
+    [ObservableProperty]
+    public partial bool HasPercentile { get; set; }
+
+    [ObservableProperty]
+    public partial string Percentile { get; set; } = "–";
+
+    /// <summary>Escalón del color (0, 25, 50, 75, 95 o 100), el de las claves Percentile* del tema.</summary>
+    [ObservableProperty]
+    public partial int PercentileTier { get; set; }
+
+    [ObservableProperty]
+    public partial string PercentileHint { get; set; } = string.Empty;
+
+    /// <summary>Tus DPS guardados contra el objetivo de la pelea, sin contarla; <c>null</c> sin historial.</summary>
+    public Func<EncounterSnapshot, Task<IReadOnlyList<double>>>? PastDps { get; set; }
+
+    private IReadOnlyList<double> _pastDps = [];
+
+    [ObservableProperty]
+    public partial string ActiveDps { get; set; } = "–";
 
     [ObservableProperty]
     public partial string Duration { get; set; } = "00:00";
@@ -210,27 +207,57 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     public partial string Overkill { get; set; } = "–";
 
     [ObservableProperty]
-    public partial bool IsMissing { get; set; }
+    public partial string DamageTaken { get; set; } = "–";
 
-    /// <summary>Ventana del promedio móvil del gráfico, como en el mock ("ventana 5 s").</summary>
+    [ObservableProperty]
+    public partial string DeathCount { get; set; } = "0";
+
+    /// <summary>Porcentaje del tiempo pegando, del primer golpe al último.</summary>
+    [ObservableProperty]
+    public partial string Uptime { get; set; } = "–";
+
+    [ObservableProperty]
+    public partial string DeadTime { get; set; } = "–";
+
+    [ObservableProperty]
+    public partial string DeadTimeHint { get; set; } = string.Empty;
+
+    /// <summary>Consejos de la pelea (solo para el jugador local).</summary>
+    public ObservableCollection<string> Advice { get; } = [];
+
+    [ObservableProperty]
+    public partial bool HasAdvice { get; set; }
+
+    // ===================== DPS en el tiempo =====================
+
+    /// <summary>Ventana del promedio móvil con que se calcula el pico del gráfico.</summary>
     internal const int ChartWindowSeconds = 5;
 
-    /// <summary>
-    /// DPS en el tiempo: x = segundo, y = pico − DPS (WPF crece hacia abajo). El primer punto es (0, pico)
-    /// para que la base del gráfico sea DPS 0; el Polyline se estira al tamaño del recuadro.
-    /// </summary>
+    /// <summary>Barras del gráfico, como en el mock: 40 (o una por segundo si la pelea es más corta).</summary>
+    public const int ChartBarCount = 40;
+
+    public ObservableCollection<ChartBar> ChartBars { get; } = [];
+
     [ObservableProperty]
-    public partial PointCollection ChartPoints { get; set; } = [];
+    public partial int ChartColumns { get; set; } = ChartBarCount;
 
     [ObservableProperty]
     public partial bool HasChart { get; set; }
 
+    /// <summary>"0:00 — 2:47".</summary>
+    [ObservableProperty]
+    public partial string ChartRange { get; set; } = string.Empty;
+
     [ObservableProperty]
     public partial string PeakDps { get; set; } = "–";
 
-    /// <summary>" · marcas 0:42, 1:15" con los momentos marcados con el atajo, o vacío.</summary>
+    /// <summary>" · marcas 0:42, 1:15 · boss 75% 0:50…": los momentos marcados con el atajo y las fases, o vacío.</summary>
     [ObservableProperty]
     public partial string ChartMarks { get; set; } = string.Empty;
+
+    /// <summary>Tooltip del gráfico: el pico, las marcas y las fases del boss.</summary>
+    [ObservableProperty]
+    public partial string ChartTip { get; set; } = string.Empty;
 
     /// <summary>" · boss 75% 0:42 · 50% 1:30 · 25% 2:10": cuándo la vida del objetivo bajó de cada fase, o vacío.</summary>
     public static string PhasesText(IReadOnlyList<HealthPhase>? phases) =>
@@ -243,25 +270,126 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
             ? string.Empty
             : " · marcas " + string.Join(", ", marks.Order().Select(m => TimeSpan.FromSeconds(m).ToString(@"m\:ss", CultureInfo.InvariantCulture)));
 
+    // ===================== Skills =====================
+
     public ObservableCollection<SkillRowViewModel> Skills { get; } = [];
 
     /// <summary>Fila TOTAL, con las mismas columnas que las skills.</summary>
     public SkillRowViewModel Totals { get; } = new();
 
+    // ===================== Registro integrado =====================
+
+    /// <summary>Registro del jugador elegido para las pestañas Muertes y Log; se arma al abrir una de ellas.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLog), nameof(IsLogEmpty), nameof(LogEmptyText))]
+    public partial LogViewModel? Log { get; set; }
+
+    public bool HasLog => Log is not null;
+
+    /// <summary>No hay líneas para mostrar (sin registro, sin golpes o nada coincide con el filtro).</summary>
+    public bool IsLogEmpty => Log is not { IsEmpty: false };
+
+    public string LogEmptyText => Log switch
+    {
+        null => "Sin registro de golpes para esta pelea",
+        { Search.Length: > 0 } => "Nada coincide con el filtro",
+        _ => "Sin golpes en el registro: solo se guarda el de la pelea en curso o la última",
+    };
+
+    /// <summary>Cada cuánto se vuelve a leer el registro del motor con la pestaña abierta (copiarlo entero cuesta).</summary>
+    internal const int LogRefreshMs = 1_500;
+
+    private long _logLoadedAt;
+
+    // Color de cada jugador de la pelea por ID, para los nombres del registro.
+    private Dictionary<ulong, Brush> _brushes = [];
+
+    private Brush? BrushOf(ulong id) => _brushes.GetValueOrDefault(id);
+
+    partial void OnLogChanged(LogViewModel? oldValue, LogViewModel? newValue)
+    {
+        if (oldValue is not null)
+        {
+            oldValue.LinesChanged -= OnLogLinesChanged;
+        }
+
+        if (newValue is not null)
+        {
+            newValue.LinesChanged += OnLogLinesChanged;
+        }
+
+        UpdateDeathLogLine();
+    }
+
+    private void OnLogLinesChanged()
+    {
+        OnPropertyChanged(nameof(IsLogEmpty));
+        OnPropertyChanged(nameof(LogEmptyText));
+        UpdateDeathLogLine();
+    }
+
+    /// <summary>
+    /// El registro del motor es el de una sola pelea (la actual o la última): si no se superpone con la que muestra el
+    /// detalle (una del historial, por ejemplo), es de otra y no se muestra.
+    /// </summary>
+    public static IReadOnlyList<CombatLogEntry> ForFight(IReadOnlyList<CombatLogEntry> log, EncounterSnapshot snapshot) =>
+        log.Count > 0 && log[0].Timestamp <= snapshot.End && log[^1].Timestamp >= snapshot.Start ? log : [];
+
+    private IReadOnlyList<CombatLogEntry> FightLog() =>
+        LogSource is { } source && _last is { } snapshot ? ForFight(source(), snapshot) : [];
+
+    private void RefreshLog(bool force)
+    {
+        if (LogSource is null || ActorId is not { } id || HasComparison || Tab == DetailTab.Skills)
+        {
+            return;
+        }
+
+        if (Log is null || Log.FocusId != id)
+        {
+            Log = new LogViewModel(FightLog, names, id, Name, BrushOf);
+        }
+        else if (force || Environment.TickCount64 - _logLoadedAt >= LogRefreshMs)
+        {
+            Log.Reload();
+        }
+        else
+        {
+            return;
+        }
+
+        _logLoadedAt = Environment.TickCount64;
+    }
+
+    // ===================== Elegir jugador y refrescar =====================
+
+    private EncounterSnapshot? _last;
+
     public void Select(ActorRowViewModel row)
     {
         ActorId = row.Id;
         HasChart = false;
+        ChartBars.Clear();
         Name = row.Name;
         Accent = row.Accent;
         BarFill = row.BarFill;
+        AvatarLetter = row.Initial.Length > 0 ? row.Initial : "?";
+        ClassEmblem = row.ClassEmblem;
+        _avatarFor = default;
         Skills.Clear();
         _rebuildingOthers = true;
         CompareWith = null;
         Others.Clear();
         _rebuildingOthers = false;
         _past = [];
+        _pastDps = [];
         _pastFor = null;
+        HasPercentile = false;
+        Deaths.Clear();
+        _deathsKey = default;
+        SelectedDeathIndex = -1;
+        RenamingSkill = null;
+        Log = null;
     }
 
     public void Update(EncounterSnapshot snapshot)
@@ -286,18 +414,24 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         }
 
         Name = alias ?? actor.Name;
+        UpdateAvatar(actor);
         Profile = ProfileText(actor);
         Target = MeterViewModel.TitleOf(snapshot);
+        _brushes = BrushesOf(snapshot);
         Dps = ActorRowViewModel.Compact(actor.Dps);
         ActiveDps = ActorRowViewModel.Compact(actor.ActiveDps);
         Total = ActorRowViewModel.Compact(actor.Damage);
+        ShareText = $"{actor.Share.ToString("P1", culture)} del party";
         Duration = duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
         Overkill = ActorRowViewModel.Compact(actor.Overkill);
         DamageTaken = ActorRowViewModel.Compact(actor.DamageTaken);
         DeathCount = actor.Deaths.ToString(culture);
+        UpdateKpis(actor);
         UpdateDeaths(snapshot, actor.Id);
-        UpdateChart(actor.Timeline ?? []);
+        UpdateChart(actor.Timeline ?? [], snapshot.Marks);
         ChartMarks = MarksText(snapshot.Marks) + PhasesText(snapshot.Phases);
+        ChartTip = $"Pico {PeakDps} DPS (promedio móvil de {ChartWindowSeconds} s){ChartMarks}"
+            + (snapshot.Marks is { Count: > 0 } ? Environment.NewLine + "Barras doradas: momentos marcados con el atajo" : string.Empty);
         UpdateActivity(FightActivity.From(actor.Timeline));
         UpdateAdvice(snapshot, actor);
         if (actor.IsLocalPlayer && _pastFor != snapshot.Id)
@@ -306,7 +440,217 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         }
 
         UpdateComparison(snapshot, actor);
+        UpdateSkills(actor, duration);
+        RefreshLog(force: false);
+    }
 
+    private void UpdateAvatar(ActorSnapshot actor)
+    {
+        // EmblemOf mira el disco: solo cuando cambia la clase, no en cada refresco.
+        if (_avatarFor == (true, actor.ClassId))
+        {
+            return;
+        }
+
+        _avatarFor = (true, actor.ClassId);
+        ClassEmblem = PlayerClasses.EmblemOf(actor.ClassId);
+        AvatarLetter = PlayerClasses.Of(actor.ClassId)?.Name is { Length: > 0 } className
+            ? char.ToUpper(className[0], CultureInfo.CurrentCulture).ToString()
+            : ActorRowViewModel.InitialOf(actor.Name);
+    }
+
+    /// <summary>El color de cada jugador como en el overlay: el elegido con su acento, los demás por clase o por nombre.</summary>
+    private Dictionary<ulong, Brush> BrushesOf(EncounterSnapshot snapshot)
+    {
+        var brushes = new Dictionary<ulong, Brush>(snapshot.Actors.Count);
+        foreach (var a in snapshot.Actors)
+        {
+            brushes[a.Id] = a.Id == ActorId ? Accent
+                : PlayerClasses.Of(a.ClassId) is { } playerClass ? PlayerColors.ForClass(playerClass.Color)
+                : a.IsLocalPlayer ? PlayerColors.Local
+                : PlayerColors.For(a.Name);
+        }
+
+        return brushes;
+    }
+
+    private void UpdateKpis(ActorSnapshot actor)
+    {
+        var culture = CultureInfo.CurrentCulture;
+        var counts = actor.Counts ?? HitCounts.Empty;
+        var back = counts.Rate(counts.Back);
+        CritRate = actor.Hits == 0 ? "–" : actor.CritRate.ToString("P0", culture);
+        BackRate = counts.Hits == 0 ? "–" : back.ToString("P0", culture);
+
+        // Las diferencias son contra tu intento anterior: solo para vos y si hay uno guardado.
+        var previous = actor.IsLocalPlayer ? _past.FirstOrDefault(o => o.Id == CompareOption.PreviousAttemptId)?.Saved : null;
+        DpsDelta = previous is null ? Delta.None : PercentDelta(actor.Dps, previous.Dps);
+        CritDelta = previous is null || actor.Hits == 0 || previous.Hits == 0 ? Delta.None : PointsDelta(actor.CritRate, previous.CritRate);
+        var previousCounts = previous?.Counts ?? HitCounts.Empty;
+        BackDelta = previous is null || counts.Hits == 0 || previousCounts.Hits == 0
+            ? Delta.None
+            : PointsDelta(back, previousCounts.Rate(previousCounts.Back));
+
+        var percentile = actor.IsLocalPlayer ? PercentileAmong(actor.Dps, _pastDps) : null;
+        HasPercentile = percentile is not null;
+        if (percentile is { } p)
+        {
+            Percentile = p.Percentile.ToString(culture);
+            PercentileTier = TierOf(p.Percentile);
+            PercentileHint = $"entre tus {p.Attempts} intentos";
+        }
+    }
+
+    /// <summary>"+8% vs intento anterior" o "−3% …"; menos del 1 % no cuenta como diferencia.</summary>
+    public static Delta PercentDelta(double mine, double reference)
+    {
+        if (reference <= 0)
+        {
+            return Delta.None;
+        }
+
+        var change = (mine - reference) / reference;
+        return Math.Abs(change) < 0.01
+            ? new Delta("igual que el intento anterior")
+            : new Delta($"{change.ToString("+0%;−0%", CultureInfo.CurrentCulture)} vs intento anterior", change > 0 ? DeltaTone.Better : DeltaTone.Worse);
+    }
+
+    /// <summary>"+3 pts" o "−5 pts" entre dos proporciones; menos de medio punto no cuenta.</summary>
+    public static Delta PointsDelta(double mine, double reference)
+    {
+        var points = (mine - reference) * 100;
+        return Math.Abs(points) < 0.5
+            ? new Delta("±0 pts")
+            : new Delta($"{points.ToString("+0;−0", CultureInfo.CurrentCulture)} pts", points > 0 ? DeltaTone.Better : DeltaTone.Worse);
+    }
+
+    /// <summary>Percentil de <paramref name="dps"/> entre los guardados más este; <c>null</c> sin al menos un intento guardado.</summary>
+    public static (int Percentile, int Attempts)? PercentileAmong(double dps, IReadOnlyList<double> saved)
+    {
+        if (saved.Count == 0)
+        {
+            return null;
+        }
+
+        double[] all = [.. saved, dps];
+        return (HistoryItem.PercentileOf(dps, all), all.Length);
+    }
+
+    /// <summary>Escalón del percentil con los umbrales de <see cref="HistoryItem.TierBrush"/>.</summary>
+    public static int TierOf(int percentile) => percentile switch
+    {
+        >= 100 => 100,
+        >= 95 => 95,
+        >= 75 => 75,
+        >= 50 => 50,
+        >= 25 => 25,
+        _ => 0,
+    };
+
+    /// <summary>
+    /// Tus DPS guardados contra el objetivo de la pelea (sin contarla), del historial; vacío si no hay jugador local u
+    /// objetivo, o si la base falla. <c>null</c> sin historial.
+    /// </summary>
+    public static Func<EncounterSnapshot, Task<IReadOnlyList<double>>>? PastDpsFrom(EncounterRepository? history) =>
+        history is null ? null : async snapshot =>
+        {
+            var local = snapshot.Actors.FirstOrDefault(a => a.IsLocalPlayer);
+            if (local is null || snapshot.TargetName is not { Length: > 0 } target)
+            {
+                return [];
+            }
+
+            try
+            {
+                return await history.LocalDpsAsync(target, snapshot.Id.ToString(), local.Name).ConfigureAwait(true);
+            }
+            catch (DbException)
+            {
+                return [];
+            }
+        };
+
+    private void UpdateChart(IReadOnlyList<long> timeline, IReadOnlyList<int>? marks)
+    {
+        HasChart = timeline.Count >= 2;
+        if (!HasChart)
+        {
+            ChartBars.Clear();
+            return;
+        }
+
+        var bars = DpsBars(timeline, marks, ChartBarCount);
+        ChartColumns = bars.Count;
+        Replace(ChartBars, bars);
+        ChartRange = $"0:00 — {DungeonSummaryViewModel.Length(TimeSpan.FromSeconds(timeline.Count))}";
+        PeakDps = ActorRowViewModel.Compact(RollingDps(timeline, ChartWindowSeconds).Max());
+    }
+
+    /// <summary>
+    /// Daño por segundo agrupado en <paramref name="count"/> tramos iguales (o uno por segundo si hay menos): el alto es
+    /// el DPS promedio del tramo respecto del más alto, y el tramo va dorado si tiene un momento marcado.
+    /// </summary>
+    public static IReadOnlyList<ChartBar> DpsBars(IReadOnlyList<long> timeline, IReadOnlyList<int>? marks, int count)
+    {
+        var bars = Math.Min(count, timeline.Count);
+        if (bars <= 0)
+        {
+            return [];
+        }
+
+        var averages = new double[bars];
+        var bounds = new (int From, int To)[bars];
+        for (var i = 0; i < bars; i++)
+        {
+            var from = i * timeline.Count / bars;
+            var to = (i + 1) * timeline.Count / bars;
+            long sum = 0;
+            for (var s = from; s < to; s++)
+            {
+                sum += timeline[s];
+            }
+
+            bounds[i] = (from, to);
+            averages[i] = (double)sum / Math.Max(1, to - from);
+        }
+
+        var top = averages.Max();
+        return
+        [
+            .. averages.Select((average, i) =>
+            {
+                var (from, to) = bounds[i];
+                var marked = marks?.Any(m => m >= from && m < to) ?? false;
+                var span = $"{DungeonSummaryViewModel.Length(TimeSpan.FromSeconds(from))}–{DungeonSummaryViewModel.Length(TimeSpan.FromSeconds(to))}";
+                return new ChartBar(top <= 0 ? 0 : average / top, marked, $"{span} · {ActorRowViewModel.Compact(average)} DPS{(marked ? " · marcado" : string.Empty)}");
+            }),
+        ];
+    }
+
+    /// <summary>Cambia solo los elementos distintos (sin rearmar la lista en cada refresco).</summary>
+    internal static void Replace<T>(ObservableCollection<T> target, IReadOnlyList<T> items)
+    {
+        for (var i = 0; i < items.Count; i++)
+        {
+            if (i >= target.Count)
+            {
+                target.Add(items[i]);
+            }
+            else if (!EqualityComparer<T>.Default.Equals(target[i], items[i]))
+            {
+                target[i] = items[i];
+            }
+        }
+
+        while (target.Count > items.Count)
+        {
+            target.RemoveAt(target.Count - 1);
+        }
+    }
+
+    private void UpdateSkills(ActorSnapshot actor, TimeSpan duration)
+    {
+        var culture = CultureInfo.CurrentCulture;
         var skills = actor.Skills;
         var top = skills.Count > 0 ? skills[0].Damage : 0;
         for (var i = 0; i < skills.Count; i++)
@@ -337,27 +681,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         Totals.MaxHit = hits == 0 ? "–" : ActorRowViewModel.Compact(actor.MaxHit);
         Totals.Average = hits == 0 ? "–" : ActorRowViewModel.Compact((double)direct / hits);
         Totals.Dps = ActorRowViewModel.Compact(actor.Dps);
-    }
-
-    private void UpdateChart(IReadOnlyList<long> timeline)
-    {
-        var dps = RollingDps(timeline, ChartWindowSeconds);
-        HasChart = dps.Count >= 2;
-        if (!HasChart)
-        {
-            return;
-        }
-
-        var peak = dps.Max();
-        var points = new PointCollection(dps.Count + 1) { new(0, peak) };
-        for (var i = 0; i < dps.Count; i++)
-        {
-            points.Add(new Point(i + 1, peak - dps[i]));
-        }
-
-        points.Freeze();
-        ChartPoints = points;
-        PeakDps = ActorRowViewModel.Compact(peak);
+        Totals.Tip = SkillRowViewModel.TipText(Totals.Back, Totals.Average);
     }
 
     private string Display(string name) => NicknameOf?.Invoke(name) ?? name;
@@ -374,117 +698,6 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
                 Advice.Add(tip);
             }
         }
-    }
-
-    private async Task LoadPastAttemptsAsync(EncounterSnapshot snapshot)
-    {
-        _pastFor = snapshot.Id;
-        _past = [];
-        if (PastAttempts is not { } source)
-        {
-            return;
-        }
-
-        var past = await source(snapshot).ConfigureAwait(true);
-
-        // Si mientras cargaba se eligió otro jugador o empezó otra pelea, esto ya no corresponde.
-        if (_pastFor == snapshot.Id && _last is { } last)
-        {
-            _past = past;
-            Update(last);
-        }
-    }
-
-    private void UpdateComparison(EncounterSnapshot snapshot, ActorSnapshot actor)
-    {
-        var others = snapshot.Actors.Where(a => a.Id != actor.Id).OrderByDescending(a => a.Dps).Select(a => new CompareOption(a.Id, Display(a.Name)))
-            .Concat(actor.IsLocalPlayer ? _past : []).ToList();
-        if (!others.SequenceEqual(Others))
-        {
-            var selected = CompareWith?.Id;
-            _rebuildingOthers = true;
-            try
-            {
-                Others.Clear();
-                foreach (var option in others)
-                {
-                    Others.Add(option);
-                }
-
-                // Reasignar la elección después de rearmar la lista (el ComboBox la pierde al limpiar).
-                CompareWith = others.FirstOrDefault(o => o.Id == selected);
-            }
-            finally
-            {
-                _rebuildingOthers = false;
-            }
-        }
-
-        var other = CompareWith is { } choice ? choice.Saved ?? snapshot.Actors.FirstOrDefault(a => a.Id == choice.Id) : null;
-        HasComparison = other is not null;
-        Comparison.Clear();
-        if (other is not null)
-        {
-            var rows = Compare(actor, other);
-            if (CompareWith?.Saved is not null)
-            {
-                rows = [.. rows, .. ComparePhases(snapshot.Phases, CompareWith.SavedPhases)];
-            }
-
-            foreach (var row in rows)
-            {
-                Comparison.Add(row);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Contra un intento guardado: a qué tiempo llegó el boss a cada fase en esta pelea y en esa (antes es mejor).
-    /// Solo las fases que tienen las dos.
-    /// </summary>
-    public static IReadOnlyList<CompareRow> ComparePhases(IReadOnlyList<HealthPhase>? mine, IReadOnlyList<HealthPhase>? theirs)
-    {
-        if (mine is null || theirs is null)
-        {
-            return [];
-        }
-
-        return
-        [
-            .. mine.Join(theirs, p => p.Percent, p => p.Percent, (a, b) => new CompareRow(
-                $"Boss al {a.Percent}%",
-                Clock(a.Second),
-                Clock(b.Second),
-                a.Second < b.Second,
-                b.Second < a.Second)),
-        ];
-
-        static string Clock(int seconds) => TimeSpan.FromSeconds(seconds).ToString(@"m\:ss", CultureInfo.InvariantCulture);
-    }
-
-    /// <summary>Las filas de la comparación entre dos jugadores de la misma pelea.</summary>
-    public static IReadOnlyList<CompareRow> Compare(ActorSnapshot mine, ActorSnapshot theirs)
-    {
-        var culture = CultureInfo.CurrentCulture;
-        var myActivity = FightActivity.From(mine.Timeline);
-        var theirActivity = FightActivity.From(theirs.Timeline);
-        var myCounts = mine.Counts ?? HitCounts.Empty;
-        var theirCounts = theirs.Counts ?? HitCounts.Empty;
-        return
-        [
-            Row("DPS", mine.Dps, theirs.Dps, v => ActorRowViewModel.Compact(v)),
-            Row("Daño", mine.Damage, theirs.Damage, v => ActorRowViewModel.Compact(v)),
-            Row("DPS activo", mine.ActiveDps, theirs.ActiveDps, v => ActorRowViewModel.Compact(v)),
-            Row("Crítico", mine.CritRate, theirs.CritRate, v => v.ToString("P0", culture)),
-            Row("Espalda", myCounts.Rate(myCounts.Back), theirCounts.Rate(theirCounts.Back), v => v.ToString("P0", culture)),
-            Row("Golpe máximo", mine.MaxHit, theirs.MaxHit, v => ActorRowViewModel.Compact(v)),
-            Row("Activo", myActivity.Uptime, theirActivity.Uptime, v => v.ToString("P0", culture)),
-            Row("Recibido", mine.DamageTaken, theirs.DamageTaken, v => ActorRowViewModel.Compact(v), lowerIsBetter: true),
-            Row("Muertes", mine.Deaths, theirs.Deaths, v => v.ToString("0", culture), lowerIsBetter: true),
-        ];
-
-        static CompareRow Row(string label, double a, double b, Func<double, string> format, bool lowerIsBetter = false) =>
-            new(label, format(a), format(b), lowerIsBetter ? a < b : a > b, lowerIsBetter ? b < a : b > a);
     }
 
     private void UpdateActivity(FightActivity activity)
@@ -506,39 +719,6 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
             ? $"Sin huecos de más de {FightActivity.Tolerance} s sin pegar en {activity.Seconds} s de pelea"
             : $"{activity.Gaps} huecos de más de {FightActivity.Tolerance} s sin pegar (el más largo, {activity.LongestGap} s) en {activity.Seconds} s de pelea";
         return (uptime, dead, hint);
-    }
-
-    private void UpdateDeaths(EncounterSnapshot snapshot, ulong actorId)
-    {
-        var deaths = (snapshot.Deaths ?? []).Where(d => d.ActorId == actorId).ToList();
-        HasDeaths = deaths.Count > 0;
-        if (deaths.Count == Deaths.Count)
-        {
-            return; // las muertes no cambian una vez registradas
-        }
-
-        Deaths.Clear();
-        foreach (var death in deaths)
-        {
-            Deaths.Add(Describe(death, snapshot.Start, names));
-        }
-    }
-
-    /// <summary>"01:23 · Lo mató Tarka con Skill 502 por 9.0k (crítico)" y el resumen de los golpes previos.</summary>
-    public static DeathItem Describe(DeathRecap death, DateTimeOffset start, SkillNames names)
-    {
-        var offset = death.Timestamp - start;
-        var when = $"{(int)offset.TotalMinutes:00}:{offset.Seconds:00}";
-        if (death.KillingBlow is not { } blow)
-        {
-            return new DeathItem(when, "Murió (sin golpes registrados antes)", string.Empty);
-        }
-
-        var flags = LogViewModel.Flags(blow.Modifiers);
-        var summary = $"Lo mató {blow.SourceName} con {names.Of(blow.SkillId)} por {ActorRowViewModel.Compact(blow.Amount)}{(flags.Length > 0 ? $" ({flags})" : string.Empty)}";
-        var total = death.LastHits.Sum(h => h.Amount);
-        var lastHits = $"{death.LastHits.Count} golpes por {ActorRowViewModel.Compact(total)} en los {DeathRecap.Window.TotalSeconds:0} s anteriores";
-        return new DeathItem(when, summary, lastHits);
     }
 
     /// <summary>Promedio móvil: el DPS del segundo t es el daño de los últimos <paramref name="window"/> segundos dividido por la ventana.</summary>

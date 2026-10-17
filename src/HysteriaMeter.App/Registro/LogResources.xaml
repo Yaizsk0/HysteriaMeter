@@ -1,0 +1,161 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:vm="clr-namespace:HysteriaMeter.App.ViewModels">
+
+    <!-- Piezas del registro que comparten la ventana Registro y las pestañas Muertes y Log del detalle (mock Muertes). -->
+
+    <!-- Caja "Filtrar": la etiqueta adentro, el texto de ayuda en Tag y el borde del acento con foco -->
+    <Style x:Key="LogFilterBox" TargetType="TextBox">
+        <Setter Property="Background" Value="{DynamicResource InputBg}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Stroke}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CaretBrush" Value="{DynamicResource Gold}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource Gold}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSizeSmall}" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="ToolTip" Value="Buscar por jugador, objetivo, skill o modificador (crítico, espalda…). Esc la vacía." />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{StaticResource RadiusControl}" Padding="10,0">
+                        <DockPanel>
+                            <TextBlock Text="Filtrar" Foreground="{DynamicResource TextDim}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <Grid>
+                                <TextBlock x:Name="Hint" Text="{TemplateBinding Tag}" Foreground="{DynamicResource TextDim}" VerticalAlignment="Center"
+                                           Margin="2,0,0,0" IsHitTestVisible="False" Visibility="Collapsed" TextTrimming="CharacterEllipsis" />
+                                <ScrollViewer x:Name="PART_ContentHost" Focusable="False" VerticalAlignment="Center"
+                                              HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+                            </Grid>
+                        </DockPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter TargetName="Hint" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Gold}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Fila del registro: sin el resaltado azul de Windows; la seleccionada (la muerte que se ve) en el acento tenue -->
+    <Style x:Key="LogItem" TargetType="ListBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Padding" Value="4,5" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="Row" Background="{TemplateBinding Background}" BorderBrush="{DynamicResource RuleDim}" BorderThickness="0,0,0,1" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Row" Property="Background" Value="{DynamicResource RowSubtle}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Row" Property="Background" Value="{DynamicResource AccentTint}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="LogList" TargetType="ListBox">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource LogItem}" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+        <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+    </Style>
+
+    <!-- Quién lo hizo, en el color de su fila del overlay (los monstruos, en el color del texto) -->
+    <Style x:Key="LogSource" TargetType="Run">
+        <Setter Property="Foreground" Value="{Binding SourceBrush}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding SourceBrush}" Value="{x:Null}">
+                <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- "→" entre quién y la skill; en una muerte no hay skill -->
+    <Style x:Key="LogArrow" TargetType="Run">
+        <Setter Property="Text" Value=" → " />
+        <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsDeath}" Value="True">
+                <Setter Property="Text" Value=" " />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Monto: curaciones en verde, muertes en rojo -->
+    <Style x:Key="LogAmount" TargetType="TextBlock">
+        <Setter Property="HorizontalAlignment" Value="Right" />
+        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsHeal}" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Healing}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Línea angosta (columna derecha de Muertes): tiempo, "Quién → Skill CRÍTICO" y monto -->
+    <DataTemplate x:Key="LogLineNarrow" DataType="vm:LogLine">
+        <Grid ToolTip="{Binding Tip}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="56" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="56" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding Time}" Foreground="{DynamicResource TextDim}" Typography.NumeralAlignment="Tabular" />
+            <TextBlock x:Name="What" Grid.Column="1" Margin="8,0" TextTrimming="CharacterEllipsis">
+                <Run Text="{Binding Source, Mode=OneWay}" Style="{StaticResource LogSource}" /><Run Style="{StaticResource LogArrow}" /><Run Text="{Binding DisplaySkill, Mode=OneWay}" />
+                <Run Text="{Binding Tags, Mode=OneWay}" FontSize="{StaticResource FontSizeMicro}" Foreground="{DynamicResource Gold}" />
+            </TextBlock>
+            <TextBlock Grid.Column="2" Text="{Binding Amount}" Style="{StaticResource LogAmount}" />
+        </Grid>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsDeath}" Value="True">
+                <Setter TargetName="What" Property="Foreground" Value="{DynamicResource Danger}" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <!-- Línea ancha (pestaña Log): suma el objetivo -->
+    <DataTemplate x:Key="LogLineWide" DataType="vm:LogLine">
+        <Grid ToolTip="{Binding Tip}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="64" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="70" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding Time}" Foreground="{DynamicResource TextDim}" Typography.NumeralAlignment="Tabular" />
+            <TextBlock x:Name="What" Grid.Column="1" Margin="8,0" TextTrimming="CharacterEllipsis">
+                <Run Text="{Binding Source, Mode=OneWay}" Style="{StaticResource LogSource}" /><Run Style="{StaticResource LogArrow}" /><Run Text="{Binding DisplaySkill, Mode=OneWay}" />
+                <Run Text="{Binding Tags, Mode=OneWay}" FontSize="{StaticResource FontSizeMicro}" Foreground="{DynamicResource Gold}" />
+            </TextBlock>
+            <TextBlock Grid.Column="2" Text="{Binding Target}" Margin="0,0,8,0" Foreground="{DynamicResource TextMuted}" TextTrimming="CharacterEllipsis" />
+            <TextBlock Grid.Column="3" Text="{Binding Amount}" Style="{StaticResource LogAmount}" />
+        </Grid>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsDeath}" Value="True">
+                <Setter TargetName="What" Property="Foreground" Value="{DynamicResource Danger}" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+</ResourceDictionary>

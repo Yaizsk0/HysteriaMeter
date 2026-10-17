@@ -33,11 +33,9 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using HysteriaMeter.App.Detail;
 using HysteriaMeter.App.Dungeon;
 using HysteriaMeter.App.Overlay;
 using HysteriaMeter.App.Pipeline;
-using HysteriaMeter.App.Registro;
 using HysteriaMeter.App.ViewModels;
 using HysteriaMeter.Combat;
 using HysteriaMeter.Storage;
@@ -58,8 +56,7 @@ public sealed partial class UiSnapshotTests
     /// <summary>
     /// Los estados, en orden. Estados del mock que hoy no se pueden armar (no hay datos o la UI no existe todavía):
     /// "Intento N" y "Enrage en" (la demo no trae TargetEnrageSeconds y el TTK solo sale de Refresh en vivo),
-    /// overheal, pestañas Skills/Muertes/Log del detalle (ActorDetailViewModel no tiene propiedad de pestaña),
-    /// avisos dentro del overlay. Historial y Configuración tienen estados en sus archivos parciales;
+    /// overheal y avisos dentro del overlay. Detalle, Historial y Configuración tienen estados en sus archivos parciales;
     /// Bienvenida (incluido "sin Npcap") y fin de pelea en UiSnapshotTests.Inicio.cs.
     /// </summary>
     private static readonly State[] States =
@@ -110,28 +107,7 @@ public sealed partial class UiSnapshotTests
             return Overlay(Refreshed(new MeterViewModel(h.Session(status: failed))));
         }),
 
-        // Detalle de jugador. El VM no tiene overlay: DetailRequested no tiene suscriptor y la ventana la crea el arnés.
-        new("20-detalle", h => new DetailWindow(h.DetailOf("Kaelis"))),
-        new("21-detalle-muertes", h => new DetailWindow(h.DetailOf("Tharos"))),
-        new("22-detalle-comparar", h =>
-        {
-            var detail = h.DetailOf("Kaelis");
-            detail.CompareWith = detail.Others[0];
-            return new DetailWindow(detail);
-        }),
-        new("23-detalle-renombrar-skill", h =>
-        {
-            var detail = h.DetailOf("Kaelis");
-            detail.StartRenameSkillCommand.Execute(detail.Skills[0]);
-            return new DetailWindow(detail);
-        }),
-
-        // Registro de la primera muerte de la demo (como en WindowSmokeTests).
-        new("24-registro", _ =>
-        {
-            var death = DemoEncounter.Create(Base).Deaths![0];
-            return new LogWindow(new LogViewModel(() => death.LastHits, SkillNames.Empty, death.ActorId, death.Name));
-        }),
+        // Detalle de jugador y Registro: en UiSnapshotTests.Detalle.cs.
 
         // Modo dungeon: un wipe y un kill del boss. Son la demo marcada como boss: no hay otros números.
         new("30-dungeon", _ =>

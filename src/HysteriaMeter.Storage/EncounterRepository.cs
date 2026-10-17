@@ -239,6 +239,22 @@ public sealed class EncounterRepository(string databasePath)
     }
 
     /// <summary>
+    /// Tu DPS en cada pelea guardada contra ese objetivo, sin contar <paramref name="excludeId"/>: con la pelea actual,
+    /// da el percentil del detalle ("entre tus N intentos"). Con <paramref name="localName"/>, solo las de ese personaje.
+    /// </summary>
+    public async Task<IReadOnlyList<double>> LocalDpsAsync(string targetName, string excludeId, string? localName = null, CancellationToken cancellationToken = default)
+    {
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var dps = await connection.QueryAsync<double>(
+            """
+            SELECT a.dps FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
+            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
+            """,
+            new { targetName, excludeId, localName }).ConfigureAwait(false);
+        return [.. dps];
+    }
+
+    /// <summary>
     /// Ids de tu intento anterior y de tu mejor intento contra ese objetivo, sin contar <paramref name="excludeId"/>,
     /// para compararlos con la pelea actual. Cada uno es <c>null</c> si no hay.
     /// </summary>

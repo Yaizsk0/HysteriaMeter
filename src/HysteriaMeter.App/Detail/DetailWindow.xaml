@@ -4,326 +4,873 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:HysteriaMeter.App.ViewModels"
+        xmlns:local="clr-namespace:HysteriaMeter.App.Detail"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:ActorDetailViewModel}"
         Title="{Binding Name, StringFormat='Detalle · {0}'}"
-        Width="700" Height="600" MinWidth="520" MinHeight="220"
+        Width="1040" Height="680" MinWidth="760" MinHeight="420"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="CanResizeWithGrip" ShowInTaskbar="False"
-        FontSize="13" Foreground="{StaticResource Text}" FontFamily="{DynamicResource BodyFont}"
+        FontSize="13" Foreground="{DynamicResource Text}" FontFamily="{DynamicResource BodyFont}"
         TextOptions.TextFormattingMode="Display">
 
-    <!-- Referencia visual: mocks/Detalle.dc.html, sección "Desglose por skill". -->
+    <!-- Referencia visual: mocks Detalle, Muertes y Comparar del rediseño, y "Renombrar skill" del mock Avisos. -->
     <Window.Resources>
-        <Style x:Key="Cell" TargetType="TextBlock">
-            <Setter Property="HorizontalAlignment" Value="Right" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
-        </Style>
-        <Style x:Key="HeaderCell" TargetType="TextBlock" BasedOn="{StaticResource Cell}">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="{StaticResource TextDim}" />
-        </Style>
-        <Style x:Key="Stat" TargetType="StackPanel">
-            <Setter Property="Margin" Value="0,0,22,4" />
-        </Style>
-        <Style x:Key="StatLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="11" />
-            <Setter Property="Foreground" Value="{StaticResource TextDim}" />
-        </Style>
-        <Style x:Key="StatValue" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="18" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Foreground" Value="{StaticResource TextBright}" />
-        </Style>
-        <DataTemplate x:Key="SkillRowCells" DataType="vm:SkillRowViewModel">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" MinWidth="120" />
-                    <ColumnDefinition Width="62" />
-                    <ColumnDefinition Width="52" />
-                    <ColumnDefinition Width="54" />
-                    <ColumnDefinition Width="48" />
-                    <ColumnDefinition Width="58" />
-                    <ColumnDefinition Width="56" />
-                    <ColumnDefinition Width="54" />
-                    <ColumnDefinition Width="54" />
-                </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Image Width="20" Height="20" Margin="0,0,6,0" RenderOptions.BitmapScalingMode="HighQuality">
-                        <Image.Style>
-                            <Style TargetType="Image">
-                                <Setter Property="Source" Value="{Binding Icon}" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Icon}" Value="{x:Null}">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Setter Property="Source" Value="{x:Null}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Image.Style>
-                    </Image>
-                    <TextBlock Text="{Binding Name}" Foreground="{StaticResource TextBright}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Text="{Binding Note}" Margin="6,0,0,0" FontSize="11" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
-                </StackPanel>
-                <TextBlock Grid.Column="1" Text="{Binding Damage}" Style="{StaticResource Cell}" Foreground="{StaticResource TextBright}" />
-                <TextBlock Grid.Column="2" Text="{Binding Share}" Style="{StaticResource Cell}" />
-                <TextBlock Grid.Column="3" Text="{Binding Hits}" Style="{StaticResource Cell}" />
-                <TextBlock Grid.Column="4" Text="{Binding Critical}" Style="{StaticResource Cell}" />
-                <TextBlock Grid.Column="5" Text="{Binding Back}" Style="{StaticResource Cell}" />
-                <TextBlock Grid.Column="6" Text="{Binding MaxHit}" Style="{StaticResource Cell}" />
-                <TextBlock Grid.Column="7" Text="{Binding Average}" Style="{StaticResource Cell}" />
-                <TextBlock Grid.Column="8" Text="{Binding Dps}" Style="{StaticResource Cell}" Foreground="{StaticResource TextBright}" />
-            </Grid>
-        </DataTemplate>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/HysteriaMeter;component/Registro/LogResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Celdas numéricas de las tablas: a la derecha, en el color secundario -->
+            <Style x:Key="Cell" TargetType="TextBlock">
+                <Setter Property="HorizontalAlignment" Value="Right" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Margin" Value="8,0,0,0" />
+                <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+                <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+            </Style>
+            <Style x:Key="HeaderCell" TargetType="TextBlock" BasedOn="{StaticResource Cell}">
+                <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+            </Style>
+            <Style x:Key="BigCell" TargetType="TextBlock" BasedOn="{StaticResource Cell}">
+                <Setter Property="FontFamily" Value="{StaticResource NumberFont}" />
+                <Setter Property="FontWeight" Value="Bold" />
+                <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            </Style>
+
+            <!-- KPI: etiqueta, valor grande y una línea chica (diferencia o dato de contexto) -->
+            <Style x:Key="KpiCell" TargetType="Border">
+                <Setter Property="Padding" Value="20,12" />
+                <Setter Property="BorderBrush" Value="{DynamicResource Rule}" />
+                <Setter Property="BorderThickness" Value="1,0,0,0" />
+                <Setter Property="Background" Value="Transparent" />
+            </Style>
+            <Style x:Key="KpiLabel" TargetType="TextBlock" BasedOn="{StaticResource SectionLabel}">
+                <Setter Property="Margin" Value="0,0,0,2" />
+            </Style>
+            <Style x:Key="KpiHint" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+                <Setter Property="Margin" Value="0,2,0,0" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            </Style>
+
+            <!-- Diferencia (DataContext = Delta): verde si mejora, rojo si empeora, tenue si no cuenta -->
+            <Style x:Key="DeltaText" TargetType="TextBlock" BasedOn="{StaticResource KpiHint}">
+                <Setter Property="Text" Value="{Binding Text}" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:DeltaTone.Better}">
+                        <Setter Property="Foreground" Value="{DynamicResource Success}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:DeltaTone.Worse}">
+                        <Setter Property="Foreground" Value="{DynamicResource Danger}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- Dato de la línea secundaria: "DPS ACTIVO 380k" -->
+            <Style x:Key="MinorStat" TargetType="TextBlock">
+                <Setter Property="Margin" Value="0,0,22,0" />
+                <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+            </Style>
+
+            <!-- Ícono de skill: el PNG o, si no hay, el cuadrado gris del mock -->
+            <Style x:Key="SkillIcon" TargetType="Border">
+                <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource StrokeStrong}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Background" Value="{DynamicResource SkillIconEmpty}" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <Style x:Key="SkillIconImage" TargetType="Image">
+                <Setter Property="Source" Value="{Binding Icon}" />
+                <Setter Property="Stretch" Value="UniformToFill" />
+                <Setter Property="RenderOptions.BitmapScalingMode" Value="HighQuality" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasIcon}" Value="False">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Setter Property="Source" Value="{x:Null}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- Botón de ícono que queda marcado (el "⋯" de la cabecera), con el mismo aspecto que ButtonIcon -->
+            <Style x:Key="IconToggle" TargetType="ToggleButton">
+                <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Width" Value="32" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusControl}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+                        <Setter Property="Background" Value="{DynamicResource Track}" />
+                    </Trigger>
+                    <Trigger Property="IsChecked" Value="True">
+                        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+                        <Setter Property="Background" Value="{DynamicResource Track}" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- Columnas de la tabla de skills (mock: 1fr 90 64 64 64 84 84) -->
+            <DataTemplate x:Key="SkillRowCells" DataType="vm:SkillRowViewModel">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="120" />
+                        <ColumnDefinition Width="98" />
+                        <ColumnDefinition Width="72" />
+                        <ColumnDefinition Width="72" />
+                        <ColumnDefinition Width="72" />
+                        <ColumnDefinition Width="92" />
+                        <ColumnDefinition Width="92" />
+                    </Grid.ColumnDefinitions>
+                    <DockPanel Grid.Column="0" VerticalAlignment="Center">
+                        <Border Width="24" Height="24" Margin="0,0,10,0" Style="{StaticResource SkillIcon}">
+                            <Image Style="{StaticResource SkillIconImage}" />
+                        </Border>
+                        <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                            <Run Text="{Binding Name, Mode=OneWay}" FontWeight="Medium" />
+                            <Run Text="{Binding Note, Mode=OneWay}" FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextDim}" />
+                        </TextBlock>
+                    </DockPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding Damage}" Style="{StaticResource BigCell}" FontSize="{StaticResource NumberSizeRowName}" />
+                    <TextBlock Grid.Column="2" Text="{Binding Share}" Style="{StaticResource Cell}" />
+                    <TextBlock Grid.Column="3" Text="{Binding Hits}" Style="{StaticResource Cell}" />
+                    <TextBlock Grid.Column="4" Text="{Binding Critical}" Style="{StaticResource Cell}" />
+                    <TextBlock Grid.Column="5" Text="{Binding MaxHit}" Style="{StaticResource Cell}" />
+                    <TextBlock Grid.Column="6" Text="{Binding Dps}" Style="{StaticResource Cell}" Foreground="{DynamicResource Text}" />
+                </Grid>
+            </DataTemplate>
+
+            <!-- Fila TOTAL: las mismas columnas, sin ícono -->
+            <DataTemplate x:Key="TotalRowCells" DataType="vm:SkillRowViewModel">
+                <Grid TextElement.FontWeight="Bold">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="120" />
+                        <ColumnDefinition Width="98" />
+                        <ColumnDefinition Width="72" />
+                        <ColumnDefinition Width="72" />
+                        <ColumnDefinition Width="72" />
+                        <ColumnDefinition Width="92" />
+                        <ColumnDefinition Width="92" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Name}" Margin="34,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextMuted}" FontSize="{StaticResource FontSizeCaption}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Damage}" Style="{StaticResource BigCell}" FontSize="{StaticResource NumberSizeRowName}" />
+                    <TextBlock Grid.Column="2" Text="{Binding Share}" Style="{StaticResource Cell}" />
+                    <TextBlock Grid.Column="3" Text="{Binding Hits}" Style="{StaticResource Cell}" />
+                    <TextBlock Grid.Column="4" Text="{Binding Critical}" Style="{StaticResource Cell}" />
+                    <TextBlock Grid.Column="5" Text="{Binding MaxHit}" Style="{StaticResource Cell}" />
+                    <TextBlock Grid.Column="6" Text="{Binding Dps}" Style="{StaticResource Cell}" Foreground="{DynamicResource Text}" />
+                </Grid>
+            </DataTemplate>
+
+            <!-- Columnas de la tabla de Comparar (mock: 1fr 100 100 220 90) -->
+            <DataTemplate x:Key="CompareSkillCells" DataType="vm:CompareSkillRow">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MinWidth="120" />
+                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition Width="230" />
+                        <ColumnDefinition Width="100" />
+                    </Grid.ColumnDefinitions>
+                    <DockPanel VerticalAlignment="Center">
+                        <Border Width="22" Height="22" Margin="0,0,10,0" Style="{StaticResource SkillIcon}">
+                            <Image Style="{StaticResource SkillIconImage}" />
+                        </Border>
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    </DockPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding Mine}" Style="{StaticResource BigCell}" FontSize="{StaticResource NumberSizeTimer}" Margin="10,0,0,0" />
+                    <TextBlock Grid.Column="2" Text="{Binding Theirs}" Style="{StaticResource Cell}" Margin="10,0,0,0" />
+                    <!-- Diferencia: la línea del medio es "igual"; a la izquierda en rojo lo que perdiste, a la derecha en verde lo que ganaste -->
+                    <Grid Grid.Column="3" Margin="10,0,0,0" Height="18">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Height="12" CornerRadius="2" Background="{DynamicResource Danger}" HorizontalAlignment="Stretch" RenderTransformOrigin="1,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="{Binding Loss}" />
+                            </Border.RenderTransform>
+                        </Border>
+                        <Border Grid.Column="1" Height="12" CornerRadius="2" Background="{DynamicResource Success}" HorizontalAlignment="Stretch" RenderTransformOrigin="0,0.5">
+                            <Border.RenderTransform>
+                                <ScaleTransform ScaleX="{Binding Gain}" />
+                            </Border.RenderTransform>
+                        </Border>
+                        <Rectangle Grid.ColumnSpan="2" Width="1" HorizontalAlignment="Center" Fill="{DynamicResource StrokeKbd}" />
+                    </Grid>
+                    <TextBlock x:Name="Hits" Grid.Column="4" Text="{Binding Hits}" Style="{StaticResource Cell}" Margin="10,0,0,0" />
+                </Grid>
+                <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:DeltaTone.Better}">
+                        <Setter TargetName="Hits" Property="Foreground" Value="{DynamicResource Success}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:DeltaTone.Worse}">
+                        <Setter TargetName="Hits" Property="Foreground" Value="{DynamicResource Danger}" />
+                    </DataTrigger>
+                </DataTemplate.Triggers>
+            </DataTemplate>
+
+            <!-- Visible solo cuando el valor es falso (lo contrario del convertidor Visible) -->
+            <Style x:Key="WhenNoDeaths" TargetType="FrameworkElement">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasDeaths}" Value="False">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
     </Window.Resources>
 
-    <!-- Marco con el borde del acento (GoldDim), como WindowFrame; el fondo sigue translúcido hasta la pista de cada ventana. -->
-    <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource GoldDim}" BorderThickness="1">
-        <DockPanel>
-            <!-- Cabecera: se arrastra la ventana desde acá -->
-            <DockPanel DockPanel.Dock="Top" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="SizeAll" Background="Transparent">
-                <Border DockPanel.Dock="Bottom" Height="1" Background="{StaticResource Rule}" />
-                <Button DockPanel.Dock="Right" Click="OnCloseClick" ToolTip="Cerrar" Cursor="Hand" Width="26" Height="26" Margin="0,6,6,6"
-                        Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextMuted}">
-                    <Path Width="12" Height="12" Stretch="Uniform" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.6"
-                          Data="M6,6 L18,18 M18,6 L6,18" />
-                </Button>
-                <Button DockPanel.Dock="Right" Content="Registro" Command="{Binding OpenLogCommand}" Cursor="Hand" Margin="0,0,8,0" VerticalAlignment="Center"
-                        Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" FontSize="12"
-                        ToolTip="Golpe a golpe de la pelea en curso o de la última, filtrable" />
+    <Grid>
+        <Border Style="{StaticResource WindowFrame}">
+            <DockPanel>
+                <!-- ===================== Cabecera: se arrastra la ventana desde acá ===================== -->
+                <Border DockPanel.Dock="Top" Padding="20,16" BorderBrush="{DynamicResource Rule}" BorderThickness="0,0,0,1"
+                        Background="Transparent" MouseLeftButtonDown="OnHeaderMouseDown">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource ButtonIcon}" Width="32" Height="32" Margin="6,0,0,0"
+                                Click="OnCloseClick" ToolTip="Cerrar (Esc)" VerticalAlignment="Center">
+                            <Path Width="14" Height="14" Stretch="None" Data="M2,2 L12,12 M12,2 L2,12" StrokeThickness="1.8"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                        </Button>
+                        <ToggleButton x:Name="MoreButton" DockPanel.Dock="Right" Style="{StaticResource IconToggle}" Margin="6,0,0,0"
+                                      Content="⋯" FontSize="16" ToolTip="Apodo y registro" VerticalAlignment="Center" />
+                        <!-- Comparar con: sin preselección; "Sin comparar" vuelve al detalle -->
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                            <TextBlock Text="Comparar con" FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource TextMuted}"
+                                       VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <Grid Width="210">
+                                <ComboBox x:Name="CompareBox" ItemsSource="{Binding Others}" SelectedItem="{Binding CompareWith}" FontSize="{StaticResource FontSizeSmall}">
+                                    <ComboBox.Style>
+                                        <Style TargetType="ComboBox" BasedOn="{StaticResource DarkComboBox}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Others.Count}" Value="0">
+                                                    <Setter Property="IsEnabled" Value="False" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ComboBox.Style>
+                                </ComboBox>
+                                <TextBlock Text="Elegir…" Margin="9,0,28,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                                           FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource TextDim}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CompareWith}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- Avatar: emblema de la clase o su inicial, en el color del jugador -->
+                        <Grid Width="40" Height="40" Margin="0,0,14,0" VerticalAlignment="Center">
+                            <Ellipse Fill="{Binding Accent}" Opacity="0.12" />
+                            <Ellipse Stroke="{Binding Accent}" StrokeThickness="1.5" />
+                            <TextBlock Text="{Binding AvatarLetter}" FontWeight="Bold" FontSize="{StaticResource FontSizeEmphasis}" Foreground="{Binding Accent}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasClassEmblem}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Image Source="{Binding ClassEmblem}" Width="26" Height="26" RenderOptions.BitmapScalingMode="HighQuality"
+                                   Visibility="{Binding HasClassEmblem, Converter={StaticResource Visible}}" />
+                        </Grid>
+                        <StackPanel VerticalAlignment="Center" MinWidth="0">
+                            <TextBlock Text="{Binding Name}" Style="{StaticResource WindowTitle}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource TextDim}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0">
+                                <Run Text="{Binding Subtitle, Mode=OneWay}" />
+                                <Run>
+                                    <Run.Style>
+                                        <Style TargetType="Run">
+                                            <Setter Property="Text" Value="" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsMissing}" Value="True">
+                                                    <Setter Property="Text" Value=" · no está en el encuentro actual" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Run.Style>
+                                </Run>
+                            </TextBlock>
+                        </StackPanel>
+                        <!-- Pestañas: mientras se compara ninguna queda marcada y elegir una sale de la comparación -->
+                        <Border Style="{StaticResource SegmentBar}" Padding="3" Margin="24,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton Content="Skills" Style="{StaticResource SegmentTabLarge}" GroupName="DetailTab" IsChecked="{Binding IsSkillsTab, Mode=TwoWay}" />
+                                <RadioButton Content="Muertes" Style="{StaticResource SegmentTabLarge}" GroupName="DetailTab" IsChecked="{Binding IsDeathsTab, Mode=TwoWay}" />
+                                <RadioButton Content="Log" Style="{StaticResource SegmentTabLarge}" GroupName="DetailTab" IsChecked="{Binding IsLogTab, Mode=TwoWay}" Margin="0" />
+                            </StackPanel>
+                        </Border>
+                    </DockPanel>
+                </Border>
+
+                <Grid>
+                    <!-- ===================== Skills ===================== -->
+                    <DockPanel Visibility="{Binding IsSkillsTab, Converter={StaticResource Visible}}">
+                        <!-- KPIs: PERCENTIL solo para vos con intentos guardados (la grilla reparte entre los visibles) -->
+                        <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Rule}" BorderThickness="0,0,0,1">
+                            <UniformGrid Rows="1">
+                                <Border Style="{StaticResource KpiCell}" BorderThickness="0"
+                                        ToolTip="Daño por segundo de toda la pelea, del primer golpe al último del encuentro">
+                                    <StackPanel>
+                                        <TextBlock Text="DPS" Style="{StaticResource KpiLabel}" />
+                                        <TextBlock Text="{Binding Dps}" Style="{StaticResource KpiValue}" />
+                                        <TextBlock DataContext="{Binding DpsDelta}" Style="{StaticResource DeltaText}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource KpiCell}">
+                                    <StackPanel>
+                                        <TextBlock Text="DAÑO TOTAL" Style="{StaticResource KpiLabel}" />
+                                        <TextBlock Text="{Binding Total}" Style="{StaticResource KpiValue}" />
+                                        <TextBlock Text="{Binding ShareText}" Style="{StaticResource KpiHint}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource KpiCell}">
+                                    <StackPanel>
+                                        <TextBlock Text="CRÍTICOS" Style="{StaticResource KpiLabel}" />
+                                        <TextBlock Text="{Binding CritRate}" Style="{StaticResource KpiValue}" />
+                                        <TextBlock DataContext="{Binding CritDelta}" Style="{StaticResource DeltaText}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource KpiCell}"
+                                        ToolTip="Golpes por la espalda contra el objetivo principal: los modificadores se cuentan solo contra él">
+                                    <StackPanel>
+                                        <TextBlock Text="POR LA ESPALDA" Style="{StaticResource KpiLabel}" />
+                                        <TextBlock Text="{Binding BackRate}" Style="{StaticResource KpiValue}" />
+                                        <TextBlock DataContext="{Binding BackDelta}" Style="{StaticResource DeltaText}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource KpiCell}" Visibility="{Binding HasPercentile, Converter={StaticResource Visible}}"
+                                        ToolTip="Tu DPS contra tus peleas guardadas con el mismo objetivo, esta incluida (100 = la mejor)">
+                                    <StackPanel>
+                                        <TextBlock Text="PERCENTIL" Style="{StaticResource KpiLabel}" />
+                                        <TextBlock Text="{Binding Percentile}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource KpiValue}">
+                                                    <Setter Property="Foreground" Value="{DynamicResource Percentile0}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding PercentileTier}" Value="25">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Percentile25}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding PercentileTier}" Value="50">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Percentile50}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding PercentileTier}" Value="75">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Percentile75}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding PercentileTier}" Value="95">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Percentile95}" />
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding PercentileTier}" Value="100">
+                                                            <Setter Property="Foreground" Value="{DynamicResource Percentile100}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding PercentileHint}" Style="{StaticResource KpiHint}" />
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+                        </Border>
+
+                        <!-- Lo que el mock no muestra, en una línea chica: no se pierde nada de lo que había -->
+                        <WrapPanel DockPanel.Dock="Top" Margin="20,10,20,0">
+                            <TextBlock Style="{StaticResource MinorStat}" ToolTip="Sin tiempo muerto: los huecos de más de 3 s entre golpes cuentan como 3 s">
+                                DPS ACTIVO <Run Text="{Binding ActiveDps, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" />
+                            </TextBlock>
+                            <TextBlock Style="{StaticResource MinorStat}">
+                                DURACIÓN <Run Text="{Binding Duration, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" />
+                            </TextBlock>
+                            <TextBlock Style="{StaticResource MinorStat}" ToolTip="Daño que pasó la vida que le quedaba al objetivo">
+                                OVERKILL <Run Text="{Binding Overkill, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" />
+                            </TextBlock>
+                            <TextBlock Style="{StaticResource MinorStat}" ToolTip="Daño que le hicieron los monstruos">
+                                RECIBIDO <Run Text="{Binding DamageTaken, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" />
+                            </TextBlock>
+                            <TextBlock Style="{StaticResource MinorStat}">
+                                MUERTES <Run Text="{Binding DeathCount, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" />
+                            </TextBlock>
+                            <TextBlock Style="{StaticResource MinorStat}" ToolTip="{Binding DeadTimeHint}">
+                                ACTIVO <Run Text="{Binding Uptime, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" />
+                            </TextBlock>
+                            <TextBlock Style="{StaticResource MinorStat}" ToolTip="{Binding DeadTimeHint}">
+                                TIEMPO MUERTO <Run Text="{Binding DeadTime, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" />
+                            </TextBlock>
+                        </WrapPanel>
+
+                        <!-- DPS en el tiempo: barras del DPS promedio de cada tramo; doradas las de los momentos marcados -->
+                        <StackPanel DockPanel.Dock="Top" Margin="20,12,20,0" Visibility="{Binding HasChart, Converter={StaticResource Visible}}">
+                            <DockPanel ToolTip="{Binding ChartTip}" Background="Transparent">
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding ChartRange}" FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextDim}" />
+                                <TextBlock FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextDim}" TextTrimming="CharacterEllipsis">
+                                    DPS en el tiempo<Run Text="{Binding PeakDps, Mode=OneWay, StringFormat=' · pico {0}'}" /><Run Text="{Binding ChartMarks, Mode=OneWay}" Foreground="{DynamicResource Gold}" />
+                                </TextBlock>
+                            </DockPanel>
+                            <ItemsControl ItemsSource="{Binding ChartBars}" Height="56" Margin="0,6,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Rows="1" Columns="{Binding ChartColumns}" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:ChartBar">
+                                        <Grid Background="Transparent" ToolTip="{Binding Tip}" Margin="1,0">
+                                            <Border x:Name="Bar" CornerRadius="1" RenderTransformOrigin="0,1" Opacity="0.55"
+                                                    Background="{Binding DataContext.Accent, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                <Border.RenderTransform>
+                                                    <ScaleTransform ScaleY="{Binding Height}" />
+                                                </Border.RenderTransform>
+                                            </Border>
+                                        </Grid>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsMarked}" Value="True">
+                                                <Setter TargetName="Bar" Property="Background" Value="{DynamicResource Gold}" />
+                                                <Setter TargetName="Bar" Property="Opacity" Value="1" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- Consejos de la pelea (reglas locales, solo para vos) -->
+                        <Border DockPanel.Dock="Top" Margin="20,12,20,0" Padding="12,8" CornerRadius="{StaticResource RadiusCard}"
+                                Background="{DynamicResource AccentFaint}" BorderBrush="{DynamicResource Rule}" BorderThickness="1"
+                                Visibility="{Binding HasAdvice, Converter={StaticResource Visible}}">
+                            <StackPanel>
+                                <TextBlock Text="CONSEJOS" Style="{StaticResource Eyebrow}" Margin="0,0,0,2" />
+                                <ItemsControl ItemsSource="{Binding Advice}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding StringFormat='• {0}'}" FontSize="{StaticResource FontSizeSmall}" TextWrapping="Wrap" Margin="0,1" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Tabla de skills: encabezado, filas con la barra del daño y TOTAL. Arriba y sin estirarse: con pocas
+                             skills TOTAL queda pegado a la última fila; con muchas, las filas se desplazan y TOTAL queda fijo. -->
+                        <Grid Margin="20,10,20,14" VerticalAlignment="Top">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Border BorderBrush="{DynamicResource Rule}" BorderThickness="0,0,0,1" Padding="10,6">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" MinWidth="120" />
+                                        <ColumnDefinition Width="98" />
+                                        <ColumnDefinition Width="72" />
+                                        <ColumnDefinition Width="72" />
+                                        <ColumnDefinition Width="72" />
+                                        <ColumnDefinition Width="92" />
+                                        <ColumnDefinition Width="92" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="SKILL" Style="{StaticResource HeaderCell}" HorizontalAlignment="Left" Margin="0"
+                                               ToolTip="Pasá el mouse por una fila para ver ESPALDA y PROM.; doble clic para renombrarla" />
+                                    <TextBlock Grid.Column="1" Text="DAÑO" Style="{StaticResource HeaderCell}" />
+                                    <TextBlock Grid.Column="2" Text="%" Style="{StaticResource HeaderCell}" />
+                                    <TextBlock Grid.Column="3" Text="GOLPES" Style="{StaticResource HeaderCell}" />
+                                    <TextBlock Grid.Column="4" Text="CRÍT." Style="{StaticResource HeaderCell}" />
+                                    <TextBlock Grid.Column="5" Text="MÁX." Style="{StaticResource HeaderCell}" />
+                                    <TextBlock Grid.Column="6" Text="DPS" Style="{StaticResource HeaderCell}" />
+                                </Grid>
+                            </Border>
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+                                <ItemsControl ItemsSource="{Binding Skills}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:SkillRowViewModel">
+                                            <Grid Height="34" Margin="0,0,0,3" Background="Transparent" ToolTip="{Binding Tip}">
+                                                <Grid.InputBindings>
+                                                    <MouseBinding Gesture="LeftDoubleClick" CommandParameter="{Binding}"
+                                                                  Command="{Binding DataContext.StartRenameSkillCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                </Grid.InputBindings>
+                                                <Border CornerRadius="{StaticResource RadiusRow}" Background="{DynamicResource RowSubtle}" />
+                                                <Border CornerRadius="5,0,0,5" Opacity="0.66" RenderTransformOrigin="0,0.5"
+                                                        Background="{Binding DataContext.BarFill, RelativeSource={RelativeSource AncestorType=Window}}">
+                                                    <Border.RenderTransform>
+                                                        <ScaleTransform ScaleX="{Binding Bar}" />
+                                                    </Border.RenderTransform>
+                                                </Border>
+                                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SkillRowCells}" Margin="10,0" Focusable="False" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                            <Border Grid.Row="2" BorderBrush="{DynamicResource Rule}" BorderThickness="0,1,0,0" Padding="10,0" Height="38" ToolTip="{Binding Totals.Tip}">
+                                <ContentControl Content="{Binding Totals}" ContentTemplate="{StaticResource TotalRowCells}" VerticalAlignment="Center" Focusable="False" />
+                            </Border>
+                        </Grid>
+                    </DockPanel>
+
+                    <!-- ===================== Muertes ===================== -->
+                    <Grid Visibility="{Binding IsDeathsTab, Converter={StaticResource Visible}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="400" />
+                        </Grid.ColumnDefinitions>
+                        <Border BorderBrush="{DynamicResource Rule}" BorderThickness="0,0,1,0" Padding="20,16">
+                            <Grid>
+                                <Border Style="{StaticResource WhenNoDeaths}">
+                                    <TextBlock Text="Sin muertes en esta pelea" Style="{StaticResource SecondaryText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <DockPanel Visibility="{Binding HasDeaths, Converter={StaticResource Visible}}">
+                                    <!-- "MUERTE 2 DE 3 · 1:52" y ‹ › (también con las flechas del teclado) -->
+                                    <DockPanel DockPanel.Dock="Top">
+                                        <Button DockPanel.Dock="Right" Style="{StaticResource ButtonIcon}" Content="›" FontSize="16" Margin="4,0,0,0"
+                                                Command="{Binding NextDeathCommand}" ToolTip="Muerte siguiente (→)" />
+                                        <Button DockPanel.Dock="Right" Style="{StaticResource ButtonIcon}" Content="‹" FontSize="16"
+                                                Command="{Binding PreviousDeathCommand}" ToolTip="Muerte anterior (←)" />
+                                        <TextBlock Text="{Binding DeathPosition}" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" />
+                                    </DockPanel>
+                                    <!-- Lo mató… -->
+                                    <Border DockPanel.Dock="Top" Margin="0,10,0,0" Padding="14,12" CornerRadius="{StaticResource RadiusCard}"
+                                            Background="{DynamicResource WipeSoft}" BorderBrush="{DynamicResource DangerLine}" BorderThickness="1">
+                                        <Grid>
+                                            <TextBlock FontSize="{StaticResource FontSizeEmphasis}" TextWrapping="Wrap"
+                                                       Visibility="{Binding SelectedDeath.HasKillingBlow, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+                                                Lo mató <Run Text="{Binding SelectedDeath.Killer, Mode=OneWay}" FontWeight="Bold" /> con <Run Text="{Binding SelectedDeath.SkillName, Mode=OneWay}" FontWeight="Bold" /> por <Run Text="{Binding SelectedDeath.Amount, Mode=OneWay}" FontWeight="Bold" FontFamily="{StaticResource NumberFont}" FontSize="{StaticResource NumberSizeRowValue}" /><Run Text="{Binding SelectedDeath.FlagsText, Mode=OneWay}" />
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding SelectedDeath.Summary}" FontSize="{StaticResource FontSizeEmphasis}" TextWrapping="Wrap">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding SelectedDeath.HasKillingBlow}" Value="False">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+                                    </Border>
+                                    <TextBlock DockPanel.Dock="Top" Text="{x:Static vm:ActorDetailViewModel.RecapTitle}" Style="{StaticResource SectionLabel}" Margin="0,14,0,8" />
+                                    <!-- Recap: golpes (y curaciones del registro) de los segundos previos, del más viejo al golpe final -->
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding SelectedDeath.Rows}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="vm:DeathRecapRow">
+                                                    <Border Height="32" Margin="0,0,0,4" Padding="10,0" CornerRadius="{StaticResource RadiusRow}" Background="{DynamicResource RowSubtle}">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="52" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="80" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="{Binding Time}" Foreground="{DynamicResource TextDim}" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding What}" Margin="10,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding What}" />
+                                                            <TextBlock x:Name="Amount" Grid.Column="2" Text="{Binding Amount}" Style="{StaticResource NumberStrong}" FontSize="{StaticResource NumberSizeTimer}"
+                                                                       Foreground="{DynamicResource Danger}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                                        </Grid>
+                                                    </Border>
+                                                    <DataTemplate.Triggers>
+                                                        <DataTrigger Binding="{Binding IsHeal}" Value="True">
+                                                            <Setter TargetName="Amount" Property="Foreground" Value="{DynamicResource Healing}" />
+                                                        </DataTrigger>
+                                                    </DataTemplate.Triggers>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </DockPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Registro de la pelea, angosto, con la muerte que se ve marcada -->
+                        <DockPanel Grid.Column="1" Margin="20,16">
+                            <TextBlock DockPanel.Dock="Top" Text="LOG DE COMBATE" Style="{StaticResource SectionLabel}" />
+                            <TextBox DockPanel.Dock="Top" Margin="0,10,0,10" Style="{StaticResource LogFilterBox}" Tag="skill, jugador o crit"
+                                     DataContext="{Binding Log}" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, FallbackValue=''}"
+                                     IsEnabled="{Binding DataContext.HasLog, RelativeSource={RelativeSource AncestorType=Window}}">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Escape" Command="{Binding ClearSearchCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
+                            <Grid>
+                                <ListBox x:Name="DeathsLog" Style="{StaticResource LogList}" ItemsSource="{Binding Log.Lines}" ItemTemplate="{StaticResource LogLineNarrow}"
+                                         SelectedItem="{Binding DeathLogLine, Mode=TwoWay}" FontSize="{StaticResource FontSizeSmall}" />
+                                <TextBlock Text="{Binding LogEmptyText}" Style="{StaticResource SecondaryText}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           TextWrapping="Wrap" TextAlignment="Center" Visibility="{Binding IsLogEmpty, Converter={StaticResource Visible}}" />
+                            </Grid>
+                        </DockPanel>
+                    </Grid>
+
+                    <!-- ===================== Log ===================== -->
+                    <DockPanel Margin="20,14,20,14" Visibility="{Binding IsLogTab, Converter={StaticResource Visible}}">
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                            <Button DockPanel.Dock="Right" Style="{StaticResource ButtonLink}" Content="Abrir en otra ventana" Margin="12,0,0,0"
+                                    Command="{Binding OpenLogCommand}" ToolTip="El registro completo de la pelea, en su propia ventana" />
+                            <Button DockPanel.Dock="Right" Style="{StaticResource ButtonLink}" Content="Actualizar" Margin="12,0,0,0" Command="{Binding Log.ReloadCommand}" />
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding Log.CountText}" Margin="12,0,0,0" Style="{StaticResource SecondaryText}" VerticalAlignment="Center" />
+                            <CheckBox DockPanel.Dock="Right" Margin="12,0,0,0" VerticalAlignment="Center" IsChecked="{Binding Log.OnlyFocus}"
+                                      Visibility="{Binding HasLog, Converter={StaticResource Visible}}" FontSize="{StaticResource FontSizeSmall}"
+                                      ToolTip="Solo los golpes que hizo o recibió">
+                                <TextBlock Text="{Binding Log.FocusName, StringFormat='Solo {0}'}" />
+                            </CheckBox>
+                            <TextBox Style="{StaticResource LogFilterBox}" Tag="skill, jugador, objetivo o crit"
+                                     DataContext="{Binding Log}" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, FallbackValue=''}"
+                                     IsEnabled="{Binding DataContext.HasLog, RelativeSource={RelativeSource AncestorType=Window}}">
+                                <TextBox.InputBindings>
+                                    <KeyBinding Key="Escape" Command="{Binding ClearSearchCommand}" />
+                                </TextBox.InputBindings>
+                            </TextBox>
+                        </DockPanel>
+                        <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Rule}" BorderThickness="0,0,0,1" Padding="4,0,4,6">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="64" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="180" />
+                                    <ColumnDefinition Width="70" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="TIEMPO" Style="{StaticResource HeaderCell}" HorizontalAlignment="Left" Margin="0" />
+                                <TextBlock Grid.Column="1" Text="DE → SKILL" Style="{StaticResource HeaderCell}" HorizontalAlignment="Left" />
+                                <TextBlock Grid.Column="2" Text="A" Style="{StaticResource HeaderCell}" HorizontalAlignment="Left" Margin="0" />
+                                <TextBlock Grid.Column="3" Text="MONTO" Style="{StaticResource HeaderCell}" />
+                            </Grid>
+                        </Border>
+                        <Grid>
+                            <ListBox Style="{StaticResource LogList}" ItemsSource="{Binding Log.Lines}" ItemTemplate="{StaticResource LogLineWide}"
+                                     FontSize="{StaticResource FontSizeSmall}" />
+                            <TextBlock Text="{Binding LogEmptyText}" Style="{StaticResource SecondaryText}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       TextWrapping="Wrap" TextAlignment="Center" Visibility="{Binding IsLogEmpty, Converter={StaticResource Visible}}" />
+                        </Grid>
+                    </DockPanel>
+
+                    <!-- ===================== Comparar ===================== -->
+                    <DockPanel Visibility="{Binding HasComparison, Converter={StaticResource Visible}}">
+                        <!-- Los dos lados: este y el elegido -->
+                        <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Rule}" BorderThickness="0,0,0,1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Padding="20,16" BorderBrush="{DynamicResource Rule}" BorderThickness="0,0,1,0">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding MineLabel}" Style="{StaticResource Eyebrow}" FontWeight="Normal" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Margin="0,2,0,0">
+                                            <Run Text="{Binding MineDps, Mode=OneWay}" FontFamily="{StaticResource NumberFont}" FontWeight="Bold" FontSize="{StaticResource NumberSizeDisplay}" />
+                                            <Run DataContext="{Binding CompareDelta}" Text="{Binding Text, Mode=OneWay}" FontSize="16">
+                                                <Run.Style>
+                                                    <Style TargetType="Run">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:DeltaTone.Better}">
+                                                                <Setter Property="Foreground" Value="{DynamicResource Success}" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Tone}" Value="{x:Static vm:DeltaTone.Worse}">
+                                                                <Setter Property="Foreground" Value="{DynamicResource Danger}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Run.Style>
+                                            </Run>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding MineFight}" FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource TextDim}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </Border>
+                                <StackPanel Grid.Column="1" Margin="20,16">
+                                    <TextBlock Text="{Binding TheirsLabel}" Style="{StaticResource SectionLabel}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding TheirsDps}" Margin="0,2,0,0" FontFamily="{StaticResource NumberFont}" FontWeight="Bold"
+                                               FontSize="{StaticResource NumberSizeDisplay}" Foreground="{DynamicResource TextMuted}" />
+                                    <TextBlock Text="{Binding TheirsFight}" FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource TextDim}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- DPS acumulado: eje en segundos de pelea, con las muertes de los dos -->
+                        <StackPanel DockPanel.Dock="Top" Margin="20,14,20,6">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <TextBlock Text="{Binding MineLegend, StringFormat='— {0}'}" FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource Gold}" />
+                                    <TextBlock Text="{Binding TheirsLegend, StringFormat='- - {0}'}" FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextDim}" Margin="14,0,0,0" />
+                                </StackPanel>
+                                <TextBlock Text="DPS ACUMULADO" Style="{StaticResource SectionLabel}" />
+                            </DockPanel>
+                            <local:CompareChart Height="120" Margin="0,6,0,0" Data="{Binding CompareChart}"
+                                                MineBrush="{DynamicResource Gold}" TheirsBrush="{DynamicResource TextDim}" DeathBrush="{DynamicResource Danger}"
+                                                ToolTip="DPS acumulado: todo el daño hasta cada segundo dividido por los segundos que pasaron" />
+                        </StackPanel>
+
+                        <!-- Las stats de siempre, en una franja abajo -->
+                        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Rule}" BorderThickness="0,1,0,0" Padding="20,10">
+                            <ItemsControl ItemsSource="{Binding Comparison}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="vm:CompareRow">
+                                        <StackPanel Margin="0,2,22,2">
+                                            <TextBlock Text="{Binding Label}" FontSize="{StaticResource FontSizeMicro}" Foreground="{DynamicResource TextDim}" />
+                                            <TextBlock FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource TextMuted}">
+                                                <Run x:Name="Mine" Text="{Binding Mine, Mode=OneWay}" /> / <Run x:Name="Theirs" Text="{Binding Theirs, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </StackPanel>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding MineBetter}" Value="True">
+                                                <Setter TargetName="Mine" Property="Foreground" Value="{DynamicResource Gold}" />
+                                                <Setter TargetName="Mine" Property="FontWeight" Value="Bold" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding TheirsBetter}" Value="True">
+                                                <Setter TargetName="Theirs" Property="Foreground" Value="{DynamicResource Gold}" />
+                                                <Setter TargetName="Theirs" Property="FontWeight" Value="Bold" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+
+                        <!-- Por skill: daño de cada lado, la diferencia y los golpes (arriba y sin estirarse, como la de Skills) -->
+                        <Grid Margin="20,8,20,10" VerticalAlignment="Top">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid Margin="10,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" MinWidth="120" />
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="230" />
+                                    <ColumnDefinition Width="100" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="SKILL" Style="{StaticResource HeaderCell}" HorizontalAlignment="Left" Margin="0" />
+                                <TextBlock Grid.Column="1" Text="{Binding MineColumn}" Style="{StaticResource HeaderCell}" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="2" Text="{Binding TheirsColumn}" Style="{StaticResource HeaderCell}" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="3" Text="DIFERENCIA" Style="{StaticResource HeaderCell}" HorizontalAlignment="Center" Margin="10,0,0,0" />
+                                <TextBlock Grid.Column="4" Text="GOLPES" Style="{StaticResource HeaderCell}" Margin="10,0,0,0" />
+                            </Grid>
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding CompareSkills}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:CompareSkillRow">
+                                            <Border Height="36" Margin="0,0,0,3" Padding="10,0" CornerRadius="{StaticResource RadiusRow}" Background="{DynamicResource RowSubtle}"
+                                                    ToolTip="{Binding Tip}">
+                                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource CompareSkillCells}" VerticalAlignment="Center" Focusable="False" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                            <TextBlock Grid.Row="2" Margin="0,8,0,0" Style="{StaticResource SecondaryText}" TextWrapping="Wrap"
+                                       Visibility="{Binding HasInsight, Converter={StaticResource Visible}}">
+                                <Run Text="{Binding InsightLead, Mode=OneWay}" /><Run Text="{Binding InsightSkill, Mode=OneWay}" FontWeight="Bold" Foreground="{DynamicResource Danger}" /><Run Text="{Binding InsightTail, Mode=OneWay}" />
+                            </TextBlock>
+                        </Grid>
+                    </DockPanel>
+                </Grid>
+            </DockPanel>
+        </Border>
+
+        <!-- ===================== Menú "⋯": apodo y registro aparte ===================== -->
+        <Border x:Name="MoreMenu" Style="{StaticResource MenuPanel}" Width="280" Padding="14,12" HorizontalAlignment="Right" VerticalAlignment="Top"
+                Margin="0,58,52,0" Effect="{StaticResource ShadowMenu}"
+                Visibility="{Binding IsChecked, ElementName=MoreButton, Converter={StaticResource Visible}}">
+            <StackPanel>
                 <!-- Apodo: solo cambia cómo se ve el nombre en el meter (Enter para guardar, vacío para sacarlo) -->
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,10,0" VerticalAlignment="Center" Cursor="Arrow"
-                            ToolTip="{Binding RealName, StringFormat='Apodo para {0} (Enter para guardar, vacío para sacarlo)'}">
-                    <TextBlock Text="Apodo" FontSize="11" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" Margin="0,0,6,0" />
-                    <TextBox Text="{Binding Nickname, UpdateSourceTrigger=PropertyChanged}" Width="110" FontSize="12" MaxLength="24" Padding="4,1"
-                             Background="{DynamicResource InputBg}" Foreground="{StaticResource TextBright}" BorderBrush="{StaticResource Stroke}" CaretBrush="{DynamicResource Gold}">
+                <TextBlock Text="APODO" Style="{StaticResource SectionLabel}" />
+                <DockPanel Margin="0,6,0,0" ToolTip="{Binding RealName, StringFormat='Apodo para {0} (Enter para guardar, vacío para sacarlo)'}">
+                    <Button DockPanel.Dock="Right" Style="{StaticResource ButtonSoft}" Content="Guardar" MinHeight="34" Margin="8,0,0,0"
+                            Command="{Binding SaveNicknameCommand}" />
+                    <TextBox x:Name="NicknameBox" Style="{StaticResource InputBox}" Text="{Binding Nickname, UpdateSourceTrigger=PropertyChanged}" MaxLength="24">
                         <TextBox.InputBindings>
                             <KeyBinding Key="Enter" Command="{Binding SaveNicknameCommand}" />
                         </TextBox.InputBindings>
                     </TextBox>
-                    <Button Content="✓" Command="{Binding SaveNicknameCommand}" Cursor="Hand" Margin="4,0,0,0" Background="Transparent" BorderThickness="0"
-                            Foreground="{StaticResource Gold}" FontSize="12" ToolTip="Guardar apodo" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Margin="12,6,0,6" VerticalAlignment="Center">
-                    <Border Width="12" Height="12" BorderBrush="{Binding Accent}" BorderThickness="1" RenderTransformOrigin="0.5,0.5" VerticalAlignment="Center">
-                        <Border.RenderTransform>
-                            <RotateTransform Angle="45" />
-                        </Border.RenderTransform>
-                    </Border>
-                    <TextBlock Text="{Binding Name}" Margin="10,0,0,0" FontSize="15" FontWeight="Bold" Foreground="{Binding Accent}" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding Profile}" Margin="8,0,0,0" FontSize="11" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding Target, StringFormat='·  {0}'}" Margin="8,0,0,0" Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" />
-                    <TextBlock Text="(no está en el encuentro actual)" Margin="8,0,0,0" FontSize="11" Foreground="{StaticResource TextDim}" VerticalAlignment="Center"
-                               Visibility="{Binding IsMissing, Converter={StaticResource Visible}}" />
-                </StackPanel>
-            </DockPanel>
-
-            <!-- Resumen. WrapPanel: con Inter (más ancha que Segoe UI) los 9 datos no entran en 700 px y el último se cortaba. -->
-            <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="14,10,14,4">
-                <StackPanel Style="{StaticResource Stat}">
-                    <TextBlock Text="DPS" Style="{StaticResource StatLabel}" />
-                    <TextBlock Text="{Binding Dps}" Style="{StaticResource StatValue}" />
-                </StackPanel>
-                <StackPanel Style="{StaticResource Stat}" ToolTip="Sin tiempo muerto: los huecos de más de 3 s entre golpes cuentan como 3 s">
-                    <TextBlock Text="DPS ACTIVO" Style="{StaticResource StatLabel}" />
-                    <TextBlock Text="{Binding ActiveDps}" Style="{StaticResource StatValue}" />
-                </StackPanel>
-                <StackPanel Style="{StaticResource Stat}">
-                    <TextBlock Text="DAÑO" Style="{StaticResource StatLabel}" />
-                    <TextBlock Text="{Binding Total}" Style="{StaticResource StatValue}" />
-                </StackPanel>
-                <StackPanel Style="{StaticResource Stat}">
-                    <TextBlock Text="DURACIÓN" Style="{StaticResource StatLabel}" />
-                    <TextBlock Text="{Binding Duration}" Style="{StaticResource StatValue}" />
-                </StackPanel>
-                <StackPanel Style="{StaticResource Stat}" ToolTip="Daño que pasó la vida que le quedaba al objetivo">
-                    <TextBlock Text="OVERKILL" Style="{StaticResource StatLabel}" />
-                    <TextBlock Text="{Binding Overkill}" Style="{StaticResource StatValue}" />
-                </StackPanel>
-                <StackPanel Style="{StaticResource Stat}" ToolTip="Daño que le hicieron los monstruos">
-                    <TextBlock Text="RECIBIDO" Style="{StaticResource StatLabel}" />
-                    <TextBlock Text="{Binding DamageTaken}" Style="{StaticResource StatValue}" />
-                </StackPanel>
-                <StackPanel Style="{StaticResource Stat}">
-                    <TextBlock Text="MUERTES" Style="{StaticResource StatLabel}" />
-                    <TextBlock Text="{Binding DeathCount}" Style="{StaticResource StatValue}" />
-                </StackPanel>
-                <StackPanel Style="{StaticResource Stat}" ToolTip="{Binding DeadTimeHint}">
-                    <TextBlock Text="ACTIVO" Style="{StaticResource StatLabel}" />
-                    <TextBlock Text="{Binding Uptime}" Style="{StaticResource StatValue}" />
-                </StackPanel>
-                <StackPanel Style="{StaticResource Stat}" ToolTip="{Binding DeadTimeHint}">
-                    <TextBlock Text="TIEMPO MUERTO" Style="{StaticResource StatLabel}" />
-                    <TextBlock Text="{Binding DeadTime}" Style="{StaticResource StatValue}" />
-                </StackPanel>
-            </WrapPanel>
-
-            <!-- Muertes: qué lo mató y cuánto recibió antes -->
-            <Border DockPanel.Dock="Top" Margin="10,0,10,6" Padding="8,4" Background="{StaticResource WipeSoft}" BorderBrush="{StaticResource DangerLine}" BorderThickness="1"
-                    Visibility="{Binding HasDeaths, Converter={StaticResource Visible}}">
-                <ItemsControl ItemsSource="{Binding Deaths}" MaxHeight="90">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="vm:DeathItem">
-                            <TextBlock Margin="0,1" TextTrimming="CharacterEllipsis" ToolTip="{Binding LastHits}">
-                                <Run Text="✝" Foreground="{StaticResource Danger}" />
-                                <Run Text="{Binding When, Mode=OneWay}" Foreground="{StaticResource TextDim}" />
-                                <Run Text="{Binding Summary, Mode=OneWay}" Foreground="{StaticResource TextBright}" />
-                                <Run Text="·" Foreground="{StaticResource TextDim}" />
-                                <Run Text="{Binding LastHits, Mode=OneWay}" Foreground="{StaticResource TextMuted}" />
-                            </TextBlock>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </Border>
-
-            <!-- Consejos de la pelea (reglas locales, solo para vos) -->
-            <Border DockPanel.Dock="Top" Margin="10,0,10,6" Padding="8,4" Background="{DynamicResource AccentFaint}" BorderBrush="{StaticResource Rule}" BorderThickness="1"
-                    Visibility="{Binding HasAdvice, Converter={StaticResource Visible}}">
-                <StackPanel>
-                    <TextBlock Text="CONSEJOS" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Gold}" Margin="0,0,0,2" />
-                    <ItemsControl ItemsSource="{Binding Advice}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding StringFormat='• {0}'}" FontSize="12" Foreground="{StaticResource Text}" TextWrapping="Wrap" Margin="0,1" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </Border>
-
-            <!-- Comparar con otro jugador de la misma pelea o, para el jugador local, con tus intentos guardados -->
-            <StackPanel DockPanel.Dock="Top" Margin="10,0,10,6">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="COMPARAR CON" FontSize="10" FontWeight="Bold" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <ComboBox ItemsSource="{Binding Others}" SelectedItem="{Binding CompareWith}" Width="210" FontSize="12" />
-                </StackPanel>
-                <ItemsControl ItemsSource="{Binding Comparison}" Margin="0,4,0,0" Visibility="{Binding HasComparison, Converter={StaticResource Visible}}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="vm:CompareRow">
-                            <Grid Margin="0,1">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="110" />
-                                    <ColumnDefinition Width="90" />
-                                    <ColumnDefinition Width="90" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="{Binding Label}" FontSize="12" Foreground="{StaticResource TextMuted}" />
-                                <TextBlock Grid.Column="1" Text="{Binding Mine}" FontSize="12" HorizontalAlignment="Right">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="{StaticResource Text}" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding MineBetter}" Value="True">
-                                                    <Setter Property="Foreground" Value="{StaticResource Gold}" />
-                                                    <Setter Property="FontWeight" Value="Bold" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                                <TextBlock Grid.Column="2" Text="{Binding Theirs}" FontSize="12" HorizontalAlignment="Right">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="{StaticResource Text}" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding TheirsBetter}" Value="True">
-                                                    <Setter Property="Foreground" Value="{StaticResource Gold}" />
-                                                    <Setter Property="FontWeight" Value="Bold" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                </DockPanel>
+                <TextBlock Text="{Binding RealName, StringFormat='Nombre en el juego: {0}'}" Style="{StaticResource SectionLabel}" Margin="0,6,0,0" TextTrimming="CharacterEllipsis" />
+                <Border Height="1" Background="{DynamicResource Track}" Margin="-14,12" />
+                <Button Style="{StaticResource ButtonLink}" Content="Abrir registro en otra ventana" HorizontalAlignment="Left" Click="OnOpenLogClick"
+                        Command="{Binding OpenLogCommand}" ToolTip="Golpe a golpe de la pelea en curso o de la última, filtrable" />
             </StackPanel>
+        </Border>
 
-            <!-- DPS en el tiempo (promedio móvil de 5 s) -->
-            <Border DockPanel.Dock="Top" Margin="10,2,10,6" Height="92" Background="{StaticResource Row}" BorderBrush="{StaticResource CardBorder}" BorderThickness="1"
-                    Visibility="{Binding HasChart, Converter={StaticResource Visible}}">
-                <Grid>
-                    <Polyline Points="{Binding ChartPoints}" Stretch="Fill" Margin="6,20,6,6" Stroke="{Binding Accent}" StrokeThickness="1.6" StrokeLineJoin="Round" />
-                    <TextBlock Margin="8,4,0,0" FontSize="11" Foreground="{StaticResource TextDim}" HorizontalAlignment="Left" VerticalAlignment="Top">
-                        <Run Text="DPS EN EL TIEMPO · ventana 5 s · pico" />
-                        <Run Text="{Binding PeakDps, Mode=OneWay}" FontWeight="Bold" Foreground="{StaticResource Text}" /><Run Text="{Binding ChartMarks, Mode=OneWay}" Foreground="{StaticResource Gold}" />
-                    </TextBlock>
-                </Grid>
+        <!-- ===================== Renombrar skill (doble clic en su fila; mock Avisos) ===================== -->
+        <Grid Visibility="{Binding IsRenamingSkill, Converter={StaticResource Visible}}">
+            <Border Background="{DynamicResource WindowBg}" Opacity="0.72" CornerRadius="{StaticResource RadiusWindow}" MouseLeftButtonDown="OnRenameBackdropClick" />
+            <Border Width="360" HorizontalAlignment="Center" VerticalAlignment="Center" Background="{DynamicResource WindowBg}"
+                    BorderBrush="{DynamicResource Stroke}" BorderThickness="1" CornerRadius="{StaticResource RadiusWindow}" Padding="{StaticResource PaddingDialog}"
+                    Effect="{StaticResource ShadowMenu}">
+                <StackPanel DataContext="{Binding RenamingSkill}">
+                    <DockPanel>
+                        <Border Width="28" Height="28" Margin="0,0,10,0" Style="{StaticResource SkillIcon}">
+                            <Image Style="{StaticResource SkillIconImage}" />
+                        </Border>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding DataContext.RenameSubtitle, RelativeSource={RelativeSource AncestorType=Window}}"
+                                       FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextDim}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <Trigger Property="Text" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </DockPanel>
+                    <TextBlock Text="Nombre (máx. 32)" FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource TextMuted}" Margin="0,12,0,6" />
+                    <TextBox x:Name="RenameBox" Style="{StaticResource InputBox}" MinHeight="38" FontSize="{StaticResource FontSizeEmphasis}" MaxLength="32"
+                             Text="{Binding DataContext.SkillNameDraft, RelativeSource={RelativeSource AncestorType=Window}, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="{Binding DataContext.RenamingSkillLabel, RelativeSource={RelativeSource AncestorType=Window}}">
+                        <TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding DataContext.SaveSkillNameCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                            <KeyBinding Key="Escape" Command="{Binding DataContext.CancelSkillRenameCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                        </TextBox.InputBindings>
+                    </TextBox>
+                    <CheckBox Margin="0,10,0,0" FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource TextMuted}"
+                              Content="{Binding DataContext.RenameVariantsText, RelativeSource={RelativeSource AncestorType=Window}}"
+                              IsChecked="{Binding DataContext.ApplyToVariants, RelativeSource={RelativeSource AncestorType=Window}}"
+                              Visibility="{Binding DataContext.HasRenameVariants, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}"
+                              ToolTip="Las variantes de una skill (nivel y versión) toman el nombre de la base" />
+                    <UniformGrid Columns="2" Margin="0,12,0,0">
+                        <Button Style="{StaticResource ButtonPrimary}" Content="Guardar" Margin="0,0,4,0" IsDefault="False"
+                                Command="{Binding DataContext.SaveSkillNameCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                ToolTip="Vacío vuelve al nombre de skills.json" />
+                        <Button Style="{StaticResource ButtonGhost}" Content="Cancelar" Margin="4,0,0,0" MinHeight="40"
+                                Command="{Binding DataContext.CancelSkillRenameCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                    </UniformGrid>
+                </StackPanel>
             </Border>
-
-            <!-- Encabezado de columnas, fila TOTAL abajo y skills en el medio -->
-            <Border DockPanel.Dock="Top" BorderBrush="{StaticResource Rule}" BorderThickness="0,0,0,1" Margin="10,4,10,0" Padding="8,0,8,4">
-                <ContentControl Content="{x:Null}">
-                    <ContentControl.Template>
-                        <ControlTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" MinWidth="120" />
-                                    <ColumnDefinition Width="62" />
-                                    <ColumnDefinition Width="52" />
-                                    <ColumnDefinition Width="54" />
-                                    <ColumnDefinition Width="48" />
-                                    <ColumnDefinition Width="58" />
-                                    <ColumnDefinition Width="56" />
-                                    <ColumnDefinition Width="54" />
-                                    <ColumnDefinition Width="54" />
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="SKILL" Style="{StaticResource HeaderCell}" HorizontalAlignment="Left" />
-                                <TextBlock Grid.Column="1" Text="DAÑO" Style="{StaticResource HeaderCell}" />
-                                <TextBlock Grid.Column="2" Text="%" Style="{StaticResource HeaderCell}" />
-                                <TextBlock Grid.Column="3" Text="GOLPES" Style="{StaticResource HeaderCell}" />
-                                <TextBlock Grid.Column="4" Text="CRÍT." Style="{StaticResource HeaderCell}" />
-                                <TextBlock Grid.Column="5" Text="ESPALDA" Style="{StaticResource HeaderCell}" />
-                                <TextBlock Grid.Column="6" Text="MÁX." Style="{StaticResource HeaderCell}" />
-                                <TextBlock Grid.Column="7" Text="PROM." Style="{StaticResource HeaderCell}" ToolTip="Promedio por golpe directo (sin ticks de DoT)" />
-                                <TextBlock Grid.Column="8" Text="DPS" Style="{StaticResource HeaderCell}" />
-                            </Grid>
-                        </ControlTemplate>
-                    </ContentControl.Template>
-                </ContentControl>
-            </Border>
-
-            <Border DockPanel.Dock="Bottom" BorderBrush="{StaticResource Rule}" BorderThickness="0,1,0,0" Margin="10,0,10,14" Padding="8,6,8,0">
-                <ContentControl Content="{Binding Totals}" ContentTemplate="{StaticResource SkillRowCells}" FontWeight="Bold" />
-            </Border>
-
-            <!-- Renombrar una skill: doble clic en su fila (el juego solo manda el ID) -->
-            <DockPanel DockPanel.Dock="Top" Margin="18,2,18,4" Visibility="{Binding IsRenamingSkill, Converter={StaticResource Visible}}">
-                <TextBlock Text="{Binding RenamingSkillLabel}" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0" />
-                <Button DockPanel.Dock="Right" Content="✕" Command="{Binding CancelSkillRenameCommand}" Cursor="Hand" Background="Transparent" BorderThickness="0"
-                        Foreground="{StaticResource TextDim}" Margin="4,0,0,0" ToolTip="Cancelar" />
-                <Button DockPanel.Dock="Right" Content="✓" Command="{Binding SaveSkillNameCommand}" Cursor="Hand" Background="Transparent" BorderThickness="0"
-                        Foreground="{StaticResource Gold}" Margin="4,0,0,0" ToolTip="Guardar (vacío vuelve al nombre de skills.json)" />
-                <TextBox Text="{Binding SkillNameDraft, UpdateSourceTrigger=PropertyChanged}" FontSize="12" MaxLength="32" Padding="4,1">
-                    <TextBox.InputBindings>
-                        <KeyBinding Key="Enter" Command="{Binding SaveSkillNameCommand}" />
-                        <KeyBinding Key="Escape" Command="{Binding CancelSkillRenameCommand}" />
-                    </TextBox.InputBindings>
-                </TextBox>
-            </DockPanel>
-
-            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="10,2,10,4">
-                <ItemsControl ItemsSource="{Binding Skills}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="vm:SkillRowViewModel">
-                            <Grid Height="26" Margin="0,0,0,2" Background="Transparent" ToolTip="Doble clic para ponerle nombre">
-                                <Grid.InputBindings>
-                                    <MouseBinding Gesture="LeftDoubleClick" CommandParameter="{Binding}"
-                                                  Command="{Binding DataContext.StartRenameSkillCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                </Grid.InputBindings>
-                                <Rectangle Fill="{Binding DataContext.BarFill, RelativeSource={RelativeSource AncestorType=Window}}" Opacity="0.55" RenderTransformOrigin="0,0.5">
-                                    <Rectangle.RenderTransform>
-                                        <ScaleTransform ScaleX="{Binding Bar}" />
-                                    </Rectangle.RenderTransform>
-                                </Rectangle>
-                                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SkillRowCells}" Margin="8,0" />
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </DockPanel>
-    </Border>
+        </Grid>
+    </Grid>
 </Window>
