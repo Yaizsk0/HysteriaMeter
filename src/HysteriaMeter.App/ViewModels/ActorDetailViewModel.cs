@@ -51,9 +51,11 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     [CommunityToolkit.Mvvm.Input.RelayCommand]
     private void OpenLog()
     {
-        if (LogSource is { } source)
+        if (LogSource is { } source && _last is { } snapshot)
         {
-            LogRequested?.Invoke(new LogViewModel(source, names, ActorId, Name, BrushOf));
+            // La ventana separada conserva esta pelea al cambiar el detalle. Si el motor ya pasó a otra, no muestra
+            // eventos ajenos; el origen temporal coincide con las pestañas Log y Muertes aunque falten líneas viejas.
+            LogRequested?.Invoke(new LogViewModel(() => ForFight(source(), snapshot), names, ActorId, Name, BrushOf, () => snapshot.Start));
         }
     }
 
