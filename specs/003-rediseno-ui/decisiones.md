@@ -58,7 +58,7 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 - Atajo nuevo "Cambiar pestaña" (rota DPS→CURA→RECIB. en la ventana principal), por defecto vacío.
 - Captura: selector de placa de red (LiveCaptureSource.ListDevices) guardado en preferencias, se aplica al reiniciar el meter (decirlo en la UI); "Automática" por defecto.
 - Datos del juego: carpeta %LOCALAPPDATA%\HysteriaMeter\Juego con conteos (skills con nombre, íconos, emblemas) y botón "Abrir carpeta".
-- Tema: 4 tarjetas con vista previa de las paletas reales de MeterThemes.
+- Tema: 4 tarjetas con vista previa de las paletas reales de MeterThemes, en el orden del mock: Abismo, Dorado, Mínimo, Carmesí (`ThemeCard.Order`; `MeterThemes.All` no cambia porque su primer tema es el de reemplazo).
 - Copiar imagen / Ver barras de prueba / Abrir pelea: ya no necesitan cerrar nada; la ventana queda abierta.
 
 ## Detalle (Detalle, Muertes, Comparar)

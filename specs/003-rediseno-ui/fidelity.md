@@ -13,7 +13,7 @@ Revisión local del 17/10/2026 sobre los HTML originales del rediseño. Compleme
 ## Alcance corregido
 
 - Fuentes originales OFL embebidas, sin instalación global: Barlow Condensed para números, títulos y nombres del overlay; IBM Plex Sans para el cuerpo por defecto. Se comprueba que WPF resuelva las familias y pesos embebidos. Los nombres usan `NumberFont` a 16 unidades en filas de 30, con tamaños menores o mayores según densidad.
-- Se conservan Inter y Barlow Semi Condensed como opciones. La selección del usuario sigue controlando el cuerpo. Los chips de Configuración heredan una fuente uniforme; no dependen de encontrar cada nombre de familia instalado en Windows.
+- Se conservan Inter y Barlow Semi Condensed como opciones. La selección del usuario sigue controlando el cuerpo. Los chips de FUENTE en Configuración se escriben cada uno en su fuente, como el mock, con `MeterViewModel.FontOf` (converter `FontPreview`): las embebidas salen del ensamblado y una del sistema que falte cae en la fuente de reemplazo de WPF, sin error.
 - Radios ajustados a la altura real de chips y toggles. Vista previa de cada tema de Configuración a 66 unidades de alto exterior, como el contenido CSS de 54 más su relleno vertical.
 - Encabezado adaptable al ancho y al indicador de grabación; acciones accesibles al reducirlo. Pausa con su propio encabezado (la franja conserva "● REC" y el punto de estado) y filas simples al alto de la densidad elegida, sin duplicar los bloques del vivo. Estados y colores mediante recursos y triggers compatibles con WPF.
 - Pastilla con `MiniPanel` al 88 %, insignia, cifras, puesto, tendencia y reloj cuando corresponden. El fondo de un aviso elevado sigue siendo un recurso distinto.
