@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:HysteriaMeter.App.ViewModels"
         xmlns:conv="clr-namespace:HysteriaMeter.App.Converters"
+        xmlns:welcome="clr-namespace:HysteriaMeter.App.Welcome"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MeterViewModel}"
         Title="Hysteria Meter"
@@ -171,6 +172,23 @@
                                             <MenuItem Header="Minimizar" Command="{Binding ToggleMinimizedCommand}"/>
                                             <Separator/><MenuItem Header="Cerrar" Click="OnCloseClick"/>
                                         </ContextMenu>
+        <!-- "● REC" y el punto de estado: en el encabezado y en la franja de pausa (decisiones: se conservan los dos). -->
+        <Style x:Key="RecBadge" TargetType="TextBlock">
+            <Setter Property="Text" Value="● REC"/><Setter Property="FontSize" Value="9"/><Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource DangerStrong}"/><Setter Property="VerticalAlignment" Value="Center"/><Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="Visibility" Value="{Binding IsRecording, Converter={StaticResource Visible}}"/><Setter Property="ToolTip" Value="{Binding RecordingHint}"/>
+        </Style>
+        <Style x:Key="StatusDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="8"/><Setter Property="Height" Value="8"/><Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/><Setter Property="ToolTip" Value="{Binding StatusText}"/>
+            <Setter Property="Fill" Value="{DynamicResource StatusIdle}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StatusKind}" Value="live"><Setter Property="Fill" Value="{DynamicResource StatusLive}"/></DataTrigger>
+                <DataTrigger Binding="{Binding StatusKind}" Value="ready"><Setter Property="Fill" Value="{DynamicResource StatusLive}"/></DataTrigger>
+                <DataTrigger Binding="{Binding StatusKind}" Value="warn"><Setter Property="Fill" Value="{DynamicResource StatusWarn}"/></DataTrigger>
+                <DataTrigger Binding="{Binding StatusKind}" Value="error"><Setter Property="Fill" Value="{DynamicResource StatusError}"/></DataTrigger>
+            </Style.Triggers>
+        </Style>
         <DataTemplate x:Key="MiniBadge">
             <Grid Width="22" Height="22" ToolTip="{Binding ClassName}">
                 <Border x:Name="Badge" CornerRadius="11" Background="{DynamicResource ClassBadgeBg}" BorderBrush="{Binding BadgeBrush}" BorderThickness="1">
@@ -236,19 +254,10 @@
                                 </StackPanel>
                             </Border>
                             <StackPanel x:Name="LiveActions" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="4,0,0,0">
-                                <TextBlock Text="● REC" FontSize="9" FontWeight="SemiBold" Foreground="{DynamicResource DangerStrong}" VerticalAlignment="Center" Margin="0,0,4,0" Visibility="{Binding IsRecording, Converter={StaticResource Visible}}" ToolTip="{Binding RecordingHint}"/>
-                                <Ellipse Width="6" Height="6" Margin="0,0,5,0" ToolTip="{Binding StatusText}">
-                                    <Ellipse.Style><Style TargetType="Ellipse"><Setter Property="Fill" Value="{DynamicResource StatusIdle}"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding StatusKind}" Value="live"><Setter Property="Fill" Value="{DynamicResource StatusLive}"/></DataTrigger>
-                                            <DataTrigger Binding="{Binding StatusKind}" Value="ready"><Setter Property="Fill" Value="{DynamicResource StatusLive}"/></DataTrigger>
-                                            <DataTrigger Binding="{Binding StatusKind}" Value="warn"><Setter Property="Fill" Value="{DynamicResource StatusWarn}"/></DataTrigger>
-                                            <DataTrigger Binding="{Binding StatusKind}" Value="error"><Setter Property="Fill" Value="{DynamicResource StatusError}"/></DataTrigger>
-                                        </Style.Triggers>
-                                    </Style></Ellipse.Style>
-                                </Ellipse>
+                                <TextBlock Style="{StaticResource RecBadge}"/>
+                                <Ellipse Style="{StaticResource StatusDot}"/>
                                 <TextBlock Text="{Binding Elapsed}" Style="{StaticResource NumberText}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" Visibility="{Binding ShowClock, Converter={StaticResource Visible}}"/>
-                                <TextBlock Text="{Binding StatusLabel}" FontSize="11" Foreground="{DynamicResource TextMuted}" MaxWidth="70" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding StatusText}">
+                                <TextBlock Text="{Binding StatusLabel}" FontSize="11" Foreground="{DynamicResource TextMuted}" MaxWidth="140" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding StatusText}">
                                     <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding ShowClock}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
                                 </TextBlock>
                                 <Button Style="{StaticResource LiveIcon}" Command="{Binding TogglePauseCommand}" Visibility="{Binding HasFight, Converter={StaticResource Visible}}" ToolTip="Pausar: la pelea sigue contando" AutomationProperties.Name="Pausar">
@@ -264,6 +273,10 @@
                     <Border x:Name="PauseHeader" Background="{DynamicResource AccentSoft}" CornerRadius="9,9,0,0" Padding="10,8" Visibility="{Binding IsPauseBannerVisible, Converter={StaticResource Visible}}" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="{Binding CanMoveWindow, Converter={StaticResource MoveCursor}}">
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Style="{StaticResource LiveIcon}" Content="⋯" Click="OnMoreClick" ContextMenu="{StaticResource OverlayMenu}" ToolTip="Más opciones" AutomationProperties.Name="Más opciones"/>
+                            <StackPanel x:Name="PauseStatus" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,2,0">
+                                <TextBlock Style="{StaticResource RecBadge}"/>
+                                <Ellipse Style="{StaticResource StatusDot}" Margin="0"/>
+                            </StackPanel>
                             <Button x:Name="ResumeButton" DockPanel.Dock="Left" Style="{StaticResource LiveIcon}" Width="12" Margin="0,0,6,0" Command="{Binding TogglePauseCommand}" ToolTip="Seguir" AutomationProperties.Name="Seguir">
                                 <Path Width="12" Height="12" Stroke="{DynamicResource Gold}" StrokeThickness="1.8" Data="M3,2 V10 M9,2 V10"/>
                             </Button>
@@ -307,9 +320,12 @@
                                     <TextBlock DockPanel.Dock="Right" Text="{Binding AttemptText}" FontSize="11" Foreground="{DynamicResource TextDim}" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="{Binding HasAttempt, Converter={StaticResource Visible}}"/>
                                     <TextBlock Text="{Binding Title}" Style="{StaticResource NumberText}" FontWeight="SemiBold" FontSize="17" TextTrimming="CharacterEllipsis"/>
                                 </DockPanel>
-                                <Grid Height="5" Margin="0,6,0,0" Visibility="{Binding HasTargetHealth, Converter={StaticResource Visible}}">
-                                    <Border Background="{DynamicResource HealthTrack}" CornerRadius="3"/>
-                                    <Border Background="{StaticResource Health}" CornerRadius="3" RenderTransformOrigin="0,0.5"><Border.RenderTransform><ScaleTransform ScaleX="{Binding TargetHealthRatio}"/></Border.RenderTransform></Border>
+                                <!-- Como el mock: el riel redondeado recorta el relleno, que no lleva radio propio (si no, el borde derecho
+                                     del relleno sale redondeado en medio de la barra). -->
+                                <Grid x:Name="HealthBar" Height="5" Margin="0,6,0,0" Visibility="{Binding HasTargetHealth, Converter={StaticResource Visible}}">
+                                    <Grid.Clip><MultiBinding Converter="{StaticResource RoundedClip}"><Binding Path="ActualWidth" ElementName="HealthBar"/><Binding Path="ActualHeight" ElementName="HealthBar"/><Binding Path="CornerRadius" ElementName="HealthRail"/></MultiBinding></Grid.Clip>
+                                    <Border x:Name="HealthRail" Background="{DynamicResource HealthTrack}" CornerRadius="3"/>
+                                    <Border Background="{StaticResource Health}" RenderTransformOrigin="0,0.5"><Border.RenderTransform><ScaleTransform ScaleX="{Binding TargetHealthRatio}"/></Border.RenderTransform></Border>
                                 </Grid>
                                 <DockPanel Margin="0,6,0,0" TextElement.FontSize="11" TextElement.Foreground="{DynamicResource TextDim}">
                                     <TextBlock DockPanel.Dock="Right" Text="{Binding EnrageText}" Visibility="{Binding HasEnrage, Converter={StaticResource Visible}}"/>
@@ -355,18 +371,18 @@
                         </StackPanel>
                         <Border x:Name="NpcapCard" Style="{StaticResource CaptureCard}" BorderBrush="{DynamicResource DangerBorder}" Visibility="{Binding ShowNpcapCard, Converter={StaticResource Visible}}">
                             <StackPanel><TextBlock Text="No se encontró Npcap" Foreground="{DynamicResource Danger}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                <TextBlock Text="Instalá Npcap con la compatibilidad WinPcap y reiniciá el meter." Foreground="{DynamicResource TextMuted}" FontSize="12" Margin="0,6,0,8" TextWrapping="Wrap"/>
+                                <TextBlock Text="{x:Static welcome:WelcomeViewModel.NpcapMissingText}" Foreground="{DynamicResource TextMuted}" FontSize="12" Margin="0,6,0,8" TextWrapping="Wrap"/>
                                 <Button Content="Descargar Npcap ↗" Style="{StaticResource ButtonLink}" Command="{Binding OpenNpcapDownloadCommand}" HorizontalAlignment="Left"/>
                             </StackPanel>
                         </Border>
-                        <Border x:Name="TrafficCard" Style="{StaticResource CaptureCard}" BorderBrush="{DynamicResource Warning}" Visibility="{Binding ShowTrafficCard, Converter={StaticResource Visible}}">
-                            <StackPanel><TextBlock Text="Capturando, pero no llega nada de AION 2" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                <TextBlock Text="Abrí el juego y revisá la placa de red si usás una VPN." FontSize="12" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" Margin="0,6,0,10"/>
+                        <Border x:Name="TrafficCard" Style="{StaticResource CaptureCard}" BorderBrush="{DynamicResource WarningLine}" Visibility="{Binding ShowTrafficCard, Converter={StaticResource Visible}}">
+                            <StackPanel><TextBlock Text="Capturando, pero no llega nada de AION 2" Foreground="{DynamicResource Warning}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="¿Está abierto el juego? Si usás VPN o varias placas de red, elegí la correcta en Configuración → Captura." FontSize="12" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" Margin="0,6,0,10"/>
                                 <Button Content="Elegir placa de red" Style="{StaticResource ButtonGhost}" Command="{Binding OpenCaptureSettingsCommand}" HorizontalAlignment="Left" Padding="10,6"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource CaptureCard}" BorderBrush="{DynamicResource DangerBorder}" Visibility="{Binding ShowFailedCard, Converter={StaticResource Visible}}">
-                            <StackPanel><TextBlock Text="La captura se detuvo" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource Danger}"/><TextBlock Text="{Binding FailedDetail}" FontSize="12" Foreground="{DynamicResource TextMuted}" Margin="0,6,0,8" TextWrapping="Wrap"/><Button Content="Reportar un problema" Style="{StaticResource ButtonLink}" Command="{Binding ReportProblemCommand}" HorizontalAlignment="Left"/></StackPanel>
+                            <StackPanel><TextBlock Text="La captura se detuvo" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource Danger}"/><TextBlock Text="{Binding FailedDetail}" FontSize="12" Foreground="{DynamicResource TextMuted}" Margin="0,6,0,8" TextWrapping="Wrap"/><Button Content="Reportar un problema" Style="{StaticResource ButtonSoft}" Command="{Binding ReportProblemCommand}" HorizontalAlignment="Left"/></StackPanel>
                         </Border>
                         <TextBlock Text="{Binding EmptyTabText}" Margin="16,20" Foreground="{DynamicResource TextDim}" TextAlignment="Center" VerticalAlignment="Top" Visibility="{Binding ShowEmptyTabText, Converter={StaticResource Visible}}"/>
                         <ScrollViewer x:Name="ActorScroller" VerticalScrollBarVisibility="Hidden" Visibility="{Binding HasFight, Converter={StaticResource Visible}}">
@@ -412,30 +428,30 @@
                                                 <Polyline x:Name="RowSpark" Points="{Binding Spark}" Stretch="Fill" Stroke="{Binding Accent}" StrokeThickness="1" Opacity="0.35" Margin="0,5" IsHitTestVisible="False"/>
                                                 <Grid x:Name="FullRowCells" Margin="6,0,9,0">
                                                     <Grid.ColumnDefinitions><ColumnDefinition Width="14"/><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="58"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding Rank}" Style="{StaticResource RowNumber}" FontSize="13" Foreground="{DynamicResource TextDim}"/>
+                                                    <TextBlock Text="{Binding Rank}" Style="{StaticResource RowNumber}" FontSize="13" FontWeight="Normal" Foreground="{DynamicResource TextDim}"/>
                                                     <ContentControl Grid.Column="1" Content="{Binding}" ContentTemplate="{StaticResource LiveBadge}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                                     <DockPanel Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0">
                                                         <TextBlock DockPanel.Dock="Right" Text="{Binding Gear}" FontSize="11" Foreground="{DynamicResource TextDim}" Margin="5,0,0,0" Visibility="{Binding HasGear, Converter={StaticResource Visible}}"/>
-                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Trend}" FontSize="10" Margin="5,0,0,0"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Danger}"/><Style.Triggers><DataTrigger Binding="{Binding Trend}" Value="▲"><Setter Property="Foreground" Value="{DynamicResource Success}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
-                                                        <TextBlock x:Name="NameText" Text="{Binding DisplayName}" FontFamily="{DynamicResource NumberFont}" FontSize="{Binding DataContext.RowNameSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="SemiBold" Foreground="{DynamicResource TextBright}" TextTrimming="CharacterEllipsis"/>
+                                                        <!-- Nombre, cruz de muertes (Barlow no la trae: SymbolFont) y la tendencia pegada al nombre, como el mock. -->
+                                                        <TextBlock x:Name="NameText" FontFamily="{DynamicResource NumberFont}" FontSize="{Binding DataContext.RowNameSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="SemiBold" Foreground="{DynamicResource TextBright}" TextTrimming="CharacterEllipsis"><Run Text="{Binding Name, Mode=OneWay}"/><Run Text="{Binding DeathText, Mode=OneWay}" FontFamily="{DynamicResource SymbolFont}"/><Run Text="&#x2002;"/><Run Text="{Binding Trend, Mode=OneWay}" FontFamily="{DynamicResource SymbolFont}" FontSize="11" FontWeight="Normal"><Run.Style><Style TargetType="Run"><Setter Property="Foreground" Value="{DynamicResource Danger}"/><Style.Triggers><DataTrigger Binding="{Binding Trend}" Value="▲"><Setter Property="Foreground" Value="{DynamicResource Success}"/></DataTrigger></Style.Triggers></Style></Run.Style></Run></TextBlock>
                                                     </DockPanel>
                                                     <TextBlock x:Name="PerSecondText" Grid.Column="3" Text="{Binding PerSecond}" Style="{StaticResource RowNumber}" FontSize="{Binding DataContext.RowValueSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="Bold" Foreground="{DynamicResource Text}"/>
                                                     <TextBlock x:Name="TotalText" Grid.Column="4" Text="{Binding Total}" Style="{StaticResource RowNumber}" Width="58" Visibility="{Binding DataContext.ShowTotalColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}"/>
                                                     <TextBlock Grid.Column="5" Text="{Binding Recent}" Style="{StaticResource RowNumber}" Width="50" Visibility="{Binding DataContext.ShowRecentColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}"/>
                                                     <TextBlock Grid.Column="6" Text="{Binding Crit}" Style="{StaticResource RowNumber}" Width="42" Visibility="{Binding DataContext.ShowCritColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}"/>
                                                     <TextBlock Grid.Column="7" Text="{Binding MaxHitText}" Style="{StaticResource RowNumber}" Width="50" Visibility="{Binding DataContext.ShowMaxHitColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}"/>
-                                                    <TextBlock Grid.Column="8" Text="{Binding Share}" Style="{StaticResource RowNumber}" FontFamily="{DynamicResource BodyFont}" FontSize="11" Width="48" Visibility="{Binding DataContext.ShowShareColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}"/>
+                                                    <TextBlock Grid.Column="8" Text="{Binding Share}" Style="{StaticResource RowNumber}" FontFamily="{DynamicResource BodyFont}" FontSize="11" FontWeight="Normal" Width="48" Visibility="{Binding DataContext.ShowShareColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}"/>
                                                 </Grid>
                                                 <DockPanel x:Name="PauseRowCells" Visibility="Collapsed" Margin="10,0" VerticalAlignment="Center">
                                                     <TextBlock x:Name="PauseRowDps" DockPanel.Dock="Right" Text="{Binding PerSecond}" FontFamily="{DynamicResource NumberFont}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource Text}" Margin="8,0,0,0"/>
-                                                    <TextBlock x:Name="PauseRowName" FontFamily="{DynamicResource NumberFont}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource Text}" TextTrimming="CharacterEllipsis"><Run Text="{Binding Rank, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding DisplayName, Mode=OneWay}"/></TextBlock>
+                                                    <TextBlock x:Name="PauseRowName" FontFamily="{DynamicResource NumberFont}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource Text}" TextTrimming="CharacterEllipsis"><Run Text="{Binding Rank, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Name, Mode=OneWay}"/><Run Text="{Binding DeathText, Mode=OneWay}" FontFamily="{DynamicResource SymbolFont}"/></TextBlock>
                                                 </DockPanel>
                                             </Grid>
                                         </Border>
                                         <DataTemplate.Triggers>
                                             <DataTrigger Binding="{Binding DataContext.ShowHealingColumn, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"><Setter TargetName="TotalText" Property="Text" Value="{Binding HealingPerSecond}"/><Setter TargetName="TotalText" Property="Foreground" Value="{DynamicResource Healing}"/></DataTrigger>
                                             <DataTrigger Binding="{Binding DataContext.IsPauseBannerVisible, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                                <Setter TargetName="Row" Property="Height" Value="28"/><Setter TargetName="FullRowCells" Property="Visibility" Value="Collapsed"/>
+                                                <Setter TargetName="FullRowCells" Property="Visibility" Value="Collapsed"/>
                                                 <Setter TargetName="PauseRowCells" Property="Visibility" Value="Visible"/><Setter TargetName="RowSpark" Property="Visibility" Value="Collapsed"/>
                                             </DataTrigger>
                                             <DataTrigger Binding="{Binding DataContext.IsCompact, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"><Setter TargetName="Row" Property="Height" Value="22"/><Setter TargetName="Row" Property="CornerRadius" Value="4"/><Setter TargetName="Row" Property="Margin" Value="0,0,0,2"/><Setter TargetName="NameText" Property="FontSize" Value="13"/><Setter TargetName="PerSecondText" Property="FontSize" Value="13"/><Setter TargetName="PauseRowName" Property="FontSize" Value="13"/><Setter TargetName="PauseRowDps" Property="FontSize" Value="13"/></DataTrigger>
@@ -456,8 +472,10 @@
                                     <TextBlock Text="{Binding BossNoticeDetail}" FontSize="12" Foreground="{DynamicResource TextDim}" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
-                            <Border Style="{StaticResource ToastPanel}" Background="{DynamicResource AlertBg}" BorderBrush="{DynamicResource DangerStrong}" Padding="14,12" Margin="0,0,0,5" Visibility="{Binding IsEnrageDanger, Converter={StaticResource Visible}}">
-                                <Border.Effect><DropShadowEffect Color="#E8564A" BlurRadius="24" ShadowDepth="0" Opacity="0.45"/></Border.Effect>
+                            <Grid Margin="0,0,0,5" Visibility="{Binding IsEnrageDanger, Converter={StaticResource Visible}}">
+                            <!-- El brillo (GlowDanger) va en un Border propio detrás del aviso: un efecto sobre el texto le saca ClearType. -->
+                            <Border Background="{DynamicResource AlertBg}" CornerRadius="{StaticResource RadiusCard}" Effect="{StaticResource GlowDanger}"/>
+                            <Border Style="{StaticResource ToastPanel}" Background="{DynamicResource AlertBg}" BorderBrush="{DynamicResource DangerStrong}" Padding="14,12">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                     <Path Width="22" Height="22" Stretch="Uniform" VerticalAlignment="Center" Stroke="{DynamicResource OnDanger}" StrokeThickness="2" Data="M12,3 L22,20 H2 Z M12,10 V14 M12,17 V17.5"/>
                                     <StackPanel Grid.Column="1" Margin="12,0,0,0">
@@ -466,6 +484,7 @@
                                     </StackPanel>
                                 </Grid>
                             </Border>
+                            </Grid>
                             <Border Style="{StaticResource ToastPanel}" BorderBrush="{DynamicResource SuccessLine}" Padding="14,10" Margin="0,0,0,5" Visibility="{Binding HasSavedNotice, Converter={StaticResource Visible}}">
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Content="Abrir" Command="{Binding OpenExportsCommand}" Style="{StaticResource ButtonLink}" FontSize="12" Margin="10,0,0,0"/>
@@ -475,7 +494,7 @@
                             </Border>
                             <Border Style="{StaticResource ToastPanel}" Margin="0,0,0,5" Visibility="{Binding HasRecordMessage, Converter={StaticResource Visible}}"><TextBlock Text="{Binding RecordMessage}" Foreground="{DynamicResource Gold}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap"/></Border>
                             <Border Style="{StaticResource ToastPanel}" BorderBrush="{DynamicResource Warning}" Visibility="{Binding ShowPatchNotice, Converter={StaticResource Visible}}">
-                                <StackPanel><TextBlock Text="Puede que el juego se haya actualizado" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="Llegan paquetes, pero no se reconocen. Revisá si hay una versión nueva del meter." FontSize="12" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" Margin="0,5,0,6"/><Button Content="Reportar un problema" Command="{Binding ReportProblemCommand}" Style="{StaticResource ButtonLink}" HorizontalAlignment="Left"/></StackPanel>
+                                <StackPanel><TextBlock Text="Puede que el juego se haya actualizado" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="Los números pueden faltar hasta la próxima versión del meter." FontSize="12" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" Margin="0,6,0,8" ToolTip="Llegan paquetes del juego, pero el meter no los reconoce"/><Button Content="Reportar un problema" Command="{Binding ReportProblemCommand}" Style="{StaticResource ButtonSoft}" HorizontalAlignment="Left"/></StackPanel>
                             </Border>
                         </StackPanel>
 
@@ -543,7 +562,7 @@
                         </Style.Triggers>
                     </Style></TextBlock.Style>
                 </TextBlock>
-                <TextBlock Text="{Binding Elapsed}" Style="{StaticResource NumberText}" FontSize="14" Foreground="{DynamicResource TextDim}" Margin="10,0,0,0" VerticalAlignment="Center" Visibility="{Binding ShowClock, Converter={StaticResource Visible}}"/>
+                <TextBlock Text="{Binding Elapsed}" Style="{StaticResource NumberText}" FontSize="14" FontWeight="Normal" Foreground="{DynamicResource TextDim}" Margin="10,0,0,0" VerticalAlignment="Center" Visibility="{Binding ShowClock, Converter={StaticResource Visible}}"/>
                 <TextBlock Text="{Binding MinimizedText}" Foreground="{DynamicResource TextMuted}" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"><TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding HasPillRow}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
                 <Button Style="{StaticResource LiveIcon}" Width="18" Height="22" Margin="6,0,0,0" Content="↗" Command="{Binding ToggleMinimizedCommand}" ToolTip="Abrir el overlay"/>
             </WrapPanel>

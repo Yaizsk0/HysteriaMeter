@@ -37,6 +37,8 @@
     <FontFamily x:Key="TitleFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/BarlowCondensed/#Barlow</FontFamily>
     <!-- La fuente de texto elegida sigue reemplazando BodyFont en App.xaml.cs. -->
     <FontFamily x:Key="BodyFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/IBMPlexSans/#IBM Plex Sans</FontFamily>
+    <!-- Símbolos que Barlow no trae (la cruz de muertes ✝): sin esto WPF cae en Segoe UI Emoji y la dibuja como ícono. -->
+    <FontFamily x:Key="SymbolFont">Segoe UI Symbol</FontFamily>
     <!-- ===================== Tamaños de letra (px del mock = unidades WPF) ===================== -->
     <!-- Texto -->
     <sys:Double x:Key="FontSizeMicro">10</sys:Double>       <!-- etiquetas de la tarjeta de fin de pelea, chips de la run, flags del log -->
@@ -138,6 +140,7 @@
     <SolidColorBrush x:Key="WipeSoft" Color="#1FC0392B" />      <!-- 12 %: fondo de "Lo mató…" -->
     <SolidColorBrush x:Key="AlertBg" Color="#EB781410" />       <!-- fondo de la alerta de enrage -->
     <SolidColorBrush x:Key="Warning" Color="#E8B04A" />         <!-- vida media, "sin tráfico" -->
+    <SolidColorBrush x:Key="WarningLine" Color="#73E8B04A" />   <!-- 45 %: borde de "sin tráfico" y del aviso de parche -->
     <!-- Mismos valores que DungeonSummaryViewModel (KillBrush, WipeBrush, TrashBrush y la clase desconocida) -->
     <SolidColorBrush x:Key="Kill" Color="#E8B04A" />            <!-- segmento kill de la línea de tiempo -->
     <SolidColorBrush x:Key="Neutral" Color="#3A3F4A" />         <!-- segmento trash, toggle apagado -->

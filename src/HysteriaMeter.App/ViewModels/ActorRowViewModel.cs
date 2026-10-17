@@ -21,6 +21,10 @@ public sealed partial class ActorRowViewModel : ObservableObject
     [ObservableProperty]
     public partial string DisplayName { get; set; } = string.Empty;
 
+    /// <summary>Solo la marca de muertes (" ✝", " ✝3"): el overlay la dibuja con una fuente que tenga la cruz.</summary>
+    [ObservableProperty]
+    public partial string DeathText { get; set; } = string.Empty;
+
     /// <summary>Letra del rombo cuando todavía no se sabe la clase: la inicial del nombre.</summary>
     [ObservableProperty]
     public partial string Initial { get; set; } = string.Empty;
@@ -207,7 +211,8 @@ public sealed partial class ActorRowViewModel : ObservableObject
         Id = actor.Id;
         Rank = rank;
         Name = actor.Name;
-        DisplayName = actor.Name + DeathMark(actor.Deaths);
+        DeathText = DeathMark(actor.Deaths);
+        DisplayName = actor.Name + DeathText;
         Initial = InitialOf(actor.Name);
         BadgeText = playerClass is null ? Initial : InitialOf(playerClass.Name);
         if (colorByClass && playerClass is not null)

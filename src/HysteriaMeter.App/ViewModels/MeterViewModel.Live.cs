@@ -620,8 +620,13 @@ public sealed partial class MeterViewModel
     /// <summary>Franja de pausa: congela lo que se ve del vivo (con una pelea guardada abierta no hace nada).</summary>
     public bool IsPauseBannerVisible => IsPaused && !IsViewingHistory;
 
-    /// <summary>"Ctrl+Shift+P para seguir", en el pie mientras está en pausa.</summary>
-    public string PauseHint => Preferences.HotkeyPause.Length > 0 ? $"{Preferences.HotkeyPause} para seguir" : "Tocá ▶ para seguir";
+    /// <summary>
+    /// "Ctrl+Shift+P para seguir", en el pie mientras está en pausa. Sin atajo, señala el botón de la franja, que dibuja
+    /// las dos barras de pausa (como el mock).
+    /// </summary>
+    public string PauseHint => Preferences.HotkeyPause.Length > 0 ? $"{Preferences.HotkeyPause} para seguir" : PauseHintWithoutHotkey;
+
+    public const string PauseHintWithoutHotkey = "Tocá ‖ en la franja de arriba para seguir";
 
     /// <summary>Lo del rediseño que sale de la pelea en pantalla; lo llama Refresh después de armar las filas.</summary>
     private void UpdateLive(EncounterSnapshot real, int players)
