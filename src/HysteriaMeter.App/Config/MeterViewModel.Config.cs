@@ -85,7 +85,10 @@ public sealed partial class MeterViewModel
         _ => MeterTab.Damage,
     };
 
-    /// <summary>"Automática" y las placas de red que ve Npcap; se vuelven a leer cada vez que se abre la configuración.</summary>
+    /// <summary>
+    /// "Automática" y las placas de red que ve Npcap. Se piden de nuevo al abrir la configuración, pero SharpPcap guarda
+    /// su lista por proceso: una placa que aparece con el meter abierto puede no verse hasta reiniciarlo.
+    /// </summary>
     public IReadOnlyList<CaptureDeviceOption> CaptureDeviceOptions =>
         _captureDevices ??= CaptureDevices.Options(CaptureDevices.Source(), Preferences.CaptureDevice);
 

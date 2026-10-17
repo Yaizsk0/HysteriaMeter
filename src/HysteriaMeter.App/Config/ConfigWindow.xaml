@@ -363,6 +363,7 @@
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="ATAJOS" Style="{StaticResource BlockLabel}" />
                             <ContentControl Template="{StaticResource HotkeyCards}" Focusable="False" />
+                            <TextBlock Text="{Binding HotkeyMessage}" Style="{StaticResource Notice}" Margin="0,10,0,0" />
                         </StackPanel>
 
                         <Grid Margin="0,0,0,22">
