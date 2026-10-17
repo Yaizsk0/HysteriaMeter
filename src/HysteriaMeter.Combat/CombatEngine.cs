@@ -434,7 +434,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var dead = Entities.Canonical(e.EntityId);
-        if (_current is not null && !Entities.IsNpc(dead) && InScope(dead))
+        // El daño de una invocación es del dueño; la muerte del NPC físico no es una muerte del jugador.
+        if (_current is not null && !Entities.IsNpc(e.EntityId) && !Entities.IsNpc(dead) && InScope(dead))
         {
             // Los golpes que recibió en los últimos segundos: el último es el que lo mató.
             var since = e.Timestamp - DeathRecap.Window;

@@ -81,3 +81,8 @@ description: "Tareas de la feature 002: precisión del combate"
 - T020 depende de T017 (nombres) para resolver dueños por nombre.
 - T025 depende de T012 (HP conocido del objetivo).
 - Las tareas de research (T006, T010, T016, T019, T022) necesitan capturas nuevas en la PC de Mati.
+
+## Corrección de víctimas de invocaciones (2026-10-17)
+
+- [X] T031 [US4] Separar víctima NPC física y atribución de daño al dueño; conservar aliases sin clasificación NPC y registrar cadáver/reaparición por ID físico.
+- [X] T032 [US4] Regresiones de dueño por ID/nombre/clase en encuentro/sesión/run, recaps/log y muerte real posterior; documentar evidencia y límites en `summon-deaths.md`.

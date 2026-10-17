@@ -119,8 +119,8 @@ public sealed class EntityRegistry
                 }
 
                 break;
-            case DeathEvent death when IsNpc(Canonical(death.EntityId)):
-                _deadNpcs.Add(Canonical(death.EntityId));
+            case DeathEvent death when IsNpc(death.EntityId):
+                _deadNpcs.Add(death.EntityId);
                 break;
             case EntityInfoEvent info:
                 SetName(info.EntityId, info.Name);
