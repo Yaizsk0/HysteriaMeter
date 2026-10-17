@@ -41,6 +41,17 @@ public partial class DungeonWindow : Window
         }
     }
 
+    private void OnExportClick(object sender, RoutedEventArgs e)
+    {
+        var (path, error) = _viewModel.Export();
+        ExportButton.Content = path is not null ? "Guardado ✓" : "No se pudo guardar, reintentá";
+        ExportButton.ToolTip = path is not null ? $"Guardado en {path}" : error;
+    }
+
+    /// <summary>Un clic en una celda de la matriz abre ese intento en el overlay; esta ventana queda abierta.</summary>
+    private void OnCellClick(object sender, RoutedEventArgs e) =>
+        _viewModel.OpenFight((sender as FrameworkElement)?.DataContext as PlayerBossCell);
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);

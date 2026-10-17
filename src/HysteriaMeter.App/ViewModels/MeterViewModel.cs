@@ -1758,7 +1758,16 @@ public sealed partial class MeterViewModel : ObservableObject
         }
 
         var entered = DateTimeOffset.TryParse(run, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var at) ? at : (DateTimeOffset?)null;
-        RunSummaryRequested?.Invoke(new DungeonSummaryViewModel(DungeonSummary.From(fights, entered)));
+        RunSummaryRequested?.Invoke(new DungeonSummaryViewModel(DungeonSummary.From(fights, entered), OpenRunFight, AnonymizeExports));
+    }
+
+    /// <summary>Un clic en la matriz del modo dungeon: abre ese intento en el overlay, como una fila del historial.</summary>
+    private void OpenRunFight(Guid id)
+    {
+        if (_allHistory.Find(i => Guid.TryParse(i.Id, out var saved) && saved == id) is { } item)
+        {
+            OpenEncounterCommand.Execute(item);
+        }
     }
 
     /// <summary>Muestra una pelea inventada para acomodar el overlay sin combatir.</summary>
