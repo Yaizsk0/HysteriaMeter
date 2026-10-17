@@ -53,6 +53,13 @@ public partial class OverlayWindow : Window
             }
         };
         _viewModel.PropertyChanged += OnSettingsOpenChanged;
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!IsVisible)
+            {
+                _viewModel.IsSettingsOpen = false;
+            }
+        };
 
         // Una ventana cerrada no puede ser dueña de otra: se suelta del view model al cerrarse.
         Closed += (_, _) =>
@@ -217,7 +224,14 @@ public partial class OverlayWindow : Window
 
         if (_config is null)
         {
-            _config = new Config.ConfigWindow(_viewModel) { Owner = this };
+            _config = new Config.ConfigWindow(_viewModel, _viewModel.SettingsSection) { Owner = this };
+            var placement = Config.ConfigWindow.Placement(
+                new Rect(Left, Top, ActualWidth, ActualHeight), ScreenWorkArea(),
+                new Size(_config.Width, _config.Height), new Size(_config.MinWidth, _config.MinHeight));
+            _config.Left = placement.Left;
+            _config.Top = placement.Top;
+            _config.Width = placement.Width;
+            _config.Height = placement.Height;
             _config.Closed += (_, _) =>
             {
                 // Primero se suelta: así IsSettingsOpen = false no vuelve a cerrar una ventana que ya se está cerrando.

@@ -38,11 +38,12 @@ public partial class App : Application
         builder.Services.AddOptions<CaptureSettings>().PostConfigure<MeterSession>((settings, session) =>
         {
             var saved = session.Preferences.CaptureDevice;
-            CaptureDevices.Applied = saved;
             if (settings.Mode == CaptureMode.Live && saved.Length > 0)
             {
                 settings.Device = CaptureDevices.Resolve(saved, settings.Device, CaptureDevices.FromNpcap());
             }
+
+            CaptureDevices.Applied = CaptureDevices.AppliedChoice(saved, settings.Mode, settings.Device);
         });
 
         PlayerClasses.Load(Path.Combine(AppContext.BaseDirectory, "data", "classes.json"));

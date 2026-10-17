@@ -21,9 +21,24 @@ public sealed partial class UiSnapshotTests
             window.Loaded += (_, _) => VisiblePage(window)?.ScrollToEnd();
             return window;
         }),
+        new("08-configuracion-1c-apariencia-limite", h =>
+        {
+            var window = Config(h, ConfigSection.Apariencia);
+            var vm = (MeterViewModel)window.DataContext;
+            vm.ShowAllRows = false;
+            vm.RowLimit = 12;
+            return window;
+        }),
         new("08-configuracion-2-columnas", h => Config(h, ConfigSection.Columnas)),
         new("08-configuracion-3-alertas", h => Config(h, ConfigSection.Alertas)),
         new("08-configuracion-4-atajos", h => Config(h, ConfigSection.Atajos)),
+        new("08-configuracion-4b-atajos-minimo", h =>
+        {
+            var window = Config(h, ConfigSection.Atajos);
+            window.Width = window.MinWidth;
+            window.Height = window.MinHeight;
+            return window;
+        }),
 
         // Placas de red: las que ve Npcap en esta PC (sin Npcap, solo "Automática" y el aviso).
         new("08-configuracion-5-captura", h => Config(h, ConfigSection.Captura, realDevices: true)),

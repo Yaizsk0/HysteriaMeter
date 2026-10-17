@@ -122,18 +122,21 @@
             <Setter Property="Padding" Value="12,8" />
             <Setter Property="Margin" Value="0,0,10,10" />
         </Style>
-        <!-- La grilla de atajos va en Apariencia (como el mock) y en Atajos: una sola plantilla para las dos -->
+        <!-- Nombre de la tarjeta de atajo: si igual no entra, se corta con "…" (el ToolTip de la tarjeta lo explica) -->
+        <Style x:Key="HotkeyName" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <!-- La grilla de atajos va en Apariencia (como el mock) y en Atajos: una sola plantilla para las dos. Tres columnas;
+             dos si la ventana se achica (OnHotkeyGridSizeChanged). -->
         <ControlTemplate x:Key="HotkeyCards" TargetType="ContentControl">
-            <UniformGrid Columns="3" Margin="0,0,-10,-10">
+            <UniformGrid Columns="3" Margin="0,0,-10,-10" SizeChanged="OnHotkeyGridSizeChanged">
                 <UniformGrid.Resources>
                     <Style TargetType="TextBox" BasedOn="{StaticResource HotkeyBox}">
                         <Setter Property="DockPanel.Dock" Value="Right" />
                         <Setter Property="Margin" Value="8,0,0,0" />
                     </Style>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="VerticalAlignment" Value="Center" />
-                        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-                    </Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource HotkeyName}" />
                 </UniformGrid.Resources>
                 <Border Style="{StaticResource HotkeyCard}" ToolTip="Ocultar / mostrar el overlay">
                     <DockPanel><TextBox Text="{Binding HotkeyVisibility, UpdateSourceTrigger=Explicit}" /><TextBlock Text="Mostrar / ocultar" /></DockPanel>
@@ -255,8 +258,13 @@
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Configuración" Style="{StaticResource WindowTitle}" FontSize="{StaticResource NumberSizeSection}"
                                Margin="10,0,10,12" />
-                    <TextBlock DockPanel.Dock="Bottom" Margin="12,0" Style="{StaticResource Hint}"
-                               Text="{Binding Version, Mode=OneTime, StringFormat='Hysteria Meter {0} · captura pasiva'}" />
+                    <!-- Pie: la versión en una línea (con el commit no entra junto a "captura pasiva") -->
+                    <StackPanel DockPanel.Dock="Bottom" Margin="12,0">
+                        <TextBlock Style="{StaticResource Hint}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                   Text="{Binding Version, Mode=OneTime, StringFormat='Hysteria Meter {0}'}"
+                                   ToolTip="{Binding Version, Mode=OneTime, StringFormat='Hysteria Meter {0}'}" />
+                        <TextBlock Style="{StaticResource Hint}" Text="captura pasiva" />
+                    </StackPanel>
                     <StackPanel>
                         <RadioButton x:Name="NavAppearance" Style="{StaticResource NavItem}" GroupName="ConfigNav" Content="Apariencia" IsChecked="True" />
                         <RadioButton x:Name="NavColumns" Style="{StaticResource NavItem}" GroupName="ConfigNav" Content="Columnas" />
@@ -271,8 +279,13 @@
             </Border>
 
             <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <Grid.Resources>
-                    <Style TargetType="ScrollViewer">
+                    <!-- Una página por sección. Con clave: implícito también le llegaba al desplegable del ComboBox de Captura. -->
+                    <Style x:Key="Page" TargetType="ScrollViewer">
                         <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
                         <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
                         <Setter Property="Padding" Value="28,22,28,0" />
@@ -280,7 +293,7 @@
                 </Grid.Resources>
 
                 <!-- ===================== Apariencia (el mock) ===================== -->
-                <ScrollViewer Visibility="{Binding IsChecked, ElementName=NavAppearance, Converter={StaticResource Visible}}">
+                <ScrollViewer Style="{StaticResource Page}" Visibility="{Binding IsChecked, ElementName=NavAppearance, Converter={StaticResource Visible}}">
                     <StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="TEMA" Style="{StaticResource BlockLabel}" />
@@ -297,31 +310,33 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="FILAS" Style="{StaticResource BlockLabel}" />
-                                <!-- Los rangos son MeterViewModel.MinRowHeight..MaxRowHeight y MinRowLimit..MaxRowLimit (x:Static de un int no entra en un double) -->
                                 <TextBlock Style="{StaticResource SliderLabel}" ToolTip="Alto de cada fila; el modo compacto usa 22 px">
                                     <Run Text="Alto de fila · " /><Run Text="{Binding RowHeight, Mode=OneWay}" /><Run Text=" px" />
                                 </TextBlock>
-                                <Slider Style="{StaticResource FieldSlider}" Minimum="22" Maximum="40"
+                                <Slider Style="{StaticResource FieldSlider}" Minimum="{x:Static vm:MeterViewModel.MinRowHeight}" Maximum="{x:Static vm:MeterViewModel.MaxRowHeight}"
                                         TickFrequency="2" IsSnapToTickEnabled="True" SmallChange="2" LargeChange="2"
                                         Value="{Binding RowHeight, Delay=250}" />
 
                                 <DockPanel Margin="0,0,0,6">
                                     <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" MinHeight="0" Content="Todos" IsChecked="{Binding ShowAllRows}"
                                               ToolTip="Sin máximo: se ven todos los jugadores" />
-                                    <TextBlock VerticalAlignment="Center" ToolTip="Cuántos jugadores mostrar; si quedás afuera, tu fila ocupa el último lugar">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding ShowAllRows}" Value="True">
-                                                        <Setter Property="Text" Value="Máximo de jugadores · todos" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                        <Run Text="Máximo de jugadores · " /><Run Text="{Binding RowLimit, Mode=OneWay}" />
+                                    <!-- "todos" va en el Run y no en TextBlock.Text: poner Text reemplaza los Runs y no vuelven al apagar "Todos" -->
+                                    <TextBlock x:Name="RowLimitLabel" VerticalAlignment="Center" ToolTip="Cuántos jugadores mostrar; si quedás afuera, tu fila ocupa el último lugar">
+                                        <Run Text="Máximo de jugadores · " /><Run>
+                                            <Run.Style>
+                                                <Style TargetType="Run">
+                                                    <Setter Property="Text" Value="{Binding RowLimit, Mode=OneWay}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding ShowAllRows}" Value="True">
+                                                            <Setter Property="Text" Value="todos" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Run.Style>
+                                        </Run>
                                     </TextBlock>
                                 </DockPanel>
-                                <Slider Minimum="4" Maximum="24"
+                                <Slider Minimum="{x:Static vm:MeterViewModel.MinRowLimit}" Maximum="{x:Static vm:MeterViewModel.MaxRowLimit}"
                                         TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="1" LargeChange="2"
                                         Value="{Binding RowLimit, Delay=250}">
                                     <Slider.Style>
@@ -406,7 +421,7 @@
                 </ScrollViewer>
 
                 <!-- ===================== Columnas ===================== -->
-                <ScrollViewer Visibility="{Binding IsChecked, ElementName=NavColumns, Converter={StaticResource Visible}}">
+                <ScrollViewer Style="{StaticResource Page}" Visibility="{Binding IsChecked, ElementName=NavColumns, Converter={StaticResource Visible}}">
                     <StackPanel>
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -447,7 +462,7 @@
                 </ScrollViewer>
 
                 <!-- ===================== Alertas y sonidos ===================== -->
-                <ScrollViewer Visibility="{Binding IsChecked, ElementName=NavAlerts, Converter={StaticResource Visible}}">
+                <ScrollViewer Style="{StaticResource Page}" Visibility="{Binding IsChecked, ElementName=NavAlerts, Converter={StaticResource Visible}}">
                     <StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="SONIDO" Style="{StaticResource BlockLabel}" />
@@ -483,7 +498,7 @@
                 </ScrollViewer>
 
                 <!-- ===================== Atajos ===================== -->
-                <ScrollViewer Visibility="{Binding IsChecked, ElementName=NavHotkeys, Converter={StaticResource Visible}}">
+                <ScrollViewer Style="{StaticResource Page}" Visibility="{Binding IsChecked, ElementName=NavHotkeys, Converter={StaticResource Visible}}">
                     <StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="ATAJOS GLOBALES" Style="{StaticResource BlockLabel}" />
@@ -494,23 +509,26 @@
                         </StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="CON EL MOUSE, SOBRE EL OVERLAY" Style="{StaticResource BlockLabel}" />
-                            <UniformGrid Columns="3" Margin="0,0,-10,-10">
-                                <Border Style="{StaticResource HotkeyCard}">
+                            <UniformGrid Columns="3" Margin="0,0,-10,-10" SizeChanged="OnHotkeyGridSizeChanged">
+                                <UniformGrid.Resources>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource HotkeyName}" />
+                                </UniformGrid.Resources>
+                                <Border Style="{StaticResource HotkeyCard}" ToolTip="Zoom del overlay: Ctrl + rueda del mouse">
                                     <DockPanel>
                                         <Border DockPanel.Dock="Right" Style="{StaticResource KeyCap}" Margin="8,0,0,0"><TextBlock Text="Ctrl + rueda" /></Border>
-                                        <TextBlock Text="Zoom" VerticalAlignment="Center" />
+                                        <TextBlock Text="Zoom" />
                                     </DockPanel>
                                 </Border>
-                                <Border Style="{StaticResource HotkeyCard}">
+                                <Border Style="{StaticResource HotkeyCard}" ToolTip="Modo compacto: doble clic en el encabezado del overlay">
                                     <DockPanel>
                                         <Border DockPanel.Dock="Right" Style="{StaticResource KeyCap}" Margin="8,0,0,0"><TextBlock Text="Doble clic arriba" /></Border>
-                                        <TextBlock Text="Modo compacto" VerticalAlignment="Center" />
+                                        <TextBlock Text="Modo compacto" />
                                     </DockPanel>
                                 </Border>
-                                <Border Style="{StaticResource HotkeyCard}">
+                                <Border Style="{StaticResource HotkeyCard}" ToolTip="Esc cierra la configuración o el historial; sin nada abierto, vuelve a la pelea en vivo">
                                     <DockPanel>
                                         <Border DockPanel.Dock="Right" Style="{StaticResource KeyCap}" Margin="8,0,0,0"><TextBlock Text="Esc" /></Border>
-                                        <TextBlock Text="Cerrar / volver al vivo" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="Cerrar / volver al vivo" />
                                     </DockPanel>
                                 </Border>
                             </UniformGrid>
@@ -519,7 +537,7 @@
                 </ScrollViewer>
 
                 <!-- ===================== Captura ===================== -->
-                <ScrollViewer Visibility="{Binding IsChecked, ElementName=NavCapture, Converter={StaticResource Visible}}">
+                <ScrollViewer Style="{StaticResource Page}" Visibility="{Binding IsChecked, ElementName=NavCapture, Converter={StaticResource Visible}}">
                     <StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="PLACA DE RED" Style="{StaticResource BlockLabel}" />
@@ -527,24 +545,23 @@
                                       HorizontalAlignment="Left" MinWidth="360" MaxWidth="560" Margin="0,0,0,8" />
                             <TextBlock Style="{StaticResource Hint}"
                                        Text="Se aplica al reiniciar el meter. Automática escucha todas las placas menos loopback; elegí una si tenés VPN o varias conexiones." />
-                            <!-- Solo "Automática": Npcap no está instalado o no ve ninguna placa -->
+                            <!-- Npcap no está instalado o no ve ninguna placa (aunque quede en la lista una guardada que no está) -->
                             <TextBlock Margin="0,6,0,0" Text="Npcap no muestra ninguna placa: revisá que esté instalado (modo compatible WinPcap).">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock" BasedOn="{StaticResource Notice}">
-                                        <Setter Property="Visibility" Value="Collapsed" />
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding CaptureDeviceOptions.Count}" Value="1">
-                                                <Setter Property="Visibility" Value="Visible" />
+                                            <DataTrigger Binding="{Binding HasNpcapDevices}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </TextBlock.Style>
                             </TextBlock>
-                            <TextBlock Style="{StaticResource Notice}" Margin="0,6,0,0" Text="Reiniciá el meter para usar la placa elegida.">
-                                <TextBlock.Visibility>
-                                    <Binding Path="CaptureRestartPending" Converter="{StaticResource Visible}" />
-                                </TextBlock.Visibility>
-                            </TextBlock>
+                            <TextBlock Style="{StaticResource Notice}" Margin="0,6,0,0"
+                                       Text="La placa elegida no está conectada: la captura usa Automática hasta que vuelva y reinicies el meter."
+                                       Visibility="{Binding CaptureDeviceMissing, Converter={StaticResource Visible}}" />
+                            <TextBlock Style="{StaticResource Notice}" Margin="0,6,0,0" Text="Reiniciá el meter para usar la placa elegida."
+                                       Visibility="{Binding CaptureRestartPending, Converter={StaticResource Visible}}" />
                         </StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="CONTAR DAÑO DE" Style="{StaticResource BlockLabel}" />
@@ -584,7 +601,7 @@
                 </ScrollViewer>
 
                 <!-- ===================== Datos del juego ===================== -->
-                <ScrollViewer Visibility="{Binding IsChecked, ElementName=NavGameData, Converter={StaticResource Visible}}">
+                <ScrollViewer Style="{StaticResource Page}" Visibility="{Binding IsChecked, ElementName=NavGameData, Converter={StaticResource Visible}}">
                     <StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="CARPETA" Style="{StaticResource BlockLabel}" />
@@ -647,7 +664,7 @@
                 </ScrollViewer>
 
                 <!-- ===================== Historial ===================== -->
-                <ScrollViewer Visibility="{Binding IsChecked, ElementName=NavHistory, Converter={StaticResource Visible}}">
+                <ScrollViewer Style="{StaticResource Page}" Visibility="{Binding IsChecked, ElementName=NavHistory, Converter={StaticResource Visible}}">
                     <StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="PELEAS GUARDADAS" Style="{StaticResource BlockLabel}" />
@@ -687,7 +704,7 @@
                                     </Style>
                                 </WrapPanel.Resources>
                                 <Button Content="Exportar perfil" Command="{Binding ExportProfileCommand}"
-                                        ToolTip="Guarda esta configuración (sin el webhook) en Exportes\perfil-hysteria.json para otra PC o la legión" />
+                                        ToolTip="Guarda esta configuración (sin el webhook ni la placa de red) en Exportes\perfil-hysteria.json para otra PC o la legión" />
                                 <Button Content="Cargar perfil" Command="{Binding ImportProfileCommand}"
                                         ToolTip="Carga Exportes\perfil-hysteria.json; tu webhook de Discord y tu placa de red se mantienen" />
                             </WrapPanel>
@@ -706,13 +723,12 @@
                                 <Button DockPanel.Dock="Right" Style="{StaticResource ButtonSoft}" Content="Mandar ahora" Command="{Binding SendToDiscordCommand}" Margin="12,0,0,0" VerticalAlignment="Top" />
                                 <CheckBox Style="{StaticResource Switch}" Content="Al derrotar un boss" IsChecked="{Binding DiscordOnKill}" Tag="Manda el resumen de la pelea al canal" />
                             </DockPanel>
-                            <TextBlock Text="{Binding ExportMessage}" Style="{StaticResource SecondaryText}" TextWrapping="Wrap" Margin="0,8,0,0" />
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
 
                 <!-- ===================== Diagnóstico ===================== -->
-                <ScrollViewer Visibility="{Binding IsChecked, ElementName=NavDiagnostics, Converter={StaticResource Visible}}">
+                <ScrollViewer Style="{StaticResource Page}" Visibility="{Binding IsChecked, ElementName=NavDiagnostics, Converter={StaticResource Visible}}">
                     <StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="CAPTURA" Style="{StaticResource BlockLabel}" />
@@ -736,6 +752,21 @@
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
+
+                <!-- Resultado de la última acción (imagen copiada o guardada, exportes, Discord, perfil, inicio con Windows): a la
+                     vista desde cualquier sección. Se oculta vacío. -->
+                <Border Grid.Row="1" BorderBrush="{DynamicResource Rule}" BorderThickness="0,1,0,0" Padding="28,10">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ExportMessage}" Value="">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock x:Name="ActionMessage" Text="{Binding ExportMessage}" Style="{StaticResource SecondaryText}" TextWrapping="Wrap" />
+                </Border>
 
                 <Button Style="{StaticResource ButtonIcon}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,12,0"
                         Click="OnCloseClick" ToolTip="Cerrar (Esc)">

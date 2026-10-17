@@ -1,5 +1,6 @@
 using System.IO;
 using System.Runtime.ExceptionServices;
+using System.Windows;
 using System.Windows.Media;
 using HysteriaMeter.App.Config;
 using HysteriaMeter.App.Pipeline;
@@ -24,7 +25,7 @@ public sealed class ConfigTests
             Assert.True(vm.ShowAllRows);
 
             // Con "Todos" el slider no escribe: su mínimo (4) no pisa el 0 guardado.
-            vm.RowLimit = MeterViewModel.MinRowLimit;
+            vm.RowLimit = (int)MeterViewModel.MinRowLimit;
             Assert.Equal(0, session.Preferences.MaxRows);
 
             var changed = new List<string?>();
@@ -143,6 +144,25 @@ public sealed class ConfigTests
         var imported = ProfileFile.FromJson(json, new MeterPreferences { CaptureDevice = @"\Device\NPF_{B}" });
         Assert.NotNull(imported);
         Assert.Equal(@"\Device\NPF_{B}", imported.CaptureDevice);
+    }
+
+    [Fact]
+    public void Applied_capture_choice_tracks_the_device_actually_used()
+    {
+        Assert.Equal("", CaptureDevices.AppliedChoice("missing", CaptureMode.Live, "configured"));
+        Assert.Equal("", CaptureDevices.AppliedChoice("missing", CaptureMode.Live, null));
+        Assert.Equal("connected", CaptureDevices.AppliedChoice("connected", CaptureMode.Live, "connected"));
+        Assert.Equal("saved", CaptureDevices.AppliedChoice("saved", CaptureMode.Replay, null));
+    }
+
+    [Fact]
+    public void Config_placement_fits_the_owner_monitor_and_keeps_offscreen_harness_offscreen()
+    {
+        var placement = ConfigWindow.Placement(new Rect(1900, 100, 356, 400), new Rect(1600, 0, 1092, 614), new Size(1040, 700), new Size(880, 480));
+        Assert.Equal(new Rect(1626, 0, 1040, 614), placement);
+        var offscreen = ConfigWindow.Placement(new Rect(-10000, -10000, 356, 400), new Rect(0, 0, 1920, 1080), new Size(1040, 700), new Size(880, 480));
+        Assert.True(offscreen.Right < 0);
+        Assert.True(offscreen.Bottom < 0);
     }
 
     [Fact]

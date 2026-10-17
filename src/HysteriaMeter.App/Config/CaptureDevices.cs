@@ -1,10 +1,14 @@
+using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.Capture.Sources;
 using SharpPcap;
 
 namespace HysteriaMeter.App.Config;
 
-/// <summary>Una opción del selector de placa de red: el <c>Name</c> de Npcap (vacío = automática) y lo que se muestra.</summary>
-public sealed record CaptureDeviceOption(string Name, string Label);
+/// <summary>
+/// Una opción del selector de placa de red: el <c>Name</c> de Npcap (vacío = automática), lo que se muestra y si Npcap la
+/// ve (la guardada que ya no está queda en la lista, sin conectar).
+/// </summary>
+public sealed record CaptureDeviceOption(string Name, string Label, bool Connected = true);
 
 /// <summary>
 /// Placas de red de Configuración → Captura. La lista sale de Npcap (<see cref="LiveCaptureSource.ListDevices"/>): son
@@ -18,7 +22,10 @@ public static class CaptureDevices
     /// <summary>De dónde salen las placas. App pone <see cref="FromNpcap"/>; en los tests queda vacía y no se toca Npcap.</summary>
     public static Func<IReadOnlyList<(string Name, string Description)>> Source { get; set; } = () => [];
 
-    /// <summary>La placa elegida al abrir el meter: la que usa la captura hasta reiniciarlo.</summary>
+    /// <summary>
+    /// La elección de las preferencias que está usando la captura (ver <see cref="AppliedChoice"/>): con otra elegida
+    /// hace falta reiniciar el meter. La pone App al arrancar.
+    /// </summary>
     public static string Applied { get; set; } = string.Empty;
 
     /// <summary>Las placas que ve Npcap; vacía si no está instalado o no responde.</summary>
@@ -45,7 +52,7 @@ public static class CaptureDevices
         options.AddRange(devices.Select(d => new CaptureDeviceOption(d.Name, string.IsNullOrWhiteSpace(d.Description) ? d.Name : d.Description)));
         if (saved.Length > 0 && !devices.Any(d => d.Name == saved))
         {
-            options.Add(new CaptureDeviceOption(saved, $"{saved} (no está conectada)"));
+            options.Add(new CaptureDeviceOption(saved, $"{saved} (no está conectada)", Connected: false));
         }
 
         return options;
@@ -57,4 +64,12 @@ public static class CaptureDevices
     /// </summary>
     public static string? Resolve(string saved, string? configured, IReadOnlyList<(string Name, string Description)> devices) =>
         saved.Length > 0 && devices.Any(d => d.Name == saved) ? saved : configured;
+
+    /// <summary>
+    /// Lo que quedó aplicado de la placa guardada, en los términos del selector: la guardada si la captura la usa; vacío
+    /// (Automática) si no estaba conectada y <see cref="Resolve"/> siguió con la de appsettings o la automática. Fuera del
+    /// modo en vivo no hay placa y cuenta como aplicada la guardada: no se pide reiniciar.
+    /// </summary>
+    public static string AppliedChoice(string saved, CaptureMode mode, string? device) =>
+        mode != CaptureMode.Live || device == saved ? saved : string.Empty;
 }

@@ -24,6 +24,8 @@ public sealed partial class WindowSmokeTests
             Application.ResourceAssembly ??= typeof(App).Assembly;
             var app = Application.Current as App ?? new App();
             app.InitializeComponent();
+            // La regresión de Owner muestra ventanas fuera de pantalla; cerrar la última no debe apagar el arnés.
+            app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty, new MeterPreferences(), _ => { });
             var viewModel = new MeterViewModel(session);
