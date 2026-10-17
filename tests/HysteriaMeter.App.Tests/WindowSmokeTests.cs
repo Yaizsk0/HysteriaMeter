@@ -748,19 +748,35 @@ public sealed class WindowSmokeTests
     {
         RunOnSta(() =>
         {
+            var gold = System.Windows.Media.Colors.Gold;
             var resources = new ResourceDictionary
             {
-                ["Gold"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Gold),
+                ["Gold"] = new System.Windows.Media.SolidColorBrush(gold),
                 ["Panel"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Black),
+                // Derivada del acento: el tema le cambia el color y le deja el alfa.
+                ["GoldDim"] = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x47, gold.R, gold.G, gold.B)),
             };
             var defaults = MeterThemes.Snapshot(resources);
+            System.Windows.Media.Color ColorOf(string key) => ((System.Windows.Media.SolidColorBrush)resources[key]).Color;
 
             MeterThemes.Apply(resources, "Abismo", defaults);
-            Assert.Equal(MeterThemes.Of("Abismo").Colors["Gold"], ((System.Windows.Media.SolidColorBrush)resources["Gold"]).Color);
+            var abyss = MeterThemes.Of("Abismo").Colors["Gold"];
+            Assert.Equal(abyss, ColorOf("Gold"));
+            Assert.Equal(MeterThemes.Of("Abismo").Colors["Panel"], ColorOf("Panel"));
+            Assert.Equal(System.Windows.Media.Color.FromArgb(0x47, abyss.R, abyss.G, abyss.B), ColorOf("GoldDim"));
 
             MeterThemes.Apply(resources, "no existe", defaults);
-            Assert.Equal(System.Windows.Media.Colors.Gold, ((System.Windows.Media.SolidColorBrush)resources["Gold"]).Color);
-            Assert.All(MeterThemes.All.Skip(1), t => Assert.Equal(14, t.Colors.Count));
+            Assert.Equal(gold, ColorOf("Gold"));
+            Assert.Equal(System.Windows.Media.Colors.Black, ColorOf("Panel"));
+            Assert.Equal(System.Windows.Media.Color.FromArgb(0x47, gold.R, gold.G, gold.B), ColorOf("GoldDim"));
+
+            // Cada tema alternativo define fondos, acento y textos (14 colores); las derivadas del acento y los neutros no.
+            string[] themed =
+            [
+                "WindowBg", "Panel", "PanelRaised", "PanelSolid", "Surface", "CardBg", "InputBg", "MenuBg",
+                "Gold", "GoldBright", "Text", "TextBright", "TextMuted", "TextDim",
+            ];
+            Assert.All(MeterThemes.All.Skip(1), t => Assert.Equal(themed.Order(), t.Colors.Keys.Order()));
         });
     }
 

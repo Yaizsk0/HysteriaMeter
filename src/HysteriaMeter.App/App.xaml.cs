@@ -78,15 +78,23 @@ public partial class App : Application
         _host = builder.Build();
         await _host.StartAsync().ConfigureAwait(true);
 
-        // Tema visual: se aplica antes de abrir las ventanas; al cambiarlo, se actualizan los colores que se pueden.
+        // Tema visual y fuente del texto: se aplican antes de abrir las ventanas. Al cambiarlos (o al importar un perfil,
+        // que avisa "cambió todo"), los ven las referencias DynamicResource (BodyFont, estilos de Theme.xaml) y las
+        // ventanas que se abren después; el jugador local toma el acento nuevo en la próxima actualización de las filas.
         var session = _host.Services.GetRequiredService<MeterSession>();
-        var themeDefaults = MeterThemes.Snapshot(Resources);
-        MeterThemes.Apply(Resources, session.Preferences.Theme, themeDefaults);
+        MeterThemes.Defaults = MeterThemes.Snapshot(Resources);
+        ApplyTheme(session.Preferences.Theme);
+        Resources["BodyFont"] = MeterViewModel.FontOf(session.Preferences.TextFont);
         session.PreferencesChanged += names =>
         {
-            if (names.Contains(nameof(MeterViewModel.SelectedTheme)))
+            if (MeterSession.Touches(names, nameof(MeterViewModel.SelectedTheme)))
             {
-                Dispatcher.InvokeAsync(() => MeterThemes.Apply(Resources, session.Preferences.Theme, themeDefaults));
+                Dispatcher.InvokeAsync(() => ApplyTheme(session.Preferences.Theme));
+            }
+
+            if (MeterSession.Touches(names, nameof(MeterViewModel.FontName)))
+            {
+                Dispatcher.InvokeAsync(() => Resources["BodyFont"] = MeterViewModel.FontOf(session.Preferences.TextFont));
             }
         };
 
@@ -101,6 +109,15 @@ public partial class App : Application
         }
         catch (System.Data.Common.DbException)
         {
+        }
+    }
+
+    private void ApplyTheme(string? name)
+    {
+        var palette = MeterThemes.Apply(Resources, name, MeterThemes.Defaults);
+        if (palette.TryGetValue("Gold", out var accent))
+        {
+            PlayerColors.UseAccent(accent);
         }
     }
 

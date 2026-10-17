@@ -49,7 +49,10 @@ public sealed record HistoryItem(
 
     public bool HasPercentile => Percentile is not null;
 
-    /// <summary>Color del percentil, como en Warcraft Logs: gris, verde, azul, violeta, naranja y dorado el mejor.</summary>
+    /// <summary>
+    /// Color del percentil, con los umbrales de Warcraft Logs y los colores del rediseño: gris, verde, azul, violeta,
+    /// naranja y el acento el mejor. Son los Percentile* de Themes/Theme.xaml: mantener los dos iguales.
+    /// </summary>
     public System.Windows.Media.Brush PercentileBrush => TierBrush(Percentile ?? 0);
 
     public static System.Windows.Media.Brush TierBrush(int percentile) => Tiers[percentile switch
@@ -63,7 +66,7 @@ public sealed record HistoryItem(
     }];
 
     private static readonly System.Windows.Media.Brush[] Tiers =
-        [.. new[] { "#9D9D9D", "#1EFF00", "#0070FF", "#A335EE", "#FF8000", "#E5CC80" }.Select(Freeze)];
+        [.. new[] { "#9D9D9D", "#4FD15C", "#4A90E8", "#B867F0", "#F0A04A", "#E8B04A" }.Select(Freeze)];
 
     private static System.Windows.Media.Brush Freeze(string hex)
     {

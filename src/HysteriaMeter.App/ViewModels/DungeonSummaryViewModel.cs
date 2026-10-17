@@ -112,6 +112,7 @@ public sealed class DungeonSummaryViewModel
         }
     }
 
+    // Mismos valores que Kill, Wipe, Neutral y ClassUnknown de Themes/Theme.xaml (no cambian con el tema).
     private static readonly Brush KillBrush = Frozen(Color.FromRgb(0xE8, 0xB0, 0x4A));
     private static readonly Brush WipeBrush = Frozen(Color.FromRgb(0xC0, 0x39, 0x2B));
     private static readonly Brush TrashBrush = Frozen(Color.FromRgb(0x3A, 0x3F, 0x4A));

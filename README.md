@@ -102,6 +102,8 @@ Las skills de clase (IDs 11xxxxxx a 18xxxxxx) traen nivel y variante en los últ
 
 Modo dungeon: en el historial, cada run (peleas con la misma entrada a la zona) tiene un botón RESUMEN ›. Abre la run entera: entrada y última pelea, una línea de tiempo con trash, kills y wipes, una tarjeta por boss con sus intentos y el DPS y las muertes de cada jugador, y una tabla de muertes y DPS por jugador y boss. Un boss es el que está marcado en `npcs.json`, o un objetivo que se llevó la mayor parte del daño y aguantó al menos 30 s; el resto es trash. "Copiar para Discord" copia el resumen como texto.
 
+Rediseño, paso 1: la paleta nueva (fondo casi negro #0C0E13, acento ámbar #E8B04A, filetes y filas en blanco translúcido), números y títulos en Barlow Semi Condensed y la fuente elegida en configuración también en el detalle, el registro y el modo dungeon. Los temas Mínimo, Abismo y Carmesí siguen con su acento, que ahora tiñe también los bordes y resaltados. Para revisar la interfaz sin el juego abierto hay un arnés de capturas: `HYSTERIA_SNAPSHOTS=<carpeta> dotnet test tests/HysteriaMeter.App.Tests --filter "FullyQualifiedName~UiSnapshotTests"` guarda un PNG por ventana y estado con datos de prueba.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).

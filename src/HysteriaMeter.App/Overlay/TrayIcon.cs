@@ -60,7 +60,10 @@ public sealed class TrayIcon : IDisposable
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{AppPaths.DataFolder}\"") { UseShellExecute = true });
     }
 
-    /// <summary>Un rombo dorado como el del encabezado del overlay, dibujado en memoria (sin archivos .ico).</summary>
+    /// <summary>
+    /// Un rombo como el del encabezado del overlay, dibujado en memoria (sin archivos .ico): acento #E8B04A (Gold de
+    /// Theme.xaml) sobre el fondo #0C0E13 (WindowBg). Fijo: se dibuja una vez, antes de que haya tema.
+    /// </summary>
     private static Icon DrawIcon()
     {
         using var bitmap = new Bitmap(32, 32);
@@ -69,11 +72,11 @@ public sealed class TrayIcon : IDisposable
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.Clear(Color.Transparent);
             DPoint[] diamond = [new(16, 2), new(30, 16), new(16, 30), new(2, 16)];
-            using var fill = new SolidBrush(Color.FromArgb(0x1A, 0x16, 0x10));
-            using var pen = new Pen(Color.FromArgb(0xE8, 0xCF, 0x8F), 3);
+            using var fill = new SolidBrush(Color.FromArgb(0x0C, 0x0E, 0x13));
+            using var pen = new Pen(Color.FromArgb(0xE8, 0xB0, 0x4A), 3);
             g.FillPolygon(fill, diamond);
             g.DrawPolygon(pen, diamond);
-            using var inner = new SolidBrush(Color.FromArgb(0xC9, 0xA2, 0x5A));
+            using var inner = new SolidBrush(Color.FromArgb(0xE8, 0xB0, 0x4A));
             g.FillPolygon(inner, [new DPoint(16, 10), new DPoint(22, 16), new DPoint(16, 22), new DPoint(10, 16)]);
         }
 

@@ -10,7 +10,7 @@
         Width="700" Height="600" MinWidth="520" MinHeight="220"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="CanResizeWithGrip" ShowInTaskbar="False"
-        FontSize="13" Foreground="{StaticResource Text}"
+        FontSize="13" Foreground="{StaticResource Text}" FontFamily="{DynamicResource BodyFont}"
         TextOptions.TextFormattingMode="Display">
 
     <!-- Referencia visual: mocks/Detalle.dc.html, sección "Desglose por skill". -->
@@ -26,7 +26,7 @@
             <Setter Property="Foreground" Value="{StaticResource TextDim}" />
         </Style>
         <Style x:Key="Stat" TargetType="StackPanel">
-            <Setter Property="Margin" Value="0,0,22,0" />
+            <Setter Property="Margin" Value="0,0,22,4" />
         </Style>
         <Style x:Key="StatLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
@@ -79,10 +79,11 @@
         </DataTemplate>
     </Window.Resources>
 
-    <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Rule}" BorderThickness="1">
+    <!-- Marco con el borde del acento (GoldDim), como WindowFrame; el fondo sigue translúcido hasta la pista de cada ventana. -->
+    <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource GoldDim}" BorderThickness="1">
         <DockPanel>
             <!-- Cabecera: se arrastra la ventana desde acá -->
-            <DockPanel DockPanel.Dock="Top" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="SizeAll" Background="#14C9A25A">
+            <DockPanel DockPanel.Dock="Top" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="SizeAll" Background="Transparent">
                 <Border DockPanel.Dock="Bottom" Height="1" Background="{StaticResource Rule}" />
                 <Button DockPanel.Dock="Right" Click="OnCloseClick" ToolTip="Cerrar" Cursor="Hand" Width="26" Height="26" Margin="0,6,6,6"
                         Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextMuted}">
@@ -97,7 +98,7 @@
                             ToolTip="{Binding RealName, StringFormat='Apodo para {0} (Enter para guardar, vacío para sacarlo)'}">
                     <TextBlock Text="Apodo" FontSize="11" Foreground="{StaticResource TextDim}" VerticalAlignment="Center" Margin="0,0,6,0" />
                     <TextBox Text="{Binding Nickname, UpdateSourceTrigger=PropertyChanged}" Width="110" FontSize="12" MaxLength="24" Padding="4,1"
-                             Background="#22FFFFFF" Foreground="{StaticResource TextBright}" BorderBrush="{StaticResource Rule}" CaretBrush="{StaticResource Gold}">
+                             Background="{DynamicResource InputBg}" Foreground="{StaticResource TextBright}" BorderBrush="{StaticResource Stroke}" CaretBrush="{DynamicResource Gold}">
                         <TextBox.InputBindings>
                             <KeyBinding Key="Enter" Command="{Binding SaveNicknameCommand}" />
                         </TextBox.InputBindings>
@@ -119,8 +120,8 @@
                 </StackPanel>
             </DockPanel>
 
-            <!-- Resumen -->
-            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="14,10,14,8">
+            <!-- Resumen. WrapPanel: con Inter (más ancha que Segoe UI) los 9 datos no entran en 700 px y el último se cortaba. -->
+            <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="14,10,14,4">
                 <StackPanel Style="{StaticResource Stat}">
                     <TextBlock Text="DPS" Style="{StaticResource StatLabel}" />
                     <TextBlock Text="{Binding Dps}" Style="{StaticResource StatValue}" />
@@ -157,16 +158,16 @@
                     <TextBlock Text="TIEMPO MUERTO" Style="{StaticResource StatLabel}" />
                     <TextBlock Text="{Binding DeadTime}" Style="{StaticResource StatValue}" />
                 </StackPanel>
-            </StackPanel>
+            </WrapPanel>
 
             <!-- Muertes: qué lo mató y cuánto recibió antes -->
-            <Border DockPanel.Dock="Top" Margin="10,0,10,6" Padding="8,4" Background="#1FE0524A" BorderBrush="#55E0524A" BorderThickness="1"
+            <Border DockPanel.Dock="Top" Margin="10,0,10,6" Padding="8,4" Background="{StaticResource WipeSoft}" BorderBrush="{StaticResource DangerLine}" BorderThickness="1"
                     Visibility="{Binding HasDeaths, Converter={StaticResource Visible}}">
                 <ItemsControl ItemsSource="{Binding Deaths}" MaxHeight="90">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="vm:DeathItem">
                             <TextBlock Margin="0,1" TextTrimming="CharacterEllipsis" ToolTip="{Binding LastHits}">
-                                <Run Text="✝" Foreground="#E0524A" />
+                                <Run Text="✝" Foreground="{StaticResource Danger}" />
                                 <Run Text="{Binding When, Mode=OneWay}" Foreground="{StaticResource TextDim}" />
                                 <Run Text="{Binding Summary, Mode=OneWay}" Foreground="{StaticResource TextBright}" />
                                 <Run Text="·" Foreground="{StaticResource TextDim}" />
@@ -178,7 +179,7 @@
             </Border>
 
             <!-- Consejos de la pelea (reglas locales, solo para vos) -->
-            <Border DockPanel.Dock="Top" Margin="10,0,10,6" Padding="8,4" Background="#14C9A25A" BorderBrush="{StaticResource Rule}" BorderThickness="1"
+            <Border DockPanel.Dock="Top" Margin="10,0,10,6" Padding="8,4" Background="{DynamicResource AccentFaint}" BorderBrush="{StaticResource Rule}" BorderThickness="1"
                     Visibility="{Binding HasAdvice, Converter={StaticResource Visible}}">
                 <StackPanel>
                     <TextBlock Text="CONSEJOS" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Gold}" Margin="0,0,0,2" />
@@ -241,7 +242,7 @@
             </StackPanel>
 
             <!-- DPS en el tiempo (promedio móvil de 5 s) -->
-            <Border DockPanel.Dock="Top" Margin="10,2,10,6" Height="92" Background="{StaticResource Row}" BorderBrush="{StaticResource RowBorder}" BorderThickness="1"
+            <Border DockPanel.Dock="Top" Margin="10,2,10,6" Height="92" Background="{StaticResource Row}" BorderBrush="{StaticResource CardBorder}" BorderThickness="1"
                     Visibility="{Binding HasChart, Converter={StaticResource Visible}}">
                 <Grid>
                     <Polyline Points="{Binding ChartPoints}" Stretch="Fill" Margin="6,20,6,6" Stroke="{Binding Accent}" StrokeThickness="1.6" StrokeLineJoin="Round" />

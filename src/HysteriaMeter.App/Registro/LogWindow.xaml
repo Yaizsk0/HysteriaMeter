@@ -11,7 +11,7 @@
         Width="700" Height="460" MinWidth="480" MinHeight="220"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="CanResizeWithGrip" ShowInTaskbar="False"
-        FontSize="12" Foreground="{StaticResource Text}"
+        FontSize="12" Foreground="{StaticResource Text}" FontFamily="{DynamicResource BodyFont}"
         TextOptions.TextFormattingMode="Display">
 
     <Window.Resources>
@@ -22,10 +22,11 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Rule}" BorderThickness="1">
+    <!-- Marco con el borde del acento (GoldDim), como WindowFrame; el fondo sigue translúcido hasta la pista de cada ventana. -->
+    <Border Background="{DynamicResource Panel}" BorderBrush="{DynamicResource GoldDim}" BorderThickness="1">
         <DockPanel>
             <!-- Cabecera: se arrastra la ventana desde acá -->
-            <DockPanel DockPanel.Dock="Top" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="SizeAll" Background="#14C9A25A">
+            <DockPanel DockPanel.Dock="Top" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="SizeAll" Background="Transparent">
                 <Border DockPanel.Dock="Bottom" Height="1" Background="{StaticResource Rule}" />
                 <Button DockPanel.Dock="Right" Click="OnCloseClick" ToolTip="Cerrar" Cursor="Hand" Width="26" Height="26" Margin="0,6,6,6"
                         Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextMuted}">
@@ -44,8 +45,8 @@
                           IsChecked="{Binding OnlyFocus}" Visibility="{Binding HasFocus, Converter={StaticResource Visible}}">
                     <TextBlock Text="{Binding FocusName, StringFormat='Solo {0}'}" />
                 </CheckBox>
-                <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" Background="#33000000" Foreground="{StaticResource Text}"
-                         CaretBrush="{StaticResource Gold}" BorderBrush="{StaticResource RuleDim}" Padding="4,2"
+                <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" Background="{DynamicResource InputBg}" Foreground="{StaticResource Text}"
+                         CaretBrush="{DynamicResource Gold}" BorderBrush="{StaticResource Stroke}" Padding="4,2"
                          ToolTip="Buscar por jugador, objetivo, skill o modificador (crítico, espalda...)" />
             </DockPanel>
 
@@ -99,7 +100,7 @@
                                 <Setter TargetName="AmountText" Property="Foreground" Value="{StaticResource Healing}" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding Kind}" Value="{x:Static combat:LogKind.Death}">
-                                <Setter TargetName="Line" Property="Background" Value="#33E0524A" />
+                                <Setter TargetName="Line" Property="Background" Value="{StaticResource DangerSoft}" />
                             </DataTrigger>
                         </DataTemplate.Triggers>
                     </DataTemplate>
