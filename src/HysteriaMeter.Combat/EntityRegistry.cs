@@ -227,17 +227,47 @@ public sealed class EntityRegistry
             return false;
         }
 
-        var candidates = _profiles
-            .Where(p => p.Value is { NpcId: null } profile && profile.ClassId == classId && IsKnownPlayer(p.Key))
-            .Select(p => p.Key)
-            .Take(2)
-            .ToList();
-        if (candidates.Count != 1 || candidates[0] == summonId)
+        // Una clase inferida por daño no prueba que sea un jugador: puede ser una invocación
+        // cuyo primer golpe llegó antes de su spawn. El filtro visual de actores no decide dueños.
+        var playerGroups = _profiles
+            .Where(p => p.Value is { NpcId: null } profile && profile.ClassId == classId
+                && (p.Key == LocalPlayerId || profile.Name is not null || IsPartyMember(p.Key)))
+            .GroupBy(p => p.Value.Name, StringComparer.Ordinal);
+
+        ulong? candidate = null;
+        foreach (var group in playerGroups)
+        {
+            var ids = group.Select(p => p.Key).Take(2).ToArray();
+            if (group.Key is not null && ids.Length > 1)
+            {
+                // Al cambiar de zona quedan entidades históricas con el mismo nombre. Solo
+                // se elige una si hay evidencia de exactamente una identidad actual.
+                var current = group.Select(p => p.Key)
+                    .Where(id => id == LocalPlayerId || IsPartyMember(id))
+                    .Take(2)
+                    .ToArray();
+                if (current.Length == 1)
+                {
+                    ids = current;
+                }
+            }
+
+            // Sin nombre no se deduplican entidades; dos nombres distintos siguen siendo
+            // dos posibles dueños, incluso si uno está fuera del filtro de DPS elegido.
+            if (ids.Length != 1 || candidate is not null)
+            {
+                return false;
+            }
+
+            candidate = ids[0];
+        }
+
+        if (candidate is not { } uniqueOwner || uniqueOwner == summonId)
         {
             return false;
         }
 
-        owner = candidates[0];
+        owner = uniqueOwner;
         _owners[summonId] = owner;
         return true;
     }

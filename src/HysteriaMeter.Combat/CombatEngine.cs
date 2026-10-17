@@ -4,7 +4,7 @@ namespace HysteriaMeter.Combat;
 
 public sealed record CombatEngineOptions
 {
-    /// <summary>Sin daño durante este tiempo, el encuentro se cierra (valor inicial de <see cref="CombatEngine.IdleTimeout"/>).</summary>
+    /// <summary>Sin daño hecho o recibido durante este tiempo, el encuentro se cierra (valor inicial de <see cref="CombatEngine.IdleTimeout"/>).</summary>
     public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromSeconds(8);
 
     /// <summary>Cerrar el encuentro cuando muere el objetivo principal.</summary>
@@ -55,7 +55,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
     public EntityRegistry Entities { get; } = new();
 
-    /// <summary>Sin daño durante este tiempo, el encuentro se cierra. Se puede cambiar en caliente.</summary>
+    /// <summary>Sin daño hecho o recibido durante este tiempo, el encuentro se cierra. Se puede cambiar en caliente.</summary>
     public TimeSpan IdleTimeout
     {
         get { lock (_gate) { return _idleTimeout; } }
@@ -118,7 +118,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
     {
         lock (_gate)
         {
-            if (_splitEncounters && _current is not null && now - _current.LastActivity > _idleTimeout)
+            if (IsIdle(now))
             {
                 Finish();
             }
@@ -380,8 +380,16 @@ public sealed class CombatEngine(CombatEngineOptions options)
             return;
         }
 
+        // Sin un Tick intermedio, un golpe tardío tampoco revive una pelea vencida.
+        if (IsIdle(e.Timestamp))
+        {
+            Finish();
+            return;
+        }
+
         foreach (var encounter in Running())
         {
+            encounter.RegisterCombatActivity(e.Timestamp);
             var actor = encounter.Actor(target);
             actor.DamageTaken += e.Amount;
             actor.HitsTaken++;
@@ -460,8 +468,11 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
     }
 
+    private bool IsIdle(DateTimeOffset at) =>
+        _splitEncounters && _current is not null && at - _current.LastCombatActivity > _idleTimeout;
+
     private bool OpensEncounter(DateTimeOffset at) =>
-        _current is null || (_splitEncounters && at - _current.LastActivity > _idleTimeout);
+        _current is null || IsIdle(at);
 
     /// <summary>La pelea en curso si sigue viva en <paramref name="at"/>: pasada la inactividad, el próximo golpe abre otra.</summary>
     private Encounter? LiveFight(DateTimeOffset at) => OpensEncounter(at) ? null : _current;
@@ -476,7 +487,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
     private Encounter EnsureEncounter(DateTimeOffset at)
     {
-        if (_splitEncounters && _current is not null && at - _current.LastActivity > _idleTimeout)
+        if (IsIdle(at))
         {
             Finish();
         }
