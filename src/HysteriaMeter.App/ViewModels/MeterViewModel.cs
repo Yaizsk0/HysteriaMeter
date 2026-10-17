@@ -134,6 +134,7 @@ public sealed partial class MeterViewModel : ObservableObject
     /// <summary>La ventana pide abrir otra (botón +).</summary>
     public event Action? NewWindowRequested;
 
+    /// <summary>La ventana de configuración (Config/ConfigWindow) de esta ventana está abierta.</summary>
     [ObservableProperty]
     public partial bool IsSettingsOpen { get; set; }
 
@@ -302,7 +303,7 @@ public sealed partial class MeterViewModel : ObservableObject
     public int MaxRows
     {
         get => Preferences.MaxRows;
-        set => Update(Preferences with { MaxRows = value }, nameof(MaxRows));
+        set => Update(Preferences with { MaxRows = value }, nameof(MaxRows), nameof(RowLimit), nameof(ShowAllRows));
     }
 
     /// <summary>
@@ -598,7 +599,7 @@ public sealed partial class MeterViewModel : ObservableObject
         ? $"Grabando en {Path.GetFileName(path)}"
         : "Para comparar una pelea con Combat Analysis";
 
-    /// <summary>Opacidad elegida para el overlay (una de <see cref="MeterPreferences.Opacities"/>).</summary>
+    /// <summary>Opacidad de toda la ventana del overlay (Window.Opacity), de 0,3 a 1: el slider de Configuración.</summary>
     public double OverlayOpacity
     {
         get => Preferences.Opacity;
@@ -779,7 +780,7 @@ public sealed partial class MeterViewModel : ObservableObject
         }
     }
 
-    private string[] HotkeyTexts() => [Preferences.HotkeyClickThrough, Preferences.HotkeyReset, Preferences.HotkeyVisibility, Preferences.HotkeyMark, Preferences.HotkeyMinimize, Preferences.HotkeyPause];
+    private string[] HotkeyTexts() => [Preferences.HotkeyClickThrough, Preferences.HotkeyReset, Preferences.HotkeyVisibility, Preferences.HotkeyMark, Preferences.HotkeyMinimize, Preferences.HotkeyPause, Preferences.HotkeyTab];
 
     /// <summary>Marca este momento de la pelea en curso; se ve en el detalle y en el JSON exportado.</summary>
     [RelayCommand]
@@ -1205,9 +1206,8 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         await Task.Delay(KillImageDelay).ConfigureAwait(true);
 
-        // Solo si se ve esa pelea completa: en pausa, minimizado o con la configuración abierta la imagen no serviría
-        // (el historial es otra ventana y no tapa las filas).
-        if (_shown?.Id == snapshot.Id && IsFullView && !IsSettingsOpen)
+        // La imagen usa las filas del overlay: historial y configuración son ventanas independientes.
+        if (_shown?.Id == snapshot.Id && IsFullView)
         {
             SaveImageRequested?.Invoke(KillImagePath(snapshot));
         }
@@ -1309,14 +1309,10 @@ public sealed partial class MeterViewModel : ObservableObject
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{ExportFolder}\"") { UseShellExecute = true });
     }
 
-    /// <summary>
-    /// Cierra la configuración para que la imagen muestre las filas y le pide a la vista que la copie. El historial
-    /// es otra ventana y no tapa las filas: queda abierto.
-    /// </summary>
+    /// <summary>Pide copiar las filas del overlay; las ventanas auxiliares quedan abiertas.</summary>
     [RelayCommand]
     private void CopyImage()
     {
-        IsSettingsOpen = false;
         CopyImageRequested?.Invoke();
     }
 
@@ -1346,7 +1342,7 @@ public sealed partial class MeterViewModel : ObservableObject
         DetailRequested?.Invoke();
     }
 
-    /// <summary>La configuración tapa las filas del overlay; el historial es otra ventana y puede seguir abierto.</summary>
+    /// <summary>Abre o cierra la ventana de configuración (la abre el overlay al ver el cambio de IsSettingsOpen).</summary>
     [RelayCommand]
     private void ToggleSettings() => IsSettingsOpen = !IsSettingsOpen;
 
@@ -1704,9 +1700,7 @@ public sealed partial class MeterViewModel : ObservableObject
         IsViewingHistory = true;
         HistoryLabel = $"HISTORIAL · {item.When}";
 
-        // La ventana del historial queda abierta: la fila se marca (PinnedHistoryId) y el overlay muestra la pelea,
-        // sin la configuración tapándola.
-        IsSettingsOpen = false;
+        // Las ventanas auxiliares quedan abiertas; el overlay muestra la pelea y el historial marca su fila.
         Refresh();
     }
 
@@ -1751,7 +1745,6 @@ public sealed partial class MeterViewModel : ObservableObject
         CanEditNote = false;
         IsViewingHistory = true;
         HistoryLabel = "DEMO · datos de prueba";
-        IsSettingsOpen = false;
         Refresh();
     }
 
@@ -1783,7 +1776,6 @@ public sealed partial class MeterViewModel : ObservableObject
         CanEditNote = false;
         IsViewingHistory = true;
         HistoryLabel = $"ARCHIVO · {Path.GetFileNameWithoutExtension(path)}";
-        IsSettingsOpen = false;
         ExportMessage = string.Empty;
         Refresh();
         return true;

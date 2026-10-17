@@ -14,7 +14,7 @@ namespace HysteriaMeter.App.Tests;
 /// Carga las ventanas con sus plantillas expandidas: un recurso que falta o un binding mal escrito en XAML
 /// compila igual y recién explota al abrir la app, así que esto lo atrapa en el CI.
 /// </summary>
-public sealed class WindowSmokeTests
+public sealed partial class WindowSmokeTests
 {
     [Fact]
     public void Overlay_and_detail_windows_load_with_rows()
@@ -69,6 +69,7 @@ public sealed class WindowSmokeTests
             Assert.True(viewModel.IsViewingHistory);
             viewModel.EscapeCommand.Execute(null);
             Assert.False(viewModel.IsViewingHistory);
+            ConfigWindowLoads(viewModel);
 
             // Fijar posición vale para todas las ventanas y saca la agarradera.
             viewModel.LockPosition = true;

@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using HysteriaMeter.App.Config;
 using HysteriaMeter.App.Overlay;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.App.ViewModels;
@@ -30,6 +31,19 @@ public partial class App : Application
 
         builder.Services.Configure<CaptureSettings>(builder.Configuration.GetSection("Capture"));
         builder.Services.Configure<MeterSettings>(builder.Configuration.GetSection("Meter"));
+
+        // Placa de red: la elegida en Configuración → Captura le gana a appsettings (Capture:Device) mientras siga
+        // conectada. La captura la lee una sola vez, al arrancar: cambiarla pide reiniciar el meter.
+        CaptureDevices.Source = CaptureDevices.FromNpcap;
+        builder.Services.AddOptions<CaptureSettings>().PostConfigure<MeterSession>((settings, session) =>
+        {
+            var saved = session.Preferences.CaptureDevice;
+            CaptureDevices.Applied = saved;
+            if (settings.Mode == CaptureMode.Live && saved.Length > 0)
+            {
+                settings.Device = CaptureDevices.Resolve(saved, settings.Device, CaptureDevices.FromNpcap());
+            }
+        });
 
         PlayerClasses.Load(Path.Combine(AppContext.BaseDirectory, "data", "classes.json"));
         PlayerClasses.EmblemFolder = AppPaths.In("Juego", "clases");
