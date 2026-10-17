@@ -10,4 +10,12 @@ Validación local del 17/10/2026 en Windows, .NET 10. Las cinco pistas están in
 
 Las compilaciones y pruebas se ejecutaron de a una. No se ejecutó la aplicación ni se inició captura de red. No hay cambios en las capas Capture/Protocol ni en las herramientas de extracción/registro.
 
-La publicación y el CI remoto están pendientes. Las ramas locales separan Historial, Configuración, Inicio, Detalle y Overlay; cada PR debe incorporar su número real en `data/novedades.json` antes de integrarse.
+Publicación en cinco PR, cada uno con su número real en `data/novedades.json`:
+
+- [#71 Historial](https://github.com/Yaizsk0/HysteriaMeter/pull/71).
+- [#72 Configuración](https://github.com/Yaizsk0/HysteriaMeter/pull/72).
+- [#73 Inicio](https://github.com/Yaizsk0/HysteriaMeter/pull/73).
+- [#74 Detalle](https://github.com/Yaizsk0/HysteriaMeter/pull/74).
+- [#75 Overlay e integración](https://github.com/Yaizsk0/HysteriaMeter/pull/75).
+
+El procedimiento de merge comprueba que el HEAD coincida con el validado y que todos sus checks hayan terminado con éxito. Tras cada squash, la siguiente rama se reubica sobre `main`; se comprueba que el código coincida con la versión validada localmente.

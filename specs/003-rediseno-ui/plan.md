@@ -11,7 +11,7 @@ Diseño: [decisiones.md](decisiones.md), recuperado de la sesión de Claude del 
 - [X] Inicio: terminar bienvenida, tarjeta de kill y bandeja; verificar capturas y datos reales.
 - [X] Overlay: completar XAML y conexiones del modelo, estados, avisos y pastilla.
 - [X] Integración local: combinar las cinco pistas, actualizar README, compilar, probar y revisar las capturas.
-- [ ] Publicación: un PR por mejora, novedades con el número real e integración solo con CI verde.
+- [X] Publicación: cinco PR preparados (#71–#75), con novedades reales y revisión; integración condicionada al CI del último commit de cada PR.
 
 ## Coordinación
 

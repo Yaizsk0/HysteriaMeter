@@ -14,5 +14,5 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Overlay: completar cabecera/filas/objetivo/estados/avisos/pastilla y conexiones del modelo.
 - [X] Overlay: comprobar compilación, suite completa y capturas al tamaño normal y mínimo.
 - [X] Integración: actualizar README y validar la combinación de ventanas, preferencias, atajos y temas.
-- [ ] Publicación: agregar novedades con el número real de cada PR.
-- [ ] Integración: preparar los PR y completar su revisión y CI antes de mergear.
+- [X] Publicación: agregar novedades con el número real de cada PR (#71–#75).
+- [X] Integración: preparar los cinco PR y completar su revisión; comprobar CI verde sobre el último commit como condición de cada merge.
