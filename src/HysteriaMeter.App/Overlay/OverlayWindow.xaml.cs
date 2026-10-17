@@ -45,18 +45,12 @@ public partial class OverlayWindow : Window
         _viewModel.CopyImageRequested += CopyImage;
         _viewModel.SaveImageRequested += SaveImage;
         _viewModel.PropertyChanged += OnViewModelChanged;
-        IsVisibleChanged += (_, _) =>
-        {
-            if (!IsVisible)
-            {
-                _viewModel.IsHistoryOpen = false;
-            }
-        };
         _viewModel.PropertyChanged += OnSettingsOpenChanged;
         IsVisibleChanged += (_, _) =>
         {
             if (!IsVisible)
             {
+                _viewModel.IsHistoryOpen = false;
                 _viewModel.IsSettingsOpen = false;
             }
         };

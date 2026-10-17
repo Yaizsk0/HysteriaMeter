@@ -167,15 +167,4 @@ public sealed partial class MeterViewModel
         OnPropertyChanged(nameof(GameData));
     }
 
-    /// <summary>
-    /// Minimizado a la pastilla (con el botón o el atajo), la configuración se cierra: es otra ventana y no se iría con el
-    /// resto del overlay.
-    /// </summary>
-    partial void OnIsMinimizedChanged(bool value)
-    {
-        if (value)
-        {
-            IsSettingsOpen = false;
-        }
-    }
 }

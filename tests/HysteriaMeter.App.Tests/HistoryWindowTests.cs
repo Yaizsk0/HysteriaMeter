@@ -102,12 +102,11 @@ public sealed class HistoryWindowTests
                 vm.ToggleSettingsCommand.Execute(null);
                 Assert.True(vm.IsHistoryOpen);
 
-                // Abrir una pelea deja la ventana abierta, marca la fila, grafica ese boss y saca la configuración de
-                // encima de las filas del overlay.
+                // Abrir una pelea mantiene ambas ventanas abiertas y marca la fila y el progreso del boss.
                 var kill = vm.HistoryRuns[0].Fights[0];
                 Pump(vm.OpenEncounterCommand.ExecuteAsync(kill));
                 Assert.True(vm.IsHistoryOpen);
-                Assert.False(vm.IsSettingsOpen);
+                Assert.True(vm.IsSettingsOpen);
                 Assert.Equal(kill.Id, vm.PinnedHistoryId);
                 Assert.True(vm.HasProgress);
                 Assert.Equal("1 / 3", vm.Progress.Kills);

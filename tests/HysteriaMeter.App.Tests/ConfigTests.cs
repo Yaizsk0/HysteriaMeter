@@ -219,6 +219,37 @@ public sealed class ConfigTests
         });
     }
 
+    [Fact]
+    public void Auxiliary_windows_remain_open_when_copying_demoing_or_opening_a_fight()
+    {
+        RunOnSta(() =>
+        {
+            var vm = Meter(new MeterPreferences()).ViewModel;
+            vm.IsHistoryOpen = true;
+            vm.ToggleSettingsCommand.Execute(null);
+            Assert.True(vm.IsHistoryOpen);
+            vm.CopyImageCommand.Execute(null);
+            Assert.True(vm.IsSettingsOpen && vm.IsHistoryOpen);
+            vm.ShowDemoCommand.Execute(null);
+            Assert.True(vm.IsSettingsOpen && vm.IsHistoryOpen);
+
+            var file = Path.Combine(Path.GetTempPath(), $"hysteria-config-integration-{Guid.NewGuid():N}.json");
+            try
+            {
+                File.WriteAllText(file, HysteriaMeter.Storage.EncounterExport.ToJson(DemoEncounter.Create(DateTimeOffset.UnixEpoch)));
+                Assert.True(vm.OpenSharedFile(file));
+                Assert.True(vm.IsSettingsOpen && vm.IsHistoryOpen);
+            }
+            finally
+            {
+                File.Delete(file);
+                vm.Stop();
+            }
+
+            vm.IsMinimized = true;
+            Assert.False(vm.IsSettingsOpen || vm.IsHistoryOpen);
+        });
+    }
     private static (MeterSession Session, MeterViewModel ViewModel) Meter(MeterPreferences preferences)
     {
         var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty, preferences, _ => { });

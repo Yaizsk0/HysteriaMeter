@@ -441,6 +441,7 @@ public sealed partial class MeterViewModel : ObservableObject
         if (value)
         {
             IsHistoryOpen = false;
+            IsSettingsOpen = false;
         }
     }
 
