@@ -16,12 +16,12 @@ public sealed class ThemeTests
 {
     private static readonly string[] Themed =
     [
-        "WindowBg", "Panel", "PanelRaised", "PanelSolid", "Surface", "CardBg", "InputBg", "MenuBg",
+        "WindowBg", "Panel", "MiniPanel", "PanelRaised", "PanelSolid", "Surface", "CardBg", "InputBg", "MenuBg",
         "Gold", "GoldBright", "Text", "TextBright", "TextMuted", "TextDim",
     ];
 
     private static readonly string[] AccentDerived =
-        ["GoldDim", "AccentFaint", "AccentSoft", "AccentTint", "AccentLine", "AccentStrong", "RowBorderLocal", "NameLocal"];
+        ["GoldDim", "AccentFaint", "AccentSoft", "AccentTint", "AccentLine", "AccentStrong", "PauseBorder", "RowBorderLocal", "NameLocal"];
 
     [Fact]
     public void Fonts_resolve_to_the_embedded_files()
@@ -29,22 +29,22 @@ public sealed class ThemeTests
         RunOnSta(() =>
         {
             var theme = LoadTheme();
-            AssertFamily("Barlow Semi Condensed", (FontFamily)theme["NumberFont"]);
-            AssertFamily("Barlow Semi Condensed", (FontFamily)theme["TitleFont"]);
-            AssertFamily("Inter", (FontFamily)theme["BodyFont"]);
+            AssertFamily("Barlow Condensed", (FontFamily)theme["NumberFont"]);
+            AssertFamily("Barlow Condensed", (FontFamily)theme["TitleFont"]);
+            AssertFamily("IBM Plex Sans", (FontFamily)theme["BodyFont"]);
             Assert.All(MeterPreferences.BundledFonts, name => AssertFamily(name, MeterViewModel.FontOf(name)));
         });
     }
 
     [Fact]
-    public void Barlow_fonts_resolve_the_requested_weight()
+    public void Bundled_fonts_resolve_the_requested_weight()
     {
         RunOnSta(() =>
         {
             var theme = LoadTheme();
-            foreach (var family in new[] { (FontFamily)theme["NumberFont"], (FontFamily)theme["TitleFont"], MeterViewModel.FontOf("Barlow Semi Condensed") })
+            foreach (var family in new[] { (FontFamily)theme["NumberFont"], (FontFamily)theme["TitleFont"], MeterViewModel.FontOf("Barlow Condensed"), MeterViewModel.FontOf("IBM Plex Sans"), MeterViewModel.FontOf("Barlow Semi Condensed") })
             {
-                foreach (var weight in new[] { FontWeights.Normal, FontWeights.SemiBold, FontWeights.Bold })
+                foreach (var weight in family.Source.Contains("BarlowSemi", StringComparison.Ordinal) || family.Source == "./Assets/Fonts/#Barlow" ? new[] { FontWeights.Normal, FontWeights.SemiBold, FontWeights.Bold } : new[] { FontWeights.Normal, FontWeights.Medium, FontWeights.SemiBold, FontWeights.Bold })
                 {
                     var typeface = new Typeface(family, FontStyles.Normal, weight, FontStretches.Normal);
                     Assert.True(typeface.TryGetGlyphTypeface(out var glyph));

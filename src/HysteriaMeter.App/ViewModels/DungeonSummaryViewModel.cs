@@ -34,8 +34,8 @@ public sealed class DungeonSummaryViewModel
             Math.Max(s.StartSecond / total * TimelineWidth, 0),
             Math.Max(s.Seconds / total * TimelineWidth, 3),
             s.Kind switch { RunSegmentKind.Kill => KillBrush, RunSegmentKind.Wipe => WipeBrush, _ => TrashBrush },
-            s.Kind == RunSegmentKind.Trash ? string.Empty : s.Label,
-            $"{s.Label} · {Length(TimeSpan.FromSeconds(s.Seconds))} · {(s.Kind switch { RunSegmentKind.Kill => "kill", RunSegmentKind.Wipe => "wipe", _ => "trash" })}"))];
+            s.Label,
+            $"{s.Label} · {Length(TimeSpan.FromSeconds(s.Seconds))} · {(s.Kind switch { RunSegmentKind.Kill => "kill", RunSegmentKind.Wipe => "wipe", _ => "trash" })}", s.Kind))];
 
         Cards = [.. summary.Bosses.Select(b =>
         {
@@ -51,18 +51,22 @@ public sealed class DungeonSummaryViewModel
                     Skulls(p.Deaths),
                     top > 0 ? p.Dps / top * BarWidth : 0,
                     ClassBrush(p.ClassId, 0x55),
-                    p.IsLocalPlayer))]);
+                    p.IsLocalPlayer))])
+            {
+                Killed = b.Killed, Duration = Length(b.Duration), Attempts = b.Attempts,
+                PartyDps = ActorRowViewModel.Compact(b.PartyDps), Deaths = b.Deaths,
+            };
         })];
 
         Columns = [.. summary.Bosses.Select(b => b.Name.ToUpper(culture))];
-        Rows = [.. summary.Players.Select(p => new PlayerRow(
-            p.Name,
-            ClassBrush(p.ClassId, 0xFF),
-            [.. summary.Bosses.Select(b => b.Players.FirstOrDefault(l => l.Name == p.Name) is { } line
-                ? (line.Dps > 0 ? ActorRowViewModel.Compact(line.Dps) : "—") + (line.Deaths > 0 ? $" ☠{line.Deaths}" : string.Empty)
-                : "")],
-            p.Deaths > 0 ? $"☠ {p.Deaths}" : "—",
-            ActorRowViewModel.Compact(p.Dps)))];
+        Rows = [.. summary.Players.Select(p =>
+        {
+            var cells = summary.Bosses.Select(b => b.Players.FirstOrDefault(l => l.Name == p.Name) is { } line
+                ? new PlayerBossCell((line.Dps > 0 ? ActorRowViewModel.Compact(line.Dps) : "—") + (line.Deaths > 0 ? $" ☠{line.Deaths}" : string.Empty), line.Deaths)
+                : new PlayerBossCell(string.Empty, 0)).ToList();
+            return new PlayerRow(p.Name, ClassBrush(p.ClassId, 0xFF), [.. cells.Select(c => c.Text)],
+                p.Deaths > 0 ? $"☠ {p.Deaths}" : "—", ActorRowViewModel.Compact(p.Dps)) { StyledCells = cells };
+        })];
     }
 
     public DungeonSummary Summary { get; }
@@ -74,6 +78,12 @@ public sealed class DungeonSummaryViewModel
     public string Left { get; }
 
     public string Duration { get; }
+
+    public string TimelineQuarter => Length(TimeSpan.FromTicks(Summary.Duration.Ticks / 4));
+
+    public string TimelineHalf => Length(TimeSpan.FromTicks(Summary.Duration.Ticks / 2));
+
+    public string TimelineThreeQuarters => Length(TimeSpan.FromTicks(Summary.Duration.Ticks / 4 * 3));
 
     public string Bosses { get; }
 
@@ -136,10 +146,22 @@ public sealed class DungeonSummaryViewModel
         span.TotalHours >= 1 ? span.ToString(@"h\:mm\:ss", CultureInfo.InvariantCulture) : span.ToString(@"m\:ss", CultureInfo.InvariantCulture);
 }
 
-public sealed record SegmentItem(double Left, double Width, Brush Fill, string Label, string Tip);
+public sealed record SegmentItem(double Left, double Width, Brush Fill, string Label, string Tip, RunSegmentKind Kind = RunSegmentKind.Trash);
 
-public sealed record BossCard(string Name, string Result, Brush ResultBrush, string Stats, IReadOnlyList<BossPlayerRow> Players);
+public sealed record BossCard(string Name, string Result, Brush ResultBrush, string Stats, IReadOnlyList<BossPlayerRow> Players)
+{
+    public bool Killed { get; init; }
+    public string Duration { get; init; } = string.Empty;
+    public int Attempts { get; init; }
+    public string PartyDps { get; init; } = string.Empty;
+    public int Deaths { get; init; }
+}
 
 public sealed record BossPlayerRow(string Name, string Dps, string Skulls, double BarWidth, Brush Bar, bool IsLocalPlayer);
 
-public sealed record PlayerRow(string Name, Brush Color, IReadOnlyList<string> Cells, string Deaths, string Dps);
+public sealed record PlayerRow(string Name, Brush Color, IReadOnlyList<string> Cells, string Deaths, string Dps)
+{
+    public IReadOnlyList<PlayerBossCell> StyledCells { get; init; } = [];
+}
+
+public sealed record PlayerBossCell(string Text, int Deaths);

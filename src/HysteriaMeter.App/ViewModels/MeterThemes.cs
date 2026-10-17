@@ -76,12 +76,12 @@ public static class MeterThemes
 
     /// <summary>Claves que siguen al acento del tema conservando el alfa de <c>Theme.xaml</c>.</summary>
     private static readonly string[] AccentDerived =
-        ["GoldDim", "AccentFaint", "AccentSoft", "AccentTint", "AccentLine", "AccentStrong", "RowBorderLocal", "NameLocal"];
+        ["GoldDim", "AccentFaint", "AccentSoft", "AccentTint", "AccentLine", "AccentStrong", "PauseBorder", "RowBorderLocal", "NameLocal"];
 
     /// <summary>Todas las claves que puede cambiar un tema: las que define cada paleta y las derivadas del acento.</summary>
     private static readonly string[] Keys =
     [
-        "WindowBg", "Panel", "PanelRaised", "PanelSolid", "Surface", "CardBg", "InputBg", "MenuBg",
+        "WindowBg", "Panel", "MiniPanel", "PanelRaised", "PanelSolid", "Surface", "CardBg", "InputBg", "MenuBg",
         "Gold", "GoldBright", "Text", "TextBright", "TextMuted", "TextDim",
         .. AccentDerived,
     ];
@@ -99,6 +99,7 @@ public static class MeterThemes
         {
             ["WindowBg"] = bg,
             ["Panel"] = WithAlpha(bg, 0xDB),
+            ["MiniPanel"] = WithAlpha(bg, 0xE0),
             ["PanelRaised"] = WithAlpha(bg, 0xEB),
             ["PanelSolid"] = WithAlpha(bg, 0xF2),
             ["Surface"] = Lift(bg, 3, 4, 5),

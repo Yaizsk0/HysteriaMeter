@@ -21,9 +21,9 @@ public sealed record MeterPreferences
     public int RowHeightVersion { get; } = 1;
 
     /// <summary>Fuentes embebidas en la app (Assets/Fonts); las demás vienen con Windows.</summary>
-    public static IReadOnlyList<string> BundledFonts { get; } = ["Inter", "Barlow Semi Condensed"];
+    public static IReadOnlyList<string> BundledFonts { get; } = ["IBM Plex Sans", "Barlow Condensed", "Inter", "Barlow Semi Condensed"];
 
-    public static IReadOnlyList<string> Fonts { get; } = ["Inter", "Segoe UI", "Bahnschrift", "Barlow Semi Condensed"];
+    public static IReadOnlyList<string> Fonts { get; } = ["IBM Plex Sans", "Barlow Condensed", "Inter", "Segoe UI", "Bahnschrift", "Barlow Semi Condensed"];
 
     public static IReadOnlyList<double> Opacities { get; } = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5];
 
@@ -62,7 +62,7 @@ public sealed record MeterPreferences
     public bool ImageOnKill { get; init; }
 
     /// <summary>Línea de DPS de los últimos 30 s detrás de cada fila.</summary>
-    public bool Sparklines { get; init; } = true;
+    public bool Sparklines { get; init; }
 
     public double Opacity { get; init; } = 1.0;
 
@@ -164,5 +164,5 @@ public sealed record MeterPreferences
     public string CaptureDevice { get; init; } = string.Empty;
 
     // "TextFont" y no "Font": así las preferencias guardadas con la fuente vieja no pisan la nueva por defecto.
-    public string TextFont { get; init; } = "Inter";
+    public string TextFont { get; init; } = "IBM Plex Sans";
 }

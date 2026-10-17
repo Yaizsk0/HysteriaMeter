@@ -7,7 +7,8 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 - **Nunca inventar datos.** Si el mock muestra algo sin fuente real ("no existe" en el mapeo y no se puede derivar sin I/O nuevo del juego), el hueco se omite o se colapsa (DataTrigger / Visibility) y se anota en el informe final. Nada de valores falsos.
 - **Principio I:** captura pasiva. Nada que envíe paquetes ni toque el proceso o la memoria del juego.
 - Comentarios, textos de UI y mensajes en español. Build con `-warnaserror` (analizadores activos: CA1859, etc.).
-- Las fuentes del mock se sustituyen: Barlow Condensed → **Barlow Semi Condensed** (`NumberFont`/`TitleFont`), IBM Plex Sans → **Inter** (`BodyFont`, la que elige el usuario). WPF no tiene letter-spacing: se omite.
+- Fuentes originales del mock, embebidas con licencia OFL: **Barlow Condensed** en `NumberFont`/`TitleFont` e **IBM Plex Sans** como `BodyFont` por defecto. Esta corrección reemplaza la sustitución inicial por Barlow Semi Condensed/Inter. Ambas opciones anteriores se conservan para preferencias existentes.
+- Los pesos de Barlow Condensed se resuelven en WPF con `#Barlow` dentro de su propia carpeta de recursos; así no se mezcla con la familia anterior. IBM Plex Sans tiene su carpeta propia. No requieren instalación global ni conexión. WPF no tiene letter-spacing: se omite.
 - Colores siempre desde `Themes/Theme.xaml` (claves del PR de tema). Dentro de `Style`/`ControlTemplate`, `DynamicResource` para lo que cambia con el tema. Nada de hex sueltos salvo colores de clase/datos.
 - Los tamaños en px del mock son referencia: el overlay es redimensionable y tiene zoom (Ctrl+rueda); layout proporcional, sin anchos fijos que rompan al achicar.
 - Mantener TODAS las funciones existentes accesibles. Si el mock no muestra un botón/acción que existe, va a un menú "⋯" o a un tooltip, nunca se elimina.
@@ -25,16 +26,16 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 ## Overlay en vivo (Main, Estados, Mini pastilla, avisos, errores)
 - Encabezado: rombo + HYSTERIA, segmentado DPS / CURA / RECIB. (pestaña activa: fondo acento; en CURA fondo #7BD88F con texto OnHealing; en RECIB. fondo Danger #F08A7E con texto oscuro), reloj, pausa, configuración y un botón "⋯" con menú (estilo menú de bandeja del mock Avisos: fondo MenuBg, borde Stroke, radio 8) que contiene: Historial, Reiniciar, Copiar resumen, Nueva ventana, Segmento PELEA/RUN/SESIÓN (sub-opciones con check), Bloquear clics, Minimizar, Cerrar. Se mantienen en el encabezado el punto de estado de captura y "● REC" (chicos, a la izquierda del reloj).
 - Bloque objetivo: nombre (Barlow 17 SemiBold), "Intento N" (solo contra bosses según BossRules, desde el 2º intento; la cuenta sale de la base si es barato con una consulta nueva en Storage, con test; si no, se omite), % de vida con un decimal (GoldBright), barra 5 px con degradé Health, línea "Party X/s" y "Enrage en m:ss" (si hay enrage). Vida absoluta y "muere en m:ss" van al tooltip del %.
-- Filas: radio 5, fondo Row, barra del color de clase con alfa ~0x55, puesto (Barlow 13 tenue), insignia circular 20 px: emblema PNG si existe (PR #68), si no círculo con la inicial de la clase en su color, sin clase la inicial del jugador; nombre (fuente del usuario, SemiBold 16, TextBright; local en acento con contorno RowBorderLocal 1 px), flecha ▲/▼ (Success/Danger), DPS (Barlow Bold 17, tabular), % con un decimal ("31,5 %"). Se quita el sufijo " (vos)": lo marca el contorno + color (ajustar tests).
+- Filas: radio 5, fondo Row, barra del color de clase con alfa ~0x55, puesto (Barlow 13 tenue), insignia circular 20 px: emblema PNG si existe (PR #68), si no círculo con la inicial de la clase en su color, sin clase la inicial del jugador; nombre (`NumberFont`, Barlow Condensed SemiBold 16 con fila de 30 px, TextBright; local en acento con contorno RowBorderLocal 1 px), flecha ▲/▼ (Success/Danger), DPS (Barlow Bold 17, tabular), % con un decimal ("31,5 %"). Se quita el sufijo " (vos)": lo marca el contorno + color (ajustar tests).
 - Encabezado de columnas: se oculta cuando solo se ven DPS y %; si hay columnas opcionales (CRIT, MÁX, total, etc.) se muestra.
 - Pie: "Total X · N jugadores" a la izquierda y "Clic en una fila: detalle" a la derecha (se mantiene clic simple = detalle; doble clic = compacto, como hoy). Crít./Máx. del local pasan al tooltip del total.
-- Defaults para instalaciones nuevas como el mock (ColorByClass=true, etc.) solo si no cambia preferencias guardadas.
+- Defaults para instalaciones nuevas como el mock: texto IBM Plex Sans, Sparklines=false y ColorByClass=true, entre otros. No se reemplazan los valores guardados ni se fuerza una migración de fuente o de columnas al usuario.
 - Compacto: como hoy (oculta pestañas, filas 22).
 - Tarjeta de espera ("Listo para la próxima pelea"): solo cuando el overlay está vacío de verdad (arranque o después de Reiniciar). Entre peleas siguen visibles las filas de la última pelea, como hoy. Sin nombre de zona (no existe): muestra "Última: <objetivo> · <duración>" si hay.
 - Vista RUN: título "Run · entrada HH:mm" (no hay nombre de zona); chips por tramo (Trash agrupa tramos consecutivos; kill dorado/verde; wipe rojo con nombre del boss); tiempo = hasta el último golpe (como RunTitle).
 - Pestaña CURA: sin "overheal" (no hay dato): se omite.
 - Densidades: 22 / 30 / 36 (migrar el viejo 24 → 22 si hace falta, sin romper preferencias).
-- Pastilla minimizada (Mini): rediseño con PanelRaised, borde AccentLine, radio pill: insignia de clase, tu DPS (Barlow), tu puesto; botón chico para volver (el mismo de hoy).
+- Pastilla minimizada (Mini): rediseño con `MiniPanel` (fondo al 88 %, distinto del aviso `PanelRaised`), borde AccentLine, radio pill: insignia de clase, tu DPS (Barlow), tu puesto; botón chico para volver (el mismo de hoy).
 - Avisos dentro del overlay: superpuestos arriba de las filas (no empujan el alto), PanelRaised + borde AccentStrong, radio 8: "Boss detectado" (al empezar una pelea con TargetIsBoss), alerta de enrage mientras IsEnrageDanger (AlertBg, borde DangerStrong, texto OnDanger) que reemplaza el RecordMessage "No llegan al enrage…", "Captura guardada" (SuccessLine) con link "Abrir" a la carpeta (Exportes, como hoy). Récord y "Momento marcado" adoptan el mismo estilo de aviso. Se ocultan solos (N s) y no se ven en la imagen del kill. Solo en la ventana principal.
 - Errores de captura (Inicio): tarjetas "No se encontró Npcap" (DangerBorder, link a npcap.com), "Capturando, pero no llega nada de AION 2" (borde Warning, botón "Elegir placa de red" → abre Configuración en Captura) y "El juego se actualizó…" (texto suavizado: "Puede que el juego se haya actualizado"), mostradas en el área de filas cuando corresponda (Npcap/sin tráfico: con el overlay vacío; parche: como aviso).
 
@@ -75,6 +76,11 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 - Los consejos de NewsFeed.WelcomeLines pasan a una línea de ayuda en la bienvenida.
 
 ## Bandeja y novedades (Avisos)
-- Menú de bandeja: ToolStripProfessionalRenderer propio con los colores del mock (MenuBg, borde Stroke, hover AccentSoft, "Salir" en Danger). Se mantienen todas las opciones actuales. Se muestra el atajo configurado al lado de "Ocultar overlay".
+- Menú de bandeja: ToolStripProfessionalRenderer propio con los colores del mock (MenuBg, borde Stroke, hover AccentSoft, "Salir" en Danger). Texto de 13 px lógicos (9,75 pt), con la fuente elegida; IBM Plex Sans por defecto. Las fuentes embebidas se registran solo en memoria del proceso para que GDI las pueda medir y dibujar; se liberan al cambiar de fuente o disponer el menú. Se mantienen todas las opciones actuales. Se muestra el atajo configurado al lado de "Ocultar overlay".
 - Tarjeta de novedades: WindowBg con borde AccentLine, "NOVEDADES · vX.Y.Z" (AppVersion corta), lista de NewsFeed, botón "Entendido".
 - Renombrar skill (si existe el flujo): diálogo con estilo del mock y "Aplicar a todas las variantes" marcado por defecto (se aplica al ID base).
+
+
+## Corrección de fidelidad visual
+
+La revisión posterior de los HTML originales corrige las sustituciones tipográficas y diferencias de geometría, estados y avisos. Alcance, diferencias intencionales y evidencia local: [fidelity.md](fidelity.md). Los tamaños del mock se comprueban con las fuentes originales; una suite funcional aprobada por sí sola no certifica equivalencia visual completa.

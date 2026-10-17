@@ -15,7 +15,7 @@
 //                               sin fondo, los visores componen el PNG sobre blanco y los paneles translúcidos se ven
 //                               grises. "ninguno" deja el PNG translúcido.
 //
-// Las fuentes (Barlow, Inter) salen del ensamblado de la app con URI "HysteriaMeter;component", que resuelven también
+// Las fuentes (Barlow Condensed, IBM Plex Sans) salen del ensamblado de la app con URI "HysteriaMeter;component", que resuelven también
 // bajo el testhost. Antes de dibujar, el arnés comprueba que NumberFont, TitleFont y BodyFont sean las embebidas: si
 // cayeran en una fuente de reemplazo, los anchos y el aspecto de los PNG no serían los de la app.
 //
@@ -458,7 +458,7 @@ public sealed partial class UiSnapshotTests
     /// </summary>
     private static void CheckFonts(Application app)
     {
-        foreach (var (key, family) in new[] { ("NumberFont", "Barlow Semi Condensed"), ("TitleFont", "Barlow Semi Condensed"), ("BodyFont", "Inter") })
+        foreach (var (key, family) in new[] { ("NumberFont", "Barlow Condensed"), ("TitleFont", "Barlow Condensed"), ("BodyFont", "IBM Plex Sans") })
         {
             var font = (FontFamily)app.Resources[key];
             var typeface = new Typeface(font, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);

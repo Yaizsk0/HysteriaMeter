@@ -941,12 +941,23 @@ public sealed partial class MeterViewModel : ObservableObject
     /// La familia de una fuente de texto elegible: las embebidas (<see cref="MeterPreferences.BundledFonts"/>) salen de
     /// Assets/Fonts y las demás del sistema. App.xaml.cs la usa para el recurso BodyFont de las ventanas.
     /// El URI nombra el ensamblado ("HysteriaMeter;component"), como los de Theme.xaml: así resuelve también cuando el
-    /// ensamblado de entrada es otro (el testhost del arnés de capturas). Barlow Semi Condensed se pide como "#Barlow",
-    /// la familia con la que WPF agrupa sus tres pesos (ver NumberFont en Theme.xaml).
+    /// ensamblado de entrada es otro (el testhost del arnés de capturas). Las dos familias Barlow se piden como "#Barlow" en carpetas separadas,
+    /// el nombre con el que WPF agrupa sus pesos (ver NumberFont en Theme.xaml).
     /// </summary>
-    public static FontFamily FontOf(string name) => MeterPreferences.BundledFonts.Contains(name)
-        ? new FontFamily(new Uri("pack://application:,,,/HysteriaMeter;component/"), $"./Assets/Fonts/#{(name == "Barlow Semi Condensed" ? "Barlow" : name)}")
-        : new FontFamily(name);
+    public static FontFamily FontOf(string name)
+    {
+        var resource = name switch
+        {
+            "Barlow Condensed" => "./Assets/Fonts/BarlowCondensed/#Barlow",
+            "IBM Plex Sans" => "./Assets/Fonts/IBMPlexSans/#IBM Plex Sans",
+            "Barlow Semi Condensed" => "./Assets/Fonts/#Barlow",
+            "Inter" => "./Assets/Fonts/#Inter",
+            _ => null,
+        };
+        return resource is null
+            ? new FontFamily(name)
+            : new FontFamily(new Uri("pack://application:,,,/HysteriaMeter;component/"), resource);
+    }
 
     public ObservableCollection<ActorRowViewModel> Actors { get; } = [];
 

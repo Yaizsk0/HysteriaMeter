@@ -284,8 +284,18 @@ public partial class OverlayWindow : Window
             : new Rect(Left + bounds.X, Top + bounds.Y, bounds.Width, bounds.Height);
     }
 
-    private void ShowRunSummary(DungeonSummaryViewModel summary) =>
-        new Dungeon.DungeonWindow(summary) { Owner = this }.Show();
+    private void ShowRunSummary(DungeonSummaryViewModel summary)
+    {
+        var window = new Dungeon.DungeonWindow(summary) { Owner = this };
+        var placement = Config.ConfigWindow.Placement(
+            new Rect(Left, Top, ActualWidth, ActualHeight), ScreenWorkArea(),
+            new Size(window.Width, window.Height), new Size(window.MinWidth, window.MinHeight));
+        window.Left = placement.Left;
+        window.Top = placement.Top;
+        window.Width = placement.Width;
+        window.Height = placement.Height;
+        window.Show();
+    }
 
     /// <summary>El historial es su propia ventana: se abre y se cierra siguiendo IsHistoryOpen.</summary>
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
