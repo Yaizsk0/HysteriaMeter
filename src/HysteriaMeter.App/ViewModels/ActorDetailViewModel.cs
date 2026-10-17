@@ -347,7 +347,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
 
         if (Log is null || Log.FocusId != id)
         {
-            Log = new LogViewModel(FightLog, names, id, Name, BrushOf);
+            Log = new LogViewModel(FightLog, names, id, Name, BrushOf, () => _last?.Start);
         }
         else if (force || Environment.TickCount64 - _logLoadedAt >= LogRefreshMs)
         {

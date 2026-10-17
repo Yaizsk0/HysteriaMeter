@@ -70,7 +70,7 @@ description: "Tareas del MVP de Hysteria Meter"
 
 - [X] T030 [US3] Click-through + hotkey Ctrl+Shift+L en `src/HysteriaMeter.App/Interop/OverlayInterop.cs`
 - [ ] T031 [US3] Recordar posición y tamaño del overlay entre sesiones
-- [ ] T032 [P] [US3] Ventana de detalle por jugador (desglose por skill)
+- [X] T032 [P] [US3] Ventana de detalle por jugador (desglose por skill)
 
 ## Phase 7: User Story 4 - Historial (P3)
 

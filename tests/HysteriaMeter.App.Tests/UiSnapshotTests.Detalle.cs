@@ -1,7 +1,7 @@
 // Estados del arnés para el detalle de jugador (mocks Detalle, Muertes y Comparar; "Renombrar skill" del mock Avisos)
 // y la ventana Registro. Ver el encabezado de UiSnapshotTests.cs para correrlo.
 
-using System.Windows;
+using System.Windows.Controls.Primitives;
 using HysteriaMeter.App.Detail;
 using HysteriaMeter.App.Registro;
 using HysteriaMeter.App.ViewModels;
@@ -50,11 +50,26 @@ public sealed partial class UiSnapshotTests
             detail.CompareWith = detail.Others.First(o => o.Saved is not null);
             return new DetailWindow(detail);
         }),
+        // Tharos murió a la 1:11: el círculo y "☠ 1:11" sobre su curva, y la conclusión en tercera persona.
+        new("23c-detalle-comparar-muerte", h =>
+        {
+            var detail = h.DetailOf("Tharos");
+            detail.CompareWith = detail.Others.First(o => o.Name == "Kaelis");
+            return new DetailWindow(detail);
+        }),
         new("24-detalle-renombrar", h =>
         {
             var detail = h.DetailOf("Kaelis");
             detail.StartRenameSkillCommand.Execute(detail.Skills[0]);
             return new DetailWindow(detail);
+        }),
+
+        // Menú "⋯" de la cabecera: el apodo y el registro en otra ventana (es parte de la ventana, no un Popup).
+        new("24b-detalle-menu", h =>
+        {
+            var window = new DetailWindow(h.DetailOf("Kaelis"));
+            ((ToggleButton)window.FindName("MoreButton")).IsChecked = true;
+            return window;
         }),
 
         // Registro aparte, con el mismo registro de la pelea guardada.

@@ -44,14 +44,22 @@ public sealed partial class LogViewModel : ObservableObject
     private readonly Func<IReadOnlyList<CombatLogEntry>> _source;
     private readonly SkillNames _names;
     private readonly Func<ulong, Brush?>? _brushOf;
+    private readonly Func<DateTimeOffset?>? _fightStart;
     private IReadOnlyList<CombatLogEntry> _entries = [];
 
     /// <param name="brushOf">Color de cada jugador por ID (el de su fila); sin él, los nombres van en el color del texto.</param>
-    public LogViewModel(Func<IReadOnlyList<CombatLogEntry>> source, SkillNames names, ulong? focusId = null, string? focusName = null, Func<ulong, Brush?>? brushOf = null)
+    /// <param name="fightStart">
+    /// Inicio de la pelea, para que los tiempos coincidan con los del detalle ("muerte a la 1:11"); sin él, cuentan
+    /// desde la primera línea del registro.
+    /// </param>
+    public LogViewModel(
+        Func<IReadOnlyList<CombatLogEntry>> source, SkillNames names, ulong? focusId = null, string? focusName = null, Func<ulong, Brush?>? brushOf = null,
+        Func<DateTimeOffset?>? fightStart = null)
     {
         _source = source;
         _names = names;
         _brushOf = brushOf;
+        _fightStart = fightStart;
         FocusId = focusId;
         FocusName = focusName ?? string.Empty;
         OnlyFocus = focusId is not null;
@@ -103,7 +111,7 @@ public sealed partial class LogViewModel : ObservableObject
 
     private void Apply()
     {
-        var lines = Filter(_entries, _names, Search, OnlyFocus ? FocusId : null, _brushOf);
+        var lines = Filter(_entries, _names, Search, OnlyFocus ? FocusId : null, _brushOf, _fightStart?.Invoke());
         var skip = Math.Max(0, lines.Count - MaxLines);
         var shown = lines.Count - skip;
 
@@ -128,17 +136,18 @@ public sealed partial class LogViewModel : ObservableObject
 
     /// <summary>
     /// Formatea y filtra: por jugador (como origen u objetivo) y por texto en cualquier columna, sin distinguir
-    /// mayúsculas ni tildes ("crit" encuentra "crítico").
+    /// mayúsculas ni tildes ("crit" encuentra "crítico"). Los tiempos cuentan desde <paramref name="fightStart"/> o, sin
+    /// él (o si es posterior a la primera línea), desde la primera línea.
     /// </summary>
     public static IReadOnlyList<LogLine> Filter(
-        IReadOnlyList<CombatLogEntry> entries, SkillNames names, string? search, ulong? actorId, Func<ulong, Brush?>? brushOf = null)
+        IReadOnlyList<CombatLogEntry> entries, SkillNames names, string? search, ulong? actorId, Func<ulong, Brush?>? brushOf = null, DateTimeOffset? fightStart = null)
     {
         if (entries.Count == 0)
         {
             return [];
         }
 
-        var start = entries[0].Timestamp;
+        var start = fightStart is { } begin && begin <= entries[0].Timestamp ? begin : entries[0].Timestamp;
         var text = search?.Trim();
         var result = new List<LogLine>();
         foreach (var entry in entries)
