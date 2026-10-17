@@ -66,8 +66,10 @@ public sealed class CompareChart : FrameworkElement
     {
         base.OnRender(drawingContext);
         var data = Data;
-        var seconds = Math.Max(data.Mine.Count, data.Theirs.Count);
-        if (seconds < 2 || ActualWidth <= 0 || ActualHeight <= 2 * Inset)
+        var lastSecond = Math.Max(
+            Math.Max(data.Mine.Count, data.Theirs.Count) - 1,
+            Math.Max(data.MineDeaths.DefaultIfEmpty().Max(), data.TheirDeaths.DefaultIfEmpty().Max()));
+        if (lastSecond < 1 || ActualWidth <= 0 || ActualHeight <= 2 * Inset)
         {
             return;
         }
@@ -81,7 +83,7 @@ public sealed class CompareChart : FrameworkElement
         // Fondo transparente: el tooltip aparece en todo el recuadro, no solo sobre las líneas.
         drawingContext.DrawRectangle(Brushes.Transparent, null, new Rect(0, 0, ActualWidth, ActualHeight));
         Point At(int second, double dps) => new(
-            second * ActualWidth / (seconds - 1),
+            second * ActualWidth / lastSecond,
             Inset + (1 - (dps / top)) * (ActualHeight - 2 * Inset));
 
         Draw(drawingContext, data.Theirs, new Pen(TheirsBrush, TheirsThickness) { DashStyle = Dashed, LineJoin = PenLineJoin.Round }, At);
@@ -123,7 +125,8 @@ public sealed class CompareChart : FrameworkElement
         foreach (var second in deaths)
         {
             var index = Math.Clamp(second, 0, series.Count - 1);
-            var point = at(index, series[index]);
+            // El índice limita la lectura del DPS; la posición horizontal conserva el instante real de la muerte.
+            var point = at(second, series[index]);
             context.DrawEllipse(DeathBrush, null, point, DeathRadius, DeathRadius);
             var label = new FormattedText(
                 "☠ " + TimeSpan.FromSeconds(second).ToString(@"m\:ss", CultureInfo.InvariantCulture),

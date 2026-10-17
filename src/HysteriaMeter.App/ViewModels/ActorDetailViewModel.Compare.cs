@@ -271,11 +271,13 @@ public sealed partial class ActorDetailViewModel
         TheirsLegend = theirName;
         MineColumn = attempt ? "ESTE" : Name.ToUpper(culture);
         TheirsColumn = !attempt ? theirName.ToUpper(culture) : choice.Id == CompareOption.BestAttemptId ? "MEJOR" : "ANTERIOR";
+        var mineDeaths = DeathSeconds(snapshot, mine.Id);
+        var theirDeaths = DeathSeconds(theirFight, theirs.Id);
         CompareChart = new CompareChartData(
-            CumulativeDps(mine.Timeline ?? []),
-            CumulativeDps(theirs.Timeline ?? []),
-            DeathSeconds(snapshot, mine.Id),
-            DeathSeconds(theirFight, theirs.Id));
+            CumulativeDps(mine.Timeline ?? [], Math.Max((int)snapshot.Duration.TotalSeconds, mineDeaths.DefaultIfEmpty().Max())),
+            CumulativeDps(theirs.Timeline ?? [], Math.Max((int)theirFight.Duration.TotalSeconds, theirDeaths.DefaultIfEmpty().Max())),
+            mineDeaths,
+            theirDeaths);
         var skills = SkillDiff(mine, snapshot.Duration, theirs, theirFight.Duration, names);
         Replace(CompareSkills, skills);
         (InsightLead, InsightSkill, InsightTail) = Insight(mine, theirs, names, mine.IsLocalPlayer ? null : Name);
@@ -313,14 +315,26 @@ public sealed partial class ActorDetailViewModel
         return new Delta(change.ToString("+0.0%;−0.0%;0.0%", CultureInfo.CurrentCulture), tone);
     }
 
-    /// <summary>DPS acumulado de cada segundo: todo el daño hasta ahí dividido por los segundos que pasaron.</summary>
-    public static IReadOnlyList<double> CumulativeDps(IReadOnlyList<long> damageBySecond)
+    /// <summary>
+    /// DPS acumulado de cada segundo: todo el daño hasta ahí dividido por los segundos que pasaron. Después del último
+    /// golpe sigue contando el tiempo hasta <paramref name="lastSecond"/>; sin timeline no se inventa una curva.
+    /// </summary>
+    public static IReadOnlyList<double> CumulativeDps(IReadOnlyList<long> damageBySecond, int lastSecond = -1)
     {
-        var result = new double[damageBySecond.Count];
-        long sum = 0;
-        for (var i = 0; i < damageBySecond.Count; i++)
+        if (damageBySecond.Count == 0)
         {
-            sum += damageBySecond[i];
+            return [];
+        }
+
+        var result = new double[Math.Max(damageBySecond.Count, lastSecond + 1)];
+        long sum = 0;
+        for (var i = 0; i < result.Length; i++)
+        {
+            if (i < damageBySecond.Count)
+            {
+                sum += damageBySecond[i];
+            }
+
             result[i] = (double)sum / (i + 1);
         }
 
