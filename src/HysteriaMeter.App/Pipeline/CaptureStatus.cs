@@ -39,6 +39,9 @@ public sealed class CaptureStatus
 
     public void MarkTraffic(DateTime utcNow) => Interlocked.Exchange(ref _lastTrafficTicks, utcNow.Ticks);
 
+    /// <summary>Ya llegó tráfico del juego alguna vez desde que arrancó la captura (la bienvenida deja de esperar).</summary>
+    public bool HasTraffic => Interlocked.Read(ref _lastTrafficTicks) != 0;
+
     public void Fail(string message) => _failure = message;
 
     public CaptureState Current(DateTime utcNow)

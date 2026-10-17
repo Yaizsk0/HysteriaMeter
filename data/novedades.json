@@ -41,6 +41,7 @@
     { "id": 69, "text": "Modo dungeon: en el historial, RESUMEN › junto a cada run muestra cada boss con sus intentos, wipes, DPS y cuántas veces murió cada uno." },
     { "id": 70, "text": "Rediseño, paso 1: colores y tipografía nuevos en todas las ventanas." },
     {"id": 71, "text": "Rediseño, paso 2: historial en una ventana propia, con runs, filtros y progreso por boss."},
-    {"id": 72, "text": "Rediseño, paso 3: configuración en una ventana propia con ocho secciones y navegación más clara."}
+    {"id": 72, "text": "Rediseño, paso 3: configuración en una ventana propia con ocho secciones y navegación más clara."},
+    {"id": 73, "text": "Rediseño, paso 4: bienvenida con estado real de la captura y tarjeta de resultado al derrotar un boss."}
   ]
 }

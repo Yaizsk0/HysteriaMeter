@@ -97,7 +97,7 @@ public sealed class MeterSession
 
     private bool _noticeTaken;
 
-    /// <summary>La bienvenida o las novedades, una sola vez por arranque: la ve la primera ventana que pregunta.</summary>
+    /// <summary>Las novedades, una sola vez por arranque: las ve la primera ventana que pregunta.</summary>
     public StartupNotice? TakeStartupNotice()
     {
         if (_noticeTaken)

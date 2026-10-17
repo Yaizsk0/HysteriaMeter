@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HysteriaMeter.App.FightCard;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.Combat;
 using HysteriaMeter.Storage;
@@ -104,6 +105,18 @@ public sealed partial class MeterViewModel : ObservableObject
             {
                 dispatcher.InvokeAsync(() => SaveKillImageAsync(snapshot));
             }
+
+            if (FightCardViewModel.CanShow(snapshot))
+            {
+                // La tarjeta se suscribe a la sesión: se crea solo si hay una ventana que la muestre (y la suelte).
+                dispatcher.InvokeAsync(() =>
+                {
+                    if (FightCardRequested is { } show)
+                    {
+                        show(new FightCardViewModel(snapshot, _session, BossOnly && LooksLikeBossFight(snapshot)));
+                    }
+                });
+            }
         };
         _session.PreferencesChanged += names =>
         {
@@ -133,6 +146,9 @@ public sealed partial class MeterViewModel : ObservableObject
 
     /// <summary>La ventana pide abrir otra (botón +).</summary>
     public event Action? NewWindowRequested;
+
+    /// <summary>Se derrotó un boss: la ventana principal muestra la tarjeta de fin de pelea.</summary>
+    public event Action<FightCardViewModel>? FightCardRequested;
 
     /// <summary>La ventana de configuración (Config/ConfigWindow) de esta ventana está abierta.</summary>
     [ObservableProperty]
@@ -398,7 +414,10 @@ public sealed partial class MeterViewModel : ObservableObject
 
     private StartupNotice? _notice;
 
-    /// <summary>Bienvenida del primer arranque o novedades desde la última vez (se cierra con "Entendido").</summary>
+    /// <summary>
+    /// Novedades desde la última vez (se cierra con "Entendido"). La bienvenida del primer arranque ya no pasa por acá:
+    /// es su propia ventana (Welcome/WelcomeWindow).
+    /// </summary>
     public bool HasNotice => _notice is not null;
 
     public string NoticeTitle => _notice?.Title ?? string.Empty;
@@ -917,7 +936,8 @@ public sealed partial class MeterViewModel : ObservableObject
     /// La familia de una fuente de texto elegible: las embebidas (<see cref="MeterPreferences.BundledFonts"/>) salen de
     /// Assets/Fonts y las demás del sistema. App.xaml.cs la usa para el recurso BodyFont de las ventanas.
     /// El URI nombra el ensamblado ("HysteriaMeter;component"), como los de Theme.xaml: así resuelve también cuando el
-    /// ensamblado de entrada es otro (el testhost del arnés de capturas).
+    /// ensamblado de entrada es otro (el testhost del arnés de capturas). Barlow Semi Condensed se pide como "#Barlow",
+    /// la familia con la que WPF agrupa sus tres pesos (ver NumberFont en Theme.xaml).
     /// </summary>
     public static FontFamily FontOf(string name) => MeterPreferences.BundledFonts.Contains(name)
         ? new FontFamily(new Uri("pack://application:,,,/HysteriaMeter;component/"), $"./Assets/Fonts/#{(name == "Barlow Semi Condensed" ? "Barlow" : name)}")
@@ -1782,6 +1802,82 @@ public sealed partial class MeterViewModel : ObservableObject
         return true;
     }
 
+    // Pelea fijada desde la tarjeta de fin de pelea: como una del historial, vuelve al vivo sola con la pelea siguiente
+    // (AutoBackToLive). Las otras formas de fijar ponen otro snapshot en _pinned, así que la comparación deja de dar.
+    private Guid? _cardFightId;
+
+    /// <summary>
+    /// La tarjeta de fin de pelea actúa sobre su pelea, no sobre lo que muestre el overlay: si muestra otra cosa (vista
+    /// RUN o SESIÓN, pausa, otra pelea fijada), la fija como al abrirla del historial. Se sale con Esc, con "Volver al
+    /// vivo" o sola cuando empieza otra pelea.
+    /// </summary>
+    public void ShowFight(EncounterSnapshot fight)
+    {
+        // La pausa puede dejar una instantánea anterior con el mismo ID: solo la misma instancia ya está al día.
+        if (ReferenceEquals(_shown, fight))
+        {
+            return;
+        }
+
+        _pinned = fight;
+        PinnedHistoryId = null;
+        _pinnedAt = DateTimeOffset.Now;
+        _cardFightId = fight.Id;
+        CanEditNote = false;
+        IsViewingHistory = true;
+        HistoryLabel = $"FIN DE PELEA · {TitleOf(fight)}";
+        Refresh();
+    }
+
+    /// <summary>
+    /// "Ver detalle" de la tarjeta: tu fila en esa pelea (aunque la pestaña de la ventana no te muestre, por ejemplo CURA
+    /// sin curación). <c>false</c> si no estás en la pelea.
+    /// </summary>
+    public bool ShowFightDetail(EncounterSnapshot fight)
+    {
+        if (!fight.Actors.Any(a => a.IsLocalPlayer))
+        {
+            return false;
+        }
+
+        ShowFight(fight);
+        Detail.Select(Actors.FirstOrDefault(a => a.IsLocalPlayer) ?? LocalRow(fight));
+        // En pausa Refresh no toca el detalle: se carga acá con la pelea de la tarjeta.
+        Detail.Update(fight);
+        DetailRequested?.Invoke();
+        return true;
+    }
+
+    /// <summary>
+    /// "Guardar captura" de la tarjeta: la misma imagen que la automática al derrotar un boss (esa pelea, con el overlay
+    /// entero). Si el overlay muestra otra cosa, primero fija la pelea (<see cref="ShowFight"/>) y ahí
+    /// queda. La pastilla y la franja de pelea fijada se esconden solo mientras <paramref name="render"/>
+    /// dibuja; devuelve lo que devuelve <paramref name="render"/> (el mensaje de la tarjeta).
+    /// </summary>
+    public string SaveFightImage(EncounterSnapshot fight, Func<string> render)
+    {
+        ShowFight(fight);
+        var view = (IsMinimized, IsViewingHistory);
+        (IsMinimized, IsViewingHistory) = (false, false);
+        try
+        {
+            return render();
+        }
+        finally
+        {
+            (IsMinimized, IsViewingHistory) = view;
+        }
+    }
+
+    /// <summary>Tu fila armada a mano, para el detalle, cuando la pestaña de la ventana no la muestra.</summary>
+    private ActorRowViewModel LocalRow(EncounterSnapshot fight)
+    {
+        var me = ViewModels.Nicknames.Apply(fight, Preferences.Nicknames).Actors.First(a => a.IsLocalPlayer);
+        var row = new ActorRowViewModel();
+        row.Update(1, me, MeterTab.Damage, me.Damage, me.Damage, fight.Duration, showGear: Preferences.ShowGear, colorByClass: Preferences.ColorByClass);
+        return row;
+    }
+
     [RelayCommand]
     private void ToggleCompact() => IsCompact = !IsCompact;
 
@@ -1923,7 +2019,8 @@ public sealed partial class MeterViewModel : ObservableObject
     private void Refresh()
     {
         var current = _engine.CurrentSnapshot();
-        if (PinnedHistoryId is not null && Preferences.AutoBackToLive && current is not null && current.Start.ToLocalTime() > _pinnedAt)
+        var followsLive = PinnedHistoryId is not null || (_pinned is { } pinned && pinned.Id == _cardFightId);
+        if (followsLive && Preferences.AutoBackToLive && current is not null && current.Start.ToLocalTime() > _pinnedAt)
         {
             BackToLive();
             return;

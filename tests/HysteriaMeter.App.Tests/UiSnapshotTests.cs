@@ -59,8 +59,8 @@ public sealed partial class UiSnapshotTests
     /// Los estados, en orden. Estados del mock que hoy no se pueden armar (no hay datos o la UI no existe todavía):
     /// "Intento N" y "Enrage en" (la demo no trae TargetEnrageSeconds y el TTK solo sale de Refresh en vivo),
     /// overheal, pestañas Skills/Muertes/Log del detalle (ActorDetailViewModel no tiene propiedad de pestaña),
-    /// tarjeta de fin de pelea, avisos dentro del overlay, Bienvenida y la pantalla "sin Npcap".
-    /// Historial y Configuración traen sus estados en sus archivos parciales del arnés.
+    /// avisos dentro del overlay. Historial y Configuración tienen estados en sus archivos parciales;
+    /// Bienvenida (incluido "sin Npcap") y fin de pelea en UiSnapshotTests.Inicio.cs.
     /// </summary>
     private static readonly State[] States =
     [
@@ -97,9 +97,6 @@ public sealed partial class UiSnapshotTests
         // Densidades de fila: la más chica y la más grande de las opciones reales, en una sesión propia.
         new($"12-filas-{DenseRows}px", h => Overlay(Live(h.Demo(preferences: new MeterPreferences { LastSeenNews = 1, RowHeight = DenseRows })))),
         new($"13-filas-{LooseRows}px", h => Overlay(Live(h.Demo(preferences: new MeterPreferences { LastSeenNews = 1, RowHeight = LooseRows })))),
-
-        // Bienvenida: sesión nueva con LastSeenNews = 0; la primera ventana recibe el aviso de NewsFeed.
-        new("14-bienvenida", h => Overlay(Refreshed(new MeterViewModel(h.Session(new MeterPreferences()))))),
 
         // Sin tráfico: la captura arrancó hace 30 s y nunca vio paquetes (el silencio es de 15 s).
         new("15-sin-trafico", h => Overlay(Refreshed(new MeterViewModel(
@@ -280,8 +277,8 @@ public sealed partial class UiSnapshotTests
         }
 
         /// <summary>
-        /// Sesión nueva con captura "con tráfico". LastSeenNews = 1 por defecto: sin el aviso de bienvenida
-        /// (tiene su propio estado).
+        /// Sesión nueva con captura "con tráfico". LastSeenNews = 1 por defecto: sin novedades anteriores a ese id.
+        /// La bienvenida es una ventana propia con estados en UiSnapshotTests.Inicio.cs.
         /// </summary>
         public MeterSession Session(MeterPreferences? preferences = null, CaptureStatus? status = null)
         {

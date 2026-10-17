@@ -206,6 +206,15 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
     }
 
+    /// <summary>Id del encuentro en curso, sin armar el snapshot; <c>null</c> si no hay pelea.</summary>
+    public Guid? CurrentEncounterId()
+    {
+        lock (_gate)
+        {
+            return _current?.Id;
+        }
+    }
+
     /// <summary>Registro del encuentro en curso o, si no hay, del último que terminó.</summary>
     public IReadOnlyList<CombatLogEntry> CombatLog()
     {

@@ -8,6 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using HysteriaMeter.App.Detail;
 using HysteriaMeter.App.History;
+using HysteriaMeter.App.FightCard;
 using HysteriaMeter.App.Interop;
 using HysteriaMeter.App.ViewModels;
 
@@ -31,6 +32,7 @@ public partial class OverlayWindow : Window
     private DetailWindow? _detail;
     private HistoryWindow? _historyWindow;
     private Config.ConfigWindow? _config;
+    private FightCardWindow? _fightCard;
 
     /// <param name="windows">Gestor de ventanas; <c>null</c> en pruebas, sin atajos globales.</param>
     public OverlayWindow(MeterViewModel viewModel, OverlayLayout? layout = null, OverlayWindows? windows = null)
@@ -43,7 +45,7 @@ public partial class OverlayWindow : Window
         _viewModel.DetailRequested += ShowDetail;
         _viewModel.RunSummaryRequested += ShowRunSummary;
         _viewModel.CopyImageRequested += CopyImage;
-        _viewModel.SaveImageRequested += SaveImage;
+        _viewModel.SaveImageRequested += SaveKillImage;
         _viewModel.PropertyChanged += OnViewModelChanged;
         _viewModel.PropertyChanged += OnSettingsOpenChanged;
         IsVisibleChanged += (_, _) =>
@@ -52,8 +54,16 @@ public partial class OverlayWindow : Window
             {
                 _viewModel.IsHistoryOpen = false;
                 _viewModel.IsSettingsOpen = false;
+                _fightCard?.Close();
             }
         };
+        _viewModel.FightCardRequested += ShowFightCard;
+        _viewModel.PropertyChanged += OnMinimizedChanged;
+
+        // La tarjeta acompaña al overlay al moverse; el manejador común de visibilidad la cierra al ocultarlo.
+        // Esc la cierra primero, porque ella no toma el foco.
+        LocationChanged += (_, _) => PlaceFightCard();
+        PreviewKeyDown += OnPreviewKeyDown;
 
         // Una ventana cerrada no puede ser dueña de otra: se suelta del view model al cerrarse.
         Closed += (_, _) =>
@@ -62,10 +72,12 @@ public partial class OverlayWindow : Window
             _viewModel.DetailRequested -= ShowDetail;
             _viewModel.RunSummaryRequested -= ShowRunSummary;
             _viewModel.CopyImageRequested -= CopyImage;
-            _viewModel.SaveImageRequested -= SaveImage;
+            _viewModel.SaveImageRequested -= SaveKillImage;
             _viewModel.PropertyChanged -= OnViewModelChanged;
             _viewModel.PropertyChanged -= OnSettingsOpenChanged;
             _config?.Close();
+            _viewModel.FightCardRequested -= ShowFightCard;
+            _viewModel.PropertyChanged -= OnMinimizedChanged;
         };
     }
 
@@ -97,12 +109,24 @@ public partial class OverlayWindow : Window
         }
     }
 
-    /// <summary>Guarda el overlay como .png (al derrotar un boss). Con varias ventanas, solo la primera.</summary>
-    private void SaveImage(string path)
+    /// <summary>La imagen automática al derrotar un boss: el resultado queda en Configuración, en Exportar.</summary>
+    private void SaveKillImage(string path)
+    {
+        if (SaveImage(path) is { } message)
+        {
+            _viewModel.ExportMessage = message;
+        }
+    }
+
+    /// <summary>
+    /// Guarda el overlay como .png. Con varias ventanas, solo la primera. Devuelve el resultado ("Imagen guardada: …" o el
+    /// error), o <c>null</c> si no guardó nada (no es la principal o todavía no tiene tamaño).
+    /// </summary>
+    private string? SaveImage(string path)
     {
         if ((_windows is not null && !IsMain) || RenderOverlay() is not { } bitmap)
         {
-            return;
+            return null;
         }
 
         try
@@ -112,11 +136,11 @@ public partial class OverlayWindow : Window
             encoder.Frames.Add(BitmapFrame.Create(bitmap));
             using var file = File.Create(path);
             encoder.Save(file);
-            _viewModel.ExportMessage = $"Imagen guardada: {Path.GetFileName(path)}";
+            return $"Imagen guardada: {Path.GetFileName(path)}";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            _viewModel.ExportMessage = $"No se pudo guardar la imagen: {ex.Message}";
+            return $"No se pudo guardar la imagen: {ex.Message}";
         }
     }
 
@@ -147,6 +171,7 @@ public partial class OverlayWindow : Window
 
     private void ShowDetail()
     {
+        _fightCard?.Close();
         if (_detail is null)
         {
             _detail = new DetailWindow(_viewModel.Detail) { Owner = this };
@@ -155,6 +180,82 @@ public partial class OverlayWindow : Window
         }
 
         _detail.Activate();
+    }
+
+    /// <summary>
+    /// Tarjeta de fin de pelea al derrotar un boss: solo la ventana principal (y si se ve), debajo del overlay o de la
+    /// pastilla. Si el overlay deja pasar los clics, la tarjeta también.
+    /// </summary>
+    private void ShowFightCard(FightCardViewModel card)
+    {
+        if ((_windows is not null && !IsMain) || !IsVisible)
+        {
+            card.Detach();
+            return;
+        }
+
+        _fightCard?.Close();
+
+        // Los dos botones actúan sobre la pelea de la tarjeta: el VM la fija si el overlay muestra otra cosa.
+        // ShowDetail (el de esta ventana) cierra la tarjeta.
+        card.DetailRequested += () =>
+        {
+            if (!_viewModel.ShowFightDetail(card.Fight))
+            {
+                card.SaveMessage = "No estás en esta pelea: no hay detalle tuyo";
+            }
+        };
+        card.SaveRequested += path =>
+            card.SaveMessage = _viewModel.SaveFightImage(card.Fight, () => SaveImage(path) ?? "No se pudo dibujar el overlay: probá de nuevo");
+
+        var window = new FightCardWindow(card, _viewModel.IsClickThrough) { Owner = this };
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_fightCard, window))
+            {
+                _fightCard = null;
+            }
+        };
+        _fightCard = window;
+        PlaceFightCard();
+        window.Show();
+        _ = card.LoadAsync();
+    }
+
+    /// <summary>Pega la tarjeta de fin de pelea (si hay) debajo de lo que se ve del overlay.</summary>
+    private void PlaceFightCard() => _fightCard?.PlaceNear(VisibleBounds(), ScreenWorkArea());
+
+    /// <summary>Al minimizar o abrir el overlay cambia lo que se ve: la tarjeta se reubica cuando terminó el layout.</summary>
+    private void OnMinimizedChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MeterViewModel.IsMinimized) && _fightCard is not null)
+        {
+            _ = Dispatcher.InvokeAsync(PlaceFightCard, System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+    }
+
+    /// <summary>Esc cierra primero la tarjeta de fin de pelea; recién el siguiente llega al Esc del overlay.</summary>
+    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && _fightCard is { } card)
+        {
+            card.Close();
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>Lo que se ve del overlay (entero, o solo la pastilla si está minimizado), en coordenadas de pantalla.</summary>
+    private Rect VisibleBounds()
+    {
+        var bounds = Rect.Empty;
+        foreach (var child in Root.Children.OfType<FrameworkElement>().Where(c => c.IsVisible))
+        {
+            bounds.Union(child.TransformToAncestor(this).TransformBounds(new Rect(child.RenderSize)));
+        }
+
+        return bounds.IsEmpty
+            ? new Rect(Left, Top, ActualWidth, ActualHeight)
+            : new Rect(Left + bounds.X, Top + bounds.Y, bounds.Width, bounds.Height);
     }
 
     private void ShowRunSummary(DungeonSummaryViewModel summary) =>
@@ -394,10 +495,17 @@ public partial class OverlayWindow : Window
         _windows.ForEach(action);
     }
 
-    private void ToggleClickThrough()
+    private void ToggleClickThrough() => SetClickThrough(!_viewModel.IsClickThrough);
+
+    /// <summary>Deja pasar (o no) los clics al juego; la tarjeta de fin de pelea sigue al overlay.</summary>
+    public void SetClickThrough(bool enabled)
     {
-        _viewModel.IsClickThrough = !_viewModel.IsClickThrough;
-        OverlayInterop.SetClickThrough(this, _viewModel.IsClickThrough);
+        _viewModel.IsClickThrough = enabled;
+        OverlayInterop.SetClickThrough(this, enabled);
+        if (_fightCard is { } card)
+        {
+            OverlayInterop.SetClickThrough(card, enabled);
+        }
     }
 
     private void OnHeaderMouseDown(object sender, MouseButtonEventArgs e)

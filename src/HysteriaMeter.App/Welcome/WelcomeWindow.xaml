@@ -1,0 +1,84 @@
+<Window x:Class="HysteriaMeter.App.Welcome.WelcomeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:HysteriaMeter.App.Welcome"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance local:WelcomeViewModel}"
+        Title="Bienvenida · Hysteria Meter"
+        Width="560" SizeToContent="Height" WindowStartupLocation="CenterScreen"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" ResizeMode="NoResize" ShowInTaskbar="False"
+        FontSize="{StaticResource FontSizeBody}" Foreground="{DynamicResource Text}" FontFamily="{DynamicResource BodyFont}"
+        TextOptions.TextFormattingMode="Display">
+
+    <!-- Referencia visual: mock "Primer uso y errores" (Inicio.dc.html), tarjeta de la izquierda. -->
+    <Window.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding LaterCommand}" />
+    </Window.InputBindings>
+
+    <Border Background="{DynamicResource WindowBg}" BorderBrush="{DynamicResource AccentLine}" BorderThickness="1"
+            CornerRadius="{StaticResource RadiusWindow}" Padding="26,24" MouseLeftButtonDown="OnMouseDown">
+        <StackPanel>
+            <TextBlock Text="BIENVENIDO" Style="{StaticResource Eyebrow}" />
+            <TextBlock Text="Preparemos el meter" Margin="0,4,0,0" FontFamily="{StaticResource TitleFont}" FontWeight="Bold"
+                       FontSize="{StaticResource NumberSizeHero}" Foreground="{DynamicResource Text}" />
+            <TextBlock Text="Lee el tráfico de red de forma pasiva: no toca el juego ni su memoria." Margin="0,4,0,0" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextMuted}" />
+
+            <!-- Pasos: ✓ en verde si está listo; si no, su número en el acento y el estado a la derecha -->
+            <ItemsControl ItemsSource="{Binding Steps}" Focusable="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type local:SetupStep}">
+                        <Grid Margin="0,18,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="28" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid Width="28" Height="28" VerticalAlignment="Top">
+                                <Ellipse x:Name="Circle" Fill="{DynamicResource AccentTint}" />
+                                <TextBlock x:Name="MarkText" Text="{Binding Mark}" FontWeight="Bold" Foreground="{DynamicResource Gold}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Grid>
+                            <StackPanel Grid.Column="1" Margin="14,0,14,0">
+                                <TextBlock Text="{Binding Title}" FontSize="{StaticResource FontSizeEmphasis}" FontWeight="SemiBold" Foreground="{DynamicResource Text}" />
+                                <TextBlock Text="{Binding Hint}" Margin="0,4,0,0" FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource TextDim}" TextWrapping="Wrap" />
+                                <Button Content="{Binding Action.Text}" Style="{StaticResource ButtonLink}" HorizontalAlignment="Left" Margin="0,6,0,0" FontSize="{StaticResource FontSizeBody}"
+                                        Command="{Binding DataContext.OpenActionCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Action}"
+                                        Visibility="{Binding HasAction, Converter={StaticResource Visible}}" />
+                            </StackPanel>
+                            <TextBlock x:Name="StateText" Grid.Column="2" Text="{Binding State}" FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource Gold}" />
+                        </Grid>
+                        <DataTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsReady}" Value="True">
+                                <Setter TargetName="Circle" Property="Fill" Value="{DynamicResource SuccessSoft}" />
+                                <Setter TargetName="MarkText" Property="Foreground" Value="{DynamicResource Success}" />
+                                <Setter TargetName="StateText" Property="Foreground" Value="{DynamicResource Success}" />
+                            </DataTrigger>
+                        </DataTemplate.Triggers>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Ayuda: los consejos que antes mostraba el banner de bienvenida del overlay -->
+            <Border Margin="0,18,0,0" Padding="0,14,0,0" BorderBrush="{DynamicResource Rule}" BorderThickness="0,1,0,0">
+                <ItemsControl ItemsSource="{Binding Tips}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource TextDim}" TextWrapping="Wrap" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" Margin="0,22,0,0">
+                <Button Content="Empezar a capturar" Style="{StaticResource ButtonPrimary}" MinHeight="44" Padding="20,0" Command="{Binding StartCommand}" IsDefault="True"
+                        ToolTip="La captura ya está andando: esto cierra la bienvenida y no vuelve a aparecer" />
+                <Button Content="Más tarde" Style="{StaticResource ButtonGhost}" MinHeight="44" Padding="16,0" Margin="10,0,0,0" Command="{Binding LaterCommand}"
+                        ToolTip="Cierra la bienvenida; vuelve a aparecer la próxima vez que abras el meter" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

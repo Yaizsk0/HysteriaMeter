@@ -114,6 +114,12 @@ public sealed record MeterPreferences
     /// <summary>Última novedad vista (id de <c>data/novedades.json</c>); 0 = nunca abrió el meter.</summary>
     public int LastSeenNews { get; init; }
 
+    /// <summary>
+    /// Ya pasó por la bienvenida ("Empezar a capturar"). Verdadero por defecto: unas preferencias guardadas antes de
+    /// que existiera son de alguien que ya usaba el meter; App.xaml.cs la pone en falso solo para quien llega sin preferencias.
+    /// </summary>
+    public bool WelcomeDone { get; init; } = true;
+
     /// <summary>Tema visual (ver <see cref="MeterThemes"/>).</summary>
     public string Theme { get; init; } = MeterThemes.Default;
 

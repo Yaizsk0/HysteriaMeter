@@ -17,15 +17,22 @@ public static class ProfileFile
         JsonSerializer.Serialize(preferences with { DiscordWebhook = string.Empty, DiscordOnKill = false, CaptureDevice = string.Empty }, Json);
 
     /// <summary>
-    /// Las preferencias del archivo, conservando el webhook y la placa de red propios; <c>null</c> si el archivo no es un
-    /// perfil válido.
+    /// Las preferencias del archivo, conservando el webhook, la placa y el estado de bienvenida/novedades propios;
+    /// null si el archivo no es un perfil válido.
     /// </summary>
     public static MeterPreferences? FromJson(string json, MeterPreferences current)
     {
         try
         {
             return JsonSerializer.Deserialize<MeterPreferences>(json, Json) is { } imported
-                ? imported with { DiscordWebhook = current.DiscordWebhook, DiscordOnKill = current.DiscordOnKill, CaptureDevice = current.CaptureDevice }
+                ? imported with
+                {
+                    CaptureDevice = current.CaptureDevice,
+                    DiscordWebhook = current.DiscordWebhook,
+                    DiscordOnKill = current.DiscordOnKill,
+                    WelcomeDone = current.WelcomeDone,
+                    LastSeenNews = current.LastSeenNews,
+                }
                 : null;
         }
         catch (JsonException)

@@ -31,7 +31,9 @@
     <!-- Los URI nombran el ensamblado (HysteriaMeter;component): "pack://application:,,,/Assets/..." busca en el
          ensamblado de entrada, que bajo el testhost no es la app, y la fuente caería en una del sistema sin avisar. -->
     <!-- Números, títulos y nombres en las filas. Pesos embebidos: Normal, SemiBold y Bold
-         (el 500 del mock pasa a Normal o SemiBold). -->
+         (el 500 del mock pasa a Normal o SemiBold). La familia es "#Barlow", no "#Barlow Semi Condensed": el archivo
+         SemiBold declara la familia Win32 "Barlow Semi Condensed SemiBold" y WPF agrupa los tres bajo "Barlow" (con
+         stretch SemiCondensed). Con el otro nombre, SemiBold y Bold salían en Regular. -->
     <FontFamily x:Key="NumberFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/#Barlow</FontFamily>
     <!-- En el mock el logo "HYSTERIA" y los títulos van en Barlow (antes, Cinzel). -->
     <FontFamily x:Key="TitleFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/#Barlow</FontFamily>
