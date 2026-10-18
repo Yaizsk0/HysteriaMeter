@@ -31,6 +31,22 @@ internal static class RealCapture
     public const string PeriodicWithoutAmountBody = "a3 81 02 00 a3 81 02 01 0a e1 f5 05";
 
     /// <summary>
+    /// Tick de curación (0x3805, type 0x09) de la captura de comparación (2026-10-17): objetivo 2000, fuente 3000
+    /// (IDs reemplazados, con el mismo largo de varint), skill 0x0104C6B6 y 8411, lo que lee hoy el decoder como
+    /// monto. En la captura parece el total del HoT y no lo curado: 8411 = 7851 + 560 del primer 0x0B
+    /// (<see cref="HealTickBody"/>). Fuente y objetivo distintos: el 0x09 no es solo la curación propia.
+    /// </summary>
+    public const string HealStartTickBody ="d0 0f 09 b8 17 f6 04 23 9f dd 65 db 41 b6 c6 04 01";
+
+    /// <summary>
+    /// Tick de curación (0x3805, type 0x0B) del mismo efecto que <see cref="HealStartTickBody"/> (misma instancia,
+    /// fuente, objetivo y skill), 2 s después: 7851, lo que lee hoy el decoder. Después viene otro varint (560) y
+    /// recién ahí la skill; así cierran los 3309 ticks 0x0B de la captura. En los 14 ticks del efecto el 7851 baja
+    /// exactamente 560 por tick hasta 571: parece el resto del HoT, no lo curado (falta validar, T022).
+    /// </summary>
+    public const string HealTickBody = "d0 0f 0b b8 17 f6 04 23 9f dd 65 ab 3d b0 04 b6 c6 04 01";
+
+    /// <summary>
     /// Aparición de otro jugador (0x3645): entidad 16028, nombre reemplazado por "Tests".
     /// Recortado después del nombre; el real sigue ~1,5 KB.
     /// </summary>
