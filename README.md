@@ -122,6 +122,8 @@ Detalles menores del rediseño, paso 7. La alerta de enrage tiene una sola capa 
 
 El ACTIVO y el TIEMPO MUERTO del detalle cuentan solo tus golpes directos: un DoT que sigue pegando mientras estás muerto o quieto ya no tapa ese hueco. Muerto de 0:30 a 0:45 con un veneno corriendo, antes daba 92 % activo y ahora 79 %. La fila "Activo" de Comparar y el consejo "Pasaste N s sin pegar" usan la misma cuenta. En las peleas guardadas antes no se puede separar el DoT y se usa el daño completo, como hasta ahora.
 
+El DPS ACTIVO usa el mismo tiempo activo que ACTIVO y TIEMPO MUERTO: los ticks de DoT ya no cuentan como actividad, ni suman daño cuando caen con el jugador muerto o quieto. Sin tiempo muerto, el DPS activo es igual al DPS. Muerto 20 s en una pelea de 2 min, el daño se divide por 100 s. Si todo tu daño fue DoT se muestra "–". El consejo "Sin ese tiempo muerto…" ahora sale solo después de "Pasaste N s sin pegar" y calcula sobre esos segundos. Las peleas guardadas antes conservan el valor que tenían.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).

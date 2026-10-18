@@ -240,7 +240,10 @@ public sealed partial class ActorDetailViewModel
         [
             Row("DPS", mine.Dps, theirs.Dps, v => ActorRowViewModel.Compact(v)),
             Row("Daño", mine.Damage, theirs.Damage, v => ActorRowViewModel.Compact(v)),
-            Row("DPS activo", mine.ActiveDps, theirs.ActiveDps, v => ActorRowViewModel.Compact(v)),
+            // 0 es "sin golpes directos" (todo DoT), no "peor": contra un "–" nadie es mejor.
+            mine.ActiveDps > 0 && theirs.ActiveDps > 0
+                ? Row("DPS activo", mine.ActiveDps, theirs.ActiveDps, v => ActorRowViewModel.Compact(v))
+                : new CompareRow("DPS activo", ActorRowViewModel.ActiveDpsText(mine.ActiveDps), ActorRowViewModel.ActiveDpsText(theirs.ActiveDps), false, false),
             Row("Crítico", mine.CritRate, theirs.CritRate, v => v.ToString("P0", culture)),
             Row("Espalda", myCounts.Rate(myCounts.Back), theirCounts.Rate(theirCounts.Back), v => v.ToString("P0", culture)),
             Row("Golpe máximo", mine.MaxHit, theirs.MaxHit, v => ActorRowViewModel.Compact(v)),

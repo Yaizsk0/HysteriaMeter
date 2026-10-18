@@ -402,7 +402,7 @@
 
                         <!-- Lo que el mock no muestra, en una línea chica: no se pierde nada de lo que había -->
                         <WrapPanel DockPanel.Dock="Top" Margin="20,10,20,0">
-                            <TextBlock Style="{StaticResource MinorStat}" ToolTip="Sin tiempo muerto: los huecos de más de 3 s entre golpes cuentan como 3 s">
+                            <TextBlock Style="{StaticResource MinorStat}" ToolTip="{x:Static vm:ActorDetailViewModel.ActiveDpsHint}">
                                 DPS ACTIVO <Run Text="{Binding ActiveDps, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" />
                             </TextBlock>
                             <TextBlock Style="{StaticResource MinorStat}">

@@ -98,13 +98,6 @@ internal sealed class ActorStats
 
     public long PeriodicDamage { get; private set; }
 
-    /// <summary>Tiempo con actividad: suma de los huecos entre golpes, cada uno topeado en <see cref="ActiveGap"/>.</summary>
-    public TimeSpan ActiveTime { get; private set; }
-
-    private DateTimeOffset? _lastHitAt;
-
-    internal static readonly TimeSpan ActiveGap = TimeSpan.FromSeconds(3);
-
     public Dictionary<uint, SkillStats> Skills { get; } = [];
 
     /// <summary>Daño en cada segundo desde el inicio del encuentro (índice = segundo).</summary>
@@ -137,15 +130,8 @@ internal sealed class ActorStats
     /// <summary>Golpes por modificador separados por objetivo: Combat Analysis cuenta solo los del objetivo elegido.</summary>
     public Dictionary<ulong, HitCounter> CountsByTarget { get; } = [];
 
-    public void AddHit(uint skillId, ulong targetId, long amount, HitModifiers modifiers, DateTimeOffset at)
+    public void AddHit(uint skillId, ulong targetId, long amount, HitModifiers modifiers)
     {
-        if (_lastHitAt is { } last && at > last)
-        {
-            var gap = at - last;
-            ActiveTime += gap < ActiveGap ? gap : ActiveGap;
-        }
-
-        _lastHitAt = at;
         DamageByTarget[targetId] = DamageByTarget.GetValueOrDefault(targetId) + amount;
         if (!CountsByTarget.TryGetValue(targetId, out var counts))
         {

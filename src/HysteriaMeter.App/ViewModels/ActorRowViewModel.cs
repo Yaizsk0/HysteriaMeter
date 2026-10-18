@@ -289,7 +289,7 @@ public sealed partial class ActorRowViewModel : ObservableObject
         return string.Join(
             Environment.NewLine,
             $"Contra el objetivo: {Compact(actor.MainTargetDamage)} ({Compact(actor.MainTargetDps)} DPS)",
-            $"DPS activo: {Compact(actor.ActiveDps)} · DoT {(actor.Damage == 0 ? 0 : (double)actor.PeriodicDamage / actor.Damage).ToString("P0", culture)} del daño",
+            $"DPS activo: {ActiveDpsText(actor.ActiveDps)} · DoT {(actor.Damage == 0 ? 0 : (double)actor.PeriodicDamage / actor.Damage).ToString("P0", culture)} del daño",
             $"Golpes al objetivo: {c.Hits.ToString("N0", culture)} · máximo {Compact(actor.MaxHit)}",
             $"Crítico {Rate(HitModifiers.Critical, c.Critical)} · Perfecto {Rate(HitModifiers.Perfect, c.Perfect)} · Doble {Rate(HitModifiers.DoubleHit, c.DoubleHit)}",
             $"Frente {Rate(HitModifiers.FrontAttack, c.Front)} · Espalda {Rate(HitModifiers.BackAttack, c.Back)} · Multi {Rate(HitModifiers.MultiHit, c.MultiHit)}",
@@ -298,4 +298,7 @@ public sealed partial class ActorRowViewModel : ObservableObject
     }
 
     internal static string Compact(double value) => Numbers.Format(value);
+
+    /// <summary>El DPS activo, o "–" si es 0: sin golpes directos (todo DoT) no hay tiempo activo que medir.</summary>
+    public static string ActiveDpsText(double activeDps) => activeDps > 0 ? Compact(activeDps) : "–";
 }
