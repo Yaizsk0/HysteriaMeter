@@ -228,6 +228,7 @@ public sealed class EncounterRepositoryTests : IDisposable
         Assert.Null(await repository.LoadAsync(kill.Id.ToString()));
     }
 
+    /// <summary>Un wipe de 60 s con todo el daño al objetivo: un intento de boss, que es lo que comparan el récord y el anterior.</summary>
     private static EncounterSnapshot Fight(DateTimeOffset start, string target, double localDps, string localName = "Mati") => new(
         Guid.NewGuid(),
         start,
@@ -235,7 +236,7 @@ public sealed class EncounterRepositoryTests : IDisposable
         target,
         TargetKilled: false,
         TotalDamage: (long)(localDps * 60),
-        [new ActorSnapshot(1, localName, null, true, (long)(localDps * 60), localDps, 1, 10, 2, 100, 0, [])]);
+        [new ActorSnapshot(1, localName, null, true, (long)(localDps * 60), localDps, 1, 10, 2, 100, 0, [], MainTargetDamage: (long)(localDps * 60))]);
 
     public void Dispose()
     {

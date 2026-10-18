@@ -86,7 +86,7 @@ public sealed partial class MeterViewModel
     private DateTime _bossNoticeUntilUtc;
     private DateTime _savedNoticeUntilUtc;
 
-    private (Guid Id, string Target, string? Local)? _attemptKey;
+    private (Guid Id, string Target, string? Local)? _attemptKey; // Target: FightTarget.Identity, la plantilla o el nombre.
     private int _attempt;
     private bool _attemptVisible;
     private Task _attemptQuery = Task.CompletedTask;
@@ -295,7 +295,7 @@ public sealed partial class MeterViewModel
                 && DateTimeOffset.TryParse(last.StartedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var start)
                 && DateTimeOffset.TryParse(last.EndedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var end))
             {
-                LastFightText = LastFightLine(last.TargetName ?? "Encuentro", end - start);
+                LastFightText = LastFightLine(FightTarget.Label(last.TargetName, last.TargetNpcId), end - start);
             }
         }
         catch (DbException)
@@ -377,12 +377,14 @@ public sealed partial class MeterViewModel
     /// <summary>
     /// El intento contra el objetivo: las peleas guardadas antes contra el mismo objetivo y con el mismo personaje, más
     /// esta. En vivo (pelea, no run ni sesión) y en una pelea del historial; la demo, un archivo y la prueba de DPS no
-    /// lo muestran. La cuenta se pide una vez por pelea y objetivo.
+    /// lo muestran. La cuenta se pide una vez por pelea y objetivo. "El mismo objetivo" es el del historial
+    /// (<see cref="FightTarget.Identity(EncounterSnapshot)"/>): un boss sin nombre también cuenta por su plantilla.
     /// </summary>
     private void UpdateAttempt(EncounterSnapshot real)
     {
+        var identity = FightTarget.Identity(real);
         var eligible = _history is not null
-            && real.TargetName is { Length: > 0 }
+            && identity is not null
             && BossRules.IsBossAttempt(real)
             && (_pinned is null ? !IsRunView && !IsSessionView : PinnedHistoryId is not null);
         _attemptVisible = eligible;
@@ -392,12 +394,12 @@ public sealed partial class MeterViewModel
             return;
         }
 
-        var key = (real.Id, real.TargetName!, real.Actors.FirstOrDefault(a => a.IsLocalPlayer)?.Name);
+        var key = (real.Id, identity!, real.Actors.FirstOrDefault(a => a.IsLocalPlayer)?.Name);
         if (key != _attemptKey)
         {
             _attemptKey = key;
             _attempt = 0;
-            _attemptQuery = LoadAttemptAsync(key, real.Start);
+            _attemptQuery = LoadAttemptAsync(key, real.TargetName, real.TargetNpcId, real.Start);
         }
 
         AttemptText = AttemptLine(_attempt);
@@ -406,12 +408,12 @@ public sealed partial class MeterViewModel
     /// <summary>"Intento 3", o vacío en el primero (o si no se sabe).</summary>
     public static string AttemptLine(int attempt) => attempt >= 2 ? $"Intento {attempt.ToString(CultureInfo.CurrentCulture)}" : string.Empty;
 
-    private async Task LoadAttemptAsync((Guid Id, string Target, string? Local) key, DateTimeOffset start)
+    private async Task LoadAttemptAsync((Guid Id, string Target, string? Local) key, string? targetName, uint? npcId, DateTimeOffset start)
     {
         int earlier;
         try
         {
-            earlier = await _history!.CountEarlierAttemptsAsync(key.Target, start, key.Id.ToString(), key.Local).ConfigureAwait(true);
+            earlier = await _history!.CountEarlierAttemptsAsync(targetName, npcId, start, key.Id.ToString(), key.Local).ConfigureAwait(true);
         }
         catch (DbException)
         {

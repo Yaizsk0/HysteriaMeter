@@ -84,6 +84,40 @@ public sealed class TargetComparisonTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task A_short_pull_is_trash_and_is_left_out_of_every_comparison()
+    {
+        var repository = new EncounterRepository(_path);
+        await repository.InitializeAsync();
+        var kill = Fight(Start, null, 333, 200);
+        // 10 s a 900 DPS sin kill: el arranque de un pull que se reseteó. Es trash (menos de 30 s).
+        var pull = Fight(Start.AddMinutes(5), null, 333, 900, seconds: 10, killed: false);
+        // Un wipe de 60 s con casi todo el daño al boss sí es un intento.
+        var wipe = Fight(Start.AddMinutes(8), null, 333, 180, seconds: 60, killed: false, mainShare: 0.9);
+        // Un wipe de 60 s con el daño repartido (adds) es trash.
+        var adds = Fight(Start.AddMinutes(11), null, 333, 700, seconds: 60, killed: false, mainShare: 0.2);
+        var current = Fight(Start.AddMinutes(15), null, 333, 210);
+        foreach (var fight in new[] { kill, pull, wipe, adds, current })
+        {
+            await repository.SaveAsync(fight);
+        }
+
+        var id = current.Id.ToString();
+        Assert.Equal(200, await repository.BestLocalDpsAsync(null, 333u, id, "Mati"));
+        Assert.Equal(180, await repository.PreviousLocalDpsAsync(null, 333u, id, "Mati"));
+        Assert.Equal([180d, 200d], (await repository.LocalDpsAsync(null, 333u, id, "Mati")).Order());
+        Assert.Equal((wipe.Id.ToString(), kill.Id.ToString()), await repository.PastAttemptsAsync(null, 333u, id, "Mati"));
+
+        // La ★ del historial: la pelea actual (210) es el récord entre los intentos de boss, aunque el pull hizo 900.
+        var listed = await repository.ListRecentAsync();
+        Assert.True(listed.Single(s => s.Id == id).IsRecord);
+        Assert.False(listed.Single(s => s.Id == kill.Id.ToString()).IsRecord);
+
+        // El "intento N" sigue contando todas las peleas contra la plantilla, trash incluido (decisiones.md).
+        Assert.Equal(5, listed.Single(s => s.Id == id).Attempt);
+        Assert.Equal(4, await repository.CountEarlierAttemptsAsync(null, 333u, current.Start, id, "Mati"));
+    }
+
     private async Task<(EncounterRepository Repository, (EncounterSnapshot Unnamed, EncounterSnapshot Named, EncounterSnapshot OldNamed, EncounterSnapshot Other, EncounterSnapshot Current) Fights)> SeedAsync()
     {
         var repository = new EncounterRepository(_path);
@@ -102,15 +136,20 @@ public sealed class TargetComparisonTests : IDisposable
         return (repository, (unnamed, named, oldNamed, other, current));
     }
 
-    private static EncounterSnapshot Fight(DateTimeOffset start, string? target, uint? npc, double localDps) => new(
-        Guid.NewGuid(),
-        start,
-        start.AddSeconds(90),
-        target,
-        TargetKilled: true,
-        TotalDamage: (long)(localDps * 90),
-        [new ActorSnapshot(1, "Mati", null, true, (long)(localDps * 90), localDps, 1, 10, 2, 100, 0, [])],
-        TargetNpcId: npc);
+    private static EncounterSnapshot Fight(
+        DateTimeOffset start, string? target, uint? npc, double localDps, int seconds = 90, bool killed = true, double mainShare = 1)
+    {
+        var damage = (long)(localDps * seconds);
+        return new(
+            Guid.NewGuid(),
+            start,
+            start.AddSeconds(seconds),
+            target,
+            TargetKilled: killed,
+            TotalDamage: damage,
+            [new ActorSnapshot(1, "Mati", null, true, damage, localDps, 1, 10, 2, 100, 0, [], MainTargetDamage: (long)(damage * mainShare))],
+            TargetNpcId: npc);
+    }
 
     public void Dispose()
     {

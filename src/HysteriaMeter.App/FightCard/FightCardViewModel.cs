@@ -114,11 +114,12 @@ public sealed partial class FightCardViewModel : ObservableObject
 
     /// <summary>
     /// Lee el historial: intento anterior, mejor intento y los DPS de los intentos contra este boss para el percentil.
-    /// Compara con el DPS de la pelea entera, que es lo que guarda el historial (como el aviso de récord).
+    /// Compara con el DPS de la pelea entera, que es lo que guarda el historial (como el aviso de récord). "Este boss" es
+    /// el del historial (<see cref="FightTarget.Identity(EncounterSnapshot)"/>): un boss sin nombre se compara por su plantilla.
     /// </summary>
     public async Task LoadAsync()
     {
-        if (_session.History is not { } history || _snapshot.TargetName is not { Length: > 0 } target)
+        if (_session.History is not { } history || FightTarget.Identity(_snapshot) is null)
         {
             return;
         }
@@ -127,20 +128,17 @@ public sealed partial class FightCardViewModel : ObservableObject
         var dps = _local.Dps;
         try
         {
-            var previous = await history.PreviousLocalDpsAsync(target, id, _local.Name).ConfigureAwait(true);
-            var best = await history.BestLocalDpsAsync(target, id, _local.Name).ConfigureAwait(true);
+            var previous = await history.PreviousLocalDpsAsync(_snapshot.TargetName, _snapshot.TargetNpcId, id, _local.Name).ConfigureAwait(true);
+            var best = await history.BestLocalDpsAsync(_snapshot.TargetName, _snapshot.TargetNpcId, id, _local.Name).ConfigureAwait(true);
             (Comparison, IsImprovement) = ComparisonText(dps, previous, best);
 
-            // Las últimas 200 peleas, como el historial: sin la actual (puede estar guardada o no) y con su DPS a mano.
-            var recent = await history.ListRecentAsync(200).ConfigureAwait(true);
-            IReadOnlyCollection<double> attempts =
-            [
-                .. recent.Where(r => r.TargetName == target && r.LocalName == _local.Name && r.Id != id && r.LocalDps is > 0).Select(r => r.LocalDps!.Value),
-                dps,
-            ];
+            // Tus intentos de boss guardados contra este boss, sin la actual (puede estar guardada o no) y con su DPS a mano:
+            // la misma consulta que el percentil del detalle, así la comparación y el percentil miran los mismos intentos.
+            var past = await history.LocalDpsAsync(_snapshot.TargetName, _snapshot.TargetNpcId, id, _local.Name).ConfigureAwait(true);
+            IReadOnlyCollection<double> attempts = [.. past.Where(d => d > 0), dps];
             PercentileHint = MetricHint is { } hint
-                ? $"Entre tus {attempts.Count} intentos contra {target}. {hint}"
-                : $"Entre tus {attempts.Count} intentos contra {target}";
+                ? $"Entre tus {attempts.Count} intentos contra {Title}. {hint}"
+                : $"Entre tus {attempts.Count} intentos contra {Title}";
             Percentile = attempts.Count >= 2 ? HistoryItem.PercentileOf(dps, attempts) : null;
         }
         catch (DbException)

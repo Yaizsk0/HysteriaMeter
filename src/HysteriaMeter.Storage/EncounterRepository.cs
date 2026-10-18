@@ -181,7 +181,8 @@ public sealed class EncounterRepository(string databasePath)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
 
-        // Intento: cuántas veces se peleó contra ese objetivo hasta esta pelea. Récord: el mejor DPS propio contra ese objetivo.
+        // Intento: cuántas veces se peleó contra ese objetivo hasta esta pelea (todas, trash incluido). Récord: el mejor DPS
+        // propio entre los intentos de boss contra ese objetivo (BossAttemptOf: un pull corto no se lo lleva).
         // Los dos son por personaje: con varios personajes, cada uno compite contra sí mismo ("IS" compara también null).
         // "Ese objetivo" es la misma plantilla de NPC o, sin plantilla, el mismo nombre (FightTarget.Identity). Sin nombre ni
         // plantilla (peleas viejas) no hay con qué comparar: intento 0 y sin récord.
@@ -196,7 +197,7 @@ public sealed class EncounterRepository(string databasePath)
                    e.target_killed AS TargetKilled, e.total_damage AS TotalDamage, e.note AS Note,
                    l.dps AS LocalDps,
                    (SELECT MAX(l2.dps) FROM loc l2 JOIN encounters o ON o.id = l2.encounter_id
-                     WHERE {SameTarget} AND l2.name IS l.name) AS BestLocalDps,
+                     WHERE {SameTarget} AND {BossAttemptOf("o")} AND l2.name IS l.name) AS BestLocalDps,
                    (SELECT COUNT(*) FROM encounters o LEFT JOIN loc l2 ON l2.encounter_id = o.id
                      WHERE {SameTarget} AND o.started_at <= e.started_at AND l2.name IS l.name) AS Attempt,
                    e.zone_entered_at AS ZoneEnteredAt,
@@ -250,6 +251,34 @@ public sealed class EncounterRepository(string databasePath)
     private static string TargetIs(string alias) =>
         $"((@npcId IS NOT NULL AND {alias}.target_npc_id = @npcId) OR (@npcId IS NULL AND {alias}.target_npc_id IS NULL AND {alias}.target_name = @targetName))";
 
+    /// <summary>
+    /// <see cref="TargetIs"/> y, además, que la pelea sea un intento de boss (<see cref="BossAttemptOf"/>): con lo que se
+    /// comparan el récord, el intento anterior, el percentil y "Comparar con" del camino en vivo.
+    /// </summary>
+    private static string ComparedAttempt(string alias) => $"{TargetIs(alias)} AND {BossAttemptOf(alias)}";
+
+    /// <summary>
+    /// La pelea <paramref name="alias"/> es un intento contra un boss, con la regla de
+    /// <see cref="BossRules.IsBossAttempt(bool, bool, bool, TimeSpan, TimeSpan?, long, long)"/> como la aplica el historial
+    /// (HistoryItem: la marca de boss de data/npcs.json no se guarda): un kill de al menos 30 s contra el objetivo principal,
+    /// o una pelea sin kill de al menos 30 s en la que el objetivo principal se llevó la mayor parte del daño. Un pull corto
+    /// o con el daño repartido es trash y no entra en las comparaciones (su DPS de arranque no es un récord). El objetivo ya
+    /// lo filtran <see cref="TargetIs"/> o <see cref="SameTarget"/>: tiene nombre o plantilla. Los segundos se redondean a
+    /// milésimas porque julianday da 29,999998 para 30 s justos.
+    /// </summary>
+    private static string BossAttemptOf(string alias)
+    {
+        var seconds = $"ROUND((julianday({alias}.ended_at) - julianday({alias}.started_at)) * 86400, 3)";
+        var minimum = BossRules.BossKillMinDuration.TotalSeconds.ToString(CultureInfo.InvariantCulture);
+        var share = BossRules.BossFightShare.ToString(CultureInfo.InvariantCulture);
+        return $"""
+            (({alias}.target_killed = 1 AND COALESCE(ROUND({alias}.main_target_seconds, 3), {seconds}) >= {minimum})
+             OR ({alias}.target_killed = 0 AND {seconds} >= {minimum}
+                 AND EXISTS (SELECT 1 FROM encounter_actors x WHERE x.encounter_id = {alias}.id GROUP BY x.encounter_id
+                             HAVING SUM(x.damage) > 0 AND SUM(x.main_target_damage) >= {share} * SUM(x.damage))))
+            """;
+    }
+
     /// <summary>Filtro de las consultas viejas por nombre: solo el texto guardado, sin mirar la plantilla.</summary>
     private const string NameIs = "e.target_name = @targetName";
 
@@ -274,12 +303,12 @@ public sealed class EncounterRepository(string databasePath)
 
     /// <summary>
     /// Mejor DPS propio contra ese objetivo con la regla de <see cref="FightTarget.Identity(string?, uint?)"/> (la
-    /// plantilla primero y, sin plantilla, el nombre), sin contar <paramref name="excludeId"/>. <c>null</c> si no hay
-    /// otra o si el objetivo no tiene nombre ni plantilla.
+    /// plantilla primero y, sin plantilla, el nombre) entre los intentos de boss (<see cref="BossAttemptOf"/>), sin contar
+    /// <paramref name="excludeId"/>. <c>null</c> si no hay otro o si el objetivo no tiene nombre ni plantilla.
     /// </summary>
     public Task<double?> BestLocalDpsAsync(string? targetName, uint? npcId, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
         TryTarget(targetName, npcId, out var name, out var npc)
-            ? BestLocalDpsCoreAsync(TargetIs("e"), name, npc, excludeId, localName, cancellationToken)
+            ? BestLocalDpsCoreAsync(ComparedAttempt("e"), name, npc, excludeId, localName, cancellationToken)
             : Task.FromResult<double?>(null);
 
     private async Task<double?> BestLocalDpsCoreAsync(
@@ -302,12 +331,13 @@ public sealed class EncounterRepository(string databasePath)
         PreviousLocalDpsCoreAsync(NameIs, targetName, null, excludeId, localName, cancellationToken);
 
     /// <summary>
-    /// DPS propio en el intento anterior contra ese objetivo con la regla de <see cref="FightTarget.Identity(string?, uint?)"/>.
+    /// DPS propio en el intento de boss anterior contra ese objetivo con la regla de <see cref="FightTarget.Identity(string?, uint?)"/>
+    /// (un pull corto que quedó como trash no cuenta, <see cref="BossAttemptOf"/>).
     /// <c>null</c> si no hay o si el objetivo no tiene nombre ni plantilla.
     /// </summary>
     public Task<double?> PreviousLocalDpsAsync(string? targetName, uint? npcId, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
         TryTarget(targetName, npcId, out var name, out var npc)
-            ? PreviousLocalDpsCoreAsync(TargetIs("e"), name, npc, excludeId, localName, cancellationToken)
+            ? PreviousLocalDpsCoreAsync(ComparedAttempt("e"), name, npc, excludeId, localName, cancellationToken)
             : Task.FromResult<double?>(null);
 
     private async Task<double?> PreviousLocalDpsCoreAsync(
@@ -333,12 +363,13 @@ public sealed class EncounterRepository(string databasePath)
         LocalDpsCoreAsync(NameIs, targetName, null, excludeId, localName, cancellationToken);
 
     /// <summary>
-    /// Tu DPS en cada pelea guardada contra ese objetivo con la regla de <see cref="FightTarget.Identity(string?, uint?)"/>.
+    /// Tu DPS en cada intento de boss guardado contra ese objetivo con la regla de <see cref="FightTarget.Identity(string?, uint?)"/>,
+    /// como el percentil del historial (sin los pulls de trash, <see cref="BossAttemptOf"/>).
     /// Vacío si el objetivo no tiene nombre ni plantilla.
     /// </summary>
     public Task<IReadOnlyList<double>> LocalDpsAsync(string? targetName, uint? npcId, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
         TryTarget(targetName, npcId, out var name, out var npc)
-            ? LocalDpsCoreAsync(TargetIs("e"), name, npc, excludeId, localName, cancellationToken)
+            ? LocalDpsCoreAsync(ComparedAttempt("e"), name, npc, excludeId, localName, cancellationToken)
             : Task.FromResult<IReadOnlyList<double>>([]);
 
     private async Task<IReadOnlyList<double>> LocalDpsCoreAsync(
@@ -362,12 +393,12 @@ public sealed class EncounterRepository(string databasePath)
         PastAttemptsCoreAsync(NameIs, targetName, null, excludeId, localName, cancellationToken);
 
     /// <summary>
-    /// Ids de tu intento anterior y de tu mejor intento contra ese objetivo con la regla de
+    /// Ids de tu intento de boss anterior y de tu mejor intento de boss (<see cref="BossAttemptOf"/>) contra ese objetivo con la regla de
     /// <see cref="FightTarget.Identity(string?, uint?)"/>. Los dos <c>null</c> si el objetivo no tiene nombre ni plantilla.
     /// </summary>
     public Task<(string? Previous, string? Best)> PastAttemptsAsync(string? targetName, uint? npcId, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
         TryTarget(targetName, npcId, out var name, out var npc)
-            ? PastAttemptsCoreAsync(TargetIs("e"), name, npc, excludeId, localName, cancellationToken)
+            ? PastAttemptsCoreAsync(ComparedAttempt("e"), name, npc, excludeId, localName, cancellationToken)
             : Task.FromResult<(string? Previous, string? Best)>((null, null));
 
     private async Task<(string? Previous, string? Best)> PastAttemptsCoreAsync(
