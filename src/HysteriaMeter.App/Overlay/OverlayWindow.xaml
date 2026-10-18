@@ -23,29 +23,6 @@
     </Window.InputBindings>
     <Window.Resources>
         <conv:MoveCursorConverter x:Key="MoveCursor" />
-        <Style x:Key="IconButton" TargetType="Button">
-            <Setter Property="Width" Value="26" />
-            <Setter Property="Height" Value="26" />
-            <Setter Property="Margin" Value="2,0,0,0" />
-            <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Frame" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="3">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource GoldDim}" />
-                                <Setter Property="Foreground" Value="{DynamicResource Gold}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <Style x:Key="Icon" TargetType="Path">
             <Setter Property="Width" Value="14" />
             <Setter Property="Height" Value="14" />
@@ -55,34 +32,6 @@
             <Setter Property="StrokeStartLineCap" Value="Round" />
             <Setter Property="StrokeEndLineCap" Value="Round" />
             <Setter Property="Stroke" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-        </Style>
-
-        <Style x:Key="Tab" TargetType="RadioButton">
-            <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Margin" Value="0,0,2,0" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Underline" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,2" Padding="8,6">
-                            <ContentPresenter />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Underline" Property="BorderBrush" Value="{DynamicResource Gold}" />
-                                <Setter Property="Foreground" Value="{DynamicResource Gold}" />
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="{DynamicResource Gold}" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.45" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
         </Style>
 
         <!-- Cuadro de texto del overlay: la nota de la pelea. Fondo de las cajas de texto (InputBg), como InputBox. -->
