@@ -1,7 +1,7 @@
 namespace HysteriaMeter.Combat;
 
 /// <summary>
-/// Tiempo activo y tiempo muerto de un jugador, a partir de su daño por segundo (<see cref="ActorSnapshot.Timeline"/>).
+/// Tiempo activo y tiempo muerto de un jugador, a partir de su daño por segundo (<see cref="Of"/> usa la serie sin DoT).
 /// Cuenta como muerto cada hueco sin daño de más de <see cref="Tolerance"/> segundos, desde el primer golpe hasta el último:
 /// un par de segundos sin pegar es normal (animaciones, esquivar); más que eso es tiempo perdido.
 /// </summary>
@@ -15,6 +15,13 @@ public sealed record FightActivity(int Seconds, int DeadSeconds, int LongestGap,
 
     /// <summary>Fracción del tiempo con daño (0 a 1); 1 si no hubo pelea.</summary>
     public double Uptime => Seconds == 0 ? 1 : 1 - ((double)DeadSeconds / Seconds);
+
+    /// <summary>
+    /// La actividad del jugador: sus golpes directos, sin los ticks de DoT (<see cref="ActorSnapshot.DirectTimeline"/>).
+    /// Un veneno que sigue pegando mientras está muerto o quieto no es el jugador actuando. Sin DoT, o en las peleas
+    /// guardadas antes de la serie directa, usa el <see cref="ActorSnapshot.Timeline"/>, que en ese caso es lo mismo.
+    /// </summary>
+    public static FightActivity Of(ActorSnapshot actor) => From(actor.DirectTimeline ?? actor.Timeline);
 
     public static FightActivity From(IReadOnlyList<long>? damageBySecond)
     {

@@ -232,8 +232,8 @@ public sealed partial class ActorDetailViewModel
     public static IReadOnlyList<CompareRow> Compare(ActorSnapshot mine, ActorSnapshot theirs)
     {
         var culture = CultureInfo.CurrentCulture;
-        var myActivity = FightActivity.From(mine.Timeline);
-        var theirActivity = FightActivity.From(theirs.Timeline);
+        var myActivity = FightActivity.Of(mine);
+        var theirActivity = FightActivity.Of(theirs);
         var myCounts = mine.Counts ?? HitCounts.Empty;
         var theirCounts = theirs.Counts ?? HitCounts.Empty;
         return

@@ -69,6 +69,21 @@ public sealed class DetailCompareTests
             ActorDetailViewModel.Insight(mine with { DirectTimeline = null }, theirs, SkillNames.Empty, deathSeconds: [112], fightSeconds: 200).Tail);
     }
 
+    [Fact]
+    public void The_activity_row_does_not_count_a_dot_ticking_after_the_death()
+    {
+        using var _ = new CultureScope(CultureInfo.InvariantCulture);
+        // Muere en el 30 y su DoT sigue pegando hasta el 45: con el Timeline entero los dos darían 100 %.
+        long[] timeline = [.. Enumerable.Repeat(100L, 100)];
+        long[] direct = [.. Enumerable.Range(0, 100).Select(i => i is >= 30 and < 45 ? 0L : 100L)];
+        var mine = Actor(1, [Skill(1, 600, 6)], timeline, direct);
+        var theirs = Actor(2, [Skill(1, 1_000, 10)], timeline);
+
+        var activity = ActorDetailViewModel.Compare(mine, theirs).Single(r => r.Label == "Activo");
+
+        Assert.Equal(new CompareRow("Activo", "85 %", "100 %", MineBetter: false, TheirsBetter: true), activity);
+    }
+
     private static SkillSnapshot Skill(uint id, long damage, int hits) => new(id, damage, hits, 0, damage / Math.Max(1, hits), 0);
 
     private static ActorSnapshot Actor(ulong id, SkillSnapshot[] skills, long[]? timeline, long[]? direct = null) =>

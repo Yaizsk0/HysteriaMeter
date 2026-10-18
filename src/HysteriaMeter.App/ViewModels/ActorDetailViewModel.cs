@@ -434,7 +434,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         ChartMarks = MarksText(snapshot.Marks) + PhasesText(snapshot.Phases);
         ChartTip = $"Pico {PeakDps} DPS (promedio móvil de {ChartWindowSeconds} s){ChartMarks}"
             + (snapshot.Marks is { Count: > 0 } ? Environment.NewLine + "Barras doradas: momentos marcados con el atajo" : string.Empty);
-        UpdateActivity(FightActivity.From(actor.Timeline));
+        UpdateActivity(FightActivity.Of(actor));
         UpdateAdvice(snapshot, actor);
         if (actor.IsLocalPlayer && _pastFor != snapshot.Id)
         {

@@ -20,7 +20,7 @@ public static class FightAdvice
         var name = displayName ?? (n => n);
         var culture = CultureInfo.CurrentCulture;
         var tips = new List<string>();
-        var activity = FightActivity.From(actor.Timeline);
+        var activity = FightActivity.Of(actor);
 
         if (activity.Seconds >= 10 && activity.Uptime < UptimeGoal && activity.DeadSeconds >= 5)
         {

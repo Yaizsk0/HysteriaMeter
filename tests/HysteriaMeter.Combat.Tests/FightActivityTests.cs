@@ -19,4 +19,17 @@ public class FightActivityTests
         Assert.Equal(FightActivity.Empty, FightActivity.From(null));
         Assert.Equal(1, FightActivity.Empty.Uptime);
     }
+
+    [Fact]
+    public void A_players_activity_leaves_out_the_dot_ticks()
+    {
+        // El DoT pega todos los segundos; los golpes directos tienen un hueco de 4 s.
+        var actor = new ActorSnapshot(1, "Yo", null, true, 600, 100, 1, 2, 0, 100, 0, [],
+            Timeline: [100, 100, 100, 100, 100, 100], DirectTimeline: [100, 0, 0, 0, 0, 100]);
+
+        Assert.Equal(new FightActivity(Seconds: 6, DeadSeconds: 4, LongestGap: 4, Gaps: 1, LongestGapAt: 1), FightActivity.Of(actor));
+
+        // Sin serie directa (sin DoT o una pelea guardada antes), el Timeline.
+        Assert.Equal(FightActivity.From(actor.Timeline), FightActivity.Of(actor with { DirectTimeline = null }));
+    }
 }
