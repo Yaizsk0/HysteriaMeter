@@ -122,6 +122,8 @@ Detalles menores del rediseño, paso 7. La alerta de enrage tiene una sola capa 
 
 El ACTIVO y el TIEMPO MUERTO del detalle cuentan solo tus golpes directos: un DoT que sigue pegando mientras estás muerto o quieto ya no tapa ese hueco. Muerto de 0:30 a 0:45 con un veneno corriendo, antes daba 92 % activo y ahora 79 %. La fila "Activo" de Comparar y el consejo "Pasaste N s sin pegar" usan la misma cuenta. En las peleas guardadas antes no se puede separar el DoT y se usa el daño completo, como hasta ahora.
 
+Si cambiás el tema con una pelea guardada abierta en el overlay, la franja de arriba (la fecha, las flechas ‹ ›, "Volver al vivo" y la caja de la nota) toma los colores nuevos en el momento; antes se quedaba con los del tema anterior hasta volver a abrir el meter. La caja de la nota tiene el fondo de las demás cajas de texto y "Borrar pelea" el rojo de las otras acciones destructivas.
+
 El DPS ACTIVO usa el mismo tiempo activo que ACTIVO y TIEMPO MUERTO: los ticks de DoT ya no cuentan como actividad, ni suman daño cuando caen con el jugador muerto o quieto. Sin tiempo muerto, el DPS activo es igual al DPS. Muerto 20 s en una pelea de 2 min, el daño se divide por 100 s. Si todo tu daño fue DoT se muestra "–". El consejo "Sin ese tiempo muerto…" ahora sale solo después de "Pasaste N s sin pegar" y calcula sobre esos segundos. Las peleas guardadas antes conservan el valor que tenían.
 
 ## Spec Kit
