@@ -60,12 +60,15 @@ public sealed partial class UiSnapshotTests
         }),
 
         // Un DoT que sigue pegando con el jugador muerto no es la vuelta: la conclusión nombra la muerte de 0:30 a 0:45.
-        // Con el Timeline entero (DoT incluido) el tramo terminaba en el 0:31 y no se nombraba.
+        // Con el Timeline entero (DoT incluido) el tramo terminaba en el 0:31 y no se nombraba. Tampoco es actividad:
+        // 15 s muertos de 71 dan "Activo 79 %" (con el DoT contaban solo los 6 s sin nada y daba 92 %).
         new("23d-detalle-comparar-muerte-dot", h =>
         {
             var detail = DotAfterDeath(h);
             detail.CompareWith = detail.Others.First(o => o.Name == "Compañero");
             Assert.EndsWith(", coincide con la muerte de 0:30 a 0:45.", detail.InsightTail);
+            Assert.StartsWith("79", detail.Uptime, StringComparison.Ordinal);
+            Assert.Equal("15 s", detail.DeadTime);
             return new DetailWindow(detail);
         }),
         new("24-detalle-renombrar", h =>

@@ -133,6 +133,25 @@ public class ActorDetailViewModelTests
         Assert.False(detail.HasPercentile);
     }
 
+    [Fact]
+    public void A_dot_ticking_while_you_are_dead_is_not_activity()
+    {
+        using var _ = new CultureScope(CultureInfo.InvariantCulture);
+        // Muere en el 30 y su DoT sigue pegando hasta que vuelve a pegar directo en el 45: el Timeline nunca queda en 0.
+        long[] timeline = [.. Enumerable.Repeat(100L, 100)];
+        long[] direct = [.. Enumerable.Range(0, 100).Select(i => i is >= 30 and < 45 ? 0L : 100L)];
+        var me = Actor(1, "Vos", local: true) with { Timeline = timeline, DirectTimeline = direct };
+
+        var detail = DetailOf(Fight(Guid.NewGuid(), null, me), 1);
+
+        Assert.Equal(("85 %", "15 s"), (detail.Uptime, detail.DeadTime));
+        Assert.Contains(detail.Advice, t => t.StartsWith("Pasaste 15 s sin pegar (85 % del tiempo activo)", StringComparison.Ordinal));
+
+        // Sin la serie directa (sin DoT o una pelea guardada antes), el Timeline, como hasta ahora.
+        var old = DetailOf(Fight(Guid.NewGuid(), null, me with { DirectTimeline = null }), 1);
+        Assert.Equal(("100 %", "0 s"), (old.Uptime, old.DeadTime));
+    }
+
     // ===================== Muertes =====================
 
     [Fact]
