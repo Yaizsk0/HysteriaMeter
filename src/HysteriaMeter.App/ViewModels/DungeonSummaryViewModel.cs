@@ -45,12 +45,20 @@ public sealed class DungeonSummaryViewModel
 
         var total = Math.Max(summary.Duration.TotalSeconds, 1);
         var killOf = summary.Bosses.Where(b => b.Killed).DistinctBy(b => b.DecidingId).ToDictionary(b => b.DecidingId);
-        Timeline = [.. summary.Timeline.Select(s => new SegmentItem(
-            Math.Max(s.StartSecond / total * TimelineWidth, 0),
-            Math.Max(s.Seconds / total * TimelineWidth, 3),
-            s.Kind switch { RunSegmentKind.Kill => KillBrush, RunSegmentKind.Wipe => WipeBrush, _ => TrashBrush },
-            SegmentLabel(s, killOf),
-            $"{s.Label} · {Length(TimeSpan.FromSeconds(s.Seconds))} · {SegmentKind(s)}", s.Kind))];
+        Timeline = [.. summary.Timeline.Select(s =>
+        {
+            var suffix = SegmentSuffix(s, killOf);
+            return new SegmentItem(
+                Math.Max(s.StartSecond / total * TimelineWidth, 0),
+                Math.Max(s.Seconds / total * TimelineWidth, 3),
+                s.Kind switch { RunSegmentKind.Kill => KillBrush, RunSegmentKind.Wipe => WipeBrush, _ => TrashBrush },
+                suffix.Length > 0 ? $"{s.Label} {suffix}" : s.Label,
+                $"{s.Label} · {Length(TimeSpan.FromSeconds(s.Seconds))} · {SegmentKind(s)}", s.Kind)
+            {
+                Name = s.Label,
+                Suffix = suffix,
+            };
+        })];
 
         Cards = [.. summary.Bosses.Select(b =>
         {
@@ -110,13 +118,14 @@ public sealed class DungeonSummaryViewModel
     }
 
     /// <summary>
-    /// "Nombre 3:58" en un kill (la duración de su tarjeta), "Nombre ✕" en un wipe y "Trash" en el resto, como el mock.
+    /// Lo que va después del nombre en el segmento, como el mock ("Furia 3:58", "Furia ✕"): la duración de su tarjeta en un
+    /// kill, ✕ en un wipe y nada en el trash.
     /// </summary>
-    private static string SegmentLabel(RunSegment segment, Dictionary<Guid, BossSummary> killOf) => segment.Kind switch
+    private static string SegmentSuffix(RunSegment segment, Dictionary<Guid, BossSummary> killOf) => segment.Kind switch
     {
-        RunSegmentKind.Kill => $"{segment.Label} {Length(killOf.TryGetValue(segment.FightId, out var boss) ? boss.Duration : TimeSpan.FromSeconds(segment.Seconds))}",
-        RunSegmentKind.Wipe => $"{segment.Label} ✕",
-        _ => segment.Label,
+        RunSegmentKind.Kill => Length(killOf.TryGetValue(segment.FightId, out var boss) ? boss.Duration : TimeSpan.FromSeconds(segment.Seconds)),
+        RunSegmentKind.Wipe => "✕",
+        _ => string.Empty,
     };
 
     private static string SegmentKind(RunSegment segment) => segment.Kind switch
@@ -251,7 +260,16 @@ public sealed class DungeonSummaryViewModel
         span.TotalHours >= 1 ? span.ToString(@"h\:mm\:ss", CultureInfo.InvariantCulture) : span.ToString(@"m\:ss", CultureInfo.InvariantCulture);
 }
 
-public sealed record SegmentItem(double Left, double Width, Brush Fill, string Label, string Tip, RunSegmentKind Kind = RunSegmentKind.Trash);
+/// <summary>
+/// Un tramo del timeline. <paramref name="Label"/> es el texto entero ("NPC 2400123 1:35"); la ventana dibuja
+/// <see cref="Name"/>, que se recorta si no entra, y <see cref="Suffix"/> (duración o ✕), que siempre se ve.
+/// </summary>
+public sealed record SegmentItem(double Left, double Width, Brush Fill, string Label, string Tip, RunSegmentKind Kind = RunSegmentKind.Trash)
+{
+    public string Name { get; init; } = Label;
+
+    public string Suffix { get; init; } = string.Empty;
+}
 
 public sealed record BossCard(string Name, string Result, Brush ResultBrush, string Stats, IReadOnlyList<BossPlayerRow> Players)
 {

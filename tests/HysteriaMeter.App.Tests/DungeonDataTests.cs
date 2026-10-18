@@ -38,6 +38,9 @@ public sealed class DungeonDataTests
 
         Assert.Equal(["Trash", "NPC 2400123 ✕", "NPC 2400123 3:58"], view.Timeline.Select(s => s.Label));
         Assert.Equal([RunSegmentKind.Trash, RunSegmentKind.Wipe, RunSegmentKind.Kill], view.Timeline.Select(s => s.Kind));
+
+        // La ventana recorta solo el nombre: la ✕ y la duración van aparte y siempre se ven.
+        Assert.Equal([("Trash", ""), ("NPC 2400123", "✕"), ("NPC 2400123", "3:58")], view.Timeline.Select(s => (s.Name, s.Suffix)));
     }
 
     [Fact]

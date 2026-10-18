@@ -32,6 +32,23 @@
             <Setter Property="Margin" Value="0,0,5,0" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
+        <!-- Texto de un tramo del timeline: oscuro sobre el kill, OnWipe sobre el wipe y apagado sobre el trash. -->
+        <Style x:Key="SegmentText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Kind}" Value="{x:Static combat:RunSegmentKind.Kill}"><Setter Property="Foreground" Value="{DynamicResource OnAccent}" /></DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="{x:Static combat:RunSegmentKind.Wipe}"><Setter Property="Foreground" Value="{DynamicResource OnWipe}" /></DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="SegmentSuffix" TargetType="TextBlock" BasedOn="{StaticResource SegmentText}">
+            <Setter Property="Margin" Value="3,0,0,0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Suffix}" Value=""><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+            </Style.Triggers>
+        </Style>
         <Style x:Key="MatrixCell" TargetType="TextBlock">
             <Setter Property="Padding" Value="12,8" />
             <Setter Property="VerticalAlignment" Value="Center" />
@@ -137,18 +154,11 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:SegmentItem">
                                         <Border Background="{Binding Fill}" ToolTip="{Binding Tip}" CornerRadius="2">
-                                            <TextBlock Text="{Binding Label}" FontSize="11" FontWeight="SemiBold" Margin="4,0" VerticalAlignment="Center"
-                                                       TextAlignment="Center" TextTrimming="CharacterEllipsis">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Kind}" Value="{x:Static combat:RunSegmentKind.Kill}"><Setter Property="Foreground" Value="{DynamicResource OnAccent}" /></DataTrigger>
-                                                            <DataTrigger Binding="{Binding Kind}" Value="{x:Static combat:RunSegmentKind.Wipe}"><Setter Property="Foreground" Value="{DynamicResource OnWipe}" /></DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
+                                            <!-- El nombre se recorta si no entra; la duración o la ✕ siempre se ven. -->
+                                            <DockPanel HorizontalAlignment="Center" Margin="4,0">
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding Suffix}" Style="{StaticResource SegmentSuffix}" />
+                                                <TextBlock Text="{Binding Name}" Style="{StaticResource SegmentText}" TextTrimming="CharacterEllipsis" />
+                                            </DockPanel>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
