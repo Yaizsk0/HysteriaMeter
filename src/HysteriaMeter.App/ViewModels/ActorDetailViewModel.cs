@@ -551,20 +551,21 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
 
     /// <summary>
     /// Tus DPS guardados contra el objetivo de la pelea (sin contarla), del historial; vacío si no hay jugador local u
-    /// objetivo, o si la base falla. <c>null</c> sin historial.
+    /// objetivo, o si la base falla. <c>null</c> sin historial. El objetivo es el del historial
+    /// (<see cref="FightTarget.Identity(EncounterSnapshot)"/>): una plantilla sin nombre también tiene percentil.
     /// </summary>
     public static Func<EncounterSnapshot, Task<IReadOnlyList<double>>>? PastDpsFrom(EncounterRepository? history) =>
         history is null ? null : async snapshot =>
         {
             var local = snapshot.Actors.FirstOrDefault(a => a.IsLocalPlayer);
-            if (local is null || snapshot.TargetName is not { Length: > 0 } target)
+            if (local is null || FightTarget.Identity(snapshot) is null)
             {
                 return [];
             }
 
             try
             {
-                return await history.LocalDpsAsync(target, snapshot.Id.ToString(), local.Name).ConfigureAwait(true);
+                return await history.LocalDpsAsync(snapshot.TargetName, snapshot.TargetNpcId, snapshot.Id.ToString(), local.Name).ConfigureAwait(true);
             }
             catch (DbException)
             {

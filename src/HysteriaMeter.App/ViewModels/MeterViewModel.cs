@@ -1550,11 +1550,14 @@ public sealed partial class MeterViewModel : ObservableObject
         }
     }
 
-    /// <summary>Al terminar una pelea, avisa si el DPS propio superó el mejor contra ese objetivo.</summary>
+    /// <summary>
+    /// Al terminar una pelea, avisa si el DPS propio superó el mejor contra ese objetivo. "Ese objetivo" es el del
+    /// historial (<see cref="FightTarget.Identity(EncounterSnapshot)"/>): una plantilla sin nombre también tiene récord.
+    /// </summary>
     private async Task CheckRecordAsync(EncounterSnapshot snapshot)
     {
         var local = snapshot.Actors.FirstOrDefault(a => a.IsLocalPlayer);
-        if (_history is null || local is null || snapshot.TargetName is not { Length: > 0 } target)
+        if (_history is null || local is null || FightTarget.Identity(snapshot) is null)
         {
             return;
         }
@@ -1563,15 +1566,15 @@ public sealed partial class MeterViewModel : ObservableObject
         double? previous;
         try
         {
-            best = await _history.BestLocalDpsAsync(target, snapshot.Id.ToString(), local.Name).ConfigureAwait(true);
-            previous = await _history.PreviousLocalDpsAsync(target, snapshot.Id.ToString(), local.Name).ConfigureAwait(true);
+            best = await _history.BestLocalDpsAsync(snapshot.TargetName, snapshot.TargetNpcId, snapshot.Id.ToString(), local.Name).ConfigureAwait(true);
+            previous = await _history.PreviousLocalDpsAsync(snapshot.TargetName, snapshot.TargetNpcId, snapshot.Id.ToString(), local.Name).ConfigureAwait(true);
         }
         catch (DbException)
         {
             return;
         }
 
-        if ((RecordText(target, local.Dps, best) ?? VsPreviousText(local.Dps, previous)) is not { } message)
+        if ((RecordText(TitleOf(snapshot), local.Dps, best) ?? VsPreviousText(local.Dps, previous)) is not { } message)
         {
             return;
         }
@@ -1603,10 +1606,13 @@ public sealed partial class MeterViewModel : ObservableObject
             ? $"¡Récord en {target}! {ActorRowViewModel.Compact(dps)} DPS (antes {ActorRowViewModel.Compact(best)})"
             : null;
 
-    /// <summary>Tu intento anterior y tu mejor intento contra el objetivo, para "Comparar con" del detalle.</summary>
+    /// <summary>
+    /// Tu intento anterior y tu mejor intento contra el objetivo, para "Comparar con" del detalle. Con la regla del
+    /// historial (<see cref="FightTarget.Identity(EncounterSnapshot)"/>): la plantilla primero y, sin plantilla, el nombre.
+    /// </summary>
     private async Task<IReadOnlyList<CompareOption>> LoadPastAttemptsAsync(EncounterSnapshot snapshot)
     {
-        if (_history is null || snapshot.TargetName is not { Length: > 0 } target)
+        if (_history is null || FightTarget.Identity(snapshot) is null)
         {
             return [];
         }
@@ -1614,7 +1620,7 @@ public sealed partial class MeterViewModel : ObservableObject
         try
         {
             var localName = snapshot.Actors.FirstOrDefault(a => a.IsLocalPlayer)?.Name;
-            var (previousId, bestId) = await _history.PastAttemptsAsync(target, snapshot.Id.ToString(), localName).ConfigureAwait(true);
+            var (previousId, bestId) = await _history.PastAttemptsAsync(snapshot.TargetName, snapshot.TargetNpcId, snapshot.Id.ToString(), localName).ConfigureAwait(true);
             var previous = previousId is null ? null : await _history.LoadAsync(previousId).ConfigureAwait(true);
             var best = bestId is null || bestId == previousId ? null : await _history.LoadAsync(bestId).ConfigureAwait(true);
             return

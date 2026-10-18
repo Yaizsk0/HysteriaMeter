@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.App.ViewModels;
 using HysteriaMeter.Combat;
+using HysteriaMeter.Protocol.Events;
 using HysteriaMeter.Storage;
 using Microsoft.Data.Sqlite;
 
@@ -13,7 +14,8 @@ namespace HysteriaMeter.App.Tests;
 /// <summary>
 /// El historial y el modo dungeon deciden igual cuándo dos peleas son contra el mismo objetivo (la plantilla primero y,
 /// sin plantilla, el nombre) y cuentan los bosses de una run igual. Una celda del modo dungeon abre su intento aunque haya
-/// quedado fuera de las últimas peleas cargadas, sin perder la nota.
+/// quedado fuera de las últimas peleas cargadas, sin perder la nota. El aviso de récord, "Comparar con" y el percentil del
+/// detalle comparan con esa misma regla: una plantilla sin nombre tiene récord, intentos y percentil como en el historial.
 /// </summary>
 [Collection(WpfAppGroup.Name)]
 public sealed class TargetIdentityHistoryTests
@@ -29,9 +31,9 @@ public sealed class TargetIdentityHistoryTests
             ZoneEnteredAt: Base.ToString("O", CultureInfo.InvariantCulture)));
     }
 
-    private static EncounterSnapshot Snapshot(uint? npc, bool killed, int minute, string? name = null, int seconds = 95) =>
-        new(Guid.NewGuid(), Base.AddMinutes(minute), Base.AddMinutes(minute).AddSeconds(seconds), name, killed, 1000L * seconds,
-            [new ActorSnapshot(1, "Vos", 15, true, 1000L * seconds, 1000, 0, 10, 2, 100, 0, [], MainTargetDamage: 1000L * seconds, MainTargetDps: 1000)],
+    private static EncounterSnapshot Snapshot(uint? npc, bool killed, int minute, string? name = null, int seconds = 95, double dps = 1000) =>
+        new(Guid.NewGuid(), Base.AddMinutes(minute), Base.AddMinutes(minute).AddSeconds(seconds), name, killed, (long)dps * seconds,
+            [new ActorSnapshot(1, "Vos", 15, true, (long)dps * seconds, dps, 0, 10, 2, 100, 0, [], MainTargetDamage: (long)dps * seconds, MainTargetDps: dps)],
             TargetNpcId: npc, ZoneEnteredAt: Base);
 
     [Fact]
@@ -123,7 +125,122 @@ public sealed class TargetIdentityHistoryTests
         });
     }
 
-    private static void WithHistory(Action<MeterViewModel, EncounterRepository> action)
+    [Fact]
+    public void The_record_notice_compares_an_unnamed_template_like_the_history()
+    {
+        WithHistory((vm, repository, engine) =>
+        {
+            // Una pelea guardada contra la plantilla sin nombre, con menos DPS que la de ahora.
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: false, minute: 0, dps: 1000)));
+
+            FinishLiveFight(engine, Base.AddHours(1));
+            WaitFor(() => vm.HasRecordMessage);
+
+            // El historial le pone ★ a esta pelea: el aviso también, con el mismo rótulo del objetivo.
+            Assert.StartsWith("¡Récord en NPC 2400123!", vm.RecordMessage, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public void Naming_the_template_does_not_turn_a_worse_fight_into_a_record()
+    {
+        WithHistory((vm, repository, engine) =>
+        {
+            // El mejor intento quedó como "NPC 2400123"; hoy data/npcs.json ya le pone nombre.
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: false, minute: 0, dps: 50_000)));
+            engine.Entities.Npcs = new NpcCatalog(new Dictionary<uint, NpcInfo> { [2400123] = new("Kromede") });
+
+            FinishLiveFight(engine, Base.AddHours(1));
+            WaitFor(() => vm.HasRecordMessage);
+
+            // 40k contra 50k: no es récord (el historial no le pone ★) y se compara con ese intento anterior.
+            Assert.DoesNotContain("Récord", vm.RecordMessage, StringComparison.Ordinal);
+            Assert.Equal(MeterViewModel.VsPreviousText(40_000, 50_000), vm.RecordMessage);
+        });
+    }
+
+    [Fact]
+    public void Compare_with_offers_the_past_attempts_of_an_unnamed_template()
+    {
+        WithHistory((vm, repository, _) =>
+        {
+            var best = Snapshot(2400123, killed: false, minute: 0, dps: 1500);
+            var previous = Snapshot(2400123, killed: true, minute: 10, dps: 1200);
+            Pump(repository.SaveAsync(best));
+            Pump(repository.SaveAsync(previous));
+            Pump(repository.SaveAsync(Snapshot(7, killed: true, minute: 15, dps: 9000))); // otra plantilla: no cuenta
+
+            // La pelea de ahora, sin nombre y ya con nombre: las dos son el mismo objetivo que las guardadas.
+            foreach (var current in new[] { Snapshot(2400123, killed: true, minute: 20), Snapshot(2400123, killed: true, minute: 20, name: "Kromede") })
+            {
+                var load = vm.Detail.PastAttempts!(current);
+                Pump(load);
+                Assert.Equal(["Tu intento anterior", "Tu mejor intento"], load.Result.Select(o => o.Label));
+                Assert.Equal([previous.Id, best.Id], load.Result.Select(o => o.SavedEncounter!.Id));
+            }
+
+            // Sin nombre ni plantilla no hay con qué comparar, como en el historial.
+            var unknown = vm.Detail.PastAttempts!(Snapshot(null, killed: true, minute: 20));
+            Pump(unknown);
+            Assert.Empty(unknown.Result);
+        });
+    }
+
+    [Fact]
+    public void The_detail_percentile_counts_the_attempts_of_an_unnamed_template()
+    {
+        WithHistory((_, repository, _) =>
+        {
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: false, minute: 0, dps: 1500)));
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: true, minute: 10, dps: 1200)));
+            Pump(repository.SaveAsync(Snapshot(7, killed: true, minute: 15, dps: 9000))); // otra plantilla: no cuenta
+            var pastDps = ActorDetailViewModel.PastDpsFrom(repository)!;
+
+            foreach (var current in new[] { Snapshot(2400123, killed: true, minute: 20), Snapshot(2400123, killed: true, minute: 20, name: "Kromede") })
+            {
+                var load = pastDps(current);
+                Pump(load);
+                Assert.Equal([1200d, 1500d], load.Result.Order());
+            }
+
+            var unknown = pastDps(Snapshot(null, killed: true, minute: 20));
+            Pump(unknown);
+            Assert.Empty(unknown.Result);
+        });
+    }
+
+    /// <summary>
+    /// Una pelea en vivo de "Vos" contra la plantilla 2400123 (40k DPS: 200k de daño en 5 s) que termina por inactividad:
+    /// el motor avisa <see cref="CombatEngine.EncounterFinished"/> y el overlay revisa el récord.
+    /// </summary>
+    private static void FinishLiveFight(CombatEngine engine, DateTimeOffset start)
+    {
+        engine.Apply(new LocalPlayerEvent(start, 1, "Vos"));
+        engine.Apply(new EntitySpawnEvent(start, 900, null, NpcId: 2400123));
+        engine.Apply(new DamageEvent(start, 1, 900, 100, 100_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(start.AddSeconds(5), 1, 900, 100, 100_000, HitModifiers.None));
+        EncounterSnapshot? finished = null;
+        engine.EncounterFinished += fight => finished = fight;
+        engine.Tick(start.AddSeconds(30));
+        Assert.NotNull(finished);
+        Assert.Equal(2400123U, finished.TargetNpcId);
+        Assert.Equal(40_000, Assert.Single(finished.Actors).Dps);
+    }
+
+    private static void WaitFor(Func<bool> condition)
+    {
+        for (var wait = 0; wait < 200 && !condition(); wait++)
+        {
+            Pump(Task.Delay(10));
+        }
+
+        Assert.True(condition());
+    }
+
+    private static void WithHistory(Action<MeterViewModel, EncounterRepository> action) =>
+        WithHistory((vm, repository, _) => action(vm, repository));
+
+    private static void WithHistory(Action<MeterViewModel, EncounterRepository, CombatEngine> action)
     {
         ExceptionDispatchInfo? failure = null;
         var thread = new Thread(() =>
@@ -135,9 +252,10 @@ public sealed class TargetIdentityHistoryTests
                 SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
                 var repository = new EncounterRepository(database);
                 Pump(repository.InitializeAsync());
-                vm = new MeterViewModel(new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty,
+                var engine = new CombatEngine();
+                vm = new MeterViewModel(new MeterSession(engine, new CaptureRecorder(), SkillNames.Empty,
                     new MeterPreferences { LastSeenNews = 1 }, _ => { }, history: repository));
-                action(vm, repository);
+                action(vm, repository, engine);
             }
             catch (Exception ex)
             {
