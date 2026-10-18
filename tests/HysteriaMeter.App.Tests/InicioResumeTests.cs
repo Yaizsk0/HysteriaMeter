@@ -4,6 +4,7 @@ using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
+using HysteriaMeter.App.Config;
 using HysteriaMeter.App.FightCard;
 using HysteriaMeter.App.Overlay;
 using HysteriaMeter.App.Pipeline;
@@ -194,20 +195,26 @@ public sealed class InicioResumeTests
     [Fact]
     public void Config_and_welcome_count_the_same_names_as_the_meter()
     {
+        // Configuración y la bienvenida leen el mismo GameDataSummary: lo que cuenta es lo que carga el meter.
         var folder = Path.Combine(Path.GetTempPath(), $"hysteria-game-data-integration-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(folder);
+        var icons = Path.Combine(folder, "iconos");
+        Directory.CreateDirectory(icons);
         try
         {
             var file = Path.Combine(folder, "skills.json");
             File.WriteAllText(file, """{"skills":{"15280000":"Primero","15280000":"Último","15290000":42}}""");
-            Assert.Equal(1, HysteriaMeter.App.Config.GameDataSummary.Read(folder).Skills);
-            Assert.Equal(1, GameDataSummary.Read(folder).Skills);
-            Assert.Equal("Último", SkillNames.Load(file).Of(15280000));
+            File.WriteAllBytes(Path.Combine(icons, "15280000.png"), [0]);
+            File.WriteAllBytes(Path.Combine(icons, "fondo.png"), [0]);
+            var summary = GameDataSummary.Read(folder);
+            Assert.Equal((1, 1), (summary.Skills, summary.Icons));
+            var names = SkillNames.Load(file).WithIcons(icons);
+            Assert.Equal("Último", names.Of(15280000));
+            Assert.Equal(Path.Combine(icons, "15280000.png"), names.IconOf(15280000));
+            Assert.EndsWith(": 1 skill, 1 ícono, 0 emblemas", WelcomeViewModel.GameDataStep(summary).Hint, StringComparison.Ordinal);
         }
         finally
         {
-            File.Delete(Path.Combine(folder, "skills.json"));
-            Directory.Delete(folder);
+            Directory.Delete(folder, recursive: true);
         }
     }
     [Fact]

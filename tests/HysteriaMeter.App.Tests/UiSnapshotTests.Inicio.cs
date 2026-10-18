@@ -1,6 +1,7 @@
 // Estados del arnés para la bienvenida (mock Inicio) y la tarjeta de fin de pelea (mock Mini). Ver UiSnapshotTests.cs.
 
 using System.IO;
+using HysteriaMeter.App.Config;
 using HysteriaMeter.App.FightCard;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.App.ViewModels;

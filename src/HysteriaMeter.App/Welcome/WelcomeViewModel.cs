@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HysteriaMeter.App.Config;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.App.ViewModels;
 

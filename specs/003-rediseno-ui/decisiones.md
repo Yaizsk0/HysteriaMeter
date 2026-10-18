@@ -68,7 +68,7 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 - Opacidad con la semántica actual. Máximo de jugadores: slider 4–24 + opción "Todos" (0). Alto de fila: 22–40 en pasos de 2; compacto sigue forzando 22.
 - Atajo nuevo "Cambiar pestaña" (rota DPS→CURA→RECIB. en la ventana principal), por defecto vacío.
 - Captura: selector de placa de red (LiveCaptureSource.ListDevices) guardado en preferencias, se aplica al reiniciar el meter (decirlo en la UI); "Automática" por defecto.
-- Datos del juego: carpeta %LOCALAPPDATA%\HysteriaMeter\Juego con conteos (skills con nombre, íconos, emblemas) y botón "Abrir carpeta".
+- Datos del juego: carpeta %LOCALAPPDATA%\HysteriaMeter\Juego con conteos (skills con nombre, íconos, emblemas) y botón "Abrir carpeta". Se cuenta lo que carga el meter: las skills con nombre que lee SkillNames de `skills.json` y solo los `<id>.png` de `iconos\` y `clases\` (un `fondo.png` no es de ninguna skill ni clase y no cuenta). La bienvenida usa el mismo `Config.GameDataSummary`, así que las dos pantallas dan el mismo número.
 - Tema: 4 tarjetas con vista previa de las paletas reales de MeterThemes, en el orden del mock: Abismo, Dorado, Mínimo, Carmesí (`ThemeCard.Order`; `MeterThemes.All` no cambia porque su primer tema es el de reemplazo).
 - Copiar imagen / Ver barras de prueba / Abrir pelea: ya no necesitan cerrar nada; la ventana queda abierta.
 
@@ -84,7 +84,7 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 - Comparar: estado propio del cuerpo del detalle al elegir una opción en "Comparar con"; "Sin comparar" para salir. Columna "GOLPES" (SkillSnapshot.Hits), compara daño total y DPS por skill; eje X en tiempo absoluto; marcadores de todas las muertes; delta verde = mejora, rojo = empeora. Las stats actuales de comparación pasan a una franja secundaria.
 
 ## Inicio (bienvenida)
-- `WelcomeWindow` propia y centrada en el primer arranque (bandera nueva WelcomeDone en preferencias, no reutilizar LastSeenNews). Checklist real: Npcap (detectado o no), placa de red (la elegida o "automática", "esperando tráfico" hasta el primer paquete si se puede saber sin I/O nuevo; si no, "automática"), datos del juego (conteos reales; "Listo" si hay skills.json, "Revisar" con link a la carpeta si no).
+- `WelcomeWindow` propia y centrada en el primer arranque (bandera nueva WelcomeDone en preferencias, no reutilizar LastSeenNews). Checklist real: Npcap (detectado o no), placa de red (la elegida o "automática", "esperando tráfico" hasta el primer paquete si se puede saber sin I/O nuevo; si no, "automática"), datos del juego (conteos reales, los mismos de Configuración → Datos del juego; "Listo" si hay skills.json, "Revisar" con link a la carpeta si no).
 - "Empezar a capturar" cierra y marca WelcomeDone (la captura ya corre); "Más tarde" cierra sin marcar.
 - Los consejos de NewsFeed.WelcomeLines pasan a una línea de ayuda en la bienvenida.
 
