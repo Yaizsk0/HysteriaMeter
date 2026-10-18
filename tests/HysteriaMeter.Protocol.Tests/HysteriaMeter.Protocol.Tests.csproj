@@ -14,6 +14,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\HysteriaMeter.Protocol\HysteriaMeter.Protocol.csproj" />
+    <!-- Replay de las peleas de referencia (ReferenceFightsTests): lectura del .pcap y motor de combate. -->
+    <ProjectReference Include="..\..\src\HysteriaMeter.Capture\HysteriaMeter.Capture.csproj" />
+    <ProjectReference Include="..\..\src\HysteriaMeter.Combat\HysteriaMeter.Combat.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\data\opcodes.json" Link="data\opcodes.json" CopyToOutputDirectory="PreserveNewest" />

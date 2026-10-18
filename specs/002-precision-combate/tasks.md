@@ -18,7 +18,7 @@ description: "Tareas de la feature 002: precisión del combate"
 ## Phase 1: Setup
 
 - [ ] T001 Definir el set de capturas de referencia (10 peleas: muñeco, campo, dungeon en party, con healer, con invocador), cada una con captura de Combat Analysis, y registrarlas en `specs/002-precision-combate/references.md` (sin los `.pcap`)
-- [ ] T002 [P] Test de replay de punta a punta que compara el total propio de cada captura contra Combat Analysis en `tests/HysteriaMeter.Protocol.Tests/ReferenceFightsTests.cs` (se saltea si la captura no está en la PC)
+- [X] T002 [P] Test de replay de punta a punta que compara el total propio de cada captura contra Combat Analysis en `tests/HysteriaMeter.Protocol.Tests/ReferenceFightsTests.cs` (se saltea si la captura no está en la PC). Corre con `HYSTERIA_CAPTURES` apuntando a la carpeta de las capturas; sin la variable o sin el `.pcap` se saltea (la CI no hace replay). Compara el `MainTargetDamage` del jugador local en el encuentro que termina con la muerte del boss (por npcId): mini boss exacto (648.468 y los golpes por modificador) y dungeon a menos de 1 % (2.040.321 contra 2.040.000)
 
 ## Phase 2: Foundational
 
