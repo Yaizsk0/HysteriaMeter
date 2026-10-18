@@ -32,6 +32,12 @@ public sealed partial class UiSnapshotTests
             h.Session(new MeterPreferences { WelcomeDone = false }, new CaptureStatus(DateTime.UtcNow)),
             new CaptureSetup(NpcapInstalled: true, Device: null))),
 
+        // Placa elegida en Configuración → Captura: el paso la nombra con la descripción de Npcap, no con el
+        // \Device\NPF_{GUID}, y dice de dónde salió.
+        new("14-bienvenida-placa-elegida", h => Welcome(
+            h.Session(new MeterPreferences { WelcomeDone = false, CaptureDevice = @"\Device\NPF_{X}" }),
+            new CaptureSetup(true, @"\Device\NPF_{X}", DeviceLabel: "Intel(R) Ethernet Connection (7) I219-V", DeviceOrigin: CaptureDeviceOrigin.Preferences))),
+
         // Sin Npcap: no está el driver y la captura falló con el mensaje real de LiveCaptureSource.
         new("14-bienvenida-sin-npcap", h =>
         {

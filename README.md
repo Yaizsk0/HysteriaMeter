@@ -128,6 +128,8 @@ El DPS ACTIVO usa el mismo tiempo activo que ACTIVO y TIEMPO MUERTO: los ticks d
 
 DIAGNÓSTICO y "Reportar un problema" suman dos contadores: las desincronizaciones del lector de mensajes y los paquetes del juego que el meter tiró porque no daba abasto. Ese segundo contador antes valía siempre 0, también en el Recorder, aunque se tiraran paquetes. El reporte que se hace desde el overlay (captura detenida o aviso de parche) ahora lleva el diagnóstico aunque no se haya abierto Configuración.
 
+En la bienvenida, el paso de la placa de red muestra el nombre de la placa ("Intel(R) Ethernet Connection…") en vez del `\Device\NPF_{GUID}`, y dice de dónde salió: "elegida en la configuración" si es la que guardaste y sigue conectada, "fijada en appsettings.json" si viene de `Capture:Device`. Si la guardada no está, nombra la que de verdad usa la captura.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
