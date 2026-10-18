@@ -34,7 +34,10 @@ public sealed class GameStreamDecoder
     public IReadOnlyList<CombatEvent> Push(ReadOnlySpan<byte> data, DateTimeOffset timestamp)
     {
         var events = new List<CombatEvent>();
-        foreach (var frame in _framer.Push(data))
+        var desyncs = _framer.Desyncs;
+        var frames = _framer.Push(data);
+        _stats.Desyncs += _framer.Desyncs - desyncs;
+        foreach (var frame in frames)
         {
             Handle(frame, timestamp, events, depth: 0);
         }
@@ -62,10 +65,13 @@ public sealed class GameStreamDecoder
                 return;
             }
 
+            // Un framer por bundle: se descarta al terminar, así que sus desincronizaciones se suman acá.
             var inner = new PacketFramer(_options);
             try
             {
-                foreach (var child in inner.Push(BundleDecoder.Decompress(frame.Body.Span)))
+                var children = inner.Push(BundleDecoder.Decompress(frame.Body.Span));
+                _stats.Desyncs += inner.Desyncs;
+                foreach (var child in children)
                 {
                     Handle(child, timestamp, events, depth + 1);
                 }
@@ -106,6 +112,13 @@ public sealed class DecoderStats
 
     /// <summary>Veces que se perdió el hilo del stream (hueco TCP) y hubo que resincronizar.</summary>
     public long Resyncs { get; set; }
+
+    /// <summary>
+    /// Veces que el framer leyó un largo inválido (fuera de rango o varint roto) y descartó lo pendiente. Puede seguir a
+    /// un hueco TCP o a tomar la conexión a mitad de camino (el stream retoma a mitad de un frame), así que un mismo
+    /// hueco puede sumar acá y en <see cref="Resyncs"/>. Suma el framer del stream y los de cada bundle.
+    /// </summary>
+    public long Desyncs { get; set; }
 
     /// <summary>Frames leídos en total, de cualquier opcode.</summary>
     public long TotalFrames => _byOpcode.Values.Sum();

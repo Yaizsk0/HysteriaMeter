@@ -81,7 +81,7 @@ description: "Tareas del MVP de Hysteria Meter"
 
 ## Phase 8: Polish
 
-- [ ] T036 [P] Mostrar `DecoderStats` y segmentos descartados en una ventana de diagnóstico
+- [X] T036 [P] Mostrar `DecoderStats` y segmentos descartados en una ventana de diagnóstico (Configuración → Diagnóstico, y el reporte de un problema: frames, conocidos, errores, resincronizaciones por huecos TCP, desincronizaciones del framer —el del stream más los de cada bundle— y segmentos que la cola de `LiveCaptureSource` descartó por llena; con replay, 0. No son las pérdidas del driver de Npcap)
 - [ ] T037 [P] Mensaje claro si Npcap no está instalado o no hay permisos
 - [X] T040 [P] Elegir automáticamente la placa con tráfico del juego en `LiveCaptureSource`
 - [X] T041 [P] `hysteria-rec replay` para correr el pipeline completo sobre un `.pcap`
