@@ -142,6 +142,24 @@ public sealed class TargetIdentityHistoryTests
     }
 
     [Fact]
+    public void A_short_pull_does_not_announce_a_record()
+    {
+        WithHistory((vm, repository, engine) =>
+        {
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: false, minute: 0, dps: 1000)));
+
+            // 5 s a 40k DPS sin kill: un pull que se reseteó, trash como en el historial (sin ★ ni aviso).
+            FinishLiveFight(engine, Base.AddHours(1), seconds: 5);
+            for (var wait = 0; wait < 30; wait++)
+            {
+                Pump(Task.Delay(10));
+            }
+
+            Assert.False(vm.HasRecordMessage);
+        });
+    }
+
+    [Fact]
     public void Naming_the_template_does_not_turn_a_worse_fight_into_a_record()
     {
         WithHistory((vm, repository, engine) =>
@@ -213,15 +231,24 @@ public sealed class TargetIdentityHistoryTests
     /// Una pelea en vivo de "Vos" contra la plantilla 2400123 (40k DPS: 200k de daño en 5 s) que termina por inactividad:
     /// el motor avisa <see cref="CombatEngine.EncounterFinished"/> y el overlay revisa el récord.
     /// </summary>
-    private static void FinishLiveFight(CombatEngine engine, DateTimeOffset start)
+    /// <summary>
+    /// Un wipe contra la plantilla 2400123 a 40k DPS: un golpe cada 5 s durante <paramref name="seconds"/>. Con 35 s (y
+    /// todo el daño al objetivo) es un intento de boss; con 5 s, un pull corto que queda como trash.
+    /// </summary>
+    private static void FinishLiveFight(CombatEngine engine, DateTimeOffset start, int seconds = 35)
     {
         engine.Apply(new LocalPlayerEvent(start, 1, "Vos"));
         engine.Apply(new EntitySpawnEvent(start, 900, null, NpcId: 2400123));
-        engine.Apply(new DamageEvent(start, 1, 900, 100, 100_000, HitModifiers.None));
-        engine.Apply(new DamageEvent(start.AddSeconds(5), 1, 900, 100, 100_000, HitModifiers.None));
+        var hits = seconds / 5 + 1;
+        var damage = 40_000L * seconds / hits;
+        for (var hit = 0; hit < hits; hit++)
+        {
+            engine.Apply(new DamageEvent(start.AddSeconds(hit * 5), 1, 900, 100, damage, HitModifiers.None));
+        }
+
         EncounterSnapshot? finished = null;
         engine.EncounterFinished += fight => finished = fight;
-        engine.Tick(start.AddSeconds(30));
+        engine.Tick(start.AddSeconds(seconds + 25));
         Assert.NotNull(finished);
         Assert.Equal(2400123U, finished.TargetNpcId);
         Assert.Equal(40_000, Assert.Single(finished.Actors).Dps);

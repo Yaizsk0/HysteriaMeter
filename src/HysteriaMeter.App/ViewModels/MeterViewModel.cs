@@ -1553,11 +1553,13 @@ public sealed partial class MeterViewModel : ObservableObject
     /// <summary>
     /// Al terminar una pelea, avisa si el DPS propio superó el mejor contra ese objetivo. "Ese objetivo" es el del
     /// historial (<see cref="FightTarget.Identity(EncounterSnapshot)"/>): una plantilla sin nombre también tiene récord.
+    /// Solo en un intento de boss, como la ★ del historial: se compara contra intentos de boss, y un pull corto con el DPS
+    /// del arranque no es un récord.
     /// </summary>
     private async Task CheckRecordAsync(EncounterSnapshot snapshot)
     {
         var local = snapshot.Actors.FirstOrDefault(a => a.IsLocalPlayer);
-        if (_history is null || local is null || FightTarget.Identity(snapshot) is null)
+        if (_history is null || local is null || FightTarget.Identity(snapshot) is null || !BossRules.IsBossAttempt(snapshot))
         {
             return;
         }
