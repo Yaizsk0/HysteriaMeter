@@ -26,7 +26,7 @@ Segunda captura: 2026-10-14, dungeon en party de 5 (7 min, 3,7 MB, Wi-Fi). Serve
 | Opcode | Qué es | Confianza | Decoder |
 |---|---|---|---|
 | `0xFFFF` | Bundle LZ4 | Alta (82/82 descomprimen) | `GameStreamDecoder` |
-| `0x3804` | Resultado de efecto sobre un objetivo; con `flags & 0x04` trae daño | Alta en el layout (913/913 parsean); ver "Pendiente" para la escala | `DamagePacketDecoder` |
+| `0x3804` | Resultado de efecto sobre un objetivo; con `flags & 0x04` trae daño | Alta en el layout (913/913 parsean) y en la escala (ver "Validación contra el juego") | `DamagePacketDecoder` |
 | `0x3805` | Tick de efecto periódico: type `0x0A` = DoT, `0x0B` = curación a otro, `0x09` = curación propia | Alta para DoT; curación sin validar | `PeriodicEffectDecoder` |
 | `0x3641` | Aparición de NPC o invocación: entidad, nombre del dueño opcional, ID de NPC, posición, HP actual y máximo | Alta | `NpcSpawnDecoder` |
 | `0x3645` | Aparición de otro jugador (1,5–2 KB) con su nombre | Alta para el nombre | `PlayerSpawnDecoder` |
@@ -126,5 +126,7 @@ Validado contra la lista de la legión (`0x8A05`, que trae nombre, item level y 
 
 1. ~~Escala del daño~~: resuelta con la dungeon (ver "Validación contra el juego"); el factor de la primera captura era un error de análisis.
 2. ~~Identificar el jugador local~~: resuelto con `0x364A` y `0x3633` (ver "Jugador local").
-3. Crítico, golpes por espalda, validar curaciones contra el juego, dueño de invocaciones sin nombre.
-4. Nombres de NPC: el ID de NPC está, falta una tabla ID → nombre.
+3. ~~Crítico y golpes por espalda~~: validados contra Destroyer Tarka (ver "Modificadores").
+4. Validar las curaciones contra el juego (tipos `0x09`/`0x0B` de `0x3805` y la curación directa): hace falta una pelea grabada con un healer en la party.
+5. Dueño de invocaciones sin nombre cuando dos jugadores comparten clase (ver "Layout de `0x3641`").
+6. Nombres de NPC: la tabla ID → nombre está en `data/npcs.json` (vacía en el repo) y `hysteria-extract` saca los nombres de los archivos del juego a la PC de cada uno.
