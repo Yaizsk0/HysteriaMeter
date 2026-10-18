@@ -484,6 +484,11 @@ $RECYCLE.BIN/
 # Hysteria Meter
 *.pcap
 *.pcapng
+# Material local de las capturas (diagnósticos, replays, notas): tiene nombres de otros jugadores.
+captures/
+# Salidas sueltas del Recorder.
+dump.txt
+record.err
 *.db
 *.db-wal
 *.db-shm
