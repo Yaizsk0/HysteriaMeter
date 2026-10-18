@@ -1,0 +1,314 @@
+using System.Globalization;
+using System.IO;
+using System.Runtime.ExceptionServices;
+using System.Windows.Threading;
+using HysteriaMeter.App.Pipeline;
+using HysteriaMeter.App.ViewModels;
+using HysteriaMeter.Combat;
+using HysteriaMeter.Protocol.Events;
+using HysteriaMeter.Storage;
+using Microsoft.Data.Sqlite;
+
+namespace HysteriaMeter.App.Tests;
+
+/// <summary>
+/// El historial y el modo dungeon deciden igual cuándo dos peleas son contra el mismo objetivo (la plantilla primero y,
+/// sin plantilla, el nombre) y cuentan los bosses de una run igual. Una celda del modo dungeon abre su intento aunque haya
+/// quedado fuera de las últimas peleas cargadas, sin perder la nota. El aviso de récord, "Comparar con" y el percentil del
+/// detalle comparan con esa misma regla: una plantilla sin nombre tiene récord, intentos y percentil como en el historial.
+/// </summary>
+[Collection(WpfAppGroup.Name)]
+public sealed class TargetIdentityHistoryTests
+{
+    private static readonly DateTimeOffset Base = new(2026, 10, 16, 21, 0, 0, TimeSpan.Zero);
+
+    private static HistoryItem Item(string id, string? name, uint? npc, bool killed, double dps, int minute, int seconds = 95)
+    {
+        var start = Base.AddMinutes(minute);
+        return HistoryItem.From(new EncounterSummary(
+            id, start.ToString("O", CultureInfo.InvariantCulture), start.AddSeconds(seconds).ToString("O", CultureInfo.InvariantCulture), name, killed, 1000,
+            LocalDps: dps, Attempt: 1, LocalName: "Vos", ActorsDamage: 1000, MainTargetDamage: 900, TargetNpcId: npc,
+            ZoneEnteredAt: Base.ToString("O", CultureInfo.InvariantCulture)));
+    }
+
+    private static EncounterSnapshot Snapshot(uint? npc, bool killed, int minute, string? name = null, int seconds = 95, double dps = 1000) =>
+        new(Guid.NewGuid(), Base.AddMinutes(minute), Base.AddMinutes(minute).AddSeconds(seconds), name, killed, (long)dps * seconds,
+            [new ActorSnapshot(1, "Vos", 15, true, (long)dps * seconds, dps, 0, 10, 2, 100, 0, [], MainTargetDamage: (long)dps * seconds, MainTargetDps: dps)],
+            TargetNpcId: npc, ZoneEnteredAt: Base);
+
+    [Fact]
+    public void Old_unnamed_attempts_and_new_named_ones_of_the_same_template_compare_together()
+    {
+        // Wipe y kill de antes de agregar el ID a data/npcs.json ("NPC 111"); el kill de hoy ya dice "Griffith".
+        HistoryItem[] newestFirst =
+        [
+            Item("named", "Griffith", 111, killed: true, dps: 1200, minute: 30),
+            Item("kill", null, 111, killed: true, dps: 1000, minute: 10),
+            Item("wipe", null, 111, killed: false, dps: 800, minute: 0),
+        ];
+
+        var items = HistoryItem.WithDeltas(HistoryItem.WithComparisons(newestFirst));
+
+        Assert.Equal(["Griffith", "NPC 111", "NPC 111"], items.Select(i => i.Target));
+        Assert.Equal([100, 67, 33], items.Select(i => i.Percentile));
+        Assert.Equal("+20%", items[0].Delta); // 1200 contra el kill de 1000, aunque esa fila diga "NPC 111"
+
+        // TU PROGRESO desde la fila vieja: los tres intentos, con el nombre que tiene hoy.
+        var progress = BossProgress.For(items, items[2], Base);
+        Assert.Equal($"{"Griffith".ToUpper(CultureInfo.CurrentCulture)} · {BossProgress.Header}", progress.Title);
+        Assert.Equal(3, progress.Bars.Count);
+        Assert.True(BossProgress.For(items, null, Base).HasData); // sin fila elegida, sigue siendo un solo boss
+
+        // En una run, el wipe sin nombre y el kill con nombre son un boss, no dos.
+        Assert.Equal("1/1 boss · 1 wipe", HistoryRun.BossesText([items[0], items[2]]));
+        Assert.Contains("Los intentos se siguen contando juntos", items[1].RowTip, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("kill-kill")]
+    [InlineData("kill-wipe")]
+    [InlineData("wipe-kill-wipe")]
+    [InlineData("two-bosses")]
+    public void The_history_run_line_counts_bosses_like_the_dungeon_summary(string scenario)
+    {
+        (uint? Npc, bool Killed)[] fights = scenario switch
+        {
+            // La misma plantilla muerta dos veces, o un wipe después del kill: dos bosses en las dos vistas.
+            "kill-kill" => [(2400400, true), (2400400, true)],
+            "kill-wipe" => [(2400400, true), (2400400, false)],
+            "wipe-kill-wipe" => [(2400400, false), (2400400, true), (2400400, false)],
+            _ => [(2400101, false), (2400101, true), (2400102, true)],
+        };
+
+        var dungeon = DungeonSummary.From(fights.Select((f, i) => Snapshot(f.Npc, f.Killed, i * 10)), Base);
+        var history = fights.Select((f, i) => Item($"f{i}", null, f.Npc, f.Killed, 1000, i * 10)).Reverse().ToList();
+
+        var wipes = dungeon.Wipes switch { 0 => "sin wipes", 1 => "1 wipe", var n => $"{n} wipes" };
+        var bosses = dungeon.Bosses.Count == 1 ? "boss" : "bosses";
+        Assert.Equal($"{dungeon.BossesKilled}/{dungeon.Bosses.Count} {bosses} · {wipes}", HistoryRun.BossesText(history));
+    }
+
+    [Fact]
+    public void A_matrix_cell_opens_its_fight_with_its_note_even_after_it_left_the_loaded_history()
+    {
+        WithHistory((vm, repository) =>
+        {
+            var boss = Snapshot(2400123, killed: true, minute: 0);
+            Pump(repository.SaveAsync(boss));
+            Pump(repository.SetNoteAsync(boss.Id.ToString(), "probar otra rotación"));
+
+            Pump(vm.ToggleHistoryCommand.ExecuteAsync(null));
+            DungeonSummaryViewModel? summary = null;
+            vm.RunSummaryRequested += s => summary = s;
+            Pump(vm.OpenRunSummaryCommand.ExecuteAsync(vm.HistoryRuns.SelectMany(r => r.Fights).Single(f => f.Id == boss.Id.ToString())));
+            Assert.NotNull(summary);
+
+            // Llegan más peleas que las que carga el historial y se recarga: la del boss queda afuera.
+            Pump(vm.ToggleHistoryCommand.ExecuteAsync(null));
+            for (var i = 1; i <= MeterViewModel.HistoryLimit; i++)
+            {
+                Pump(repository.SaveAsync(Snapshot(7, killed: true, minute: i, seconds: 10) with { ZoneEnteredAt = null }));
+            }
+
+            Pump(vm.ToggleHistoryCommand.ExecuteAsync(null));
+            Assert.DoesNotContain(vm.HistoryRuns.SelectMany(r => r.Fights), f => f.Id == boss.Id.ToString());
+
+            var cell = summary.Rows.Single().StyledCells.Single();
+            Assert.True(summary.OpenFight(cell));
+            for (var wait = 0; wait < 200 && vm.PinnedHistoryId != boss.Id.ToString(); wait++)
+            {
+                Pump(Task.Delay(10));
+            }
+
+            Assert.Equal(boss.Id.ToString(), vm.PinnedHistoryId);
+            Assert.Equal("probar otra rotación", vm.CurrentNote);
+        });
+    }
+
+    [Fact]
+    public void The_record_notice_compares_an_unnamed_template_like_the_history()
+    {
+        WithHistory((vm, repository, engine) =>
+        {
+            // Una pelea guardada contra la plantilla sin nombre, con menos DPS que la de ahora.
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: false, minute: 0, dps: 1000)));
+
+            FinishLiveFight(engine, Base.AddHours(1));
+            WaitFor(() => vm.HasRecordMessage);
+
+            // El historial le pone ★ a esta pelea: el aviso también, con el mismo rótulo del objetivo.
+            Assert.StartsWith("¡Récord en NPC 2400123!", vm.RecordMessage, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
+    public void A_short_pull_does_not_announce_a_record()
+    {
+        WithHistory((vm, repository, engine) =>
+        {
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: false, minute: 0, dps: 1000)));
+
+            // 5 s a 40k DPS sin kill: un pull que se reseteó, trash como en el historial (sin ★ ni aviso).
+            FinishLiveFight(engine, Base.AddHours(1), seconds: 5);
+            for (var wait = 0; wait < 30; wait++)
+            {
+                Pump(Task.Delay(10));
+            }
+
+            Assert.False(vm.HasRecordMessage);
+        });
+    }
+
+    [Fact]
+    public void Naming_the_template_does_not_turn_a_worse_fight_into_a_record()
+    {
+        WithHistory((vm, repository, engine) =>
+        {
+            // El mejor intento quedó como "NPC 2400123"; hoy data/npcs.json ya le pone nombre.
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: false, minute: 0, dps: 50_000)));
+            engine.Entities.Npcs = new NpcCatalog(new Dictionary<uint, NpcInfo> { [2400123] = new("Kromede") });
+
+            FinishLiveFight(engine, Base.AddHours(1));
+            WaitFor(() => vm.HasRecordMessage);
+
+            // 40k contra 50k: no es récord (el historial no le pone ★) y se compara con ese intento anterior.
+            Assert.DoesNotContain("Récord", vm.RecordMessage, StringComparison.Ordinal);
+            Assert.Equal(MeterViewModel.VsPreviousText(40_000, 50_000), vm.RecordMessage);
+        });
+    }
+
+    [Fact]
+    public void Compare_with_offers_the_past_attempts_of_an_unnamed_template()
+    {
+        WithHistory((vm, repository, _) =>
+        {
+            var best = Snapshot(2400123, killed: false, minute: 0, dps: 1500);
+            var previous = Snapshot(2400123, killed: true, minute: 10, dps: 1200);
+            Pump(repository.SaveAsync(best));
+            Pump(repository.SaveAsync(previous));
+            Pump(repository.SaveAsync(Snapshot(7, killed: true, minute: 15, dps: 9000))); // otra plantilla: no cuenta
+
+            // La pelea de ahora, sin nombre y ya con nombre: las dos son el mismo objetivo que las guardadas.
+            foreach (var current in new[] { Snapshot(2400123, killed: true, minute: 20), Snapshot(2400123, killed: true, minute: 20, name: "Kromede") })
+            {
+                var load = vm.Detail.PastAttempts!(current);
+                Pump(load);
+                Assert.Equal(["Tu intento anterior", "Tu mejor intento"], load.Result.Select(o => o.Label));
+                Assert.Equal([previous.Id, best.Id], load.Result.Select(o => o.SavedEncounter!.Id));
+            }
+
+            // Sin nombre ni plantilla no hay con qué comparar, como en el historial.
+            var unknown = vm.Detail.PastAttempts!(Snapshot(null, killed: true, minute: 20));
+            Pump(unknown);
+            Assert.Empty(unknown.Result);
+        });
+    }
+
+    [Fact]
+    public void The_detail_percentile_counts_the_attempts_of_an_unnamed_template()
+    {
+        WithHistory((_, repository, _) =>
+        {
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: false, minute: 0, dps: 1500)));
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: true, minute: 10, dps: 1200)));
+            Pump(repository.SaveAsync(Snapshot(7, killed: true, minute: 15, dps: 9000))); // otra plantilla: no cuenta
+            var pastDps = ActorDetailViewModel.PastDpsFrom(repository)!;
+
+            foreach (var current in new[] { Snapshot(2400123, killed: true, minute: 20), Snapshot(2400123, killed: true, minute: 20, name: "Kromede") })
+            {
+                var load = pastDps(current);
+                Pump(load);
+                Assert.Equal([1200d, 1500d], load.Result.Order());
+            }
+
+            var unknown = pastDps(Snapshot(null, killed: true, minute: 20));
+            Pump(unknown);
+            Assert.Empty(unknown.Result);
+        });
+    }
+
+    /// <summary>
+    /// Una pelea en vivo de "Vos" contra la plantilla 2400123 (40k DPS: 200k de daño en 5 s) que termina por inactividad:
+    /// el motor avisa <see cref="CombatEngine.EncounterFinished"/> y el overlay revisa el récord.
+    /// </summary>
+    /// <summary>
+    /// Un wipe contra la plantilla 2400123 a 40k DPS: un golpe cada 5 s durante <paramref name="seconds"/>. Con 35 s (y
+    /// todo el daño al objetivo) es un intento de boss; con 5 s, un pull corto que queda como trash.
+    /// </summary>
+    private static void FinishLiveFight(CombatEngine engine, DateTimeOffset start, int seconds = 35)
+    {
+        engine.Apply(new LocalPlayerEvent(start, 1, "Vos"));
+        engine.Apply(new EntitySpawnEvent(start, 900, null, NpcId: 2400123));
+        var hits = seconds / 5 + 1;
+        var damage = 40_000L * seconds / hits;
+        for (var hit = 0; hit < hits; hit++)
+        {
+            engine.Apply(new DamageEvent(start.AddSeconds(hit * 5), 1, 900, 100, damage, HitModifiers.None));
+        }
+
+        EncounterSnapshot? finished = null;
+        engine.EncounterFinished += fight => finished = fight;
+        engine.Tick(start.AddSeconds(seconds + 25));
+        Assert.NotNull(finished);
+        Assert.Equal(2400123U, finished.TargetNpcId);
+        Assert.Equal(40_000, Assert.Single(finished.Actors).Dps);
+    }
+
+    private static void WaitFor(Func<bool> condition)
+    {
+        for (var wait = 0; wait < 200 && !condition(); wait++)
+        {
+            Pump(Task.Delay(10));
+        }
+
+        Assert.True(condition());
+    }
+
+    private static void WithHistory(Action<MeterViewModel, EncounterRepository> action) =>
+        WithHistory((vm, repository, _) => action(vm, repository));
+
+    private static void WithHistory(Action<MeterViewModel, EncounterRepository, CombatEngine> action)
+    {
+        ExceptionDispatchInfo? failure = null;
+        var thread = new Thread(() =>
+        {
+            var database = Path.Combine(Path.GetTempPath(), $"hysteria-identity-{Guid.NewGuid():N}.db");
+            MeterViewModel? vm = null;
+            try
+            {
+                SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
+                var repository = new EncounterRepository(database);
+                Pump(repository.InitializeAsync());
+                var engine = new CombatEngine();
+                vm = new MeterViewModel(new MeterSession(engine, new CaptureRecorder(), SkillNames.Empty,
+                    new MeterPreferences { LastSeenNews = 1 }, _ => { }, history: repository));
+                action(vm, repository, engine);
+            }
+            catch (Exception ex)
+            {
+                failure = ExceptionDispatchInfo.Capture(ex);
+            }
+            finally
+            {
+                vm?.Stop();
+                SqliteConnection.ClearAllPools();
+                foreach (var suffix in new[] { string.Empty, "-wal", "-shm" })
+                {
+                    File.Delete(database + suffix);
+                }
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        failure?.Throw();
+    }
+
+    private static void Pump(Task task)
+    {
+        var frame = new DispatcherFrame();
+        _ = task.ContinueWith(_ => frame.Continue = false, TaskScheduler.FromCurrentSynchronizationContext());
+        Dispatcher.PushFrame(frame);
+        task.GetAwaiter().GetResult();
+    }
+}

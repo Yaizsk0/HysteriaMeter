@@ -171,11 +171,14 @@ public sealed partial class UiSnapshotTests
         }
         finally
         {
-            // El pool de SQLite ya lo soltó el hilo STA al apagarse; acá solo se borra la base temporal.
-            foreach (var file in new[] { database, database + "-wal", database + "-shm" })
+            // El pool de SQLite ya lo soltó el hilo STA al apagarse; acá solo se borran las bases temporales (la
+            // compartida y las propias de los estados de UiSnapshotTests.DatosReales.cs).
+            foreach (var file in SeparateDatabases.Prepend(database).SelectMany(db => new[] { db, db + "-wal", db + "-shm" }))
             {
                 File.Delete(file);
             }
+
+            SeparateDatabases.Clear();
         }
 
         Assert.True(failures.Count == 0, "Estados que no se generaron:\n" + string.Join('\n', failures));

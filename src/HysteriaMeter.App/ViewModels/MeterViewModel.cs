@@ -1191,7 +1191,7 @@ public sealed partial class MeterViewModel : ObservableObject
 
         var total = (double)snapshot.Actors.Sum(metric);
         var unit = tab.Unit();
-        var header = $"{snapshot.TargetName ?? "Encuentro"} {snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture)} {unit}";
+        var header = $"{TitleOf(snapshot)} {snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture)} {unit}";
         var parts = rows.Select((a, i) =>
             $"{i + 1}. {a.Name} {ActorRowViewModel.Compact(metric(a) / seconds)} ({(metric(a) / total).ToString("P0", CultureInfo.InvariantCulture).Replace(" ", string.Empty, StringComparison.Ordinal)})");
         return string.Join(" · ", parts.Prepend(header));
@@ -1550,11 +1550,16 @@ public sealed partial class MeterViewModel : ObservableObject
         }
     }
 
-    /// <summary>Al terminar una pelea, avisa si el DPS propio superó el mejor contra ese objetivo.</summary>
+    /// <summary>
+    /// Al terminar una pelea, avisa si el DPS propio superó el mejor contra ese objetivo. "Ese objetivo" es el del
+    /// historial (<see cref="FightTarget.Identity(EncounterSnapshot)"/>): una plantilla sin nombre también tiene récord.
+    /// Solo en un intento de boss, como la ★ del historial: se compara contra intentos de boss, y un pull corto con el DPS
+    /// del arranque no es un récord.
+    /// </summary>
     private async Task CheckRecordAsync(EncounterSnapshot snapshot)
     {
         var local = snapshot.Actors.FirstOrDefault(a => a.IsLocalPlayer);
-        if (_history is null || local is null || snapshot.TargetName is not { Length: > 0 } target)
+        if (_history is null || local is null || FightTarget.Identity(snapshot) is null || !BossRules.IsBossAttempt(snapshot))
         {
             return;
         }
@@ -1563,15 +1568,15 @@ public sealed partial class MeterViewModel : ObservableObject
         double? previous;
         try
         {
-            best = await _history.BestLocalDpsAsync(target, snapshot.Id.ToString(), local.Name).ConfigureAwait(true);
-            previous = await _history.PreviousLocalDpsAsync(target, snapshot.Id.ToString(), local.Name).ConfigureAwait(true);
+            best = await _history.BestLocalDpsAsync(snapshot.TargetName, snapshot.TargetNpcId, snapshot.Id.ToString(), local.Name).ConfigureAwait(true);
+            previous = await _history.PreviousLocalDpsAsync(snapshot.TargetName, snapshot.TargetNpcId, snapshot.Id.ToString(), local.Name).ConfigureAwait(true);
         }
         catch (DbException)
         {
             return;
         }
 
-        if ((RecordText(target, local.Dps, best) ?? VsPreviousText(local.Dps, previous)) is not { } message)
+        if ((RecordText(TitleOf(snapshot), local.Dps, best) ?? VsPreviousText(local.Dps, previous)) is not { } message)
         {
             return;
         }
@@ -1593,9 +1598,9 @@ public sealed partial class MeterViewModel : ObservableObject
 
     /// <summary>
     /// El nombre del objetivo; si el juego no lo mandó y no está en data/npcs.json, "NPC 12345" para poder agregarlo.
+    /// Es el mismo rótulo del historial y del modo dungeon (<see cref="FightTarget.Label(EncounterSnapshot)"/>).
     /// </summary>
-    public static string TitleOf(EncounterSnapshot snapshot) =>
-        snapshot.TargetName ?? (snapshot.TargetNpcId is { } npc ? $"NPC {npc.ToString(CultureInfo.InvariantCulture)}" : "Encuentro");
+    public static string TitleOf(EncounterSnapshot snapshot) => FightTarget.Label(snapshot);
 
     /// <summary>"¡Récord en Tarka! 12.4k DPS (antes 11.0k)", o <c>null</c> si no lo superó o es la primera vez.</summary>
     public static string? RecordText(string target, double dps, double? previousBest) =>
@@ -1603,10 +1608,13 @@ public sealed partial class MeterViewModel : ObservableObject
             ? $"¡Récord en {target}! {ActorRowViewModel.Compact(dps)} DPS (antes {ActorRowViewModel.Compact(best)})"
             : null;
 
-    /// <summary>Tu intento anterior y tu mejor intento contra el objetivo, para "Comparar con" del detalle.</summary>
+    /// <summary>
+    /// Tu intento anterior y tu mejor intento contra el objetivo, para "Comparar con" del detalle. Con la regla del
+    /// historial (<see cref="FightTarget.Identity(EncounterSnapshot)"/>): la plantilla primero y, sin plantilla, el nombre.
+    /// </summary>
     private async Task<IReadOnlyList<CompareOption>> LoadPastAttemptsAsync(EncounterSnapshot snapshot)
     {
-        if (_history is null || snapshot.TargetName is not { Length: > 0 } target)
+        if (_history is null || FightTarget.Identity(snapshot) is null)
         {
             return [];
         }
@@ -1614,7 +1622,7 @@ public sealed partial class MeterViewModel : ObservableObject
         try
         {
             var localName = snapshot.Actors.FirstOrDefault(a => a.IsLocalPlayer)?.Name;
-            var (previousId, bestId) = await _history.PastAttemptsAsync(target, snapshot.Id.ToString(), localName).ConfigureAwait(true);
+            var (previousId, bestId) = await _history.PastAttemptsAsync(snapshot.TargetName, snapshot.TargetNpcId, snapshot.Id.ToString(), localName).ConfigureAwait(true);
             var previous = previousId is null ? null : await _history.LoadAsync(previousId).ConfigureAwait(true);
             var best = bestId is null || bestId == previousId ? null : await _history.LoadAsync(bestId).ConfigureAwait(true);
             return
@@ -1758,7 +1766,35 @@ public sealed partial class MeterViewModel : ObservableObject
         }
 
         var entered = DateTimeOffset.TryParse(run, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var at) ? at : (DateTimeOffset?)null;
-        RunSummaryRequested?.Invoke(new DungeonSummaryViewModel(DungeonSummary.From(fights, entered)));
+        RunSummaryRequested?.Invoke(new DungeonSummaryViewModel(DungeonSummary.From(fights, entered), OpenRunFight, AnonymizeExports));
+    }
+
+    /// <summary>Un clic en la matriz del modo dungeon: abre ese intento en el overlay, como una fila del historial.</summary>
+    private void OpenRunFight(Guid id) => _ = OpenRunFightAsync(id);
+
+    /// <summary>
+    /// Busca la fila en el historial cargado; si quedó fuera de las últimas <see cref="HistoryLimit"/> (llegaron peleas
+    /// nuevas con el modo dungeon abierto), la lee de la base con su nota, para que abrirla no la pise con una vacía.
+    /// </summary>
+    private async Task OpenRunFightAsync(Guid id)
+    {
+        var item = _allHistory.Find(i => Guid.TryParse(i.Id, out var saved) && saved == id);
+        if (item is null && _history is not null)
+        {
+            try
+            {
+                item = await _history.LoadSummaryAsync(id.ToString()).ConfigureAwait(true) is { } summary ? HistoryItem.From(summary) : null;
+            }
+            catch (DbException)
+            {
+                return;
+            }
+        }
+
+        if (item is not null)
+        {
+            await OpenEncounterCommand.ExecuteAsync(item).ConfigureAwait(true);
+        }
     }
 
     /// <summary>Muestra una pelea inventada para acomodar el overlay sin combatir.</summary>

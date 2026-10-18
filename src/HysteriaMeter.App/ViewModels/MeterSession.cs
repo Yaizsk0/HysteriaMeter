@@ -60,7 +60,7 @@ public sealed class MeterSession
         }
 
         var error = await DiscordWebhook.SendAsync(Preferences.DiscordWebhook, summary).ConfigureAwait(false);
-        DiscordResult?.Invoke(error ?? $"Enviado a Discord: {snapshot.TargetName ?? "Encuentro"}");
+        DiscordResult?.Invoke(error ?? $"Enviado a Discord: {MeterViewModel.TitleOf(snapshot)}");
     }
 
     private async void OnEncounterFinished(EncounterSnapshot snapshot)

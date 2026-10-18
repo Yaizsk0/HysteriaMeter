@@ -1,7 +1,9 @@
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Windows.Media;
 using HysteriaMeter.Combat;
+using HysteriaMeter.Storage;
 
 namespace HysteriaMeter.App.ViewModels;
 
@@ -17,8 +19,20 @@ public sealed class DungeonSummaryViewModel
     /// <summary>Ancho en píxeles de la barra más larga en cada boss.</summary>
     public const double BarWidth = 240;
 
-    public DungeonSummaryViewModel(DungeonSummary summary)
+    private readonly Action<Guid>? _openFight;
+    private readonly bool _anonymize;
+    private readonly string _exportFolder;
+
+    /// <param name="summary">La run.</param>
+    /// <param name="openFight">Abre una pelea guardada (clic en una celda de la matriz); sin él, las celdas no se abren.</param>
+    /// <param name="anonymize">"Ocultar los nombres de los demás": el texto para Discord y el CSV van con "Yo" y "Jugador N".</param>
+    /// <param name="exportFolder">Dónde guardar el CSV; por defecto, Exportes.</param>
+    public DungeonSummaryViewModel(DungeonSummary summary, Action<Guid>? openFight = null, bool anonymize = false, string? exportFolder = null)
     {
+        _openFight = openFight;
+        _anonymize = anonymize;
+        _exportFolder = exportFolder ?? MeterViewModel.ExportFolder;
+
         var culture = CultureInfo.CurrentCulture;
         Summary = summary;
         Title = $"RUN · ENTRADA {summary.Entered.ToLocalTime().ToString("dd/MM HH:mm", culture)}";
@@ -30,12 +44,23 @@ public sealed class DungeonSummaryViewModel
         Deaths = summary.Deaths.ToString(culture);
 
         var total = Math.Max(summary.Duration.TotalSeconds, 1);
-        Timeline = [.. summary.Timeline.Select(s => new SegmentItem(
-            Math.Max(s.StartSecond / total * TimelineWidth, 0),
-            Math.Max(s.Seconds / total * TimelineWidth, 3),
-            s.Kind switch { RunSegmentKind.Kill => KillBrush, RunSegmentKind.Wipe => WipeBrush, _ => TrashBrush },
-            s.Label,
-            $"{s.Label} · {Length(TimeSpan.FromSeconds(s.Seconds))} · {(s.Kind switch { RunSegmentKind.Kill => "kill", RunSegmentKind.Wipe => "wipe", _ => "trash" })}", s.Kind))];
+        var killOf = summary.Bosses.Where(b => b.Killed).DistinctBy(b => b.DecidingId).ToDictionary(b => b.DecidingId);
+        Timeline = [.. summary.Timeline.Select(s =>
+        {
+            var suffix = SegmentSuffix(s, killOf);
+            return new SegmentItem(
+                Math.Max(s.StartSecond / total * TimelineWidth, 0),
+                Math.Max(s.Seconds / total * TimelineWidth, 3),
+                s.Kind switch { RunSegmentKind.Kill => KillBrush, RunSegmentKind.Wipe => WipeBrush, _ => TrashBrush },
+                suffix.Length > 0 ? $"{s.Label} {suffix}" : s.Label,
+                $"{s.Label} · {Length(TimeSpan.FromSeconds(s.Seconds))} · {SegmentKind(s)}", s.Kind)
+            {
+                // "2400123" en vez de "NPC 2400123": en un tramo angosto, lo que distingue dos plantillas es el final.
+                Name = FightTarget.Compact(s.Label),
+                KeepEnd = FightTarget.IsNpcLabel(s.Label),
+                Suffix = suffix,
+            };
+        })];
 
         Cards = [.. summary.Bosses.Select(b =>
         {
@@ -44,7 +69,7 @@ public sealed class DungeonSummaryViewModel
                 b.Name,
                 b.Killed ? $"KILL {Length(b.Duration)}" : "SIN KILL",
                 b.Killed ? KillBrush : WipeBrush,
-                $"Intentos {b.Attempts} · DPS party {ActorRowViewModel.Compact(b.PartyDps)} · Muertes {b.Deaths}",
+                $"Intentos {AttemptsText(b)} · DPS party {ActorRowViewModel.Compact(b.PartyDps)} · Muertes {b.Deaths}",
                 [.. b.Players.Select(p => new BossPlayerRow(
                     p.Name,
                     p.Dps > 0 ? ActorRowViewModel.Compact(p.Dps) : "—",
@@ -53,8 +78,8 @@ public sealed class DungeonSummaryViewModel
                     ClassBrush(p.ClassId, 0x55),
                     p.IsLocalPlayer))])
             {
-                Killed = b.Killed, Duration = Length(b.Duration), Attempts = b.Attempts,
-                PartyDps = ActorRowViewModel.Compact(b.PartyDps), Deaths = b.Deaths,
+                Killed = b.Killed, Duration = Length(b.Duration), Attempts = AttemptsText(b), AttemptsTip = AttemptsTipOf(b),
+                PartyDps = ActorRowViewModel.Compact(b.PartyDps), Deaths = b.Deaths, Note = NoteOf(b),
             };
         })];
 
@@ -62,11 +87,128 @@ public sealed class DungeonSummaryViewModel
         Rows = [.. summary.Players.Select(p =>
         {
             var cells = summary.Bosses.Select(b => b.Players.FirstOrDefault(l => l.Name == p.Name) is { } line
-                ? new PlayerBossCell((line.Dps > 0 ? ActorRowViewModel.Compact(line.Dps) : "—") + (line.Deaths > 0 ? $" ☠{line.Deaths}" : string.Empty), line.Deaths)
+                ? Cell(b, (line.Dps > 0 ? ActorRowViewModel.Compact(line.Dps) : "—") + (line.Deaths > 0 ? $" ☠{line.Deaths}" : string.Empty), line.Deaths)
                 : new PlayerBossCell(string.Empty, 0)).ToList();
             return new PlayerRow(p.Name, ClassBrush(p.ClassId, 0xFF), [.. cells.Select(c => c.Text)],
                 p.Deaths > 0 ? $"☠ {p.Deaths}" : "—", ActorRowViewModel.Compact(p.Dps)) { StyledCells = cells };
         })];
+    }
+
+    /// <summary>Una celda de la matriz: abre el intento que cuenta de ese boss (el kill, o el último), el que da su DPS.</summary>
+    private PlayerBossCell Cell(BossSummary boss, string text, int deaths)
+    {
+        var canOpen = _openFight is not null && boss.DecidingId != Guid.Empty;
+        var attempt = boss.Killed ? "el kill" : "el último intento";
+        return new PlayerBossCell(text, deaths)
+        {
+            FightId = boss.DecidingId,
+            CanOpen = canOpen,
+            Tip = canOpen ? $"{text} · clic: abre {attempt} contra {boss.Name}" : text,
+        };
+    }
+
+    /// <summary>Abre en el overlay el intento de esa celda. Devuelve si había uno para abrir.</summary>
+    public bool OpenFight(PlayerBossCell? cell)
+    {
+        if (cell is not { CanOpen: true } || _openFight is null)
+        {
+            return false;
+        }
+
+        _openFight(cell.FightId);
+        return true;
+    }
+
+    /// <summary>
+    /// Lo que va después del nombre en el segmento, como el mock ("Furia 3:58", "Furia ✕"): la duración de su tarjeta en un
+    /// kill, ✕ en un wipe y nada en el trash.
+    /// </summary>
+    private static string SegmentSuffix(RunSegment segment, Dictionary<Guid, BossSummary> killOf) => segment.Kind switch
+    {
+        RunSegmentKind.Kill => Length(killOf.TryGetValue(segment.FightId, out var boss) ? boss.Duration : TimeSpan.FromSeconds(segment.Seconds)),
+        RunSegmentKind.Wipe => "✕",
+        _ => string.Empty,
+    };
+
+    private static string SegmentKind(RunSegment segment) => segment.Kind switch
+    {
+        RunSegmentKind.Kill => "kill",
+        RunSegmentKind.Wipe => "wipe",
+        _ when segment.Label == FightTarget.Unknown => "sin nombre ni plantilla: no se sabe si fue trash o un wipe",
+        _ => "trash",
+    };
+
+    /// <summary>
+    /// "Intentos 2"; sin nombre ni plantilla, "Intentos —": los wipes de esas peleas no se reconocen (quedan "Encuentro"),
+    /// así que no se sabe cuántos intentos hubo.
+    /// </summary>
+    internal static string AttemptsText(BossSummary boss) => boss.Identified ? boss.Attempts.ToString(CultureInfo.CurrentCulture) : "—";
+
+    /// <summary>Por qué el número de intentos puede no ser todo lo que se peleó contra ese boss; <c>null</c> si no hay nada que aclarar.</summary>
+    internal static string? AttemptsTipOf(BossSummary boss) =>
+        !boss.Identified
+            ? "Sin nombre ni plantilla: los wipes de estas peleas no se reconocen (quedan \"Encuentro\" en la línea de tiempo), así que no se sabe cuántos intentos hubo."
+            : boss.OtherPulls
+                ? "Antes hubo otra pelea contra este objetivo que no cuenta como intento (duró menos de 30 s o el daño se repartió): queda como trash en la línea de tiempo."
+                : null;
+
+    /// <summary>
+    /// La nota al pie de cada boss, solo con lo que se midió: cada wipe con el tiempo al que cayó y la fase más baja de
+    /// vida que se vio (75, 50 o 25 %); sin wipes, si el kill fue limpio (nadie murió) y quién hizo más DPS. "Kill limpio"
+    /// y "Kill al primer intento" dan a entender que fue el único pull (en el mock van con 1 intento): solo con nombre o
+    /// plantilla y sin otra pelea antes contra el mismo objetivo que quedó como trash (<see cref="BossSummary.OtherPulls"/>).
+    /// Un "Boss N" sin identidad pudo tener wipes que no se reconocen ("Encuentro"): ahí, sin muertes, solo "Nadie murió
+    /// en el kill.", que es lo que se midió.
+    /// </summary>
+    internal static string NoteOf(BossSummary boss)
+    {
+        const int Listed = 3;
+        if (boss.WipeList.Count > 0)
+        {
+            var wipes = boss.WipeList.Take(Listed).Select((w, i) =>
+                $"Wipe {(i + 1).ToString(CultureInfo.InvariantCulture)} a los {Length(w.Duration)}"
+                + (w.BelowPercent is { } percent ? $" (vida bajo el {percent.ToString(CultureInfo.InvariantCulture)}%)." : "."));
+            var rest = boss.WipeList.Count - Listed;
+            return string.Join(' ', rest > 0 ? wipes.Append($"Y {rest.ToString(CultureInfo.InvariantCulture)} wipes más.") : wipes);
+        }
+
+        if (!boss.Killed)
+        {
+            return string.Empty;
+        }
+
+        var onlyPull = boss.Identified && !boss.OtherPulls;
+        var kill = (onlyPull, boss.Deaths == 0) switch
+        {
+            (true, true) => "Kill limpio.",
+            (true, false) => "Kill al primer intento.",
+            (false, true) => "Nadie murió en el kill.",
+            _ => string.Empty,
+        };
+        var best = boss.Players.Where(p => p.Dps > 0).MaxBy(p => p.Dps) is { } top ? $"Mejor DPS: {top.Name}." : string.Empty;
+        return string.Join(' ', new[] { kill, best }.Where(part => part.Length > 0));
+    }
+
+    /// <summary>La run como se comparte: con nombres anónimos si así se eligió.</summary>
+    private DungeonSummary Shared => _anonymize ? EncounterExport.Anonymize(Summary) : Summary;
+
+    /// <summary>
+    /// "Exportar resumen": guarda la run en Exportes como CSV (una fila por jugador y boss, y la run completa). Devuelve
+    /// la ruta del archivo, o el motivo si no se pudo guardar.
+    /// </summary>
+    public (string? Path, string? Error) Export()
+    {
+        try
+        {
+            Directory.CreateDirectory(_exportFolder);
+            var path = Path.Combine(_exportFolder, $"{EncounterExport.RunFileName(Summary.Entered.ToLocalTime())}.csv");
+            File.WriteAllText(path, EncounterExport.RunToCsv(Shared), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+            return (path, null);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return (null, $"No se pudo guardar: {ex.Message}");
+        }
     }
 
     public DungeonSummary Summary { get; }
@@ -102,16 +244,18 @@ public sealed class DungeonSummaryViewModel
 
     public IReadOnlyList<PlayerRow> Rows { get; }
 
-    /// <summary>El resumen en texto, para pegar en Discord.</summary>
+    /// <summary>El resumen en texto, para pegar en Discord (con nombres anónimos si así se eligió).</summary>
     public string ShareText
     {
         get
         {
             var text = new StringBuilder();
-            text.AppendLine(CultureInfo.InvariantCulture, $"**{Title}** · {Duration} · {Bosses} bosses · {Wipes} wipes · {Deaths} muertes");
-            foreach (var boss in Summary.Bosses)
+            text.AppendLine(
+                CultureInfo.InvariantCulture,
+                $"**{Title}** · {Duration} · {Count(Summary.BossesKilled, "boss", "bosses")} · {Count(Summary.Wipes, "wipe", "wipes")} · {Count(Summary.Deaths, "muerte", "muertes")}");
+            foreach (var boss in Shared.Bosses)
             {
-                text.AppendLine(CultureInfo.InvariantCulture, $"> **{boss.Name}** {(boss.Killed ? "kill " + Length(boss.Duration) : "sin kill")} · {boss.Attempts} intentos");
+                text.AppendLine(CultureInfo.InvariantCulture, $"> **{boss.Name}** {(boss.Killed ? "kill " + Length(boss.Duration) : "sin kill")}{ShareAttempts(boss)}");
                 foreach (var player in boss.Players)
                 {
                     text.AppendLine(CultureInfo.InvariantCulture, $"> {player.Name} {ActorRowViewModel.Compact(player.Dps)}{(player.Deaths > 0 ? " ☠" + player.Deaths : string.Empty)}");
@@ -121,6 +265,16 @@ public sealed class DungeonSummaryViewModel
             return text.ToString();
         }
     }
+
+    /// <summary>"1 boss", "3 bosses": el número con la palabra en singular o plural.</summary>
+    private static string Count(int count, string one, string many) =>
+        $"{count.ToString(CultureInfo.InvariantCulture)} {(count == 1 ? one : many)}";
+
+    /// <summary>" · 1 intento", " · 3 intentos"; nada sin nombre ni plantilla (no se sabe cuántos hubo).</summary>
+    private static string ShareAttempts(BossSummary boss) =>
+        !boss.Identified ? string.Empty
+        : boss.Attempts == 1 ? " · 1 intento"
+        : $" · {boss.Attempts.ToString(CultureInfo.InvariantCulture)} intentos";
 
     // Mismos valores que Kill, Wipe, Neutral y ClassUnknown de Themes/Theme.xaml (no cambian con el tema).
     private static readonly Brush KillBrush = Frozen(Color.FromRgb(0xE8, 0xB0, 0x4A));
@@ -146,15 +300,38 @@ public sealed class DungeonSummaryViewModel
         span.TotalHours >= 1 ? span.ToString(@"h\:mm\:ss", CultureInfo.InvariantCulture) : span.ToString(@"m\:ss", CultureInfo.InvariantCulture);
 }
 
-public sealed record SegmentItem(double Left, double Width, Brush Fill, string Label, string Tip, RunSegmentKind Kind = RunSegmentKind.Trash);
+/// <summary>
+/// Un tramo del timeline. <paramref name="Label"/> es el texto entero ("NPC 2400123 1:35"); la ventana dibuja
+/// <see cref="Name"/>, que se recorta si no entra, y <see cref="Suffix"/> (duración o ✕), que siempre se ve.
+/// </summary>
+public sealed record SegmentItem(double Left, double Width, Brush Fill, string Label, string Tip, RunSegmentKind Kind = RunSegmentKind.Trash)
+{
+    public string Name { get; init; } = Label;
+
+    /// <summary>
+    /// El nombre es el número de una plantilla: si no entra, se corta el principio y no el final (los bosses de una
+    /// dungeon suelen tener plantillas seguidas, 2400121 y 2400123). El rótulo completo está en <see cref="Tip"/>.
+    /// </summary>
+    public bool KeepEnd { get; init; }
+
+    public string Suffix { get; init; } = string.Empty;
+}
 
 public sealed record BossCard(string Name, string Result, Brush ResultBrush, string Stats, IReadOnlyList<BossPlayerRow> Players)
 {
     public bool Killed { get; init; }
     public string Duration { get; init; } = string.Empty;
-    public int Attempts { get; init; }
+    /// <summary>"2", o "—" sin nombre ni plantilla (<see cref="DungeonSummaryViewModel.AttemptsText"/>).</summary>
+    public string Attempts { get; init; } = string.Empty;
+
+    /// <summary>Tooltip de "Intentos": por qué el número puede no ser todo lo que se peleó; <c>null</c> si no hace falta.</summary>
+    public string? AttemptsTip { get; init; }
+
     public string PartyDps { get; init; } = string.Empty;
     public int Deaths { get; init; }
+
+    /// <summary>Nota al pie: los wipes con su tiempo y fase, o si el kill fue limpio.</summary>
+    public string Note { get; init; } = string.Empty;
 }
 
 public sealed record BossPlayerRow(string Name, string Dps, string Skulls, double BarWidth, Brush Bar, bool IsLocalPlayer);
@@ -164,4 +341,13 @@ public sealed record PlayerRow(string Name, Brush Color, IReadOnlyList<string> C
     public IReadOnlyList<PlayerBossCell> StyledCells { get; init; } = [];
 }
 
-public sealed record PlayerBossCell(string Text, int Deaths);
+/// <summary>Una celda de la matriz: DPS y muertes de un jugador en un boss, y el intento que se abre con un clic.</summary>
+public sealed record PlayerBossCell(string Text, int Deaths)
+{
+    /// <summary>El intento que cuenta de ese boss (el kill, o el último).</summary>
+    public Guid FightId { get; init; }
+
+    public bool CanOpen { get; init; }
+
+    public string? Tip { get; init; }
+}

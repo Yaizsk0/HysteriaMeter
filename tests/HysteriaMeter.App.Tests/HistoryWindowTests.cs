@@ -77,8 +77,9 @@ public sealed class HistoryWindowTests
                 Assert.Equal([RunSegmentKind.Kill, RunSegmentKind.Wipe, RunSegmentKind.Trash], run.Fights.Select(f => f.Kind));
                 Assert.Equal(1, run.Fights[0].Deaths);
                 Assert.False(vm.HistoryRuns[1].CanSummarize);
-                Assert.False(vm.HasProgress); // dos objetivos ("Encuentro" y el muñeco) y ninguna fila elegida
-                Assert.Equal(BossProgress.PickText, vm.Progress.EmptyText);
+                // Sin fila elegida: el trash ("Encuentro") no es un boss, así que queda un solo objetivo y se grafica.
+                Assert.True(vm.HasProgress);
+                Assert.Equal(string.Empty, vm.Progress.EmptyText);
 
                 // Los chips son excluyentes y filtran sobre todas las peleas cargadas.
                 vm.FilterBosses = true;

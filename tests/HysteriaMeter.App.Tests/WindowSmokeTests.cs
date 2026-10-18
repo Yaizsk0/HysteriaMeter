@@ -274,7 +274,7 @@ public sealed partial class WindowSmokeTests
     public void History_compares_and_filters_per_character()
     {
         HistoryItem Item(string id, string character, double dps) =>
-            new(id, "Tarka", "16/10 21:00", "01:00", "1.0M", true, LocalDps: dps, Character: character);
+            new(id, "Tarka", "16/10 21:00", "01:00", "1.0M", true, LocalDps: dps, Character: character, Kind: RunSegmentKind.Kill);
 
         var items = HistoryItem.WithCharacterTags(HistoryItem.WithComparisons([Item("a", "Tests", 3000), Item("b", "Alt", 1000), Item("c", "Alt", 1200)]));
         Assert.Equal(100, items.Single(i => i.Id == "c").Percentile);
@@ -484,7 +484,7 @@ public sealed partial class WindowSmokeTests
     [Fact]
     public void History_compares_my_dps_with_the_best_try_on_the_same_target()
     {
-        HistoryItem Item(string target, double? dps) => new("x", target, "15/10 21:00", "01:00", "1m", false, LocalDps: dps);
+        HistoryItem Item(string target, double? dps) => new("x", target, "15/10 21:00", "01:00", "1m", false, LocalDps: dps, Kind: RunSegmentKind.Wipe);
         var items = HistoryItem.WithComparisons([Item("Tarka", 800), Item("Tarka", 1000), Item("Solo", 500), Item("Tarka", null)]);
         Assert.Contains("vs mejor", items[0].VsBest);
         Assert.Contains("20", items[0].VsBest);
@@ -585,7 +585,7 @@ public sealed partial class WindowSmokeTests
     public void Fastest_kill_is_tagged_per_boss()
     {
         HistoryItem Kill(string id, double seconds, bool killed = true) =>
-            new(id, "Tarka", "16/10 21:00", "02:00", "1.0M", killed, Seconds: seconds);
+            new(id, "Tarka", "16/10 21:00", "02:00", "1.0M", killed, Seconds: seconds, Kind: killed ? RunSegmentKind.Kill : RunSegmentKind.Wipe);
 
         var items = HistoryItem.WithComparisons([Kill("a", 150), Kill("b", 140), Kill("c", 90, killed: false)]);
         Assert.Equal("· ⏱ kill más rápida", items.Single(i => i.Id == "b").FastestTag);

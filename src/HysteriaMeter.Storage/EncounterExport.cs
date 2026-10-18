@@ -40,7 +40,7 @@ public static class EncounterExport
         {
             csv.AppendJoin(
                 ';',
-                Field(encounter.TargetName ?? "Encuentro"),
+                Field(FightTarget.Label(encounter)),
                 encounter.Start.ToString("O", inv),
                 seconds.ToString("0.0", inv),
                 encounter.TargetKilled ? "si" : "no",
@@ -94,10 +94,85 @@ public static class EncounterExport
         }
     }
 
+    /// <summary>
+    /// Los nombres de una run, como <see cref="Anonymize(EncounterSnapshot)"/> pero con los mismos "Jugador N" en todos
+    /// los bosses: el orden sale del DPS de la run entera, no de cada pelea.
+    /// </summary>
+    public static DungeonSummary Anonymize(DungeonSummary run)
+    {
+        var index = 0;
+        var names = run.Players.OrderByDescending(p => p.Dps)
+            .ToDictionary(p => p.Name, p => p.IsLocalPlayer ? "Yo" : $"Jugador {++index}", StringComparer.Ordinal);
+        string Of(string name) => names.GetValueOrDefault(name) ?? name;
+        return run with
+        {
+            Players = [.. run.Players.Select(p => p with { Name = Of(p.Name) })],
+            Bosses = [.. run.Bosses.Select(b => b with { Players = [.. b.Players.Select(p => p with { Name = Of(p.Name) })] })],
+        };
+    }
+
+    /// <summary>
+    /// El resumen de una run: una fila por jugador en cada boss (DPS del intento que cuenta y muertes sumando todos) y,
+    /// al final, una fila por jugador en la run entera ("Run completa"). Mismo formato que <see cref="ToCsv"/>. Un boss sin
+    /// nombre ni plantilla deja vacíos sus intentos y wipes (sus wipes no se reconocen: no se sabe cuántos hubo), y la run
+    /// los intentos; los wipes de la run son los reconocidos, como la cabecera del modo dungeon.
+    /// </summary>
+    public static string RunToCsv(DungeonSummary run)
+    {
+        var inv = CultureInfo.InvariantCulture;
+        var csv = new StringBuilder();
+        csv.AppendLine("boss;entrada;intentos;wipes;derrotado;duracion_s;dps_party;jugador;local;dps;muertes");
+        var entered = run.Entered.ToString("O", inv);
+        foreach (var boss in run.Bosses)
+        {
+            foreach (var p in boss.Players)
+            {
+                csv.AppendJoin(
+                    ';',
+                    Field(boss.Name),
+                    entered,
+                    boss.Identified ? boss.Attempts.ToString(inv) : string.Empty,
+                    boss.Identified ? boss.Wipes.ToString(inv) : string.Empty,
+                    boss.Killed ? "si" : "no",
+                    boss.Duration.TotalSeconds.ToString("0.0", inv),
+                    boss.PartyDps.ToString("0", inv),
+                    Field(p.Name),
+                    p.IsLocalPlayer ? "si" : "no",
+                    p.Dps.ToString("0", inv),
+                    p.Deaths.ToString(inv));
+                csv.AppendLine();
+            }
+        }
+
+        foreach (var p in run.Players)
+        {
+            csv.AppendJoin(
+                ';',
+                "Run completa",
+                entered,
+                run.Bosses.All(b => b.Identified) ? run.Bosses.Sum(b => b.Attempts).ToString(inv) : string.Empty,
+                run.Wipes.ToString(inv),
+                $"{run.BossesKilled.ToString(inv)}/{run.Bosses.Count.ToString(inv)}",
+                run.Duration.TotalSeconds.ToString("0.0", inv),
+                string.Empty,
+                Field(p.Name),
+                p.IsLocalPlayer ? "si" : "no",
+                p.Dps.ToString("0", inv),
+                p.Deaths.ToString(inv));
+            csv.AppendLine();
+        }
+
+        return csv.ToString();
+    }
+
+    /// <summary>"Run 2026-10-15 21-30": la entrada a la zona, como el título del resumen (el protocolo no trae el nombre de la dungeon).</summary>
+    public static string RunFileName(DateTimeOffset localEntered) =>
+        $"Run {localEntered.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}";
+
     /// <summary>"Destroyer Tarka 2026-10-15 21-42": nombre de archivo sin caracteres prohibidos en Windows.</summary>
     public static string FileName(EncounterSnapshot encounter, DateTimeOffset localStart)
     {
-        var target = encounter.TargetName ?? "Encuentro";
+        var target = FightTarget.Label(encounter);
         var invalid = new HashSet<char>(['<', '>', ':', '"', '/', '\\', '|', '?', '*']);
         var safe = new string([.. target.Select(c => invalid.Contains(c) || char.IsControl(c) ? '_' : c)]).Trim();
         return $"{(safe.Length == 0 ? "Encuentro" : safe)} {localStart.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture)}";

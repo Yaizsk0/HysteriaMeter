@@ -32,6 +32,23 @@
             <Setter Property="Margin" Value="0,0,5,0" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
+        <!-- Texto de un tramo del timeline: oscuro sobre el kill, OnWipe sobre el wipe y apagado sobre el trash. -->
+        <Style x:Key="SegmentText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Kind}" Value="{x:Static combat:RunSegmentKind.Kill}"><Setter Property="Foreground" Value="{DynamicResource OnAccent}" /></DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="{x:Static combat:RunSegmentKind.Wipe}"><Setter Property="Foreground" Value="{DynamicResource OnWipe}" /></DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="SegmentSuffix" TargetType="TextBlock" BasedOn="{StaticResource SegmentText}">
+            <Setter Property="Margin" Value="3,0,0,0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Suffix}" Value=""><Setter Property="Visibility" Value="Collapsed" /></DataTrigger>
+            </Style.Triggers>
+        </Style>
         <Style x:Key="MatrixCell" TargetType="TextBlock">
             <Setter Property="Padding" Value="12,8" />
             <Setter Property="VerticalAlignment" Value="Center" />
@@ -40,6 +57,33 @@
         <Style x:Key="MatrixHeader" TargetType="TextBlock" BasedOn="{StaticResource MatrixCell}">
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
+        </Style>
+        <!-- Celda de la matriz: un clic abre ese intento; la que no se puede abrir se ve igual, sin la mano ni el fondo al pasar. -->
+        <Style x:Key="MatrixCellButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Cursor" Value="Arrow" />
+                </Trigger>
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsMouseOver" Value="True" />
+                        <Condition Property="IsEnabled" Value="True" />
+                    </MultiTrigger.Conditions>
+                    <Setter Property="Background" Value="{DynamicResource Track}" />
+                </MultiTrigger>
+            </Style.Triggers>
         </Style>
         <Style x:Key="PlayerBar" TargetType="ProgressBar">
             <Setter Property="Minimum" Value="0" />
@@ -69,6 +113,9 @@
                     </Button>
                     <Button x:Name="CopyButton" DockPanel.Dock="Right" Style="{StaticResource ButtonPrimary}" Content="Copiar para Discord"
                             Click="OnCopyClick" MinHeight="40" Padding="14,0" VerticalAlignment="Center" ToolTip="Copia el resumen como texto" />
+                    <Button x:Name="ExportButton" DockPanel.Dock="Right" Style="{StaticResource ButtonGhost}" Content="Exportar resumen"
+                            Click="OnExportClick" MinHeight="40" Padding="14,0" Margin="0,0,8,0" VerticalAlignment="Center"
+                            ToolTip="Guarda la run en Exportes como CSV: cada boss con sus intentos, wipes y el DPS y las muertes de cada jugador" />
                     <WrapPanel VerticalAlignment="Center" Margin="0,0,24,0">
                         <StackPanel Margin="0,0,48,0" VerticalAlignment="Center">
                             <TextBlock Text="MODO DUNGEON · RESUMEN DE LA RUN" Style="{StaticResource Eyebrow}" />
@@ -107,18 +154,14 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:SegmentItem">
                                         <Border Background="{Binding Fill}" ToolTip="{Binding Tip}" CornerRadius="2">
-                                            <TextBlock Text="{Binding Label}" FontSize="11" FontWeight="SemiBold" Margin="4,0" VerticalAlignment="Center"
-                                                       TextAlignment="Center" TextTrimming="CharacterEllipsis">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Kind}" Value="{x:Static combat:RunSegmentKind.Kill}"><Setter Property="Foreground" Value="{DynamicResource OnAccent}" /></DataTrigger>
-                                                            <DataTrigger Binding="{Binding Kind}" Value="{x:Static combat:RunSegmentKind.Wipe}"><Setter Property="Foreground" Value="{DynamicResource OnDanger}" /></DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
+                                            <!-- El nombre se recorta si no entra; la duración o la ✕ siempre se ven. El número de una
+                                                 plantilla sin nombre se recorta por el principio ("…400456"): lo que la distingue es el final. -->
+                                            <DockPanel HorizontalAlignment="Center" Margin="4,0">
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding Suffix}" Style="{StaticResource SegmentSuffix}" />
+                                                <local:SegmentName FullText="{Binding Name}" FromStart="{Binding KeepEnd}" VerticalAlignment="Center">
+                                                    <TextBlock Style="{StaticResource SegmentText}" TextTrimming="CharacterEllipsis" />
+                                                </local:SegmentName>
+                                            </DockPanel>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -144,7 +187,7 @@
                                     <StackPanel>
                                         <DockPanel>
                                             <TextBlock DockPanel.Dock="Right" Text="{Binding Duration}" FontFamily="{StaticResource NumberFont}" FontSize="16" Foreground="{DynamicResource TextMuted}" VerticalAlignment="Center" Margin="8,0,0,0" />
-                                            <DockPanel>
+                                            <DockPanel HorizontalAlignment="Left">
                                                 <Border DockPanel.Dock="Right" Padding="7,2" CornerRadius="4" Margin="8,0,0,0" VerticalAlignment="Center">
                                                     <Border.Style>
                                                         <Style TargetType="Border">
@@ -165,7 +208,8 @@
                                             </DockPanel>
                                         </DockPanel>
                                         <WrapPanel Margin="0,10,0,10" TextElement.FontSize="12" TextElement.Foreground="{DynamicResource TextMuted}">
-                                            <TextBlock Margin="0,0,18,0">Intentos <Run Text="{Binding Attempts, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" /></TextBlock>
+                                            <!-- "—" sin nombre ni plantilla; el tooltip dice por qué el número no es todo lo que se peleó -->
+                                            <TextBlock Margin="0,0,18,0" ToolTip="{Binding AttemptsTip}">Intentos <Run Text="{Binding Attempts, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" /></TextBlock>
                                             <TextBlock Margin="0,0,18,0">DPS party <Run Text="{Binding PartyDps, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" /></TextBlock>
                                             <TextBlock>Muertes <Run Text="{Binding Deaths, Mode=OneWay}" Foreground="{DynamicResource Danger}" FontWeight="SemiBold" /></TextBlock>
                                         </WrapPanel>
@@ -186,6 +230,13 @@
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
+                                        <TextBlock Text="{Binding Note}" FontSize="11" Foreground="{DynamicResource TextDim}" TextWrapping="Wrap" Margin="0,7,0,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers><DataTrigger Binding="{Binding Note}" Value=""><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
@@ -219,14 +270,17 @@
                                                         <ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate DataType="vm:PlayerBossCell">
-                                                                <TextBlock Text="{Binding Text}" ToolTip="{Binding Text}">
-                                                                    <TextBlock.Style>
-                                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource MatrixCell}">
-                                                                            <Setter Property="Foreground" Value="{DynamicResource DeathCellText}" />
-                                                                            <Style.Triggers><DataTrigger Binding="{Binding Deaths}" Value="0"><Setter Property="Foreground" Value="{DynamicResource Text}" /></DataTrigger></Style.Triggers>
-                                                                        </Style>
-                                                                    </TextBlock.Style>
-                                                                </TextBlock>
+                                                                <Button Style="{StaticResource MatrixCellButton}" IsEnabled="{Binding CanOpen}" Click="OnCellClick"
+                                                                        ToolTip="{Binding Tip}" ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="{Binding Tip}">
+                                                                    <TextBlock Text="{Binding Text}">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource MatrixCell}">
+                                                                                <Setter Property="Foreground" Value="{DynamicResource DeathCellText}" />
+                                                                                <Style.Triggers><DataTrigger Binding="{Binding Deaths}" Value="0"><Setter Property="Foreground" Value="{DynamicResource Text}" /></DataTrigger></Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                    </TextBlock>
+                                                                </Button>
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>
@@ -246,7 +300,7 @@
                                 </ItemsControl>
                             </StackPanel>
                         </Border>
-                        <TextBlock Text="Cada celda: DPS en el intento que cuenta (el kill, o el último) · ☠ muertes sumando todos los intentos."
+                        <TextBlock Text="Cada celda: DPS en el intento del kill (o el último, si no hubo kill) · ☠ muertes sumando todos los intentos. Clic en una celda abre ese intento."
                                    Style="{StaticResource SectionLabel}" Margin="0,8,0,0" TextWrapping="Wrap" />
                     </StackPanel>
                 </StackPanel>

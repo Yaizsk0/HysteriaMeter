@@ -218,15 +218,12 @@
                                                                 </TextBlock>
                                                             </Border>
 
-                                                            <!-- El objetivo cede el ancho; intento y nota conservan su espacio propio. La nota completa va al tooltip. -->
-                                                            <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                </Grid.ColumnDefinitions>
-                                                                <TextBlock TextTrimming="CharacterEllipsis" FontWeight="SemiBold">
-                                                                    <Run Foreground="{DynamicResource Gold}"><Run.Style>
+                                                            <!-- Objetivo, intento y nota en la misma línea, como el mock (gap 8). Si no entran, se recorta el objetivo, como
+                                                                 el span con ellipsis del mock, y el intento se ve siempre; RowTitlePanel le guarda al objetivo un mínimo
+                                                                 antes de darle lugar a la nota, que tiene un ancho máximo y su propio recorte (completa en el tooltip). -->
+                                                            <local:RowTitlePanel Grid.Column="1" Margin="10,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                                <TextBlock TextTrimming="CharacterEllipsis">
+                                                                    <Run Foreground="{DynamicResource Gold}" FontWeight="SemiBold"><Run.Style>
                                                                         <Style TargetType="Run">
                                                                             <Setter Property="Text" Value="" />
                                                                             <Style.Triggers>
@@ -235,13 +232,12 @@
                                                                                 </DataTrigger>
                                                                             </Style.Triggers>
                                                                         </Style>
-                                                                    </Run.Style></Run><Run Text="{Binding Target, Mode=OneWay}" />
+                                                                    </Run.Style></Run><Run Text="{Binding TargetText, Mode=OneWay}" FontWeight="SemiBold" />
                                                                 </TextBlock>
-                                                                <TextBlock Grid.Column="1" Text="{Binding AttemptLabel}" Margin="8,0,0,0"
-                                                                           FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextDim}" />
-                                                            </Grid>
-                                                            <TextBlock Text="{Binding Note}" Visibility="{Binding HasNote, Converter={StaticResource Visible}}" FontSize="{StaticResource FontSizeCaption}" FontStyle="Italic" Foreground="{DynamicResource TextMuted}" TextTrimming="CharacterEllipsis" />
-                                                            </StackPanel>
+                                                                <TextBlock Text="{Binding AttemptInline, Mode=OneWay}" FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextDim}" />
+                                                                <TextBlock MaxWidth="120" TextTrimming="CharacterEllipsis" Text="{Binding NoteInline, Mode=OneWay}" FontSize="{StaticResource FontSizeCaption}"
+                                                                           FontStyle="Italic" Foreground="{DynamicResource TextMuted}" />
+                                                            </local:RowTitlePanel>
 
                                                             <TextBlock Grid.Column="2" Style="{StaticResource Cell}" Text="{Binding DurationText}" Foreground="{DynamicResource TextMuted}" />
 
