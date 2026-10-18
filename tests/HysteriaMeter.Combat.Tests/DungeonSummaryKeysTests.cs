@@ -95,6 +95,43 @@ public class DungeonSummaryKeysTests
     }
 
     [Fact]
+    public void A_short_pull_of_the_same_template_before_the_kill_is_trash_but_is_remembered()
+    {
+        // Un pull de 20 s sin kill no pasa como intento de boss (menos de 30 s): queda como trash en la línea de tiempo y
+        // no es un wipe, pero el boss sabe que antes hubo otra pelea contra él (no se puede decir que cayó al primero).
+        var pull = Fight(0, 20, 2400123, false);
+        Assert.False(BossRules.IsBossAttempt(pull));
+        var kill = Fight(100, 100, 2400123, true);
+
+        var summary = DungeonSummary.From([pull, kill], Entered);
+
+        var boss = Assert.Single(summary.Bosses);
+        Assert.Equal((1, 0, true), (boss.Attempts, boss.Wipes, boss.OtherPulls));
+        Assert.Equal([(RunSegmentKind.Trash, "Trash"), (RunSegmentKind.Kill, "NPC 2400123")], summary.Timeline.Select(s => (s.Kind, s.Label)));
+
+        // Otra plantilla antes no cuenta, ni la misma después del kill.
+        Assert.False(Assert.Single(DungeonSummary.From([Fight(0, 20, 2400999, false), kill], Entered).Bosses).OtherPulls);
+        Assert.False(Assert.Single(DungeonSummary.From([kill, Fight(300, 20, 2400123, false)], Entered).Bosses).OtherPulls);
+    }
+
+    [Fact]
+    public void Other_pulls_are_counted_from_the_previous_kill_of_the_same_template()
+    {
+        // La misma plantilla matada dos veces: el pull corto de antes del primer kill es del primero, no del segundo.
+        var summary = DungeonSummary.From(
+            [Fight(0, 20, 2400400, false), Fight(100, 90, 2400400, true), Fight(300, 95, 2400400, true)], Entered);
+        Assert.Equal([("NPC 2400400", true), ("NPC 2400400 (2)", false)], summary.Bosses.Select(b => (b.Name, b.OtherPulls)));
+
+        // Un pull corto entre los dos kills es del segundo.
+        var between = DungeonSummary.From(
+            [Fight(100, 90, 2400400, true), Fight(200, 20, 2400400, false), Fight(300, 95, 2400400, true)], Entered);
+        Assert.Equal([false, true], between.Bosses.Select(b => b.OtherPulls));
+
+        // Sin nombre ni plantilla no hay con qué compararla: un "Encuentro" antes no la marca.
+        Assert.False(Assert.Single(DungeonSummary.From([Fight(0, 120, null, false), Fight(200, 100, null, true)], Entered).Bosses).OtherPulls);
+    }
+
+    [Fact]
     public void A_named_boss_keeps_its_name_and_the_timeline_points_to_each_fight()
     {
         var trash = Fight(0, 12, 7, true, "Lobo");

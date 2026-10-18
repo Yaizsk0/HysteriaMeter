@@ -95,6 +95,59 @@ public sealed class DungeonDataTests
         var identified = DungeonSummary.From([Fight(0, 100, 2400123, killed: true, actors: [Player("Yo", 50_000, deaths: 1)])], Entered);
         Assert.True(identified.Bosses.Single().Identified);
         Assert.Equal("Kill al primer intento. Mejor DPS: Yo.", new DungeonSummaryViewModel(identified).Cards.Single().Note);
+        Assert.Null(new DungeonSummaryViewModel(identified).Cards.Single().AttemptsTip);
+    }
+
+    [Fact]
+    public void A_short_pull_of_the_same_template_before_the_kill_takes_away_the_first_attempt_claim()
+    {
+        // Un pull de 20 s sin kill contra la plantilla no es intento de boss (queda como trash), pero el historial lo cuenta:
+        // la tarjeta no puede decir que el kill fue al primer intento ni que fue limpio. Solo el mejor DPS.
+        var pull = Fight(0, 20, 2400123, killed: false, actors: [Player("Yo", 9_000)]);
+        var withDeath = DungeonSummary.From(
+            [pull, Fight(100, 100, 2400123, killed: true, actors: [Player("Yo", 50_000, deaths: 1), Player("Rubia", 30_000)])], Entered);
+        var view = new DungeonSummaryViewModel(withDeath);
+        var card = view.Cards.Single();
+
+        Assert.Equal("Mejor DPS: Yo.", card.Note);
+        Assert.Equal("1", card.Attempts);
+        Assert.Contains("no cuenta como intento", card.AttemptsTip, StringComparison.Ordinal);
+        Assert.Equal(["Trash", "NPC 2400123 1:40"], view.Timeline.Select(s => s.Label));
+
+        var clean = DungeonSummary.From([pull, Fight(100, 100, 2400123, killed: true, actors: [Player("Yo", 50_000)])], Entered);
+        Assert.Equal("Mejor DPS: Yo.", new DungeonSummaryViewModel(clean).Cards.Single().Note);
+    }
+
+    [Fact]
+    public void A_boss_without_name_or_template_does_not_say_how_many_attempts_it_had()
+    {
+        // Las peleas viejas: el tramo sin kill pudo ser un wipe que no se reconoce, así que "Intentos —", el CSV sin
+        // intentos ni wipes de ese boss (ni intentos de la run) y el texto para Discord sin el número.
+        var run = DungeonSummary.From(
+            [Fight(0, 120, null, killed: false, actors: [Player("Yo", 9_000)]),
+             Fight(200, 100, null, killed: true, actors: [Player("Yo", 50_000)])], Entered);
+        var view = new DungeonSummaryViewModel(run);
+        var card = view.Cards.Single();
+
+        Assert.Equal("—", card.Attempts);
+        Assert.StartsWith("Intentos — · ", card.Stats, StringComparison.Ordinal);
+        Assert.Contains("no se sabe cuántos intentos hubo", card.AttemptsTip, StringComparison.Ordinal);
+
+        var lines = EncounterExport.RunToCsv(run).TrimEnd().Split(Environment.NewLine);
+        Assert.StartsWith("Boss 1;2026-10-16T21:00:00.0000000+00:00;;;si;", lines[1], StringComparison.Ordinal);
+        Assert.StartsWith("Run completa;2026-10-16T21:00:00.0000000+00:00;;0;1/1;", lines[2], StringComparison.Ordinal);
+
+        Assert.Contains("> **Boss 1** kill 1:40" + Environment.NewLine, view.ShareText, StringComparison.Ordinal);
+        Assert.DoesNotContain("intento", view.ShareText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_discord_text_says_one_attempt_in_singular()
+    {
+        var once = DungeonSummary.From([Fight(0, 100, 2400123, killed: true, actors: [Player("Yo", 50_000)])], Entered);
+        Assert.Contains("> **NPC 2400123** kill 1:40 · 1 intento" + Environment.NewLine, new DungeonSummaryViewModel(once).ShareText, StringComparison.Ordinal);
+
+        Assert.Contains("> **NPC 2400123** kill 3:58 · 2 intentos" + Environment.NewLine, new DungeonSummaryViewModel(Run().Run).ShareText, StringComparison.Ordinal);
     }
 
     [Fact]

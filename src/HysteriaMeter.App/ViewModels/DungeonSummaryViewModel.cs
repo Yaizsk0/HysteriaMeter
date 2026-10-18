@@ -69,7 +69,7 @@ public sealed class DungeonSummaryViewModel
                 b.Name,
                 b.Killed ? $"KILL {Length(b.Duration)}" : "SIN KILL",
                 b.Killed ? KillBrush : WipeBrush,
-                $"Intentos {b.Attempts} · DPS party {ActorRowViewModel.Compact(b.PartyDps)} · Muertes {b.Deaths}",
+                $"Intentos {AttemptsText(b)} · DPS party {ActorRowViewModel.Compact(b.PartyDps)} · Muertes {b.Deaths}",
                 [.. b.Players.Select(p => new BossPlayerRow(
                     p.Name,
                     p.Dps > 0 ? ActorRowViewModel.Compact(p.Dps) : "—",
@@ -78,7 +78,7 @@ public sealed class DungeonSummaryViewModel
                     ClassBrush(p.ClassId, 0x55),
                     p.IsLocalPlayer))])
             {
-                Killed = b.Killed, Duration = Length(b.Duration), Attempts = b.Attempts,
+                Killed = b.Killed, Duration = Length(b.Duration), Attempts = AttemptsText(b), AttemptsTip = AttemptsTipOf(b),
                 PartyDps = ActorRowViewModel.Compact(b.PartyDps), Deaths = b.Deaths, Note = NoteOf(b),
             };
         })];
@@ -139,9 +139,25 @@ public sealed class DungeonSummaryViewModel
     };
 
     /// <summary>
+    /// "Intentos 2"; sin nombre ni plantilla, "Intentos —": los wipes de esas peleas no se reconocen (quedan "Encuentro"),
+    /// así que no se sabe cuántos intentos hubo.
+    /// </summary>
+    internal static string AttemptsText(BossSummary boss) => boss.Identified ? boss.Attempts.ToString(CultureInfo.CurrentCulture) : "—";
+
+    /// <summary>Por qué el número de intentos puede no ser todo lo que se peleó contra ese boss; <c>null</c> si no hay nada que aclarar.</summary>
+    internal static string? AttemptsTipOf(BossSummary boss) =>
+        !boss.Identified
+            ? "Sin nombre ni plantilla: los wipes de estas peleas no se reconocen (quedan \"Encuentro\" en la línea de tiempo), así que no se sabe cuántos intentos hubo."
+            : boss.OtherPulls
+                ? "Antes hubo otra pelea contra este objetivo que no cuenta como intento (duró menos de 30 s o el daño se repartió): queda como trash en la línea de tiempo."
+                : null;
+
+    /// <summary>
     /// La nota al pie de cada boss, solo con lo que se midió: cada wipe con el tiempo al que cayó y la fase más baja de
     /// vida que se vio (75, 50 o 25 %); sin wipes, si el kill fue limpio (nadie murió) y quién hizo más DPS. "Kill al
-    /// primer intento" solo con nombre o plantilla: un "Boss N" sin identidad pudo tener wipes que no se reconocen.
+    /// primer intento" solo con nombre o plantilla: un "Boss N" sin identidad pudo tener wipes que no se reconocen. Si
+    /// antes hubo otra pelea contra el mismo objetivo que quedó como trash (<see cref="BossSummary.OtherPulls"/>), ni
+    /// "Kill limpio" ni "Kill al primer intento": las dos dan a entender que fue el único pull (en el mock van con 1 intento).
     /// </summary>
     internal static string NoteOf(BossSummary boss)
     {
@@ -160,7 +176,7 @@ public sealed class DungeonSummaryViewModel
             return string.Empty;
         }
 
-        var kill = boss.Deaths == 0 ? "Kill limpio." : boss.Identified ? "Kill al primer intento." : string.Empty;
+        var kill = boss.OtherPulls ? string.Empty : boss.Deaths == 0 ? "Kill limpio." : boss.Identified ? "Kill al primer intento." : string.Empty;
         var best = boss.Players.Where(p => p.Dps > 0).MaxBy(p => p.Dps) is { } top ? $"Mejor DPS: {top.Name}." : string.Empty;
         return string.Join(' ', new[] { kill, best }.Where(part => part.Length > 0));
     }
@@ -229,7 +245,7 @@ public sealed class DungeonSummaryViewModel
             text.AppendLine(CultureInfo.InvariantCulture, $"**{Title}** · {Duration} · {Bosses} bosses · {Wipes} wipes · {Deaths} muertes");
             foreach (var boss in Shared.Bosses)
             {
-                text.AppendLine(CultureInfo.InvariantCulture, $"> **{boss.Name}** {(boss.Killed ? "kill " + Length(boss.Duration) : "sin kill")} · {boss.Attempts} intentos");
+                text.AppendLine(CultureInfo.InvariantCulture, $"> **{boss.Name}** {(boss.Killed ? "kill " + Length(boss.Duration) : "sin kill")}{ShareAttempts(boss)}");
                 foreach (var player in boss.Players)
                 {
                     text.AppendLine(CultureInfo.InvariantCulture, $"> {player.Name} {ActorRowViewModel.Compact(player.Dps)}{(player.Deaths > 0 ? " ☠" + player.Deaths : string.Empty)}");
@@ -239,6 +255,12 @@ public sealed class DungeonSummaryViewModel
             return text.ToString();
         }
     }
+
+    /// <summary>" · 1 intento", " · 3 intentos"; nada sin nombre ni plantilla (no se sabe cuántos hubo).</summary>
+    private static string ShareAttempts(BossSummary boss) =>
+        !boss.Identified ? string.Empty
+        : boss.Attempts == 1 ? " · 1 intento"
+        : $" · {boss.Attempts.ToString(CultureInfo.InvariantCulture)} intentos";
 
     // Mismos valores que Kill, Wipe, Neutral y ClassUnknown de Themes/Theme.xaml (no cambian con el tema).
     private static readonly Brush KillBrush = Frozen(Color.FromRgb(0xE8, 0xB0, 0x4A));
@@ -285,7 +307,12 @@ public sealed record BossCard(string Name, string Result, Brush ResultBrush, str
 {
     public bool Killed { get; init; }
     public string Duration { get; init; } = string.Empty;
-    public int Attempts { get; init; }
+    /// <summary>"2", o "—" sin nombre ni plantilla (<see cref="DungeonSummaryViewModel.AttemptsText"/>).</summary>
+    public string Attempts { get; init; } = string.Empty;
+
+    /// <summary>Tooltip de "Intentos": por qué el número puede no ser todo lo que se peleó; <c>null</c> si no hace falta.</summary>
+    public string? AttemptsTip { get; init; }
+
     public string PartyDps { get; init; } = string.Empty;
     public int Deaths { get; init; }
 

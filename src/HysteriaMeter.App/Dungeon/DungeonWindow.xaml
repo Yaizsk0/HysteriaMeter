@@ -208,7 +208,8 @@
                                             </DockPanel>
                                         </DockPanel>
                                         <WrapPanel Margin="0,10,0,10" TextElement.FontSize="12" TextElement.Foreground="{DynamicResource TextMuted}">
-                                            <TextBlock Margin="0,0,18,0">Intentos <Run Text="{Binding Attempts, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" /></TextBlock>
+                                            <!-- "—" sin nombre ni plantilla; el tooltip dice por qué el número no es todo lo que se peleó -->
+                                            <TextBlock Margin="0,0,18,0" ToolTip="{Binding AttemptsTip}">Intentos <Run Text="{Binding Attempts, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" /></TextBlock>
                                             <TextBlock Margin="0,0,18,0">DPS party <Run Text="{Binding PartyDps, Mode=OneWay}" Foreground="{DynamicResource Text}" FontWeight="SemiBold" /></TextBlock>
                                             <TextBlock>Muertes <Run Text="{Binding Deaths, Mode=OneWay}" Foreground="{DynamicResource Danger}" FontWeight="SemiBold" /></TextBlock>
                                         </WrapPanel>

@@ -113,7 +113,9 @@ public static class EncounterExport
 
     /// <summary>
     /// El resumen de una run: una fila por jugador en cada boss (DPS del intento que cuenta y muertes sumando todos) y,
-    /// al final, una fila por jugador en la run entera ("Run completa"). Mismo formato que <see cref="ToCsv"/>.
+    /// al final, una fila por jugador en la run entera ("Run completa"). Mismo formato que <see cref="ToCsv"/>. Un boss sin
+    /// nombre ni plantilla deja vacíos sus intentos y wipes (sus wipes no se reconocen: no se sabe cuántos hubo), y la run
+    /// los intentos; los wipes de la run son los reconocidos, como la cabecera del modo dungeon.
     /// </summary>
     public static string RunToCsv(DungeonSummary run)
     {
@@ -129,8 +131,8 @@ public static class EncounterExport
                     ';',
                     Field(boss.Name),
                     entered,
-                    boss.Attempts.ToString(inv),
-                    boss.Wipes.ToString(inv),
+                    boss.Identified ? boss.Attempts.ToString(inv) : string.Empty,
+                    boss.Identified ? boss.Wipes.ToString(inv) : string.Empty,
                     boss.Killed ? "si" : "no",
                     boss.Duration.TotalSeconds.ToString("0.0", inv),
                     boss.PartyDps.ToString("0", inv),
@@ -148,7 +150,7 @@ public static class EncounterExport
                 ';',
                 "Run completa",
                 entered,
-                run.Bosses.Sum(b => b.Attempts).ToString(inv),
+                run.Bosses.All(b => b.Identified) ? run.Bosses.Sum(b => b.Attempts).ToString(inv) : string.Empty,
                 run.Wipes.ToString(inv),
                 $"{run.BossesKilled.ToString(inv)}/{run.Bosses.Count.ToString(inv)}",
                 run.Duration.TotalSeconds.ToString("0.0", inv),

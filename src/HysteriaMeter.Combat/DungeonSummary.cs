@@ -116,7 +116,10 @@ public sealed record BossWipe(Guid FightId, TimeSpan Duration, int? BelowPercent
 /// Un boss de la run con todos sus intentos. <paramref name="DecidingId"/> es el intento que cuenta (el kill, o el último),
 /// el que dan el DPS y la duración. <paramref name="WipeList"/> son los intentos sin kill: solo esos son wipes.
 /// <paramref name="Identified"/>: el boss tiene nombre o plantilla (<see cref="FightTarget.Identity(string?, uint?)"/>).
-/// Sin identidad ("Boss N", peleas viejas) sus wipes no se pueden reconocer, así que no se sabe en qué intento cayó.
+/// Sin identidad ("Boss N", peleas viejas) sus wipes no se pueden reconocer, así que no se sabe cuántos intentos hubo.
+/// <paramref name="OtherPulls"/>: antes del intento que cuenta hubo en la run otra pelea contra el mismo objetivo que no
+/// pasó como intento de boss (<see cref="BossRules.IsBossAttempt(EncounterSnapshot)"/>: duró menos de 30 s o el daño se
+/// repartió) y quedó como trash; con eso no se puede afirmar que el kill fue al primer intento.
 /// </summary>
 public sealed record BossSummary(
     string Name,
@@ -128,7 +131,8 @@ public sealed record BossSummary(
     IReadOnlyList<BossPlayerLine> Players,
     Guid DecidingId,
     IReadOnlyList<BossWipe> WipeList,
-    bool Identified)
+    bool Identified,
+    bool OtherPulls = false)
 {
     public int Wipes => WipeList.Count;
 }
@@ -172,8 +176,8 @@ public sealed record DungeonSummary(
 
         var groups = BossRules.GroupAttempts(ordered.Where(BossRules.IsBossAttempt), FightTarget.Identity, f => f.TargetKilled);
         var names = BossNames(groups);
-        var bosses = groups.Select((g, i) => Boss(names[i], g)).ToList();
         var bossOf = groups.SelectMany((g, i) => g.Select(f => (f.Id, Name: names[i]))).ToDictionary(x => x.Id, x => x.Name);
+        var bosses = groups.Select((g, i) => Boss(names[i], g, HadOtherPulls(ordered, groups, i, bossOf))).ToList();
 
         var timeline = ordered.Select(f =>
         {
@@ -223,7 +227,27 @@ public sealed record DungeonSummary(
 
     private static EncounterSnapshot Deciding(List<EncounterSnapshot> attempts) => attempts.LastOrDefault(f => f.TargetKilled) ?? attempts[^1];
 
-    private static BossSummary Boss(string name, List<EncounterSnapshot> list)
+    /// <summary>
+    /// Antes del intento que cuenta del boss <paramref name="index"/> hubo en la run una pelea contra el mismo objetivo que
+    /// no fue intento de ningún boss (quedó como trash: un pull corto o con el daño repartido). Se mira desde el kill del
+    /// boss anterior con ese objetivo, si lo hubo: lo de antes de ese kill era otro boss. Sin nombre ni plantilla no hay
+    /// con qué compararla.
+    /// </summary>
+    private static bool HadOtherPulls(
+        List<EncounterSnapshot> ordered, List<List<EncounterSnapshot>> groups, int index, Dictionary<Guid, string> bossOf)
+    {
+        var deciding = Deciding(groups[index]);
+        if (FightTarget.Identity(deciding) is not { } key)
+        {
+            return false;
+        }
+
+        var since = groups.Take(index).Where(g => FightTarget.Identity(g[0]) == key)
+            .Select(g => Deciding(g).Start).DefaultIfEmpty(DateTimeOffset.MinValue).Max();
+        return ordered.Any(f => !bossOf.ContainsKey(f.Id) && f.Start > since && f.Start < deciding.Start && FightTarget.Identity(f) == key);
+    }
+
+    private static BossSummary Boss(string name, List<EncounterSnapshot> list, bool otherPulls)
     {
         var deciding = Deciding(list);
         var duration = deciding.MainTargetDuration ?? deciding.Duration;
@@ -250,6 +274,7 @@ public sealed record DungeonSummary(
             players,
             deciding.Id,
             wipes,
-            FightTarget.Identity(deciding) is not null);
+            FightTarget.Identity(deciding) is not null,
+            otherPulls);
     }
 }
