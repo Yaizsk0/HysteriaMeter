@@ -89,6 +89,47 @@ public sealed class InicioTests
     }
 
     [Fact]
+    public void Device_step_names_the_device_and_where_it_came_from()
+    {
+        var status = new CaptureStatus(DateTime.UtcNow);
+
+        // La elegida en Configuración → Captura: la descripción de Npcap, no el \Device\NPF_{GUID}.
+        var chosen = new CaptureSetup(true, @"\Device\NPF_{X}", DeviceLabel: "Intel Ethernet", DeviceOrigin: CaptureDeviceOrigin.Preferences);
+        Assert.Equal("Intel Ethernet · elegida en la configuración", WelcomeViewModel.DeviceStep(chosen, status).Hint);
+
+        // La de appsettings.json no se eligió en la configuración.
+        var configured = WelcomeViewModel.DeviceStep(new CaptureSetup(true, "Intel", DeviceLabel: "Intel Ethernet", DeviceOrigin: CaptureDeviceOrigin.AppSettings), status);
+        Assert.Equal("Intel Ethernet · fijada en appsettings.json", configured.Hint);
+        Assert.DoesNotContain("elegida en la configuración", configured.Hint, StringComparison.Ordinal);
+
+        // Sin descripción de Npcap queda el nombre, también con tráfico.
+        status.MarkTraffic(DateTime.UtcNow);
+        var unnamed = new CaptureSetup(true, @"\Device\NPF_{X}", DeviceOrigin: CaptureDeviceOrigin.Preferences);
+        Assert.Equal(@"\Device\NPF_{X} · elegida en la configuración", WelcomeViewModel.DeviceStep(unnamed, status).Hint);
+    }
+
+    [Fact]
+    public void Capture_setup_asks_npcap_only_when_there_is_a_device_to_name()
+    {
+        var listed = 0;
+        IReadOnlyList<(string Name, string Description)> Devices()
+        {
+            listed++;
+            return [(@"\Device\NPF_{X}", "Intel Ethernet")];
+        }
+
+        var chosen = CaptureSetup.From(new CaptureSettings { Device = @"\Device\NPF_{X}" }, @"\Device\NPF_{X}", Devices);
+        Assert.Equal(("Intel Ethernet", CaptureDeviceOrigin.Preferences), (chosen.DeviceLabel, chosen.DeviceOrigin));
+        Assert.Equal(1, listed);
+
+        // Automática o repitiendo un .pcap no hay placa que nombrar: no se listan las placas.
+        Assert.Equal(CaptureDeviceOrigin.Automatic, CaptureSetup.From(new CaptureSettings(), string.Empty, Devices).DeviceOrigin);
+        var replay = CaptureSetup.From(new CaptureSettings { Mode = CaptureMode.Replay, ReplayPath = @"C:\pcap\pelea.pcap", Device = "Intel" }, string.Empty, Devices);
+        Assert.Equal("pelea.pcap", replay.ReplayFile);
+        Assert.Equal(1, listed);
+    }
+
+    [Fact]
     public void Game_data_step_counts_the_files_in_the_folder()
     {
         var folder = Path.Combine(Path.GetTempPath(), $"hysteria-juego-{Guid.NewGuid():N}");

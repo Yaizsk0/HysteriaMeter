@@ -108,6 +108,31 @@ public sealed class ConfigTests
     }
 
     [Fact]
+    public void Capture_device_description_names_it_and_says_where_it_came_from()
+    {
+        (string Name, string Description)[] devices = [(@"\Device\NPF_{A}", "Intel Ethernet"), (@"\Device\NPF_{B}", string.Empty)];
+
+        // La elegida que quedó aplicada, con su descripción de Npcap; sin descripción no hay etiqueta (va el nombre).
+        Assert.Equal(("Intel Ethernet", CaptureDeviceOrigin.Preferences), CaptureDevices.Describe(@"\Device\NPF_{A}", @"\Device\NPF_{A}", devices));
+        Assert.Equal(((string?)null, CaptureDeviceOrigin.Preferences), CaptureDevices.Describe(@"\Device\NPF_{B}", @"\Device\NPF_{B}", devices));
+
+        // La de appsettings se busca como la busca la captura: parte del nombre o de la descripción, sin mayúsculas.
+        Assert.Equal(("Intel Ethernet", CaptureDeviceOrigin.AppSettings), CaptureDevices.Describe(string.Empty, "intel", devices));
+        Assert.Equal(("Intel Ethernet", CaptureDeviceOrigin.AppSettings), CaptureDevices.Describe(string.Empty, "NPF_{A}", devices));
+        Assert.Equal(((string?)null, CaptureDeviceOrigin.AppSettings), CaptureDevices.Describe(string.Empty, "Realtek", devices));
+        Assert.Equal(((string?)null, CaptureDeviceOrigin.Automatic), CaptureDevices.Describe(string.Empty, null, devices));
+
+        // La guardada ya no está: la captura siguió con la de appsettings o la automática, y eso es lo que se dice.
+        const string Missing = @"\Device\NPF_{C}";
+        Assert.Equal(
+            ("Intel Ethernet", CaptureDeviceOrigin.AppSettings),
+            CaptureDevices.Describe(CaptureDevices.AppliedChoice(Missing, CaptureMode.Live, "Intel"), CaptureDevices.Resolve(Missing, "Intel", devices), devices));
+        Assert.Equal(
+            ((string?)null, CaptureDeviceOrigin.Automatic),
+            CaptureDevices.Describe(CaptureDevices.AppliedChoice(Missing, CaptureMode.Live, null), CaptureDevices.Resolve(Missing, null, devices), devices));
+    }
+
+    [Fact]
     public void Choosing_another_capture_device_asks_for_a_restart()
     {
         RunOnSta(() =>

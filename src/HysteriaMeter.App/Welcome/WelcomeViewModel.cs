@@ -20,10 +20,20 @@ public sealed record SetupStep(int Number, string Title, string Hint, string Sta
     public bool HasAction => Action is not null;
 }
 
-/// <summary>Lo que la bienvenida sabe de la captura sin tocar la red: si está Npcap y qué placa se configuró.</summary>
-/// <param name="Device">La placa elegida en la configuración (<c>Capture:Device</c>); vacía = automática.</param>
+/// <summary>Lo que la bienvenida sabe de la captura sin tocar la red: si está Npcap, qué placa usa y de dónde salió.</summary>
+/// <param name="Device">
+/// La placa que usa la captura: la elegida en Configuración → Captura o <c>Capture:Device</c> de appsettings; vacía =
+/// automática.
+/// </param>
 /// <param name="ReplayFile">En modo repetición, el .pcap que se reproduce: no hay placa.</param>
-public sealed record CaptureSetup(bool NpcapInstalled, string? Device, string? ReplayFile = null)
+/// <param name="DeviceLabel">La descripción de Npcap de esa placa ("Intel Ethernet"); sin ella se muestra el nombre.</param>
+/// <param name="DeviceOrigin">De dónde salió la placa (ver <see cref="CaptureDevices.Describe"/>).</param>
+public sealed record CaptureSetup(
+    bool NpcapInstalled,
+    string? Device,
+    string? ReplayFile = null,
+    string? DeviceLabel = null,
+    CaptureDeviceOrigin DeviceOrigin = CaptureDeviceOrigin.Automatic)
 {
     /// <summary>
     /// Npcap deja wpcap.dll en System32\Npcap (y también en System32 con el modo compatible con WinPcap). Es solo
@@ -33,10 +43,19 @@ public sealed record CaptureSetup(bool NpcapInstalled, string? Device, string? R
         File.Exists(Path.Combine(Environment.SystemDirectory, "Npcap", "wpcap.dll"))
         || File.Exists(Path.Combine(Environment.SystemDirectory, "wpcap.dll"));
 
-    public static CaptureSetup From(CaptureSettings settings) => new(
-        NpcapPresent(),
-        string.IsNullOrWhiteSpace(settings.Device) ? null : settings.Device,
-        settings.Mode == CaptureMode.Replay && settings.ReplayPath is { Length: > 0 } replay ? Path.GetFileName(replay) : null);
+    /// <summary>
+    /// La captura ya resuelta (<see cref="CaptureDevices.Resolve"/>): <paramref name="applied"/> es la elegida que quedó
+    /// (<see cref="CaptureDevices.Applied"/>). Las placas de Npcap se listan solo si hay una placa en vivo que nombrar.
+    /// </summary>
+    public static CaptureSetup From(CaptureSettings settings, string applied, Func<IReadOnlyList<(string Name, string Description)>> devices)
+    {
+        var device = string.IsNullOrWhiteSpace(settings.Device) ? null : settings.Device;
+        var replay = settings.Mode == CaptureMode.Replay && settings.ReplayPath is { Length: > 0 } path ? Path.GetFileName(path) : null;
+        var (label, origin) = settings.Mode == CaptureMode.Live && device is not null
+            ? CaptureDevices.Describe(applied, device, devices())
+            : (null, CaptureDeviceOrigin.Automatic);
+        return new(NpcapPresent(), device, replay, label, origin);
+    }
 }
 
 /// <summary>
@@ -137,8 +156,8 @@ public sealed partial class WelcomeViewModel : ObservableObject
             new SetupAction("Descargar Npcap", NpcapDownloadUrl, IsFolder: false));
 
     /// <summary>
-    /// La placa: la elegida o "Automática" (se queda con la primera por donde llega el juego). Hasta el primer paquete
-    /// del juego queda "Esperando tráfico"; si la captura se cortó, el motivo.
+    /// La placa: la fija, con su descripción de Npcap y de dónde salió, o "Automática" (se queda con la primera por donde
+    /// llega el juego). Hasta el primer paquete del juego queda "Esperando tráfico"; si la captura se cortó, el motivo.
     /// </summary>
     public static SetupStep DeviceStep(CaptureSetup capture, CaptureStatus status)
     {
@@ -153,13 +172,16 @@ public sealed partial class WelcomeViewModel : ObservableObject
             return new SetupStep(2, Title, failure, "Revisar", false);
         }
 
-        var device = capture.Device;
+        var fixedDevice = capture.Device is null
+            ? null
+            : $"{capture.DeviceLabel ?? capture.Device} · "
+                + (capture.DeviceOrigin == CaptureDeviceOrigin.Preferences ? "elegida en la configuración" : "fijada en appsettings.json");
         if (status.HasTraffic)
         {
-            return new SetupStep(2, Title, device is null ? "Automática · detectada con el tráfico del juego" : $"{device} · elegida en la configuración", "Listo", true);
+            return new SetupStep(2, Title, fixedDevice ?? "Automática · detectada con el tráfico del juego", "Listo", true);
         }
 
-        return new SetupStep(2, Title, device is null ? "Automática · se elige cuando llegue tráfico del juego" : $"{device} · elegida en la configuración", "Esperando tráfico", false);
+        return new SetupStep(2, Title, fixedDevice ?? "Automática · se elige cuando llegue tráfico del juego", "Esperando tráfico", false);
     }
 
     public static SetupStep GameDataStep(GameDataSummary data)

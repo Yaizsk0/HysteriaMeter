@@ -141,8 +141,10 @@ public partial class App : Application
     /// </summary>
     private void ShowWelcome(MeterSession session)
     {
+        // Value ya pasó por el PostConfigure de la placa: Device es la que usa la captura y Applied, la elegida que quedó.
         var capture = _host!.Services.GetRequiredService<IOptions<CaptureSettings>>().Value;
-        var welcome = new WelcomeViewModel(session, CaptureSetup.From(capture), GameDataSummary.Read(AppPaths.In("Juego")));
+        var setup = CaptureSetup.From(capture, CaptureDevices.Applied, CaptureDevices.Source);
+        var welcome = new WelcomeViewModel(session, setup, GameDataSummary.Read(AppPaths.In("Juego")));
         new WelcomeWindow(welcome) { Owner = MainWindow }.Show();
     }
 
