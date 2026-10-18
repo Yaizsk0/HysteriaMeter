@@ -134,13 +134,13 @@
     <SolidColorBrush x:Key="DangerSoft" Color="#2EF08A7E" />    <!-- 18 %: insignia de wipe -->
     <SolidColorBrush x:Key="DangerLine" Color="#59F08A7E" />    <!-- 35 %: borde de la caja de muerte -->
     <SolidColorBrush x:Key="DangerBorder" Color="#80F08A7E" />  <!-- 50 %: tarjeta "No se encontró Npcap" -->
-    <SolidColorBrush x:Key="DangerStrong" Color="#E8564A" />    <!-- vida baja, borde de enrage, REC -->
+    <SolidColorBrush x:Key="DangerStrong" Color="#E8564A" />    <!-- borde de enrage, REC, hover de los links destructivos -->
     <SolidColorBrush x:Key="DeathCellText" Color="#F3C0B8" />   <!-- celda con ☠ en la tabla del dungeon -->
     <SolidColorBrush x:Key="Wipe" Color="#C0392B" />            <!-- segmento wipe de la línea de tiempo -->
     <SolidColorBrush x:Key="WipeSoft" Color="#1FC0392B" />      <!-- 12 %: fondo de "Lo mató…" -->
-    <SolidColorBrush x:Key="AlertBg" Color="#EB781410" />       <!-- fondo de la alerta de enrage -->
-    <SolidColorBrush x:Key="Warning" Color="#E8B04A" />         <!-- vida media, "sin tráfico" -->
-    <SolidColorBrush x:Key="WarningLine" Color="#73E8B04A" />   <!-- 45 %: borde de "sin tráfico" y del aviso de parche -->
+    <SolidColorBrush x:Key="AlertBg" Color="#EB781410" />       <!-- 92 %: fondo de la alerta de enrage (una sola capa) -->
+    <SolidColorBrush x:Key="Warning" Color="#E8B04A" />         <!-- título de "sin tráfico", borde del aviso de parche -->
+    <SolidColorBrush x:Key="WarningLine" Color="#73E8B04A" />   <!-- 45 %: borde de "sin tráfico" -->
     <!-- Mismos valores que DungeonSummaryViewModel (KillBrush, WipeBrush, TrashBrush y la clase desconocida) -->
     <SolidColorBrush x:Key="Kill" Color="#E8B04A" />            <!-- segmento kill de la línea de tiempo -->
     <SolidColorBrush x:Key="Neutral" Color="#3A3F4A" />         <!-- segmento trash, toggle apagado -->
@@ -628,7 +628,8 @@
         <Setter Property="CornerRadius" Value="{StaticResource RadiusCard}" />
         <Setter Property="Padding" Value="{StaticResource PaddingCard}" />
     </Style>
-    <!-- Aviso: boss detectado, captura guardada, récord (cambiar BorderBrush a SuccessLine o DangerStrong según el caso) -->
+    <!-- Aviso: boss detectado, captura guardada, récord, parche (BorderBrush SuccessLine, DangerStrong o Warning según el caso;
+         el enrage lo usa transparente sobre su brillo) -->
     <Style x:Key="ToastPanel" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource PanelRaised}" />
         <Setter Property="BorderBrush" Value="{DynamicResource AccentStrong}" />

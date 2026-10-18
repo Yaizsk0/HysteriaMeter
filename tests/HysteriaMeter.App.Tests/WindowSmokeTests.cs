@@ -22,7 +22,7 @@ public sealed partial class WindowSmokeTests
         RunOnSta(() =>
         {
             Application.ResourceAssembly ??= typeof(App).Assembly;
-            var app = Application.Current as App ?? new App();
+            var app = TestApp.CurrentOrWithoutStartup();
             app.InitializeComponent();
             // La regresión de Owner muestra ventanas fuera de pantalla; cerrar la última no debe apagar el arnés.
             app.ShutdownMode = ShutdownMode.OnExplicitShutdown;

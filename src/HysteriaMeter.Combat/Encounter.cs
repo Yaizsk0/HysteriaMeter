@@ -110,14 +110,26 @@ internal sealed class ActorStats
     /// <summary>Daño en cada segundo desde el inicio del encuentro (índice = segundo).</summary>
     public List<long> DamageBySecond { get; } = [];
 
-    public void AddToTimeline(int second, long amount)
+    /// <summary>Como <see cref="DamageBySecond"/>, sin los ticks de DoT: termina en el último golpe directo.</summary>
+    public List<long> DirectDamageBySecond { get; } = [];
+
+    public void AddToTimeline(int second, long amount, bool periodic)
     {
-        while (DamageBySecond.Count <= second)
+        Add(DamageBySecond, second, amount);
+        if (!periodic)
         {
-            DamageBySecond.Add(0);
+            Add(DirectDamageBySecond, second, amount);
         }
 
-        DamageBySecond[second] += amount;
+        static void Add(List<long> timeline, int second, long amount)
+        {
+            while (timeline.Count <= second)
+            {
+                timeline.Add(0);
+            }
+
+            timeline[second] += amount;
+        }
     }
 
     public Dictionary<ulong, long> DamageByTarget { get; } = [];

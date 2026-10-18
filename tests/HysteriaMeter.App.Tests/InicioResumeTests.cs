@@ -306,7 +306,7 @@ public sealed class InicioResumeWindowTests
         RunOnSta(() =>
         {
             Application.ResourceAssembly ??= typeof(App).Assembly;
-            var app = Application.Current as App ?? new App();
+            var app = TestApp.CurrentOrWithoutStartup();
             app.InitializeComponent();
             var file = Path.Combine(Path.GetTempPath(), $"hysteria-news-{Guid.NewGuid():N}.json");
             var previous = JsonSerializer.Serialize(new { news = NewsFeed.Current.Select(n => new { id = n.Id, text = n.Text }) });

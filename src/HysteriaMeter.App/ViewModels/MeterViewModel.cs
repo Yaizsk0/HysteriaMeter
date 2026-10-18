@@ -1922,8 +1922,10 @@ public sealed partial class MeterViewModel : ObservableObject
     private void ToggleCompact() => IsCompact = !IsCompact;
 
     /// <summary>
-    /// Esc, de lo que está más arriba a lo de abajo: cierra el panel abierto (es otra ventana, encima del overlay); si no
-    /// hay, cierra las novedades como "Entendido"; si tampoco, deja la pelea vieja y vuelve a la actual.
+    /// Esc cierra lo que está más arriba y se ve: el panel abierto (es otra ventana, encima del overlay); si no hay, las
+    /// novedades como "Entendido", pero solo con el overlay entero (en la pastilla no se ven y quedan pendientes); si
+    /// tampoco, deja la pelea vieja y vuelve a la actual, también en la pastilla, que muestra sus números. No abre la
+    /// pastilla: Esc cierra, no agranda. La tarjeta de fin de pelea la cierra antes OverlayWindow.
     /// </summary>
     [RelayCommand]
     private void Escape()
@@ -1935,7 +1937,7 @@ public sealed partial class MeterViewModel : ObservableObject
             return;
         }
 
-        if (HasNotice)
+        if (HasNotice && IsFullView)
         {
             DismissNotice();
             return;

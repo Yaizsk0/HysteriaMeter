@@ -425,7 +425,9 @@ public sealed partial class ActorDetailViewModel
             _ => $"{(-pick.Hits).ToString(CultureInfo.CurrentCulture)} golpes menos",
         };
         var amount = (pick.Damage < 0 ? "−" : "+") + ActorRowViewModel.Compact(Math.Abs(pick.Damage));
-        var death = pick.Damage < 0 ? DeathClause(deathSeconds ?? [], mine.Timeline, fightSeconds) : string.Empty;
+        // Sin los ticks de DoT: un veneno que sigue pegando con el jugador muerto no es la vuelta. Las peleas sin DoT
+        // (o guardadas antes de la serie directa) usan el Timeline, que en ese caso es lo mismo.
+        var death = pick.Damage < 0 ? DeathClause(deathSeconds ?? [], mine.DirectTimeline ?? mine.Timeline, fightSeconds) : string.Empty;
         return (lead, pick.Name, $": {hits} ({amount}){death}.");
     }
 
@@ -433,9 +435,9 @@ public sealed partial class ActorDetailViewModel
     public const int MinDeathSpanSeconds = 3;
 
     /// <summary>
-    /// ", coincide con la muerte de 1:52 a 2:20": el tramo muerto más largo, de la muerte al siguiente golpe propio del
-    /// Timeline (la reaparición) o, si no volvió a pegar, al final de la pelea. Vacío sin muertes o si ningún tramo llega
-    /// a <see cref="MinDeathSpanSeconds"/>.
+    /// ", coincide con la muerte de 1:52 a 2:20": el tramo muerto más largo, de la muerte al siguiente golpe directo de
+    /// <paramref name="timeline"/> (la reaparición: se le pasa la serie sin DoT) o, si no volvió a pegar, al final de la
+    /// pelea. Vacío sin muertes o si ningún tramo llega a <see cref="MinDeathSpanSeconds"/>.
     /// </summary>
     public static string DeathClause(IReadOnlyList<int> deathSeconds, IReadOnlyList<long>? timeline, int fightSeconds)
     {

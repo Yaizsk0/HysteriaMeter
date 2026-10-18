@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using HysteriaMeter.App.Config;
 using HysteriaMeter.App.Overlay;
@@ -26,7 +27,7 @@ public sealed class OverlayLiveTests
         RunOnSta(() =>
         {
             Application.ResourceAssembly ??= typeof(App).Assembly;
-            var app = Application.Current as App ?? new App();
+            var app = TestApp.CurrentOrWithoutStartup();
             app.InitializeComponent();
             var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty,
                 new MeterPreferences { LastSeenNews = 1 }, _ => { });
@@ -147,7 +148,7 @@ public sealed class OverlayLiveTests
         RunOnSta(() =>
         {
             Application.ResourceAssembly ??= typeof(App).Assembly;
-            var app = Application.Current as App ?? new App();
+            var app = TestApp.CurrentOrWithoutStartup();
             app.InitializeComponent();
             var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty,
                 new MeterPreferences { LastSeenNews = 1 }, _ => { });
@@ -208,6 +209,48 @@ public sealed class OverlayLiveTests
         });
     }
 
+    [Fact]
+    public void Enrage_alert_paints_alert_bg_once_and_keeps_the_text_without_effects()
+    {
+        RunOnSta(() =>
+        {
+            Application.ResourceAssembly ??= typeof(App).Assembly;
+            var app = TestApp.CurrentOrWithoutStartup();
+            app.InitializeComponent();
+            var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty,
+                new MeterPreferences { LastSeenNews = 1 }, _ => { });
+            var window = new OverlayWindow(new MeterViewModel(session));
+            try
+            {
+                var content = Assert.IsAssignableFrom<FrameworkElement>(window.Content);
+                content.Measure(new Size(380, 360));
+                content.Arrange(new Rect(0, 0, 380, 360));
+                content.UpdateLayout();
+
+                var alert = Assert.IsType<Grid>(window.FindName("EnrageAlert"));
+                var alertBg = Assert.IsType<SolidColorBrush>(app.Resources["AlertBg"]).Color;
+                var layers = alert.Children.OfType<Border>().ToList();
+
+                // AlertBg una sola vez: dos capas al 92 % suman 99 % y el aviso tapa el juego (el mock usa 0,92).
+                var glow = Assert.Single(layers, b => b.Background is SolidColorBrush brush && brush.Color == alertBg);
+                Assert.NotNull(glow.Effect);
+                Assert.Null(glow.Child);
+
+                // El texto va en el Border de encima, transparente y sin efecto en él ni en sus padres (ClearType).
+                var card = Assert.Single(layers, b => b.Child is not null);
+                Assert.True(card.Background is null or SolidColorBrush { Color.A: 0 });
+                for (DependencyObject? node = card; node is not null; node = VisualTreeHelper.GetParent(node))
+                {
+                    Assert.Null((node as UIElement)?.Effect);
+                }
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
     private static byte[] RenderPixels(OverlayWindow window)
     {
         var render = typeof(OverlayWindow).GetMethod("RenderOverlay", BindingFlags.NonPublic | BindingFlags.Instance)!;
@@ -223,7 +266,7 @@ public sealed class OverlayLiveTests
         RunOnSta(() =>
         {
             Application.ResourceAssembly ??= typeof(App).Assembly;
-            var app = Application.Current as App ?? new App();
+            var app = TestApp.CurrentOrWithoutStartup();
             app.InitializeComponent();
             var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty,
                 new MeterPreferences

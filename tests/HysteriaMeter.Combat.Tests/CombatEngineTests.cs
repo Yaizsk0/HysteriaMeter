@@ -357,6 +357,24 @@ public class CombatEngineTests
 
         var me = Assert.Single(engine.CurrentSnapshot()!.Actors);
         Assert.Equal([1500L, 0, 0, 2000], me.Timeline);
+        // Sin DoT la serie directa sería igual: no se arma y se usa el Timeline.
+        Assert.Null(me.DirectTimeline);
+    }
+
+    [Fact]
+    public void Direct_timeline_leaves_out_dot_ticks()
+    {
+        // Un DoT sigue pegando con el jugador muerto: el Timeline lo suma (es daño de verdad) y la serie directa no, así la
+        // vuelta después de una muerte es el siguiente golpe directo. La serie directa termina en el último golpe directo.
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Me, Boss, 7, 500, HitModifiers.DamageOverTime));
+        engine.Apply(new DamageEvent(At(3), Me, Boss, 1, 2000, HitModifiers.Critical));
+        engine.Apply(new DamageEvent(At(4), Me, Boss, 7, 500, HitModifiers.DamageOverTime));
+
+        var me = Assert.Single(engine.CurrentSnapshot()!.Actors);
+        Assert.Equal([1000L, 0, 500, 2000, 500], me.Timeline);
+        Assert.Equal([1000L, 0, 0, 2000], me.DirectTimeline);
     }
 
     [Fact]

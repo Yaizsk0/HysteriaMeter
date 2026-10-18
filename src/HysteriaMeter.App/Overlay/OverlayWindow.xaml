@@ -445,8 +445,14 @@
                                                     <ContentControl Grid.Column="1" Content="{Binding}" ContentTemplate="{StaticResource LiveBadge}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                                     <DockPanel Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0">
                                                         <TextBlock DockPanel.Dock="Right" Text="{Binding Gear}" FontSize="11" Foreground="{DynamicResource TextDim}" Margin="5,0,0,0" Visibility="{Binding HasGear, Converter={StaticResource Visible}}"/>
-                                                        <!-- Nombre, cruz de muertes (Barlow no la trae: SymbolFont) y la tendencia pegada al nombre, como el mock. -->
-                                                        <TextBlock x:Name="NameText" FontFamily="{DynamicResource NumberFont}" FontSize="{Binding DataContext.RowNameSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="SemiBold" Foreground="{DynamicResource TextBright}" TextTrimming="CharacterEllipsis"><Run Text="{Binding Name, Mode=OneWay}"/><Run Text="{Binding DeathText, Mode=OneWay}" FontFamily="{DynamicResource SymbolFont}"/><Run Text="&#x2002;"/><Run Text="{Binding Trend, Mode=OneWay}" FontFamily="{DynamicResource SymbolFont}" FontSize="11" FontWeight="Normal"><Run.Style><Style TargetType="Run"><Setter Property="Foreground" Value="{DynamicResource Danger}"/><Style.Triggers><DataTrigger Binding="{Binding Trend}" Value="▲"><Setter Property="Foreground" Value="{DynamicResource Success}"/></DataTrigger></Style.Triggers></Style></Run.Style></Run></TextBlock>
+                                                        <!-- Como los tramos del dungeon: si no entra, se recorta solo el nombre (en el mock la elipsis es solo del nombre);
+                                                             la cruz de muertes (Barlow no la trae: SymbolFont) y la tendencia van pegadas a continuación y se ven siempre.
+                                                             El nombre entero está en el tooltip de la fila. -->
+                                                        <DockPanel HorizontalAlignment="Left">
+                                                            <TextBlock x:Name="TrendText" DockPanel.Dock="Right" Text="{Binding Trend}" FontFamily="{DynamicResource SymbolFont}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Danger}"/><Style.Triggers><DataTrigger Binding="{Binding Trend}" Value="▲"><Setter Property="Foreground" Value="{DynamicResource Success}"/></DataTrigger><DataTrigger Binding="{Binding Trend}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+                                                            <TextBlock x:Name="DeathMark" DockPanel.Dock="Right" Text="{Binding DeathText}" FontFamily="{DynamicResource SymbolFont}" FontSize="{Binding DataContext.RowNameSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="SemiBold" Foreground="{DynamicResource TextBright}" VerticalAlignment="Center"><TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding DeathText}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+                                                            <TextBlock x:Name="NameText" Text="{Binding Name}" FontFamily="{DynamicResource NumberFont}" FontSize="{Binding DataContext.RowNameSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="SemiBold" Foreground="{DynamicResource TextBright}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                                        </DockPanel>
                                                     </DockPanel>
                                                     <TextBlock x:Name="PerSecondText" Grid.Column="3" Text="{Binding PerSecond}" Style="{StaticResource RowNumber}" FontSize="{Binding DataContext.RowValueSize, RelativeSource={RelativeSource AncestorType=Window}}" FontWeight="Bold" Foreground="{DynamicResource Text}"/>
                                                     <TextBlock x:Name="TotalText" Grid.Column="4" Text="{Binding Total}" Style="{StaticResource RowNumber}" Width="58" Visibility="{Binding DataContext.ShowTotalColumn, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Visible}}"/>
@@ -457,7 +463,11 @@
                                                 </Grid>
                                                 <DockPanel x:Name="PauseRowCells" Visibility="Collapsed" Margin="10,0" VerticalAlignment="Center">
                                                     <TextBlock x:Name="PauseRowDps" DockPanel.Dock="Right" Text="{Binding PerSecond}" FontFamily="{DynamicResource NumberFont}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource Text}" Margin="8,0,0,0"/>
-                                                    <TextBlock x:Name="PauseRowName" FontFamily="{DynamicResource NumberFont}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource Text}" TextTrimming="CharacterEllipsis"><Run Text="{Binding Rank, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Name, Mode=OneWay}"/><Run Text="{Binding DeathText, Mode=OneWay}" FontFamily="{DynamicResource SymbolFont}"/></TextBlock>
+                                                    <!-- Como la fila entera: si no entra, se recorta el nombre y la cruz queda a la vista. -->
+                                                    <DockPanel HorizontalAlignment="Left">
+                                                        <TextBlock x:Name="PauseRowDeath" DockPanel.Dock="Right" Text="{Binding DeathText}" FontFamily="{DynamicResource SymbolFont}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource Text}"><TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding DeathText}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+                                                        <TextBlock x:Name="PauseRowName" FontFamily="{DynamicResource NumberFont}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource Text}" TextTrimming="CharacterEllipsis"><Run Text="{Binding Rank, Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Name, Mode=OneWay}"/></TextBlock>
+                                                    </DockPanel>
                                                 </DockPanel>
                                             </Grid>
                                         </Border>
@@ -467,8 +477,8 @@
                                                 <Setter TargetName="FullRowCells" Property="Visibility" Value="Collapsed"/>
                                                 <Setter TargetName="PauseRowCells" Property="Visibility" Value="Visible"/><Setter TargetName="RowSpark" Property="Visibility" Value="Collapsed"/>
                                             </DataTrigger>
-                                            <DataTrigger Binding="{Binding DataContext.IsCompact, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"><Setter TargetName="Row" Property="Height" Value="22"/><Setter TargetName="Row" Property="CornerRadius" Value="4"/><Setter TargetName="Row" Property="Margin" Value="0,0,0,2"/><Setter TargetName="NameText" Property="FontSize" Value="13"/><Setter TargetName="PerSecondText" Property="FontSize" Value="13"/><Setter TargetName="PauseRowName" Property="FontSize" Value="13"/><Setter TargetName="PauseRowDps" Property="FontSize" Value="13"/></DataTrigger>
-                                            <DataTrigger Binding="{Binding IsLocalPlayer}" Value="True"><Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource RowBorderLocal}"/><Setter TargetName="NameText" Property="Foreground" Value="{DynamicResource NameLocal}"/><Setter TargetName="PauseRowName" Property="Foreground" Value="{DynamicResource NameLocal}"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding DataContext.IsCompact, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"><Setter TargetName="Row" Property="Height" Value="22"/><Setter TargetName="Row" Property="CornerRadius" Value="4"/><Setter TargetName="Row" Property="Margin" Value="0,0,0,2"/><Setter TargetName="NameText" Property="FontSize" Value="13"/><Setter TargetName="DeathMark" Property="FontSize" Value="13"/><Setter TargetName="PerSecondText" Property="FontSize" Value="13"/><Setter TargetName="PauseRowName" Property="FontSize" Value="13"/><Setter TargetName="PauseRowDeath" Property="FontSize" Value="13"/><Setter TargetName="PauseRowDps" Property="FontSize" Value="13"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding IsLocalPlayer}" Value="True"><Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource RowBorderLocal}"/><Setter TargetName="NameText" Property="Foreground" Value="{DynamicResource NameLocal}"/><Setter TargetName="DeathMark" Property="Foreground" Value="{DynamicResource NameLocal}"/><Setter TargetName="PauseRowName" Property="Foreground" Value="{DynamicResource NameLocal}"/><Setter TargetName="PauseRowDeath" Property="Foreground" Value="{DynamicResource NameLocal}"/></DataTrigger>
                                         </DataTemplate.Triggers>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -485,10 +495,11 @@
                                     <TextBlock Text="{Binding BossNoticeDetail}" FontSize="12" Foreground="{DynamicResource TextDim}" TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
-                            <Grid Margin="0,0,0,5" Visibility="{Binding IsEnrageDanger, Converter={StaticResource Visible}}">
-                            <!-- El brillo (GlowDanger) va en un Border propio detrás del aviso: un efecto sobre el texto le saca ClearType. -->
+                            <Grid x:Name="EnrageAlert" Margin="0,0,0,5" Visibility="{Binding IsEnrageDanger, Converter={StaticResource Visible}}">
+                            <!-- El brillo (GlowDanger) va en un Border propio detrás del aviso: un efecto sobre el texto le saca ClearType.
+                                 Ese Border lleva el único AlertBg y el aviso de encima va transparente: dos capas al 92 % quedaban casi opacas. -->
                             <Border Background="{DynamicResource AlertBg}" CornerRadius="{StaticResource RadiusCard}" Effect="{StaticResource GlowDanger}"/>
-                            <Border Style="{StaticResource ToastPanel}" Background="{DynamicResource AlertBg}" BorderBrush="{DynamicResource DangerStrong}" Padding="14,12">
+                            <Border Style="{StaticResource ToastPanel}" Background="Transparent" BorderBrush="{DynamicResource DangerStrong}" Padding="14,12">
                                 <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                     <Path Width="22" Height="22" Stretch="Uniform" VerticalAlignment="Center" Stroke="{DynamicResource OnDanger}" StrokeThickness="2" Data="M12,3 L22,20 H2 Z M12,10 V14 M12,17 V17.5"/>
                                     <StackPanel Grid.Column="1" Margin="12,0,0,0">
@@ -544,13 +555,25 @@
                                     <Style.Triggers><DataTrigger Binding="{Binding Tag, ElementName=NewsCard}" Value="Compacta"><Setter Property="MinHeight" Value="32"/><Setter Property="Margin" Value="14,0,14,10"/></DataTrigger></Style.Triggers>
                                 </Style></Button.Style>
                             </Button>
-                            <ScrollViewer x:Name="NewsScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                <ScrollViewer.Style><Style TargetType="ScrollViewer"><Setter Property="Margin" Value="18,0,10,12"/>
-                                    <Style.Triggers><DataTrigger Binding="{Binding Tag, ElementName=NewsCard}" Value="Compacta"><Setter Property="Margin" Value="14,0,6,8"/></DataTrigger></Style.Triggers>
+                            <!-- Barra solo si queda texto afuera: con menos de 2 px sin entrar (la caja vacía debajo del último renglón)
+                                 queda oculta; la rueda igual mueve ese píxel. VerticalScrollBarVisibility va en el estilo: como atributo
+                                 es un valor local y le gana al disparador. -->
+                            <ScrollViewer x:Name="NewsScroller" HorizontalScrollBarVisibility="Disabled">
+                                <ScrollViewer.Style><Style TargetType="ScrollViewer"><Setter Property="Margin" Value="18,0,10,12"/><Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Tag, ElementName=NewsCard}" Value="Compacta"><Setter Property="Margin" Value="14,0,6,8"/></DataTrigger>
+                                        <DataTrigger Binding="{Binding ScrollableHeight, RelativeSource={RelativeSource Self}, Converter={StaticResource OverlayNarrow}, ConverterParameter=2}" Value="True"><Setter Property="VerticalScrollBarVisibility" Value="Hidden"/></DataTrigger>
+                                    </Style.Triggers>
                                 </Style></ScrollViewer.Style>
                                 <ItemsControl ItemsSource="{Binding NoticeLines}" Margin="0,0,8,0"><ItemsControl.ItemTemplate><DataTemplate>
-                                    <DockPanel x:Name="NewsLine" Margin="0,0,0,10"><TextBlock DockPanel.Dock="Left" Text="◆" FontSize="11" Foreground="{DynamicResource Gold}" Margin="0,1,10,0"/><TextBlock x:Name="NewsText" Text="{Binding}" FontSize="13" Foreground="{DynamicResource Text}" TextWrapping="Wrap"/></DockPanel>
-                                    <DataTemplate.Triggers><DataTrigger Binding="{Binding Tag, ElementName=NewsCard}" Value="Compacta"><Setter TargetName="NewsLine" Property="Margin" Value="0,0,0,6"/><Setter TargetName="NewsText" Property="FontSize" Value="12"/></DataTrigger></DataTemplate.Triggers>
+                                    <!-- La separación va entre novedades, como el gap del mock: arriba de cada una menos la primera. Debajo de la
+                                         última sumaba al alto desplazable y la barra salía con todo el texto a la vista. -->
+                                    <DockPanel x:Name="NewsLine" Margin="0,10,0,0"><TextBlock DockPanel.Dock="Left" Text="◆" FontSize="11" Foreground="{DynamicResource Gold}" Margin="0,1,10,0"/><TextBlock x:Name="NewsText" Text="{Binding}" FontSize="13" Foreground="{DynamicResource Text}" TextWrapping="Wrap"/></DockPanel>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding Tag, ElementName=NewsCard}" Value="Compacta"><Setter TargetName="NewsLine" Property="Margin" Value="0,6,0,0"/><Setter TargetName="NewsText" Property="FontSize" Value="12"/></DataTrigger>
+                                        <!-- La primera (PreviousData es null) sin separación. Va después de la de compacta para ganarle. -->
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource PreviousData}}" Value="{x:Null}"><Setter TargetName="NewsLine" Property="Margin" Value="0"/></DataTrigger>
+                                    </DataTemplate.Triggers>
                                 </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
                             </ScrollViewer>
                         </DockPanel>

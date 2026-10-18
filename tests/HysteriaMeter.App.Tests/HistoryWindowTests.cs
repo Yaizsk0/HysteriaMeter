@@ -42,7 +42,8 @@ public sealed class HistoryWindowTests
                 Application.ResourceAssembly ??= typeof(App).Assembly;
                 if (Application.Current is not App)
                 {
-                    new App().InitializeComponent();
+                    // Este test bombea la cola (Pump): con new App() corría su OnStartup.
+                    TestApp.CurrentOrWithoutStartup().InitializeComponent();
                 }
 
                 var repository = new EncounterRepository(database);

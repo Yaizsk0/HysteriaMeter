@@ -61,7 +61,10 @@ public sealed record ActorSnapshot(
     int Deaths = 0,
     // Item level y power (CP) del jugador, si llegaron en su aparición.
     int? ItemLevel = null,
-    long? CombatPower = null)
+    long? CombatPower = null,
+    // Como Timeline, sin los ticks periódicos (DoT): marca cuándo volvió a pegar después de morir. null si no hubo DoT
+    // (sería igual a Timeline) o en las peleas guardadas antes de que existiera: en los dos casos, usar Timeline.
+    IReadOnlyList<long>? DirectTimeline = null)
 {
     public double CritRate => Hits == 0 ? 0 : (double)Crits / Hits;
 }

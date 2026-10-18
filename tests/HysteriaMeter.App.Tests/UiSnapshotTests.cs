@@ -55,9 +55,10 @@ public sealed partial class UiSnapshotTests
 
     /// <summary>
     /// Los estados, en orden. Estados del mock que hoy no se pueden armar (no hay datos o la UI no existe todavía):
-    /// "Intento N" y "Enrage en" (la demo no trae TargetEnrageSeconds y el TTK solo sale de Refresh en vivo),
-    /// overheal y avisos dentro del overlay. Detalle, Historial y Configuración tienen estados en sus archivos parciales;
-    /// Bienvenida (incluido "sin Npcap") y fin de pelea en UiSnapshotTests.Inicio.cs.
+    /// "Intento N" y overheal. El resto está en los archivos parciales: avisos, enrage (con una pelea pasada por el
+    /// motor), ancho mínimo y nombre largo en Overlay; novedades en Novedades y Fidelity; detalle, comparar (también con
+    /// un DoT después de una muerte) y registro en Detalle; Historial, Configuración y el tooltip de la fila en los suyos;
+    /// Bienvenida (incluido "sin Npcap") y fin de pelea en Inicio.
     /// </summary>
     private static readonly State[] States =
     [
@@ -394,7 +395,7 @@ public sealed partial class UiSnapshotTests
                         "Correr este test solo: dotnet test --filter FullyQualifiedName~UiSnapshotTests");
                 }
 
-                app = Application.Current as App ?? new App();
+                app = TestApp.CurrentOrWithoutStartup();
                 app.InitializeComponent();
                 // App.xaml usa OnMainWindowClose: cerrar la primera ventana encolaría el apagado del Dispatcher y,
                 // como acá se bombea la cola, cortaría la generación a la mitad.
