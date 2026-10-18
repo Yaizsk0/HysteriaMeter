@@ -62,8 +62,9 @@ public enum RunSegmentKind
 }
 
 /// <summary>
-/// Un tramo de la línea de tiempo de la run, en segundos desde la entrada. <paramref name="Label"/> es "Trash" o el nombre
-/// del boss como en su tarjeta; <paramref name="FightId"/> es la pelea guardada de ese tramo.
+/// Un tramo de la línea de tiempo de la run, en segundos desde la entrada. <paramref name="Label"/> es "Trash", el nombre
+/// del boss como en su tarjeta o "Encuentro" (pelea vieja sin nombre ni plantilla que no murió: no se sabe si fue trash o
+/// un wipe); <paramref name="FightId"/> es la pelea guardada de ese tramo.
 /// </summary>
 public sealed record RunSegment(RunSegmentKind Kind, string Label, double StartSecond, double Seconds, Guid FightId = default);
 
@@ -157,7 +158,9 @@ public sealed record DungeonSummary(
         var timeline = ordered.Select(f =>
         {
             var kind = BossRules.Classify(bossOf.ContainsKey(f.Id), f.TargetKilled);
-            var label = bossOf.GetValueOrDefault(f.Id) ?? "Trash";
+            // Una pelea vieja sin nombre ni plantilla que no murió no se puede llamar trash ni wipe: queda "Encuentro".
+            var label = bossOf.GetValueOrDefault(f.Id)
+                ?? (FightTarget.Key(f) is null && !f.TargetKilled ? FightTarget.Unknown : "Trash");
             return new RunSegment(kind, label, (f.Start - start).TotalSeconds, f.Duration.TotalSeconds, f.Id);
         }).ToList();
 

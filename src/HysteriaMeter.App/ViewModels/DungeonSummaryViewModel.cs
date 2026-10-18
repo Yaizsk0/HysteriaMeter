@@ -50,7 +50,7 @@ public sealed class DungeonSummaryViewModel
             Math.Max(s.Seconds / total * TimelineWidth, 3),
             s.Kind switch { RunSegmentKind.Kill => KillBrush, RunSegmentKind.Wipe => WipeBrush, _ => TrashBrush },
             SegmentLabel(s, killOf),
-            $"{s.Label} · {Length(TimeSpan.FromSeconds(s.Seconds))} · {(s.Kind switch { RunSegmentKind.Kill => "kill", RunSegmentKind.Wipe => "wipe", _ => "trash" })}", s.Kind))];
+            $"{s.Label} · {Length(TimeSpan.FromSeconds(s.Seconds))} · {SegmentKind(s)}", s.Kind))];
 
         Cards = [.. summary.Bosses.Select(b =>
         {
@@ -117,6 +117,14 @@ public sealed class DungeonSummaryViewModel
         RunSegmentKind.Kill => $"{segment.Label} {Length(killOf.TryGetValue(segment.FightId, out var boss) ? boss.Duration : TimeSpan.FromSeconds(segment.Seconds))}",
         RunSegmentKind.Wipe => $"{segment.Label} ✕",
         _ => segment.Label,
+    };
+
+    private static string SegmentKind(RunSegment segment) => segment.Kind switch
+    {
+        RunSegmentKind.Kill => "kill",
+        RunSegmentKind.Wipe => "wipe",
+        _ when segment.Label == FightTarget.Unknown => "sin nombre ni plantilla: no se sabe si fue trash o un wipe",
+        _ => "trash",
     };
 
     /// <summary>

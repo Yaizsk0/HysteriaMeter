@@ -41,6 +41,17 @@ public sealed class DungeonDataTests
     }
 
     [Fact]
+    public void An_old_fight_without_name_or_template_is_neither_trash_nor_a_wipe()
+    {
+        var view = new DungeonSummaryViewModel(DungeonSummary.From(
+            [Fight(0, 120, null, killed: false, actors: [Player("Yo", 9_000)]), Fight(200, 100, null, killed: true, actors: [Player("Yo", 9_000)])], Entered));
+
+        Assert.Equal(["Encuentro", "Boss 1 1:40"], view.Timeline.Select(s => s.Label));
+        Assert.Contains("no se sabe si fue trash o un wipe", view.Timeline[0].Tip, StringComparison.Ordinal);
+        Assert.Equal("0", view.Wipes);
+    }
+
+    [Fact]
     public void Each_boss_note_only_says_what_was_measured()
     {
         var (run, _, _) = Run();

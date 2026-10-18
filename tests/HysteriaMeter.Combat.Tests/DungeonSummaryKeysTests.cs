@@ -49,12 +49,13 @@ public class DungeonSummaryKeysTests
     [Fact]
     public void An_old_fight_without_npc_id_or_name_that_did_not_die_is_not_a_wipe()
     {
-        // Sin plantilla ni nombre no hay cómo saber que fue un boss: queda como trash, no como un wipe que no se puede probar.
+        // Sin plantilla ni nombre no hay cómo saber que fue un boss: no es un wipe que no se puede probar. Tampoco se lo
+        // llama trash: el tramo gris dice "Encuentro".
         var summary = DungeonSummary.From([Fight(0, 120, null, false), Fight(200, 100, null, true)], Entered);
 
         Assert.Equal(0, summary.Wipes);
         Assert.Equal([RunSegmentKind.Trash, RunSegmentKind.Kill], summary.Timeline.Select(s => s.Kind));
-        Assert.Equal(["Trash", "Boss 1"], summary.Timeline.Select(s => s.Label));
+        Assert.Equal(["Encuentro", "Boss 1"], summary.Timeline.Select(s => s.Label));
     }
 
     [Fact]
