@@ -55,7 +55,9 @@ public sealed class DungeonSummaryViewModel
                 suffix.Length > 0 ? $"{s.Label} {suffix}" : s.Label,
                 $"{s.Label} · {Length(TimeSpan.FromSeconds(s.Seconds))} · {SegmentKind(s)}", s.Kind)
             {
-                Name = s.Label,
+                // "2400123" en vez de "NPC 2400123": en un tramo angosto, lo que distingue dos plantillas es el final.
+                Name = FightTarget.Compact(s.Label),
+                KeepEnd = FightTarget.IsNpcLabel(s.Label),
                 Suffix = suffix,
             };
         })];
@@ -267,6 +269,12 @@ public sealed class DungeonSummaryViewModel
 public sealed record SegmentItem(double Left, double Width, Brush Fill, string Label, string Tip, RunSegmentKind Kind = RunSegmentKind.Trash)
 {
     public string Name { get; init; } = Label;
+
+    /// <summary>
+    /// El nombre es el número de una plantilla: si no entra, se corta el principio y no el final (los bosses de una
+    /// dungeon suelen tener plantillas seguidas, 2400121 y 2400123). El rótulo completo está en <see cref="Tip"/>.
+    /// </summary>
+    public bool KeepEnd { get; init; }
 
     public string Suffix { get; init; } = string.Empty;
 }

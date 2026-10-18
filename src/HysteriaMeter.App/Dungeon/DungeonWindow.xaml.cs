@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using HysteriaMeter.App.ViewModels;
 
 namespace HysteriaMeter.App.Dungeon;
@@ -94,4 +96,66 @@ public sealed class DungeonTimelinePanel : Panel
 
         return finalSize;
     }
+}
+
+/// <summary>
+/// Pone el nombre de un tramo del timeline en su <see cref="TextBlock"/> hijo. Un nombre se recorta por el final ("Krom…",
+/// con la TextTrimming del hijo); con <see cref="FromStart"/>, por el principio ("…400456"): el número de una plantilla
+/// sin nombre se distingue por el final (los bosses de una dungeon suelen tener plantillas seguidas).
+/// </summary>
+public sealed class SegmentName : Decorator
+{
+    public static readonly DependencyProperty FullTextProperty = DependencyProperty.Register(
+        nameof(FullText), typeof(string), typeof(SegmentName), new FrameworkPropertyMetadata(string.Empty, FrameworkPropertyMetadataOptions.AffectsMeasure));
+
+    public static readonly DependencyProperty FromStartProperty = DependencyProperty.Register(
+        nameof(FromStart), typeof(bool), typeof(SegmentName), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsMeasure));
+
+    public string FullText
+    {
+        get => (string)GetValue(FullTextProperty);
+        set => SetValue(FullTextProperty, value);
+    }
+
+    public bool FromStart
+    {
+        get => (bool)GetValue(FromStartProperty);
+        set => SetValue(FromStartProperty, value);
+    }
+
+    protected override Size MeasureOverride(Size constraint)
+    {
+        if (Child is not TextBlock block)
+        {
+            return base.MeasureOverride(constraint);
+        }
+
+        var full = FullText ?? string.Empty;
+        var text = full;
+        if (FromStart && double.IsFinite(constraint.Width))
+        {
+            // Saca caracteres de adelante hasta que "…" y lo que queda entren.
+            for (var cut = 1; cut < full.Length && WidthOf(block, text) > constraint.Width; cut++)
+            {
+                text = "…" + full[cut..];
+            }
+        }
+
+        if (!string.Equals(block.Text, text, StringComparison.Ordinal))
+        {
+            block.Text = text;
+        }
+
+        block.Measure(constraint);
+        return block.DesiredSize;
+    }
+
+    private static double WidthOf(TextBlock block, string text) => new FormattedText(
+        text,
+        CultureInfo.CurrentCulture,
+        block.FlowDirection,
+        new Typeface(block.FontFamily, block.FontStyle, block.FontWeight, block.FontStretch),
+        block.FontSize,
+        block.Foreground,
+        VisualTreeHelper.GetDpi(block).PixelsPerDip).WidthIncludingTrailingWhitespace;
 }

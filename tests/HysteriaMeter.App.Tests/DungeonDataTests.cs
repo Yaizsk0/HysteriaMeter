@@ -39,8 +39,10 @@ public sealed class DungeonDataTests
         Assert.Equal(["Trash", "NPC 2400123 ✕", "NPC 2400123 3:58"], view.Timeline.Select(s => s.Label));
         Assert.Equal([RunSegmentKind.Trash, RunSegmentKind.Wipe, RunSegmentKind.Kill], view.Timeline.Select(s => s.Kind));
 
-        // La ventana recorta solo el nombre: la ✕ y la duración van aparte y siempre se ven.
-        Assert.Equal([("Trash", ""), ("NPC 2400123", "✕"), ("NPC 2400123", "3:58")], view.Timeline.Select(s => (s.Name, s.Suffix)));
+        // La ventana recorta solo el nombre: la ✕ y la duración van aparte y siempre se ven. En el tramo, una plantilla sin
+        // nombre va sin el "NPC " y, si no entra, se corta por el principio (KeepEnd): lo que la distingue es el final.
+        Assert.Equal([("Trash", "", false), ("2400123", "✕", true), ("2400123", "3:58", true)], view.Timeline.Select(s => (s.Name, s.Suffix, s.KeepEnd)));
+        Assert.All(view.Timeline.Skip(1), s => Assert.StartsWith("NPC 2400123 · ", s.Tip, StringComparison.Ordinal));
     }
 
     [Fact]

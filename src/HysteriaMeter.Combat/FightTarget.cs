@@ -46,4 +46,14 @@ public static class FightTarget
         : null;
 
     public static string? Identity(EncounterSnapshot snapshot) => Identity(snapshot.TargetName, snapshot.TargetNpcId);
+
+    /// <summary>
+    /// "2400123" o "2400123 (2)": el rótulo de una plantilla sin el "NPC " de adelante, para un lugar angosto como un tramo
+    /// de la línea de tiempo (lo que distingue dos plantillas es el final del número). Cualquier otro rótulo queda igual.
+    /// </summary>
+    public static string Compact(string label) => IsNpcLabel(label) ? label[NpcPrefix.Length..] : label;
+
+    /// <summary>El rótulo es una plantilla sin nombre ("NPC 2400123", "NPC 2400123 (2)").</summary>
+    public static bool IsNpcLabel(string label) =>
+        label.Length > NpcPrefix.Length && label.StartsWith(NpcPrefix, StringComparison.Ordinal) && char.IsAsciiDigit(label[NpcPrefix.Length]);
 }

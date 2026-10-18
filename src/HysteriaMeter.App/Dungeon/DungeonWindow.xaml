@@ -154,10 +154,13 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:SegmentItem">
                                         <Border Background="{Binding Fill}" ToolTip="{Binding Tip}" CornerRadius="2">
-                                            <!-- El nombre se recorta si no entra; la duración o la ✕ siempre se ven. -->
+                                            <!-- El nombre se recorta si no entra; la duración o la ✕ siempre se ven. El número de una
+                                                 plantilla sin nombre se recorta por el principio ("…400456"): lo que la distingue es el final. -->
                                             <DockPanel HorizontalAlignment="Center" Margin="4,0">
                                                 <TextBlock DockPanel.Dock="Right" Text="{Binding Suffix}" Style="{StaticResource SegmentSuffix}" />
-                                                <TextBlock Text="{Binding Name}" Style="{StaticResource SegmentText}" TextTrimming="CharacterEllipsis" />
+                                                <local:SegmentName FullText="{Binding Name}" FromStart="{Binding KeepEnd}" VerticalAlignment="Center">
+                                                    <TextBlock Style="{StaticResource SegmentText}" TextTrimming="CharacterEllipsis" />
+                                                </local:SegmentName>
                                             </DockPanel>
                                         </Border>
                                     </DataTemplate>
