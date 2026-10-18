@@ -218,18 +218,11 @@
                                                                 </TextBlock>
                                                             </Border>
 
-                                                            <!-- Objetivo, intento y nota en la misma línea, como el mock (gap 8). Si no entra, se recorta
-                                                                 el objetivo, como el span con ellipsis del mock: el intento siempre se ve y la nota tiene
-                                                                 un ancho máximo con su propio recorte (completa en el tooltip de la fila). El DockPanel
-                                                                 mide primero lo que va a la derecha y le deja al objetivo lo que sobra; alineado a la
-                                                                 izquierda, el intento y la nota quedan pegados al objetivo y no al borde. -->
-                                                            <DockPanel Grid.Column="1" Margin="10,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                                <TextBlock DockPanel.Dock="Right" MaxWidth="120" VerticalAlignment="Bottom" TextTrimming="CharacterEllipsis"
-                                                                           Text="{Binding NoteInline, Mode=OneWay}" FontSize="{StaticResource FontSizeCaption}" FontStyle="Italic"
-                                                                           Foreground="{DynamicResource TextMuted}" />
-                                                                <TextBlock DockPanel.Dock="Right" VerticalAlignment="Bottom" Text="{Binding AttemptInline, Mode=OneWay}"
-                                                                           FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextDim}" />
-                                                                <TextBlock VerticalAlignment="Bottom" TextTrimming="CharacterEllipsis">
+                                                            <!-- Objetivo, intento y nota en la misma línea, como el mock (gap 8). Si no entran, se recorta el objetivo, como
+                                                                 el span con ellipsis del mock, y el intento se ve siempre; RowTitlePanel le guarda al objetivo un mínimo
+                                                                 antes de darle lugar a la nota, que tiene un ancho máximo y su propio recorte (completa en el tooltip). -->
+                                                            <local:RowTitlePanel Grid.Column="1" Margin="10,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                                <TextBlock TextTrimming="CharacterEllipsis">
                                                                     <Run Foreground="{DynamicResource Gold}" FontWeight="SemiBold"><Run.Style>
                                                                         <Style TargetType="Run">
                                                                             <Setter Property="Text" Value="" />
@@ -241,7 +234,10 @@
                                                                         </Style>
                                                                     </Run.Style></Run><Run Text="{Binding TargetText, Mode=OneWay}" FontWeight="SemiBold" />
                                                                 </TextBlock>
-                                                            </DockPanel>
+                                                                <TextBlock Text="{Binding AttemptInline, Mode=OneWay}" FontSize="{StaticResource FontSizeCaption}" Foreground="{DynamicResource TextDim}" />
+                                                                <TextBlock MaxWidth="120" TextTrimming="CharacterEllipsis" Text="{Binding NoteInline, Mode=OneWay}" FontSize="{StaticResource FontSizeCaption}"
+                                                                           FontStyle="Italic" Foreground="{DynamicResource TextMuted}" />
+                                                            </local:RowTitlePanel>
 
                                                             <TextBlock Grid.Column="2" Style="{StaticResource Cell}" Text="{Binding DurationText}" Foreground="{DynamicResource TextMuted}" />
 
