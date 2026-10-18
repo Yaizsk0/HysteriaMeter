@@ -36,14 +36,15 @@
     { "id": 62, "text": "Las invocaciones que el juego manda sin dueño (como Bittercold Wind del Hechicero) se le suman al único jugador de esa clase en la pelea." },
     { "id": 63, "text": "Herramienta hysteria-extract: con la clave de los archivos del juego, saca nombres de skills y NPCs a tu PC; el meter los usa solo." },
     { "id": 65, "text": "Las variantes de nivel de una skill de clase (15280143) toman el nombre de su skill base (15280000)." },
-    { "id": 67, "text": "El detalle muestra el ícono de cada skill si está en Juego\iconos (<id>.png)." },
-    { "id": 68, "text": "Emblemas de clase en el overlay si están en Juego\clases (<clase>.png); si no, queda el símbolo dibujado." },
+    { "id": 67, "text": "El detalle muestra el ícono de cada skill si está en Juego\\iconos (<id>.png)." },
+    { "id": 68, "text": "Emblemas de clase en el overlay si están en Juego\\clases (<clase>.png); si no, queda el símbolo dibujado." },
     { "id": 69, "text": "Modo dungeon: en el historial, RESUMEN › junto a cada run muestra cada boss con sus intentos, wipes, DPS y cuántas veces murió cada uno." },
     { "id": 70, "text": "Rediseño, paso 1: colores y tipografía nuevos en todas las ventanas." },
     {"id": 71, "text": "Rediseño, paso 2: historial en una ventana propia, con runs, filtros y progreso por boss."},
     {"id": 72, "text": "Rediseño, paso 3: configuración en una ventana propia con ocho secciones y navegación más clara."},
     {"id": 73, "text": "Rediseño, paso 4: bienvenida con estado real de la captura y tarjeta de resultado al derrotar un boss."},
     {"id": 74, "text": "Rediseño, paso 5: pestañas de skills, muertes y registro, y comparación de jugadores e intentos."},
-    {"id": 75, "text": "Rediseño, paso 6: nuevo overlay, filas, estados, avisos y pastilla; todas tus opciones siguen disponibles."}
+    {"id": 75, "text": "Rediseño, paso 6: nuevo overlay, filas, estados, avisos y pastilla; todas tus opciones siguen disponibles."},
+    {"id": 77, "text": "Rediseño, paso 7: fuentes originales, novedades que no tapan las filas, pastilla con tendencia y reloj, y avisos, dungeon y configuración como los diseños."}
   ]
 }
