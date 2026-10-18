@@ -48,6 +48,7 @@
     {"id": 77, "text": "Rediseño, paso 7: fuentes originales, novedades que no tapan las filas, pastilla con tendencia y reloj, y avisos, dungeon y configuración como los diseños."},
     {"id": 78, "text": "Bosses sin nombre como \"NPC 2400123\": intentos, récords y comparaciones por plantilla, y un modo dungeon que cuenta solo los wipes reales."},
     {"id": 79, "text": "La cruz y la flecha de la fila se ven aunque el nombre no entre, Esc con el overlay minimizado vuelve a la pelea actual y Comparar no cuenta el DoT después de una muerte."},
-    {"id": 80, "text": "ACTIVO y tiempo muerto cuentan solo tus golpes directos: un DoT que sigue pegando mientras estás muerto o quieto ya no tapa el hueco."}
+    {"id": 80, "text": "ACTIVO y tiempo muerto cuentan solo tus golpes directos: un DoT que sigue pegando mientras estás muerto o quieto ya no tapa el hueco."},
+    {"id": 84, "text": "Al cambiar el tema con una pelea guardada abierta, la franja de arriba del overlay toma los colores nuevos en el momento."}
   ]
 }
