@@ -19,4 +19,5 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Paso 7, detalles menores: enrage con una sola capa de AlertBg, cruz y flecha siempre visibles con nombres largos (también en pausa), Esc en la pastilla, barra de novedades solo cuando hace falta, comentario de WarningLine y vuelta después de una muerte sin contar el DoT.
 - [X] Tests sin el OnStartup de la App (arnés de capturas e HistoryWindowTests incluidos): no tocan la base, las ventanas, las preferencias ni el inicio con Windows del usuario.
 - [X] ACTIVO y TIEMPO MUERTO sin los ticks de DoT (`FightActivity.Of` con la serie directa): KPI del detalle, fila "Activo" de Comparar y consejo de tiempo muerto.
+- [X] Datos del juego: un solo `GameDataSummary` (el de Config) para Configuración y la bienvenida; íconos y emblemas cuentan solo los `<id>.png` que carga la app.
 - [X] Overlay: la pelea guardada (etiqueta, ‹ ›, "Volver al vivo" y nota) se repinta al cambiar el tema y "Borrar pelea" usa ButtonDangerLink; OverlayWindow.xaml sin StaticResource de colores del tema.
