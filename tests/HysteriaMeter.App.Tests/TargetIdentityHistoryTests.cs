@@ -1,13 +1,19 @@
 using System.Globalization;
+using System.IO;
+using System.Runtime.ExceptionServices;
+using System.Windows.Threading;
+using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.App.ViewModels;
 using HysteriaMeter.Combat;
 using HysteriaMeter.Storage;
+using Microsoft.Data.Sqlite;
 
 namespace HysteriaMeter.App.Tests;
 
 /// <summary>
 /// El historial y el modo dungeon deciden igual cuándo dos peleas son contra el mismo objetivo (la plantilla primero y,
-/// sin plantilla, el nombre) y cuentan los bosses de una run igual.
+/// sin plantilla, el nombre) y cuentan los bosses de una run igual. Una celda del modo dungeon abre su intento aunque haya
+/// quedado fuera de las últimas peleas cargadas, sin perder la nota.
 /// </summary>
 [Collection(WpfAppGroup.Name)]
 public sealed class TargetIdentityHistoryTests
@@ -78,5 +84,86 @@ public sealed class TargetIdentityHistoryTests
         var wipes = dungeon.Wipes switch { 0 => "sin wipes", 1 => "1 wipe", var n => $"{n} wipes" };
         var bosses = dungeon.Bosses.Count == 1 ? "boss" : "bosses";
         Assert.Equal($"{dungeon.BossesKilled}/{dungeon.Bosses.Count} {bosses} · {wipes}", HistoryRun.BossesText(history));
+    }
+
+    [Fact]
+    public void A_matrix_cell_opens_its_fight_with_its_note_even_after_it_left_the_loaded_history()
+    {
+        WithHistory((vm, repository) =>
+        {
+            var boss = Snapshot(2400123, killed: true, minute: 0);
+            Pump(repository.SaveAsync(boss));
+            Pump(repository.SetNoteAsync(boss.Id.ToString(), "probar otra rotación"));
+
+            Pump(vm.ToggleHistoryCommand.ExecuteAsync(null));
+            DungeonSummaryViewModel? summary = null;
+            vm.RunSummaryRequested += s => summary = s;
+            Pump(vm.OpenRunSummaryCommand.ExecuteAsync(vm.HistoryRuns.SelectMany(r => r.Fights).Single(f => f.Id == boss.Id.ToString())));
+            Assert.NotNull(summary);
+
+            // Llegan más peleas que las que carga el historial y se recarga: la del boss queda afuera.
+            Pump(vm.ToggleHistoryCommand.ExecuteAsync(null));
+            for (var i = 1; i <= MeterViewModel.HistoryLimit; i++)
+            {
+                Pump(repository.SaveAsync(Snapshot(7, killed: true, minute: i, seconds: 10) with { ZoneEnteredAt = null }));
+            }
+
+            Pump(vm.ToggleHistoryCommand.ExecuteAsync(null));
+            Assert.DoesNotContain(vm.HistoryRuns.SelectMany(r => r.Fights), f => f.Id == boss.Id.ToString());
+
+            var cell = summary.Rows.Single().StyledCells.Single();
+            Assert.True(summary.OpenFight(cell));
+            for (var wait = 0; wait < 200 && vm.PinnedHistoryId != boss.Id.ToString(); wait++)
+            {
+                Pump(Task.Delay(10));
+            }
+
+            Assert.Equal(boss.Id.ToString(), vm.PinnedHistoryId);
+            Assert.Equal("probar otra rotación", vm.CurrentNote);
+        });
+    }
+
+    private static void WithHistory(Action<MeterViewModel, EncounterRepository> action)
+    {
+        ExceptionDispatchInfo? failure = null;
+        var thread = new Thread(() =>
+        {
+            var database = Path.Combine(Path.GetTempPath(), $"hysteria-identity-{Guid.NewGuid():N}.db");
+            MeterViewModel? vm = null;
+            try
+            {
+                SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
+                var repository = new EncounterRepository(database);
+                Pump(repository.InitializeAsync());
+                vm = new MeterViewModel(new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty,
+                    new MeterPreferences { LastSeenNews = 1 }, _ => { }, history: repository));
+                action(vm, repository);
+            }
+            catch (Exception ex)
+            {
+                failure = ExceptionDispatchInfo.Capture(ex);
+            }
+            finally
+            {
+                vm?.Stop();
+                SqliteConnection.ClearAllPools();
+                foreach (var suffix in new[] { string.Empty, "-wal", "-shm" })
+                {
+                    File.Delete(database + suffix);
+                }
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        failure?.Throw();
+    }
+
+    private static void Pump(Task task)
+    {
+        var frame = new DispatcherFrame();
+        _ = task.ContinueWith(_ => frame.Continue = false, TaskScheduler.FromCurrentSynchronizationContext());
+        Dispatcher.PushFrame(frame);
+        task.GetAwaiter().GetResult();
     }
 }

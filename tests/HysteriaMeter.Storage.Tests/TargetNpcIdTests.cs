@@ -140,6 +140,24 @@ public sealed class TargetNpcIdTests : IDisposable
         Assert.Equal([false, false, true, false, true], listed.Select(s => s.IsRecord));
     }
 
+    [Fact]
+    public async Task One_fight_loads_as_the_history_lists_it_even_outside_the_recent_ones()
+    {
+        var repository = new EncounterRepository(_path);
+        await repository.InitializeAsync();
+        var first = Fight(Start, null, 111, 100);
+        await repository.SaveAsync(first);
+        await repository.SetNoteAsync(first.Id.ToString(), "probar otra rotación");
+        await repository.SaveAsync(Fight(Start.AddMinutes(5), null, 111, 120));
+
+        Assert.DoesNotContain(await repository.ListRecentAsync(1), s => s.Id == first.Id.ToString());
+        var loaded = await repository.LoadSummaryAsync(first.Id.ToString());
+
+        Assert.NotNull(loaded);
+        Assert.Equal(("probar otra rotación", 1, (uint?)111), (loaded.Note, loaded.Attempt, loaded.TargetNpcId));
+        Assert.Null(await repository.LoadSummaryAsync(Guid.NewGuid().ToString()));
+    }
+
     private static EncounterSnapshot Fight(DateTimeOffset start, string? target, uint? npc, double localDps) => new(
         Guid.NewGuid(),
         start,

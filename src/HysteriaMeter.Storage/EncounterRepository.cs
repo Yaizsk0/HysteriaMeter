@@ -167,7 +167,17 @@ public sealed class EncounterRepository(string databasePath)
         Saved?.Invoke();
     }
 
-    public async Task<IReadOnlyList<EncounterSummary>> ListRecentAsync(int limit = 50, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<EncounterSummary>> ListRecentAsync(int limit = 50, CancellationToken cancellationToken = default) =>
+        QuerySummariesAsync(string.Empty, new { limit }, cancellationToken);
+
+    /// <summary>
+    /// Una pelea guardada como la lista el historial (con su intento, récord y nota), aunque haya quedado fuera de las
+    /// últimas que carga la ventana. <c>null</c> si no existe.
+    /// </summary>
+    public async Task<EncounterSummary?> LoadSummaryAsync(string id, CancellationToken cancellationToken = default) =>
+        (await QuerySummariesAsync("WHERE e.id = @id", new { id, limit = 1 }, cancellationToken).ConfigureAwait(false)) is [var summary] ? summary : null;
+
+    private async Task<IReadOnlyList<EncounterSummary>> QuerySummariesAsync(string filter, object parameters, CancellationToken cancellationToken)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
 
@@ -195,9 +205,10 @@ public sealed class EncounterRepository(string databasePath)
                    p.damage AS ActorsDamage, p.main_damage AS MainTargetDamage, p.deaths AS Deaths,
                    e.target_npc_id AS TargetNpcId
             FROM encounters e LEFT JOIN loc l ON l.encounter_id = e.id LEFT JOIN party p ON p.encounter_id = e.id
+            {filter}
             ORDER BY e.started_at DESC LIMIT @limit
             """,
-            new { limit }).ConfigureAwait(false);
+            parameters).ConfigureAwait(false);
         return [.. rows.Select(r => new EncounterSummary(
             r.Id,
             r.StartedAt,

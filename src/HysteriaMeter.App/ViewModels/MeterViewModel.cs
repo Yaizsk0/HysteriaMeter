@@ -1762,11 +1762,30 @@ public sealed partial class MeterViewModel : ObservableObject
     }
 
     /// <summary>Un clic en la matriz del modo dungeon: abre ese intento en el overlay, como una fila del historial.</summary>
-    private void OpenRunFight(Guid id)
+    private void OpenRunFight(Guid id) => _ = OpenRunFightAsync(id);
+
+    /// <summary>
+    /// Busca la fila en el historial cargado; si quedó fuera de las últimas <see cref="HistoryLimit"/> (llegaron peleas
+    /// nuevas con el modo dungeon abierto), la lee de la base con su nota, para que abrirla no la pise con una vacía.
+    /// </summary>
+    private async Task OpenRunFightAsync(Guid id)
     {
-        if (_allHistory.Find(i => Guid.TryParse(i.Id, out var saved) && saved == id) is { } item)
+        var item = _allHistory.Find(i => Guid.TryParse(i.Id, out var saved) && saved == id);
+        if (item is null && _history is not null)
         {
-            OpenEncounterCommand.Execute(item);
+            try
+            {
+                item = await _history.LoadSummaryAsync(id.ToString()).ConfigureAwait(true) is { } summary ? HistoryItem.From(summary) : null;
+            }
+            catch (DbException)
+            {
+                return;
+            }
+        }
+
+        if (item is not null)
+        {
+            await OpenEncounterCommand.ExecuteAsync(item).ConfigureAwait(true);
         }
     }
 
