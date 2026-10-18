@@ -243,89 +243,185 @@ public sealed class EncounterRepository(string databasePath)
         """;
 
     /// <summary>
-    /// Mejor DPS propio contra ese objetivo, sin contar la pelea <paramref name="excludeId"/>. <c>null</c> si no hay otra.
-    /// Con <paramref name="localName"/>, solo las peleas con ese personaje.
+    /// La regla de <see cref="SameTarget"/> contra un objetivo que llega por parámetros (<c>@npcId</c>, <c>@targetName</c>)
+    /// en vez de otra fila: la misma plantilla si la hay; sin plantilla, el mismo nombre entre las peleas sin plantilla.
+    /// <paramref name="alias"/> es la tabla de encuentros de la consulta.
     /// </summary>
-    public async Task<double?> BestLocalDpsAsync(string targetName, string excludeId, string? localName = null, CancellationToken cancellationToken = default)
+    private static string TargetIs(string alias) =>
+        $"((@npcId IS NOT NULL AND {alias}.target_npc_id = @npcId) OR (@npcId IS NULL AND {alias}.target_npc_id IS NULL AND {alias}.target_name = @targetName))";
+
+    /// <summary>Filtro de las consultas viejas por nombre: solo el texto guardado, sin mirar la plantilla.</summary>
+    private const string NameIs = "e.target_name = @targetName";
+
+    /// <summary>
+    /// El objetivo como parámetros de <see cref="TargetIs"/>: el nombre de verdad (<see cref="FightTarget.Name"/>) y la
+    /// plantilla. <c>false</c> sin ninguno de los dos: no se compara con nada, como en el historial.
+    /// </summary>
+    private static bool TryTarget(string? targetName, uint? npcId, out string? name, out long? npc)
     {
-        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
-        return await connection.ExecuteScalarAsync<double?>(
-            """
-            SELECT MAX(a.dps) FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
-            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
-            """,
-            new { targetName, excludeId, localName }).ConfigureAwait(false);
+        name = FightTarget.Name(targetName);
+        npc = npcId;
+        return FightTarget.Identity(targetName, npcId) is not null;
     }
 
-    /// <summary>DPS propio en el intento anterior contra ese objetivo (el último antes de <paramref name="excludeId"/>). <c>null</c> si no hay.</summary>
-    public async Task<double?> PreviousLocalDpsAsync(string targetName, string excludeId, string? localName = null, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Mejor DPS propio contra ese objetivo, sin contar la pelea <paramref name="excludeId"/>. <c>null</c> si no hay otra.
+    /// Con <paramref name="localName"/>, solo las peleas con ese personaje. Compara solo por el nombre guardado: para la
+    /// regla del historial (plantilla primero) va la sobrecarga con la plantilla.
+    /// </summary>
+    public Task<double?> BestLocalDpsAsync(string targetName, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
+        BestLocalDpsCoreAsync(NameIs, targetName, null, excludeId, localName, cancellationToken);
+
+    /// <summary>
+    /// Mejor DPS propio contra ese objetivo con la regla de <see cref="FightTarget.Identity(string?, uint?)"/> (la
+    /// plantilla primero y, sin plantilla, el nombre), sin contar <paramref name="excludeId"/>. <c>null</c> si no hay
+    /// otra o si el objetivo no tiene nombre ni plantilla.
+    /// </summary>
+    public Task<double?> BestLocalDpsAsync(string? targetName, uint? npcId, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
+        TryTarget(targetName, npcId, out var name, out var npc)
+            ? BestLocalDpsCoreAsync(TargetIs("e"), name, npc, excludeId, localName, cancellationToken)
+            : Task.FromResult<double?>(null);
+
+    private async Task<double?> BestLocalDpsCoreAsync(
+        string target, string? targetName, long? npcId, string excludeId, string? localName, CancellationToken cancellationToken)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         return await connection.ExecuteScalarAsync<double?>(
-            """
+            $"""
+            SELECT MAX(a.dps) FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
+            WHERE a.is_local = 1 AND {target} AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
+            """,
+            new { targetName, npcId, excludeId, localName }).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// DPS propio en el intento anterior contra ese objetivo (el último antes de <paramref name="excludeId"/>). <c>null</c>
+    /// si no hay. Compara solo por el nombre guardado.
+    /// </summary>
+    public Task<double?> PreviousLocalDpsAsync(string targetName, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
+        PreviousLocalDpsCoreAsync(NameIs, targetName, null, excludeId, localName, cancellationToken);
+
+    /// <summary>
+    /// DPS propio en el intento anterior contra ese objetivo con la regla de <see cref="FightTarget.Identity(string?, uint?)"/>.
+    /// <c>null</c> si no hay o si el objetivo no tiene nombre ni plantilla.
+    /// </summary>
+    public Task<double?> PreviousLocalDpsAsync(string? targetName, uint? npcId, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
+        TryTarget(targetName, npcId, out var name, out var npc)
+            ? PreviousLocalDpsCoreAsync(TargetIs("e"), name, npc, excludeId, localName, cancellationToken)
+            : Task.FromResult<double?>(null);
+
+    private async Task<double?> PreviousLocalDpsCoreAsync(
+        string target, string? targetName, long? npcId, string excludeId, string? localName, CancellationToken cancellationToken)
+    {
+        await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        return await connection.ExecuteScalarAsync<double?>(
+            $"""
             SELECT a.dps FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
-            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
+            WHERE a.is_local = 1 AND {target} AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
               AND e.started_at < COALESCE((SELECT started_at FROM encounters WHERE id = @excludeId), '9999')
             ORDER BY e.started_at DESC LIMIT 1
             """,
-            new { targetName, excludeId, localName }).ConfigureAwait(false);
+            new { targetName, npcId, excludeId, localName }).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Tu DPS en cada pelea guardada contra ese objetivo, sin contar <paramref name="excludeId"/>: con la pelea actual,
     /// da el percentil del detalle ("entre tus N intentos"). Con <paramref name="localName"/>, solo las de ese personaje.
+    /// Compara solo por el nombre guardado.
     /// </summary>
-    public async Task<IReadOnlyList<double>> LocalDpsAsync(string targetName, string excludeId, string? localName = null, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<double>> LocalDpsAsync(string targetName, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
+        LocalDpsCoreAsync(NameIs, targetName, null, excludeId, localName, cancellationToken);
+
+    /// <summary>
+    /// Tu DPS en cada pelea guardada contra ese objetivo con la regla de <see cref="FightTarget.Identity(string?, uint?)"/>.
+    /// Vacío si el objetivo no tiene nombre ni plantilla.
+    /// </summary>
+    public Task<IReadOnlyList<double>> LocalDpsAsync(string? targetName, uint? npcId, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
+        TryTarget(targetName, npcId, out var name, out var npc)
+            ? LocalDpsCoreAsync(TargetIs("e"), name, npc, excludeId, localName, cancellationToken)
+            : Task.FromResult<IReadOnlyList<double>>([]);
+
+    private async Task<IReadOnlyList<double>> LocalDpsCoreAsync(
+        string target, string? targetName, long? npcId, string excludeId, string? localName, CancellationToken cancellationToken)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         var dps = await connection.QueryAsync<double>(
-            """
+            $"""
             SELECT a.dps FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
-            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
+            WHERE a.is_local = 1 AND {target} AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
             """,
-            new { targetName, excludeId, localName }).ConfigureAwait(false);
+            new { targetName, npcId, excludeId, localName }).ConfigureAwait(false);
         return [.. dps];
     }
 
     /// <summary>
     /// Ids de tu intento anterior y de tu mejor intento contra ese objetivo, sin contar <paramref name="excludeId"/>,
-    /// para compararlos con la pelea actual. Cada uno es <c>null</c> si no hay.
+    /// para compararlos con la pelea actual. Cada uno es <c>null</c> si no hay. Compara solo por el nombre guardado.
     /// </summary>
-    public async Task<(string? Previous, string? Best)> PastAttemptsAsync(string targetName, string excludeId, string? localName = null, CancellationToken cancellationToken = default)
+    public Task<(string? Previous, string? Best)> PastAttemptsAsync(string targetName, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
+        PastAttemptsCoreAsync(NameIs, targetName, null, excludeId, localName, cancellationToken);
+
+    /// <summary>
+    /// Ids de tu intento anterior y de tu mejor intento contra ese objetivo con la regla de
+    /// <see cref="FightTarget.Identity(string?, uint?)"/>. Los dos <c>null</c> si el objetivo no tiene nombre ni plantilla.
+    /// </summary>
+    public Task<(string? Previous, string? Best)> PastAttemptsAsync(string? targetName, uint? npcId, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
+        TryTarget(targetName, npcId, out var name, out var npc)
+            ? PastAttemptsCoreAsync(TargetIs("e"), name, npc, excludeId, localName, cancellationToken)
+            : Task.FromResult<(string? Previous, string? Best)>((null, null));
+
+    private async Task<(string? Previous, string? Best)> PastAttemptsCoreAsync(
+        string target, string? targetName, long? npcId, string excludeId, string? localName, CancellationToken cancellationToken)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var parameters = new { targetName, npcId, excludeId, localName };
         var previous = await connection.ExecuteScalarAsync<string?>(
-            """
+            $"""
             SELECT e.id FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
-            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
+            WHERE a.is_local = 1 AND {target} AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
               AND e.started_at < COALESCE((SELECT started_at FROM encounters WHERE id = @excludeId), '9999')
             ORDER BY e.started_at DESC LIMIT 1
             """,
-            new { targetName, excludeId, localName }).ConfigureAwait(false);
+            parameters).ConfigureAwait(false);
         var best = await connection.ExecuteScalarAsync<string?>(
-            """
+            $"""
             SELECT e.id FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
-            WHERE a.is_local = 1 AND e.target_name = @targetName AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
+            WHERE a.is_local = 1 AND {target} AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
             ORDER BY a.dps DESC LIMIT 1
             """,
-            new { targetName, excludeId, localName }).ConfigureAwait(false);
+            parameters).ConfigureAwait(false);
         return (previous, best);
     }
 
     /// <summary>
     /// Cuántas peleas guardadas contra ese objetivo empezaron antes de <paramref name="before"/>, sin contar <paramref name="excludeId"/>:
     /// el overlay muestra "Intento N" (N = esto + 1) mientras la pelea todavía no se guardó. Por personaje, como el intento del historial.
+    /// Compara solo por el nombre guardado.
     /// </summary>
-    public async Task<int> CountEarlierAttemptsAsync(string targetName, DateTimeOffset before, string excludeId, string? localName = null, CancellationToken cancellationToken = default)
+    public Task<int> CountEarlierAttemptsAsync(string targetName, DateTimeOffset before, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
+        CountEarlierAttemptsCoreAsync("o.target_name = @targetName", targetName, null, before, excludeId, localName, cancellationToken);
+
+    /// <summary>
+    /// El mismo conteo con la regla de <see cref="FightTarget.Identity(string?, uint?)"/>, la del "intento N" del historial:
+    /// así el overlay y el historial dan el mismo número. 0 si el objetivo no tiene nombre ni plantilla.
+    /// </summary>
+    public Task<int> CountEarlierAttemptsAsync(
+        string? targetName, uint? npcId, DateTimeOffset before, string excludeId, string? localName = null, CancellationToken cancellationToken = default) =>
+        TryTarget(targetName, npcId, out var name, out var npc)
+            ? CountEarlierAttemptsCoreAsync(TargetIs("o"), name, npc, before, excludeId, localName, cancellationToken)
+            : Task.FromResult(0);
+
+    private async Task<int> CountEarlierAttemptsCoreAsync(
+        string target, string? targetName, long? npcId, DateTimeOffset before, string excludeId, string? localName, CancellationToken cancellationToken)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
         var count = await connection.ExecuteScalarAsync<long>(
-            """
+            $"""
             WITH loc AS (SELECT encounter_id, MAX(name) AS name FROM encounter_actors WHERE is_local = 1 GROUP BY encounter_id)
             SELECT COUNT(*) FROM encounters o LEFT JOIN loc l ON l.encounter_id = o.id
-            WHERE o.target_name = @targetName AND o.started_at < @before AND o.id <> @excludeId AND l.name IS @localName
+            WHERE {target} AND o.started_at < @before AND o.id <> @excludeId AND l.name IS @localName
             """,
-            new { targetName, before = before.ToString("O", CultureInfo.InvariantCulture), excludeId, localName }).ConfigureAwait(false);
+            new { targetName, npcId, before = before.ToString("O", CultureInfo.InvariantCulture), excludeId, localName }).ConfigureAwait(false);
         return (int)count;
     }
 
