@@ -6,6 +6,7 @@ using HysteriaMeter.App.Detail;
 using HysteriaMeter.App.Registro;
 using HysteriaMeter.App.ViewModels;
 using HysteriaMeter.Combat;
+using HysteriaMeter.Protocol.Events;
 
 namespace HysteriaMeter.App.Tests;
 
@@ -55,6 +56,16 @@ public sealed partial class UiSnapshotTests
         {
             var detail = h.DetailOf("Tharos");
             detail.CompareWith = detail.Others.First(o => o.Name == "Kaelis");
+            return new DetailWindow(detail);
+        }),
+
+        // Un DoT que sigue pegando con el jugador muerto no es la vuelta: la conclusión nombra la muerte de 0:30 a 0:45.
+        // Con el Timeline entero (DoT incluido) el tramo terminaba en el 0:31 y no se nombraba.
+        new("23d-detalle-comparar-muerte-dot", h =>
+        {
+            var detail = DotAfterDeath(h);
+            detail.CompareWith = detail.Others.First(o => o.Name == "Compañero");
+            Assert.EndsWith(", coincide con la muerte de 0:30 a 0:45.", detail.InsightTail);
             return new DetailWindow(detail);
         }),
         new("24-detalle-renombrar", h =>
@@ -122,5 +133,46 @@ public sealed partial class UiSnapshotTests
         }
 
         return detail;
+    }
+
+    /// <summary>
+    /// Pelea en vivo pasada por el motor, como la reciben los eventos: vos ("Prueba") y "Compañero" le pegan al boss una
+    /// vez por segundo durante 70 s. Morís en el 0:30 con un DoT puesto que sigue pegando hasta el 0:38, y volvés a pegar
+    /// directo en el 0:45. Alcance "todos" para que Compañero cuente sin armar un grupo.
+    /// </summary>
+    private static ActorDetailViewModel DotAfterDeath(Harness h)
+    {
+        var session = h.Session(new MeterPreferences { LastSeenNews = 1, Scope = ActorScope.Everyone });
+        var engine = session.Engine;
+        engine.Entities.Npcs = new NpcCatalog(new Dictionary<uint, NpcInfo> { [500] = new("Boss de prueba", null, IsBoss: true) });
+        var start = Base;
+        engine.Apply(new LocalPlayerEvent(start, 1, "Prueba"));
+        engine.Apply(new EntityInfoEvent(start, 1, "Prueba", 11));
+        engine.Apply(new EntityInfoEvent(start, 2, "Compañero", null));
+        engine.Apply(new EntitySpawnEvent(start, 900, null, 500, Hp: 10_000_000, MaxHp: 10_000_000));
+        for (var second = 0; second <= 70; second++)
+        {
+            var at = start.AddSeconds(second);
+            engine.Apply(new DamageEvent(at, 2, 900, 11_010_000, 9_000, HitModifiers.None));
+            if (second is < 30 or >= 45)
+            {
+                engine.Apply(new DamageEvent(at, 1, 900, 11_010_000, 8_000, HitModifiers.None));
+            }
+
+            if (second is > 20 and <= 38)
+            {
+                engine.Apply(new DamageEvent(at, 1, 900, 11_020_000, 1_000, HitModifiers.DamageOverTime));
+            }
+
+            if (second == 30)
+            {
+                engine.Apply(new DeathEvent(at, 1));
+            }
+        }
+
+        var vm = Refreshed(new MeterViewModel(session));
+        Pump(vm.LiveQueries);
+        vm.ShowDetailCommand.Execute(vm.Actors.Single(a => a.Name == "Prueba"));
+        return vm.Detail;
     }
 }

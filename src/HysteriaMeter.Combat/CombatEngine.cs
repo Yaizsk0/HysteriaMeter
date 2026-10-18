@@ -301,7 +301,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
     {
         var actor = encounter.Actor(source);
         actor.AddHit(e.SkillId, e.TargetId, e.Amount, e.Modifiers, e.Timestamp);
-        actor.AddToTimeline((int)Math.Max((e.Timestamp - encounter.Start).TotalSeconds, 0), e.Amount);
+        actor.AddToTimeline((int)Math.Max((e.Timestamp - encounter.Start).TotalSeconds, 0), e.Amount, e.Modifiers.HasFlag(HitModifiers.DamageOverTime));
         actor.Overkill += overkill;
         encounter.RegisterDamage(e.TargetId, e.Amount, e.Timestamp);
     }
@@ -507,7 +507,9 @@ public sealed class CombatEngine(CombatEngineOptions options)
                     stats.HitsTaken,
                     stats.Deaths,
                     profile.ItemLevel,
-                    profile.CombatPower);
+                    profile.CombatPower,
+                    // Sin DoT sería igual al Timeline: no se guarda dos veces.
+                    stats.PeriodicDamage > 0 ? [.. stats.DirectDamageBySecond] : null);
             })
             .OrderByDescending(a => a.Damage)
             .ToArray();

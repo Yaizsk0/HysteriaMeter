@@ -16,3 +16,5 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Integración: actualizar README y validar la combinación de ventanas, preferencias, atajos y temas.
 - [X] Publicación: agregar novedades con el número real de cada PR (#71–#75).
 - [X] Integración: preparar los cinco PR y completar su revisión; comprobar CI verde sobre el último commit como condición de cada merge.
+- [X] Paso 7, detalles menores: enrage con una sola capa de AlertBg, cruz y flecha siempre visibles con nombres largos (también en pausa), Esc en la pastilla, barra de novedades solo cuando hace falta, comentario de WarningLine y vuelta después de una muerte sin contar el DoT.
+- [X] Tests sin el OnStartup de la App (arnés de capturas e HistoryWindowTests incluidos): no tocan la base, las ventanas, las preferencias ni el inicio con Windows del usuario.

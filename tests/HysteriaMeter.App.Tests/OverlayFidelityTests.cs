@@ -22,7 +22,7 @@ public sealed class OverlayFidelityTests
         RunOnSta(() =>
         {
             Application.ResourceAssembly ??= typeof(App).Assembly;
-            var app = Application.Current as App ?? new App();
+            var app = TestApp.CurrentOrWithoutStartup();
             app.InitializeComponent();
             var recorder = new CaptureRecorder();
             var session = new MeterSession(new CombatEngine(), recorder, SkillNames.Empty,

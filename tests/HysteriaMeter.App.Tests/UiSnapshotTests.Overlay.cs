@@ -67,7 +67,35 @@ public sealed partial class UiSnapshotTests
             window.Loaded += (_, _) => ((System.Windows.Controls.ScrollViewer)window.FindName("ActorScroller")).ScrollToRightEnd();
             return window;
         }),
+
+        // Nombre largo con muerte y tendencia en el ancho mínimo, normal y compacto: se recorta solo el nombre y la cruz y la
+        // flecha siguen a la vista, pegadas a continuación (como la ✕ de los tramos del dungeon). Brann, corto, la lleva pegada.
+        new("45b-overlay-nombre-largo", h => Overlay(LongName(Live(h.Demo())), width: 260)),
+        new("45c-overlay-nombre-largo-compacto", h => Overlay(LongName(Live(h.Demo(compact: true))), width: 260)),
+
+        // En pausa la fila solo lleva puesto, nombre, cruz y DPS: la cruz también queda a la vista. El nombre es más largo
+        // que el de 45b porque, sin insignia ni %, entra más.
+        new("45d-overlay-nombre-largo-pausa", h =>
+        {
+            var vm = Live(h.Demo());
+            vm.Actors.Single(a => a.Name == "Tharos").Name = "Nombre de prueba muy largo, más que la fila en pausa";
+            vm.IsPaused = true;
+            return Overlay(vm, width: 260);
+        }),
     ];
+
+    /// <summary>
+    /// Tharos (el de la demo con una muerte) con un nombre de prueba que no entra y ▲; Brann con ▼. La flecha se fija a mano:
+    /// en vivo la pone RankTrends al cambiar de puesto y dura 3 s. Va después de Live(), que no refresca.
+    /// </summary>
+    private static MeterViewModel LongName(MeterViewModel vm)
+    {
+        var tharos = vm.Actors.Single(a => a.Name == "Tharos");
+        tharos.Name = "Nombre de prueba muy largo";
+        tharos.Trend = "▲";
+        vm.Actors.Single(a => a.Name == "Brann").Trend = "▼";
+        return vm;
+    }
 
     private static MeterViewModel LiveEncounter(Harness harness)
     {

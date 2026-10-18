@@ -28,7 +28,7 @@ public sealed class DetailCompareTests
     [Fact]
     public void A_death_followed_by_a_hit_right_away_is_not_named()
     {
-        // Murió en el 20 y pegó en el 21 (por ejemplo, un daño periódico): no hubo tramo muerto que explique nada.
+        // Murió en el 20 y volvió a pegar en el 21 (lo levantaron enseguida): no hubo tramo muerto que explique nada.
         long[] timeline = [.. Enumerable.Repeat(100L, 100)];
 
         Assert.Equal(string.Empty, ActorDetailViewModel.DeathClause([20], timeline, 100));
@@ -51,8 +51,26 @@ public sealed class DetailCompareTests
         Assert.Equal(": 4 golpes más (+400).", ActorDetailViewModel.Insight(theirs, mine, SkillNames.Empty, deathSeconds: [112], fightSeconds: 200).Tail);
     }
 
+    [Fact]
+    public void A_dot_still_ticking_after_the_death_is_not_the_return()
+    {
+        using var _ = new CultureScope(CultureInfo.InvariantCulture);
+        // Muere en el 112 y sus DoT siguen pegando todo el tramo: el Timeline nunca queda en 0. Vuelve a pegar directo en el 140.
+        long[] timeline = [.. Enumerable.Repeat(100L, 200)];
+        long[] direct = [.. Enumerable.Range(0, 200).Select(i => i is >= 112 and < 140 ? 0L : 100L)];
+        var mine = Actor(1, [Skill(1, 600, 6)], timeline, direct);
+        var theirs = Actor(2, [Skill(1, 1_000, 10)], null);
+
+        Assert.Equal(": 4 golpes menos (−400), coincide con la muerte de 1:52 a 2:20.",
+            ActorDetailViewModel.Insight(mine, theirs, SkillNames.Empty, deathSeconds: [112], fightSeconds: 200).Tail);
+
+        // Sin la serie directa (sin DoT o una pelea guardada antes), el Timeline, como hasta ahora.
+        Assert.Equal(": 4 golpes menos (−400).",
+            ActorDetailViewModel.Insight(mine with { DirectTimeline = null }, theirs, SkillNames.Empty, deathSeconds: [112], fightSeconds: 200).Tail);
+    }
+
     private static SkillSnapshot Skill(uint id, long damage, int hits) => new(id, damage, hits, 0, damage / Math.Max(1, hits), 0);
 
-    private static ActorSnapshot Actor(ulong id, SkillSnapshot[] skills, long[]? timeline) =>
-        new(id, $"Jugador {id}", null, id == 1, skills.Sum(s => s.Damage), 100, 0.5, skills.Sum(s => s.Hits), 0, 0, 0, skills, Timeline: timeline);
+    private static ActorSnapshot Actor(ulong id, SkillSnapshot[] skills, long[]? timeline, long[]? direct = null) =>
+        new(id, $"Jugador {id}", null, id == 1, skills.Sum(s => s.Damage), 100, 0.5, skills.Sum(s => s.Hits), 0, 0, 0, skills, Timeline: timeline, DirectTimeline: direct);
 }

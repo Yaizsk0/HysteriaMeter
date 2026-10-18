@@ -361,7 +361,7 @@ public sealed class InicioWindowTests
         RunOnSta(() =>
         {
             Application.ResourceAssembly ??= typeof(App).Assembly;
-            var app = Application.Current as App ?? new App();
+            var app = TestApp.CurrentOrWithoutStartup();
             app.InitializeComponent();
 
             var status = new CaptureStatus(DateTime.UtcNow);
