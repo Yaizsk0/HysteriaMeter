@@ -140,7 +140,8 @@ public sealed class DungeonSummaryViewModel
 
     /// <summary>
     /// La nota al pie de cada boss, solo con lo que se midió: cada wipe con el tiempo al que cayó y la fase más baja de
-    /// vida que se vio (75, 50 o 25 %); sin wipes, si el kill fue limpio (nadie murió) y quién hizo más DPS.
+    /// vida que se vio (75, 50 o 25 %); sin wipes, si el kill fue limpio (nadie murió) y quién hizo más DPS. "Kill al
+    /// primer intento" solo con nombre o plantilla: un "Boss N" sin identidad pudo tener wipes que no se reconocen.
     /// </summary>
     internal static string NoteOf(BossSummary boss)
     {
@@ -159,8 +160,9 @@ public sealed class DungeonSummaryViewModel
             return string.Empty;
         }
 
-        var kill = boss.Deaths == 0 ? "Kill limpio." : "Kill al primer intento.";
-        return boss.Players.Where(p => p.Dps > 0).MaxBy(p => p.Dps) is { } best ? $"{kill} Mejor DPS: {best.Name}." : kill;
+        var kill = boss.Deaths == 0 ? "Kill limpio." : boss.Identified ? "Kill al primer intento." : string.Empty;
+        var best = boss.Players.Where(p => p.Dps > 0).MaxBy(p => p.Dps) is { } top ? $"Mejor DPS: {top.Name}." : string.Empty;
+        return string.Join(' ', new[] { kill, best }.Where(part => part.Length > 0));
     }
 
     /// <summary>La run como se comparte: con nombres anónimos si así se eligió.</summary>

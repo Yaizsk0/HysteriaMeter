@@ -75,6 +75,29 @@ public sealed class DungeonDataTests
     }
 
     [Fact]
+    public void A_boss_without_name_or_template_never_claims_a_first_attempt_kill()
+    {
+        // Peleas viejas: el tramo sin kill queda "Encuentro" (pudo ser un wipe que no se reconoce), así que el "Boss 1"
+        // de después no puede decir que cayó al primer intento. Con muertes, solo el mejor DPS.
+        var deaths = DungeonSummary.From(
+            [Fight(0, 120, null, killed: false, actors: [Player("Yo", 9_000)]),
+             Fight(200, 100, null, killed: true, actors: [Player("Yo", 50_000, deaths: 1), Player("Rubia", 30_000)])], Entered);
+        var card = new DungeonSummaryViewModel(deaths).Cards.Single();
+        Assert.Equal("Boss 1", card.Name);
+        Assert.Equal("Mejor DPS: Yo.", card.Note);
+        Assert.False(deaths.Bosses.Single().Identified);
+
+        // Sin muertes sí se midió que fue limpio.
+        var clean = DungeonSummary.From([Fight(0, 100, null, killed: true, actors: [Player("Yo", 50_000)])], Entered);
+        Assert.Equal("Kill limpio. Mejor DPS: Yo.", new DungeonSummaryViewModel(clean).Cards.Single().Note);
+
+        // Con plantilla, un kill sin wipes con muertes sí fue al primer intento.
+        var identified = DungeonSummary.From([Fight(0, 100, 2400123, killed: true, actors: [Player("Yo", 50_000, deaths: 1)])], Entered);
+        Assert.True(identified.Bosses.Single().Identified);
+        Assert.Equal("Kill al primer intento. Mejor DPS: Yo.", new DungeonSummaryViewModel(identified).Cards.Single().Note);
+    }
+
+    [Fact]
     public void A_matrix_cell_opens_the_attempt_that_gives_its_dps()
     {
         var (run, _, kill) = Run();

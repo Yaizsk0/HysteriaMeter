@@ -115,6 +115,8 @@ public sealed record BossWipe(Guid FightId, TimeSpan Duration, int? BelowPercent
 /// <summary>
 /// Un boss de la run con todos sus intentos. <paramref name="DecidingId"/> es el intento que cuenta (el kill, o el último),
 /// el que dan el DPS y la duración. <paramref name="WipeList"/> son los intentos sin kill: solo esos son wipes.
+/// <paramref name="Identified"/>: el boss tiene nombre o plantilla (<see cref="FightTarget.Identity(string?, uint?)"/>).
+/// Sin identidad ("Boss N", peleas viejas) sus wipes no se pueden reconocer, así que no se sabe en qué intento cayó.
 /// </summary>
 public sealed record BossSummary(
     string Name,
@@ -125,7 +127,8 @@ public sealed record BossSummary(
     int Deaths,
     IReadOnlyList<BossPlayerLine> Players,
     Guid DecidingId,
-    IReadOnlyList<BossWipe> WipeList)
+    IReadOnlyList<BossWipe> WipeList,
+    bool Identified)
 {
     public int Wipes => WipeList.Count;
 }
@@ -246,6 +249,7 @@ public sealed record DungeonSummary(
             deaths.Values.Sum(),
             players,
             deciding.Id,
-            wipes);
+            wipes,
+            FightTarget.Identity(deciding) is not null);
     }
 }
