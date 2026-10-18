@@ -23,6 +23,7 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 - **Sombra del panel del overlay: NO** (rompe imanes, captura de clics y la imagen exportada). Las ventanas grandes sí pueden llevar sombra si no complica.
 - Se eliminan las esquinas doradas (estilo Corner) y el degradé del encabezado.
 - Percentiles con los colores nuevos (#9D9D9D #4FD15C #4A90E8 #B867F0 #F0A04A #E8B04A), mismos umbrales.
+- OverlayWindow.xaml no lleva StaticResource de colores que cambia el tema ni colores sueltos: la franja de la pelea guardada (etiqueta, ‹ › y "Volver al vivo" con ButtonLink, y la nota) se repinta al cambiar el tema con la pelea abierta. La nota toma InputBg (antes negro al 20 %) y "Borrar pelea" usa ButtonDangerLink: el Danger del sistema (antes #E0524A), que no cambia con el tema.
 
 ## Overlay en vivo (Main, Estados, Mini pastilla, avisos, errores)
 - Encabezado: rombo + HYSTERIA, segmentado DPS / CURA / RECIB. (pestaña activa: fondo acento; en CURA fondo #7BD88F con texto OnHealing; en RECIB. fondo Danger #F08A7E con texto oscuro), reloj, pausa, configuración y un botón "⋯" con menú (estilo menú de bandeja del mock Avisos: fondo MenuBg, borde Stroke, radio 8) que contiene: Historial, Reiniciar, Copiar resumen, Nueva ventana, Segmento PELEA/RUN/SESIÓN (sub-opciones con check), Bloquear clics, Minimizar, Cerrar. Se mantienen en el encabezado el punto de estado de captura y "● REC" (chicos, a la izquierda del reloj).
