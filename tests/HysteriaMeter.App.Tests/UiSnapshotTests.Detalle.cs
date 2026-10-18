@@ -61,7 +61,9 @@ public sealed partial class UiSnapshotTests
 
         // Un DoT que sigue pegando con el jugador muerto no es la vuelta: la conclusión nombra la muerte de 0:30 a 0:45.
         // Con el Timeline entero (DoT incluido) el tramo terminaba en el 0:31 y no se nombraba. Tampoco es actividad:
-        // 15 s muertos de 71 dan "Activo 79 %" (con el DoT contaban solo los 6 s sin nada y daba 92 %).
+        // 15 s muertos de 71 dan "Activo 79 %" (con el DoT contaban solo los 6 s sin nada y daba 92 %). El DPS activo usa
+        // los mismos segundos activos: su daño son los 448.000 directos más los 9 ticks del 21 al 29 (los del 30 al 38
+        // caen con el jugador muerto), sobre 70 − 15 = 55 s medidos como el DPS (del 0 al 70 son 70 s).
         new("23d-detalle-comparar-muerte-dot", h =>
         {
             var detail = DotAfterDeath(h);
@@ -69,6 +71,7 @@ public sealed partial class UiSnapshotTests
             Assert.EndsWith(", coincide con la muerte de 0:30 a 0:45.", detail.InsightTail);
             Assert.StartsWith("79", detail.Uptime, StringComparison.Ordinal);
             Assert.Equal("15 s", detail.DeadTime);
+            Assert.Equal(ActorRowViewModel.ActiveDpsText(457_000d / 55), detail.ActiveDps);
             return new DetailWindow(detail);
         }),
         new("24-detalle-renombrar", h =>

@@ -23,57 +23,83 @@ public sealed record FightActivity(int Seconds, int DeadSeconds, int LongestGap,
     /// </summary>
     public static FightActivity Of(ActorSnapshot actor) => From(actor.DirectTimeline ?? actor.Timeline);
 
-    public static FightActivity From(IReadOnlyList<long>? damageBySecond)
+    /// <summary>
+    /// DPS activo (<see cref="ActorSnapshot.ActiveDps"/>), con la misma actividad que <see cref="Of"/>
+    /// (<paramref name="direct"/> ?? <paramref name="timeline"/>): el daño de los segundos activos (del primer golpe directo
+    /// al último, sin los huecos muertos; DoT incluido) sobre el tiempo activo. Un tick que cae en un hueco o después del
+    /// último golpe no suma tiempo ni daño: con el jugador muerto o quieto, no es el jugador actuando. El tiempo se mide
+    /// como el DPS, que del segundo 0 al 9 cuenta 9 s: los segundos activos menos uno, mínimo 1 s. Así, pegando de punta a
+    /// punta sin tiempo muerto da lo mismo que el DPS. 0 si no hubo golpes directos (todo DoT): no hay tiempo que medir.
+    /// </summary>
+    /// <param name="maxSeconds">
+    /// Tope del tiempo activo: el tiempo de combate del DPS. En una pelea no cambia nada; en la sesión y la run, cuyas
+    /// series van desde su propio inicio, cada rato entre peleas es un hueco muerto pero deja su segundo "menos uno" de más.
+    /// </param>
+    public static double ActiveDps(IReadOnlyList<long>? direct, IReadOnlyList<long>? timeline, double maxSeconds = double.PositiveInfinity)
     {
-        if (damageBySecond is null || damageBySecond.Count == 0)
+        var (first, last, gaps) = Scan(direct ?? timeline);
+        if (first < 0 || timeline is null)
         {
-            return Empty;
+            return 0;
         }
 
-        var first = -1;
-        var last = -1;
-        for (var i = 0; i < damageBySecond.Count; i++)
+        long damage = 0;
+        for (var i = first; i <= last && i < timeline.Count; i++)
         {
-            if (damageBySecond[i] > 0)
+            damage += timeline[i];
+        }
+
+        foreach (var (start, length) in gaps)
+        {
+            for (var i = start; i < start + length && i < timeline.Count; i++)
             {
-                first = first < 0 ? i : first;
-                last = i;
+                damage -= timeline[i];
             }
         }
 
+        var seconds = Math.Min(Math.Max(last - first - gaps.Sum(g => g.Length), 1), maxSeconds);
+        return damage / seconds;
+    }
+
+    public static FightActivity From(IReadOnlyList<long>? damageBySecond)
+    {
+        var (first, last, gaps) = Scan(damageBySecond);
         if (first < 0)
         {
             return Empty;
         }
 
-        int dead = 0, longest = 0, longestAt = 0, gaps = 0, run = 0;
-        for (var i = first; i <= last; i++)
+        // Si hay empate, el primero de los más largos (MaxBy se queda con el primero).
+        var longest = gaps.Count == 0 ? default : gaps.MaxBy(g => g.Length);
+        return new FightActivity(last - first + 1, gaps.Sum(g => g.Length), longest.Length, gaps.Count, longest.Start);
+    }
+
+    /// <summary>
+    /// Primer y último segundo con daño y los huecos muertos entre ellos (más de <see cref="Tolerance"/> segundos seguidos
+    /// sin daño); First = -1 si no hubo daño.
+    /// </summary>
+    private static (int First, int Last, List<(int Start, int Length)> Gaps) Scan(IReadOnlyList<long>? damageBySecond)
+    {
+        var gaps = new List<(int Start, int Length)>();
+        int first = -1, last = -1, run = 0;
+        for (var i = 0; damageBySecond is not null && i < damageBySecond.Count; i++)
         {
-            if (damageBySecond[i] > 0)
+            if (damageBySecond[i] <= 0)
             {
-                Close(run, i - run);
-                run = 0;
+                run += first < 0 ? 0 : 1;
+                continue;
             }
-            else
+
+            if (run > Tolerance)
             {
-                run++;
+                gaps.Add((i - run, run));
             }
+
+            first = first < 0 ? i : first;
+            last = i;
+            run = 0;
         }
 
-        return new FightActivity(last - first + 1, dead, longest, gaps, longestAt);
-
-        void Close(int length, int start)
-        {
-            if (length > Tolerance)
-            {
-                dead += length;
-                gaps++;
-                if (length > longest)
-                {
-                    longest = length;
-                    longestAt = start;
-                }
-            }
-        }
+        return (first, last, gaps);
     }
 }

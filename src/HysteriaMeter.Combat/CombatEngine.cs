@@ -300,7 +300,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
     private static void RecordHit(Encounter encounter, ulong source, DamageEvent e, long overkill)
     {
         var actor = encounter.Actor(source);
-        actor.AddHit(e.SkillId, e.TargetId, e.Amount, e.Modifiers, e.Timestamp);
+        actor.AddHit(e.SkillId, e.TargetId, e.Amount, e.Modifiers);
         actor.AddToTimeline((int)Math.Max((e.Timestamp - encounter.Start).TotalSeconds, 0), e.Amount, e.Modifiers.HasFlag(HitModifiers.DamageOverTime));
         actor.Overkill += overkill;
         encounter.RegisterDamage(e.TargetId, e.Amount, e.Timestamp);
@@ -483,6 +483,9 @@ public sealed class CombatEngine(CombatEngineOptions options)
                     .Select(s => new SkillSnapshot(s.Key, s.Value.Damage, s.Value.Hits, s.Value.Crits, s.Value.MaxHit, Share(s.Value.Damage, stats.Damage), s.Value.Counts.Snapshot(), s.Value.PeriodicDamage))
                     .OrderByDescending(s => s.Damage)
                     .ToArray();
+                long[] timeline = [.. stats.DamageBySecond];
+                // Sin DoT sería igual al Timeline: no se guarda dos veces.
+                long[]? direct = stats.PeriodicDamage > 0 ? [.. stats.DirectDamageBySecond] : null;
                 return new ActorSnapshot(
                     id,
                     Entities.DisplayName(id),
@@ -500,16 +503,17 @@ public sealed class CombatEngine(CombatEngineOptions options)
                     targetDamage,
                     targetDamage / targetSeconds,
                     stats.PeriodicDamage,
-                    stats.Damage / Math.Max(stats.ActiveTime.TotalSeconds, 1),
+                    // Con la misma actividad que ACTIVO y TIEMPO MUERTO (FightActivity.Of): los ticks de DoT no son tiempo activo.
+                    // Topeado con el tiempo del DPS: en la sesión y la run, los ratos entre peleas no dejan segundos de más.
+                    FightActivity.ActiveDps(direct, timeline, seconds),
                     stats.Overkill,
-                    [.. stats.DamageBySecond],
+                    timeline,
                     stats.DamageTaken,
                     stats.HitsTaken,
                     stats.Deaths,
                     profile.ItemLevel,
                     profile.CombatPower,
-                    // Sin DoT sería igual al Timeline: no se guarda dos veces.
-                    stats.PeriodicDamage > 0 ? [.. stats.DirectDamageBySecond] : null);
+                    direct);
             })
             .OrderByDescending(a => a.Damage)
             .ToArray();

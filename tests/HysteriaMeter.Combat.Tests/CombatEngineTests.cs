@@ -161,6 +161,9 @@ public class CombatEngineTests
         Assert.Equal(TimeSpan.FromSeconds(10), session.Duration); // 5 s + 5 s, sin los 95 s entre peleas
         Assert.Equal(3000, session.Actors.Single(a => a.Id == Me).Damage);
         Assert.Equal(300, session.Actors.Single(a => a.Id == Me).Dps);
+        // Los huecos de 4 s dentro de cada pelea y los 94 s entre peleas pasan la tolerancia: quedan los 4 s con golpes,
+        // que medidos como el DPS son 3 s. Pelea por pelea serían 1 + 1: el rato entre peleas deja un segundo de más.
+        Assert.Equal(3000d / 3, session.Actors.Single(a => a.Id == Me).ActiveDps, 3);
         Assert.Equal(1000, engine.CurrentSnapshot()!.Actors.Single(a => a.Id == Me).Damage);
 
         engine.Reset();
@@ -334,17 +337,155 @@ public class CombatEngineTests
     }
 
     [Fact]
-    public void Active_dps_caps_idle_gaps()
+    public void Active_dps_leaves_out_gaps_longer_than_the_tolerance()
     {
-        // Golpes en 0, 1 y 7 s: tiempo activo = 1 + 3 (el hueco de 6 s cuenta como 3).
+        // Golpes en 0, 1 y 7 s: la serie es [1000, 1000, 0, 0, 0, 0, 0, 2000]. Del primer golpe al último hay 8 s y los
+        // 5 s seguidos sin pegar (del 2 al 6) pasan la tolerancia de 2 s: son tiempo muerto. Quedan 3 s activos, que
+        // medidos como el DPS (del 0 al 7 son 7 s) dan 7 − 5 = 2 s.
         var engine = CreateEngine();
         engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 1000, HitModifiers.None));
         engine.Apply(new DamageEvent(At(1), Me, Boss, 1, 1000, HitModifiers.None));
         engine.Apply(new DamageEvent(At(7), Me, Boss, 1, 2000, HitModifiers.None));
 
         var me = Assert.Single(engine.CurrentSnapshot()!.Actors);
-        Assert.Equal(1000d, me.ActiveDps);
+        Assert.Equal((8, 5), (FightActivity.From(me.Timeline).Seconds, FightActivity.From(me.Timeline).DeadSeconds));
+        Assert.Equal(4000d / 2, me.ActiveDps, 3);
         Assert.Equal(4000d / 7, me.Dps, 3);
+    }
+
+    [Fact]
+    public void Without_dead_time_the_active_dps_is_the_dps()
+    {
+        // Golpes en 0, 1, 2 y 3 s: ACTIVO 100 % y TIEMPO MUERTO 0 s, así que el DPS activo no puede quedar por debajo del
+        // DPS. Contando los 4 segundos con golpes daba 4000 / 4; medido como el DPS, del 0 al 3 son 3 s.
+        var engine = CreateEngine();
+        for (var second = 0; second < 4; second++)
+        {
+            engine.Apply(new DamageEvent(At(second), Me, Boss, 1, 1000, HitModifiers.None));
+        }
+
+        var me = Assert.Single(engine.CurrentSnapshot()!.Actors);
+        Assert.Equal(0, FightActivity.Of(me).DeadSeconds);
+        Assert.Equal(4000d / 3, me.Dps, 3);
+        Assert.Equal(me.Dps, me.ActiveDps, 3);
+    }
+
+    [Fact]
+    public void Active_dps_of_a_player_dead_20_s_in_a_2_minute_fight_uses_100_s()
+    {
+        // Escenario de spec.md (002, historia del DPS activo): el aliado pega del 0:00 al 2:00, así la pelea dura 2 min y
+        // no se corta; vos pegás 1.000 por segundo salvo los 20 s que estuviste muerto (del 50 al 69: TIEMPO MUERTO 20 s).
+        // Alcance "todos": el aliado no manda HP/MP y a los 30 s dejaría de contar como party.
+        var engine = CreateEngine();
+        engine.Scope = ActorScope.Everyone;
+        for (var second = 0; second <= 120; second++)
+        {
+            engine.Apply(new DamageEvent(At(second), Ally, Boss, 2, 500, HitModifiers.None));
+            if (second is < 50 or >= 70)
+            {
+                engine.Apply(new DamageEvent(At(second), Me, Boss, 1, 1000, HitModifiers.None));
+            }
+        }
+
+        var snapshot = engine.CurrentSnapshot()!;
+        var me = snapshot.Actors.Single(a => a.Id == Me);
+        Assert.Equal(TimeSpan.FromMinutes(2), snapshot.Duration);
+        Assert.Equal(20, FightActivity.Of(me).DeadSeconds);
+        Assert.Equal(101_000, me.Damage); // 50 golpes antes de morir y 51 después (del 70 al 120)
+        Assert.Equal(101_000d / 100, me.ActiveDps, 3);
+    }
+
+    [Fact]
+    public void Dot_ticks_that_fill_a_gap_do_not_change_the_active_dps()
+    {
+        // Golpes directos del 0 al 9 y del 30 al 39; en el medio solo pega el DoT, con el jugador muerto o quieto. El daño
+        // del DoT es suyo y suma al daño, pero esos 20 s no son el jugador actuando: ni su tiempo ni sus ticks cuentan para
+        // el DPS activo, que da lo mismo que en la pelea sin esos ticks. Activos, 20 s, que medidos como el DPS son
+        // 39 − 20 = 19 s (antes, con los ticks como actividad, contaban 39). El aliado pega todo el tiempo para que, sin
+        // los ticks, la pelea no se corte en el hueco; alcance "todos" porque no manda HP/MP.
+        var withDot = CreateEngine();
+        var withoutDot = CreateEngine();
+        withDot.Scope = withoutDot.Scope = ActorScope.Everyone;
+        for (var second = 0; second < 40; second++)
+        {
+            withDot.Apply(new DamageEvent(At(second), Ally, Boss, 2, 500, HitModifiers.None));
+            withoutDot.Apply(new DamageEvent(At(second), Ally, Boss, 2, 500, HitModifiers.None));
+            if (second is >= 10 and < 30)
+            {
+                withDot.Apply(new DamageEvent(At(second), Me, Boss, 7, 500, HitModifiers.DamageOverTime));
+                continue;
+            }
+
+            withDot.Apply(new DamageEvent(At(second), Me, Boss, 1, 1000, HitModifiers.None));
+            withoutDot.Apply(new DamageEvent(At(second), Me, Boss, 1, 1000, HitModifiers.None));
+        }
+
+        var me = withDot.CurrentSnapshot()!.Actors.Single(a => a.Id == Me);
+        Assert.Equal(30_000, me.Damage);
+        Assert.Equal(20_000d / 19, me.ActiveDps, 3);
+        Assert.Equal(withoutDot.CurrentSnapshot()!.Actors.Single(a => a.Id == Me).ActiveDps, me.ActiveDps, 3);
+    }
+
+    [Fact]
+    public void A_dot_tail_after_the_last_direct_hit_does_not_inflate_the_active_dps()
+    {
+        // Un golpe directo de 1.000 en el 0 y después solo DoT, 300 por segundo del 1 al 9 (murió o dejó de pegar). Con todo
+        // el daño sobre su único segundo activo daba 3.700, 9 veces el DPS; los ticks de después no son el jugador actuando.
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 1000, HitModifiers.None));
+        for (var second = 1; second < 10; second++)
+        {
+            engine.Apply(new DamageEvent(At(second), Me, Boss, 7, 300, HitModifiers.DamageOverTime));
+        }
+
+        var me = Assert.Single(engine.CurrentSnapshot()!.Actors);
+        Assert.Equal(3_700, me.Damage);
+        Assert.Equal(3_700d / 9, me.Dps, 3);
+        Assert.Equal(1_000d, me.ActiveDps, 3); // el daño de su segundo activo sobre 1 s, el mínimo, como el DPS
+    }
+
+    [Fact]
+    public void A_player_that_only_did_dot_has_no_active_dps()
+    {
+        // Sin golpes directos no hay tiempo activo que medir: 0 (la UI muestra "–"), como el ACTIVO del detalle.
+        var engine = CreateEngine();
+        for (var second = 0; second < 10; second++)
+        {
+            engine.Apply(new DamageEvent(At(second), Ally, Boss, 2, 1000, HitModifiers.None));
+            engine.Apply(new DamageEvent(At(second), Me, Boss, 7, 300, HitModifiers.DamageOverTime));
+        }
+
+        var me = engine.CurrentSnapshot()!.Actors.Single(a => a.Id == Me);
+        Assert.Equal(3_000, me.Damage);
+        Assert.Equal(0d, me.ActiveDps);
+    }
+
+    [Fact]
+    public void Session_and_run_active_dps_count_only_combat_time()
+    {
+        // Dos peleas pegando todos los segundos (del 0 al 9 y del 100 al 109, 9 s cada una como el DPS) y 90 s sin pelea
+        // entre ellas: sin tiempo muerto, el DPS activo es el DPS en cada pelea, en la sesión y en la run. Los 90 s entre
+        // peleas son un hueco muerto de la serie de la sesión; el segundo "de más" que deja se topea con los 18 s de combate.
+        var engine = CreateEngine();
+        for (var second = 0; second < 10; second++)
+        {
+            engine.Apply(new DamageEvent(At(second), Me, Boss, 1, 1000, HitModifiers.None));
+        }
+
+        engine.Tick(At(30));
+        for (var second = 100; second < 110; second++)
+        {
+            engine.Apply(new DamageEvent(At(second), Me, Boss, 1, 500, HitModifiers.None));
+        }
+
+        foreach (var snapshot in new[] { engine.SessionSnapshot()!, engine.RunSnapshot()! })
+        {
+            var me = snapshot.Actors.Single(a => a.Id == Me);
+            Assert.Equal(15_000d / 18, me.Dps, 3);
+            Assert.Equal(me.Dps, me.ActiveDps, 3);
+        }
+
+        Assert.Equal(5_000d / 9, engine.CurrentSnapshot()!.Actors.Single(a => a.Id == Me).ActiveDps, 3);
     }
 
     [Fact]

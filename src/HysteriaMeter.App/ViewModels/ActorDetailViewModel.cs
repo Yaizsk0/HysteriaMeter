@@ -202,6 +202,11 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     [ObservableProperty]
     public partial string ActiveDps { get; set; } = "–";
 
+    /// <summary>Tooltip de DPS ACTIVO: el mismo tiempo activo que ACTIVO y TIEMPO MUERTO.</summary>
+    public static string ActiveDpsHint { get; } =
+        $"Daño sobre el tiempo activo, el mismo de ACTIVO y TIEMPO MUERTO: no cuentan los huecos de más de {FightActivity.Tolerance} s "
+        + "sin golpes directos ni el DoT que pega en ellos o después del último golpe. Si todo fue DoT, no hay tiempo activo que medir";
+
     [ObservableProperty]
     public partial string Duration { get; set; } = "00:00";
 
@@ -421,7 +426,7 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
         Target = MeterViewModel.TitleOf(snapshot);
         _brushes = BrushesOf(snapshot);
         Dps = ActorRowViewModel.Compact(actor.Dps);
-        ActiveDps = ActorRowViewModel.Compact(actor.ActiveDps);
+        ActiveDps = ActorRowViewModel.ActiveDpsText(actor.ActiveDps);
         Total = ActorRowViewModel.Compact(actor.Damage);
         ShareText = $"{actor.Share.ToString("P1", culture)} del party";
         Duration = duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
