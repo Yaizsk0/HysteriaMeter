@@ -1191,7 +1191,7 @@ public sealed partial class MeterViewModel : ObservableObject
 
         var total = (double)snapshot.Actors.Sum(metric);
         var unit = tab.Unit();
-        var header = $"{snapshot.TargetName ?? "Encuentro"} {snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture)} {unit}";
+        var header = $"{TitleOf(snapshot)} {snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture)} {unit}";
         var parts = rows.Select((a, i) =>
             $"{i + 1}. {a.Name} {ActorRowViewModel.Compact(metric(a) / seconds)} ({(metric(a) / total).ToString("P0", CultureInfo.InvariantCulture).Replace(" ", string.Empty, StringComparison.Ordinal)})");
         return string.Join(" · ", parts.Prepend(header));
