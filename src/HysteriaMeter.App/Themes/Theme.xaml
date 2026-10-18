@@ -6,7 +6,7 @@
         Muertes, Comparar, Historial, Config, Inicio, Avisos y Dungeon), que reemplazan a los aprobados el 2026-10-15
         (hysteria-meter/mocks: filetes dorados y títulos en Cinzel, que se sacó del ensamblado).
         Fondo #0C0E13, acento ámbar #E8B04A, filetes y filas en blanco translúcido, números y títulos en
-        Barlow Semi Condensed y texto en Inter (los mocks usan Barlow Condensed e IBM Plex Sans). Las fuentes son OFL
+        Barlow Condensed y texto en IBM Plex Sans, como los mocks originales. Las fuentes son OFL
         y van embebidas (Assets/Fonts, con su licencia al lado).
 
         Reglas:
@@ -30,18 +30,15 @@
     <!-- ===================== Fuentes ===================== -->
     <!-- Los URI nombran el ensamblado (HysteriaMeter;component): "pack://application:,,,/Assets/..." busca en el
          ensamblado de entrada, que bajo el testhost no es la app, y la fuente caería en una del sistema sin avisar. -->
-    <!-- Números, títulos y nombres en las filas. Pesos embebidos: Normal, SemiBold y Bold
-         (el 500 del mock pasa a Normal o SemiBold). La familia es "#Barlow", no "#Barlow Semi Condensed": el archivo
-         SemiBold declara la familia Win32 "Barlow Semi Condensed SemiBold" y WPF agrupa los tres bajo "Barlow" (con
-         stretch SemiCondensed). Con el otro nombre, SemiBold y Bold salían en Regular. -->
-    <FontFamily x:Key="NumberFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/#Barlow</FontFamily>
-    <!-- En el mock el logo "HYSTERIA" y los títulos van en Barlow (antes, Cinzel). -->
-    <FontFamily x:Key="TitleFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/#Barlow</FontFamily>
-    <!-- Texto. Valor por defecto: App.xaml.cs lo reemplaza por la fuente elegida en Configuración
-         (MeterPreferences.TextFont, con MeterViewModel.FontOf). Las ventanas lo usan con DynamicResource.
-         Pesos: Normal, Medium, SemiBold y Bold. -->
-    <FontFamily x:Key="BodyFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/#Inter</FontFamily>
-
+    <!-- Fuentes originales de los mocks, embebidas y disponibles sin instalación ni conexión.
+         WPF agrupa los pesos de Barlow Condensed bajo #Barlow. Su carpeta propia impide que elija
+         Barlow Semi Condensed (conservada para las preferencias existentes) por estiramiento. -->
+    <FontFamily x:Key="NumberFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/BarlowCondensed/#Barlow</FontFamily>
+    <FontFamily x:Key="TitleFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/BarlowCondensed/#Barlow</FontFamily>
+    <!-- La fuente de texto elegida sigue reemplazando BodyFont en App.xaml.cs. -->
+    <FontFamily x:Key="BodyFont">pack://application:,,,/HysteriaMeter;component/Assets/Fonts/IBMPlexSans/#IBM Plex Sans</FontFamily>
+    <!-- Símbolos que Barlow no trae (la cruz de muertes ✝): sin esto WPF cae en Segoe UI Emoji y la dibuja como ícono. -->
+    <FontFamily x:Key="SymbolFont">Segoe UI Symbol</FontFamily>
     <!-- ===================== Tamaños de letra (px del mock = unidades WPF) ===================== -->
     <!-- Texto -->
     <sys:Double x:Key="FontSizeMicro">10</sys:Double>       <!-- etiquetas de la tarjeta de fin de pelea, chips de la run, flags del log -->
@@ -68,7 +65,7 @@
     <CornerRadius x:Key="RadiusRow">5</CornerRadius>        <!-- filas del overlay y de las tablas -->
     <CornerRadius x:Key="RadiusSmall">4</CornerRadius>      <!-- pestaña activa, insignias, ícono de skill, tecla -->
     <CornerRadius x:Key="RadiusBar">3</CornerRadius>        <!-- barra de vida y pistas -->
-    <CornerRadius x:Key="RadiusPill">999</CornerRadius>     <!-- chips, pastilla, toggle (WPF lo achica a medio alto) -->
+    <CornerRadius x:Key="RadiusPill">16</CornerRadius>      <!-- chips de 32 px; en WPF 999 produce una elipse -->
 
     <!-- ===================== Espaciado ===================== -->
     <Thickness x:Key="PaddingWindowHeader">20,16</Thickness>
@@ -81,6 +78,7 @@
     <SolidColorBrush x:Key="WindowBg" Color="#0C0E13" />        <!-- ventanas grandes: opaco -->
     <!-- Overlay en vivo: 86 %. La opacidad de Configuración sigue siendo la de toda la ventana (Window.Opacity). -->
     <SolidColorBrush x:Key="Panel" Color="#DB0C0E13" />
+    <SolidColorBrush x:Key="MiniPanel" Color="#E00C0E13" />
     <SolidColorBrush x:Key="PanelRaised" Color="#EB0C0E13" />   <!-- avisos y pastilla: 92 % (mock 0,88 a 0,92) -->
     <SolidColorBrush x:Key="PanelSolid" Color="#F20C0E13" />    <!-- tooltip, fin de pelea, tapas del overlay: 95 % -->
     <SolidColorBrush x:Key="Surface" Color="#0F1218" />         <!-- nav de Configuración, celdas KPI -->
@@ -122,6 +120,7 @@
     <SolidColorBrush x:Key="AccentTint" Color="#2EE8B04A" />    <!-- 18 %: insignia "en curso", paso pendiente -->
     <SolidColorBrush x:Key="GoldDim" Color="#47E8B04A" />       <!-- 28 % (mock 0,25 a 0,28): borde de ventanas y overlay -->
     <SolidColorBrush x:Key="AccentLine" Color="#59E8B04A" />    <!-- 35 % (mock 0,35 a 0,4): pastilla, novedades, fin de pelea -->
+    <SolidColorBrush x:Key="PauseBorder" Color="#99E8B04A" />
     <SolidColorBrush x:Key="AccentStrong" Color="#80E8B04A" />  <!-- 50 % (mock 0,45 a 0,6): chip activo, aviso de boss, pausa -->
     <SolidColorBrush x:Key="RowBorderLocal" Color="#88E8B04A" /> <!-- contorno de tu fila -->
     <SolidColorBrush x:Key="NameLocal" Color="#E8B04A" />       <!-- tu nombre en la fila -->
@@ -141,6 +140,7 @@
     <SolidColorBrush x:Key="WipeSoft" Color="#1FC0392B" />      <!-- 12 %: fondo de "Lo mató…" -->
     <SolidColorBrush x:Key="AlertBg" Color="#EB781410" />       <!-- fondo de la alerta de enrage -->
     <SolidColorBrush x:Key="Warning" Color="#E8B04A" />         <!-- vida media, "sin tráfico" -->
+    <SolidColorBrush x:Key="WarningLine" Color="#73E8B04A" />   <!-- 45 %: borde de "sin tráfico" y del aviso de parche -->
     <!-- Mismos valores que DungeonSummaryViewModel (KillBrush, WipeBrush, TrashBrush y la clase desconocida) -->
     <SolidColorBrush x:Key="Kill" Color="#E8B04A" />            <!-- segmento kill de la línea de tiempo -->
     <SolidColorBrush x:Key="Neutral" Color="#3A3F4A" />         <!-- segmento trash, toggle apagado -->
@@ -551,7 +551,7 @@
                 <ControlTemplate TargetType="ToggleButton">
                     <DockPanel Background="Transparent">
                         <Border x:Name="Track" DockPanel.Dock="Left" Width="36" Height="20" Padding="2" Margin="0,0,12,0" VerticalAlignment="Center"
-                                CornerRadius="{StaticResource RadiusPill}" Background="{DynamicResource Neutral}">
+                                CornerRadius="10" Background="{DynamicResource Neutral}">
                             <Ellipse x:Name="Knob" Width="16" Height="16" Fill="{DynamicResource TextBright}" HorizontalAlignment="Left" />
                         </Border>
                         <ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True" />

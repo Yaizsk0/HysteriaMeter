@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using HysteriaMeter.App.ViewModels;
 using DPoint = System.Drawing.Point;
@@ -49,9 +52,10 @@ public sealed class TrayIcon : IDisposable
             Renderer = new TrayMenuRenderer(colors),
             ShowImageMargin = false,
             ShowCheckMargin = false,
-            // Inter es un recurso de WPF y GDI no la ve: Segoe UI a 13 px (9,75 pt), el tamaño del mock.
-            Font = new Font("Segoe UI", 9.75f),
         };
+        var menuFont = new MenuFont(session.Preferences.TextFont);
+        menu.Font = menuFont.Value;
+        menu.Disposed += (_, _) => menuFont.Dispose();
         var scale = menu.DeviceDpi / 96f;
         menu.MinimumSize = new System.Drawing.Size((int)Math.Round(220 * scale), 0);
 
@@ -72,6 +76,14 @@ public sealed class TrayIcon : IDisposable
 
         menu.Opening += (_, _) =>
         {
+            if (menuFont.Name != session.Preferences.TextFont)
+            {
+                var previous = menuFont;
+                menuFont = new MenuFont(session.Preferences.TextFont);
+                menu.Font = menuFont.Value;
+                previous.Dispose();
+            }
+
             colors.Refresh();
             menu.BackColor = colors.Background;
             RoundCorners(menu, colors.Border);
@@ -213,8 +225,109 @@ public sealed class TrayIcon : IDisposable
         _image.Dispose();
     }
 
+    /// <summary>
+    /// La fuente elegida, también en GDI: ToolStrip mide con GDI y PrivateFontCollection solo la expone a GDI+.
+    /// El registro en memoria es privado al proceso; se libera con el menú o al cambiar de fuente.
+    /// </summary>
+    private sealed class MenuFont : IDisposable
+    {
+        private PrivateFontCollection? _collection;
+        private FontFamily? _family;
+        private IntPtr _memory;
+        private IntPtr _registration;
+
+        public MenuFont(string name)
+        {
+            Name = name;
+            // 13 px lógicos a 96 ppp; puntos para que WinForms escale con el DPI del monitor.
+            Value = new Font(name, 9.75f, System.Drawing.FontStyle.Regular, GraphicsUnit.Point);
+            var file = name switch
+            {
+                "IBM Plex Sans" => "IBMPlexSans/IBMPlexSans-Regular.ttf",
+                "Barlow Condensed" => "BarlowCondensed/BarlowCondensed-Regular.ttf",
+                "Inter" => "Inter-Regular.ttf",
+                "Barlow Semi Condensed" => "BarlowSemiCondensed-Regular.ttf",
+                _ => null,
+            };
+            if (file is null)
+            {
+                return;
+            }
+
+            try
+            {
+                using var stream = Application.GetResourceStream(new Uri($"/HysteriaMeter;component/Assets/Fonts/{file}", UriKind.Relative))?.Stream;
+                if (stream is null)
+                {
+                    return;
+                }
+
+                using var bytes = new MemoryStream();
+                stream.CopyTo(bytes);
+                var data = bytes.ToArray();
+                _memory = Marshal.AllocHGlobal(data.Length);
+                Marshal.Copy(data, 0, _memory, data.Length);
+                uint count = 0;
+                _registration = NativeMethods.AddFontMemResourceEx(_memory, (uint)data.Length, IntPtr.Zero, ref count);
+                if (_registration == IntPtr.Zero)
+                {
+                    ReleaseResources();
+                    return;
+                }
+
+                _collection = new PrivateFontCollection();
+                _collection.AddMemoryFont(_memory, data.Length);
+                _family = _collection.Families[0];
+                var embedded = new Font(_family, 9.75f, System.Drawing.FontStyle.Regular, GraphicsUnit.Point);
+                Value.Dispose();
+                Value = embedded;
+            }
+            catch (Exception ex) when (ex is IOException or ArgumentException or ExternalException)
+            {
+                // Si falta o no se puede cargar el recurso, queda la familia elegida resuelta por Windows.
+                ReleaseResources();
+            }
+        }
+
+        public string Name { get; }
+
+        public Font Value { get; }
+
+        public void Dispose()
+        {
+            Value.Dispose();
+            ReleaseResources();
+        }
+
+        private void ReleaseResources()
+        {
+            _family?.Dispose();
+            _family = null;
+            _collection?.Dispose();
+            _collection = null;
+            if (_registration != IntPtr.Zero)
+            {
+                NativeMethods.RemoveFontMemResourceEx(_registration);
+                _registration = IntPtr.Zero;
+            }
+
+            if (_memory != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(_memory);
+                _memory = IntPtr.Zero;
+            }
+        }
+    }
+
     private static class NativeMethods
     {
+        [DllImport("gdi32.dll")]
+        public static extern IntPtr AddFontMemResourceEx(IntPtr data, uint length, IntPtr reserved, ref uint count);
+
+        [DllImport("gdi32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool RemoveFontMemResourceEx(IntPtr handle);
+
         public const int WindowCornerPreference = 33; // DWMWA_WINDOW_CORNER_PREFERENCE
         public const int BorderColor = 34;            // DWMWA_BORDER_COLOR
         public const int CornerRound = 2;             // DWMWCP_ROUND

@@ -312,7 +312,7 @@ public sealed partial class MeterViewModel : ObservableObject
     public int RowHeight
     {
         get => Preferences.RowHeight;
-        set => Update(Preferences with { RowHeight = value }, nameof(RowHeight), nameof(RowNameSize), nameof(RowValueSize));
+        set => Update(Preferences with { RowHeight = value }, nameof(RowHeight), nameof(RowNameSize), nameof(RowValueSize), nameof(RowCornerRadius), nameof(RowGap));
     }
 
     /// <summary>Letra del nombre acorde al alto de la fila (la del DPS es <see cref="RowValueSize"/>).</summary>
@@ -941,12 +941,23 @@ public sealed partial class MeterViewModel : ObservableObject
     /// La familia de una fuente de texto elegible: las embebidas (<see cref="MeterPreferences.BundledFonts"/>) salen de
     /// Assets/Fonts y las demás del sistema. App.xaml.cs la usa para el recurso BodyFont de las ventanas.
     /// El URI nombra el ensamblado ("HysteriaMeter;component"), como los de Theme.xaml: así resuelve también cuando el
-    /// ensamblado de entrada es otro (el testhost del arnés de capturas). Barlow Semi Condensed se pide como "#Barlow",
-    /// la familia con la que WPF agrupa sus tres pesos (ver NumberFont en Theme.xaml).
+    /// ensamblado de entrada es otro (el testhost del arnés de capturas). Las dos familias Barlow se piden como "#Barlow" en carpetas separadas,
+    /// el nombre con el que WPF agrupa sus pesos (ver NumberFont en Theme.xaml).
     /// </summary>
-    public static FontFamily FontOf(string name) => MeterPreferences.BundledFonts.Contains(name)
-        ? new FontFamily(new Uri("pack://application:,,,/HysteriaMeter;component/"), $"./Assets/Fonts/#{(name == "Barlow Semi Condensed" ? "Barlow" : name)}")
-        : new FontFamily(name);
+    public static FontFamily FontOf(string name)
+    {
+        var resource = name switch
+        {
+            "Barlow Condensed" => "./Assets/Fonts/BarlowCondensed/#Barlow",
+            "IBM Plex Sans" => "./Assets/Fonts/IBMPlexSans/#IBM Plex Sans",
+            "Barlow Semi Condensed" => "./Assets/Fonts/#Barlow",
+            "Inter" => "./Assets/Fonts/#Inter",
+            _ => null,
+        };
+        return resource is null
+            ? new FontFamily(name)
+            : new FontFamily(new Uri("pack://application:,,,/HysteriaMeter;component/"), resource);
+    }
 
     public ObservableCollection<ActorRowViewModel> Actors { get; } = [];
 
@@ -1560,14 +1571,25 @@ public sealed partial class MeterViewModel : ObservableObject
             return;
         }
 
-        if ((RecordText(target, local.Dps, best) ?? VsPreviousText(local.Dps, previous)) is { } message)
+        if ((RecordText(target, local.Dps, best) ?? VsPreviousText(local.Dps, previous)) is not { } message)
         {
-            Alert(AlertSound.Info);
-            RecordMessage = message;
+            return;
+        }
+
+        Alert(AlertSound.Info);
+        // Si se abre la tarjeta de fin de pelea, ella ya dice "vs tu intento anterior" y el récord: el aviso no lo repite.
+        // La tarjeta sale solo en la ventana que muestra los avisos (ShowsToasts, la principal), como en ShowFightCard.
+        var cardOpens = FightCardViewModel.CanShow(snapshot) && ShowsToasts && FightCardRequested is not null;
+        if (FinishedNotice(message, cardOpens) is { } shown)
+        {
+            RecordMessage = shown;
             HasRecordMessage = true;
             _recordUntilUtc = DateTime.UtcNow + RecordNoticeDuration;
         }
     }
+
+    /// <summary>El aviso de récord o de comparación del overlay; ninguno cuando la tarjeta de fin de pelea lo muestra.</summary>
+    public static string? FinishedNotice(string message, bool cardOpens) => cardOpens ? null : message;
 
     /// <summary>
     /// El nombre del objetivo; si el juego no lo mandó y no está en data/npcs.json, "NPC 12345" para poder agregarlo.
@@ -1863,7 +1885,10 @@ public sealed partial class MeterViewModel : ObservableObject
     [RelayCommand]
     private void ToggleCompact() => IsCompact = !IsCompact;
 
-    /// <summary>Esc: cierra el panel abierto; sin panel, deja la pelea vieja y vuelve a la actual.</summary>
+    /// <summary>
+    /// Esc, de lo que está más arriba a lo de abajo: cierra el panel abierto (es otra ventana, encima del overlay); si no
+    /// hay, cierra las novedades como "Entendido"; si tampoco, deja la pelea vieja y vuelve a la actual.
+    /// </summary>
     [RelayCommand]
     private void Escape()
     {
@@ -1871,6 +1896,12 @@ public sealed partial class MeterViewModel : ObservableObject
         {
             IsSettingsOpen = false;
             IsHistoryOpen = false;
+            return;
+        }
+
+        if (HasNotice)
+        {
+            DismissNotice();
             return;
         }
 

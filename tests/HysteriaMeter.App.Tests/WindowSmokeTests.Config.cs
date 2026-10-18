@@ -26,7 +26,7 @@ public sealed partial class WindowSmokeTests
 
         // Vista previa de los temas: una tarjeta por tema, con el fondo y el acento de su paleta (todos distintos).
         var cards = viewModel.ThemeCards;
-        Assert.Equal(MeterThemes.All.Select(t => t.Name), cards.Select(c => c.Theme.Name));
+        Assert.Equal(ThemeCard.Ordered(MeterThemes.All).Select(t => t.Name), cards.Select(c => c.Theme.Name));
         Assert.All(cards, card => Assert.NotEqual(Colors.Transparent, ((SolidColorBrush)card.Ground).Color));
         Assert.Equal(cards.Count, cards.Select(card => ((SolidColorBrush)card.Bar).Color).Distinct().Count());
 

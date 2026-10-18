@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using HysteriaMeter.App.ViewModels;
 
@@ -48,5 +49,38 @@ public partial class DungeonWindow : Window
             e.Handled = true;
             Close();
         }
+    }
+}
+
+/// <summary>Escala posiciones y anchos del timeline, sin estirar la tipografía de sus etiquetas.</summary>
+public sealed class DungeonTimelinePanel : Panel
+{
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        var availableWidth = double.IsFinite(availableSize.Width) ? availableSize.Width : DungeonSummaryViewModel.TimelineWidth;
+        foreach (UIElement child in InternalChildren)
+        {
+            var width = child is ContentPresenter { Content: SegmentItem segment }
+                ? Math.Max(segment.Width / DungeonSummaryViewModel.TimelineWidth * availableWidth - 2, 0)
+                : 0;
+            child.Measure(new Size(width, 34));
+        }
+
+        return new Size(0, 34);
+    }
+
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        foreach (UIElement child in InternalChildren)
+        {
+            if (child is ContentPresenter { Content: SegmentItem segment })
+            {
+                var left = Math.Clamp(segment.Left / DungeonSummaryViewModel.TimelineWidth * finalSize.Width, 0, finalSize.Width);
+                var width = Math.Min(Math.Max(segment.Width / DungeonSummaryViewModel.TimelineWidth * finalSize.Width - 2, 0), finalSize.Width - left);
+                child.Arrange(new Rect(left, 0, width, finalSize.Height));
+            }
+        }
+
+        return finalSize;
     }
 }

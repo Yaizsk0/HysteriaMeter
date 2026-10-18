@@ -755,10 +755,10 @@ public sealed partial class WindowSmokeTests
             Assert.Equal(System.Windows.Media.Colors.Black, ColorOf("Panel"));
             Assert.Equal(System.Windows.Media.Color.FromArgb(0x47, gold.R, gold.G, gold.B), ColorOf("GoldDim"));
 
-            // Cada tema alternativo define fondos, acento y textos (14 colores); las derivadas del acento y los neutros no.
+            // Cada tema alternativo define fondos, acento y textos (15 colores); las derivadas del acento y los neutros no.
             string[] themed =
             [
-                "WindowBg", "Panel", "PanelRaised", "PanelSolid", "Surface", "CardBg", "InputBg", "MenuBg",
+                "WindowBg", "Panel", "MiniPanel", "PanelRaised", "PanelSolid", "Surface", "CardBg", "InputBg", "MenuBg",
                 "Gold", "GoldBright", "Text", "TextBright", "TextMuted", "TextDim",
             ];
             Assert.All(MeterThemes.All.Skip(1), t => Assert.Equal(themed.Order(), t.Colors.Keys.Order()));

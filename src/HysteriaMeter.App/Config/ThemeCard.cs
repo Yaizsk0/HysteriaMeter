@@ -13,12 +13,26 @@ public sealed record ThemeCard(MeterTheme Theme, Brush Ground, Brush Bar)
     /// <summary>Alfa de las barras de la vista previa (el 60 % del mock).</summary>
     private const byte BarAlpha = 0x99;
 
-    /// <summary>Una tarjeta por tema, en el orden de <see cref="MeterThemes.All"/>.</summary>
+    /// <summary>
+    /// Orden de las tarjetas, el del mock Config: Abismo, Dorado, Mínimo, Carmesí. <see cref="MeterThemes.All"/> no se
+    /// reordena porque su primer tema es el de reemplazo (<see cref="MeterThemes.Of"/>). Un tema que no esté acá va al final.
+    /// </summary>
+    public static IReadOnlyList<string> Order => OrderNames;
+
+    private static readonly string[] OrderNames = ["Abismo", MeterThemes.Default, "Mínimo", "Carmesí"];
+
+    /// <summary>Una tarjeta por tema, en el orden de <see cref="Order"/>.</summary>
     public static IReadOnlyList<ThemeCard> All()
     {
         var defaults = Defaults();
-        return [.. MeterThemes.All.Select(theme => From(theme, MeterThemes.Resolve(theme.Name, defaults)))];
+        return [.. Ordered(MeterThemes.All).Select(theme => From(theme, MeterThemes.Resolve(theme.Name, defaults)))];
     }
+
+    /// <summary>Los temas en el orden de <see cref="Order"/>; los que no figuran, después y en su orden.</summary>
+    public static IEnumerable<MeterTheme> Ordered(IEnumerable<MeterTheme> themes) =>
+        themes.Select((theme, index) => (theme, index))
+            .OrderBy(t => Array.IndexOf(OrderNames, t.theme.Name) is var at and >= 0 ? at : OrderNames.Length + t.index)
+            .Select(t => t.theme);
 
     public static ThemeCard From(MeterTheme theme, IReadOnlyDictionary<string, Color> palette)
     {

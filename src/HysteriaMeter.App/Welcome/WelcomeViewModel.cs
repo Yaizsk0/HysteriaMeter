@@ -121,12 +121,16 @@ public sealed partial class WelcomeViewModel : ObservableObject
     private IReadOnlyList<SetupStep> BuildSteps() =>
         [NpcapStep(_capture.NpcapInstalled), DeviceStep(_capture, _session.Status), GameDataStep(_gameData)];
 
+    /// <summary>Qué hacer sin Npcap (mock Inicio): lo comparten la bienvenida y la tarjeta del overlay.</summary>
+    public const string NpcapMissingText =
+        "El meter necesita Npcap para leer la red. Instalalo con la opción \"WinPcap API-compatible mode\" y volvé a abrir el meter.";
+
     public static SetupStep NpcapStep(bool installed) => installed
         ? new SetupStep(1, "Npcap instalado", "Driver de captura de red", "Listo", true)
         : new SetupStep(
             1,
             "No se encontró Npcap",
-            "El meter necesita Npcap para leer la red. Instalalo con la opción \"WinPcap API-compatible mode\" y volvé a abrir el meter.",
+            NpcapMissingText,
             "Revisar",
             false,
             new SetupAction("Descargar Npcap", NpcapDownloadUrl, IsFolder: false));

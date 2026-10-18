@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:HysteriaMeter.App.ViewModels"
+        xmlns:conv="clr-namespace:HysteriaMeter.App.Converters"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MeterViewModel}"
         Title="Configuración"
@@ -16,6 +17,8 @@
     <!-- Referencia visual: mocks/Config.dc.html (la página Apariencia). Las otras siete secciones no tienen diseño:
          reparten las opciones que antes estaban en el panel del overlay, con los mismos controles del mock. -->
     <Window.Resources>
+        <!-- Chips de FUENTE: cada nombre escrito en su propia fuente, como el mock -->
+        <conv:FontPreviewConverter x:Key="FontPreview" />
         <!-- Bloque de una sección, con su etiqueta en mayúsculas ("TEMA", "FILAS") -->
         <Style x:Key="Block" TargetType="StackPanel">
             <Setter Property="Margin" Value="0,0,0,22" />
@@ -213,7 +216,8 @@
                 <Setter.Value>
                     <DataTemplate>
                         <StackPanel>
-                            <Border Height="54" CornerRadius="5" Padding="6" Background="{Binding Ground}">
+                            <!-- CSS: height 54 + padding vertical 6 + 6 = 66 de alto exterior. -->
+                            <Border Height="66" CornerRadius="5" Padding="6" Background="{Binding Ground}">
                                 <StackPanel>
                                     <StackPanel.Resources>
                                         <Style TargetType="Border">
@@ -392,7 +396,7 @@
                                 <ListBox Style="{StaticResource Chips}" ItemsSource="{x:Static vm:MeterPreferences.Fonts}" SelectedItem="{Binding FontName}">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding}" FontFamily="{Binding}" />
+                                            <TextBlock Text="{Binding}" FontFamily="{Binding Converter={StaticResource FontPreview}}" />
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
