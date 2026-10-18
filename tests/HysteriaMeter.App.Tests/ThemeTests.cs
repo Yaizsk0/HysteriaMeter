@@ -2,6 +2,8 @@ using System.Runtime.ExceptionServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using HysteriaMeter.App.Overlay;
+using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.App.ViewModels;
 using HysteriaMeter.Combat;
 
@@ -9,9 +11,10 @@ namespace HysteriaMeter.App.Tests;
 
 /// <summary>
 /// El tema del rediseño (Themes/Theme.xaml) y los temas alternativos: fuentes embebidas, colores que el código repite,
-/// las claves derivadas del acento y el repintado en vivo. Cargan Theme.xaml solo, sin crear la App (WPF admite una
-/// por proceso y la usan WindowSmokeTests).
+/// las claves derivadas del acento y el repintado en vivo. Casi todos cargan Theme.xaml solo; el del overlay crea la
+/// App (WPF admite una por proceso), por eso la clase va en la colección de los overlays, que no corre en paralelo.
 /// </summary>
+[Collection("Overlay WPF")]
 public sealed class ThemeTests
 {
     private static readonly string[] Themed =
@@ -139,6 +142,57 @@ public sealed class ThemeTests
             MeterThemes.Apply(border.Resources, MeterThemes.Default, defaults);
             Assert.Equal(defaults["Panel"], ColorOf(border.Background));
             Assert.Equal(defaults["GoldDim"], ColorOf(border.BorderBrush));
+        });
+    }
+
+    [Fact]
+    public void Saved_fight_banner_repaints_when_the_theme_changes()
+    {
+        RunOnSta(() =>
+        {
+            Application.ResourceAssembly ??= typeof(App).Assembly;
+            var app = TestApp.CurrentOrWithoutStartup();
+            app.InitializeComponent();
+            var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty,
+                new MeterPreferences { LastSeenNews = 1 }, _ => { });
+            var vm = new MeterViewModel(session);
+            // La demo queda fijada como una pelea guardada; la nota y "Borrar pelea" se ven al abrirla desde el historial.
+            vm.ShowDemoCommand.Execute(null);
+            vm.IsViewingHistory = true;
+            vm.CanEditNote = true;
+            var defaults = MeterThemes.Snapshot(app.Resources);
+            var window = new OverlayWindow(vm);
+            try
+            {
+                var content = Assert.IsAssignableFrom<FrameworkElement>(window.Content);
+                content.Measure(new Size(380, 420));
+                content.Arrange(new Rect(0, 0, 380, 420));
+                content.UpdateLayout();
+                var label = Assert.IsType<TextBlock>(window.FindName("HistoryLabelText"));
+                var back = Assert.IsType<Button>(window.FindName("BackToLiveButton"));
+                var delete = Assert.IsType<Button>(window.FindName("DeleteEncounterButton"));
+                var note = Assert.IsType<TextBox>(window.FindName("NoteBox"));
+                // "Volver al vivo" y las flechas ‹ › de la misma franja.
+                var links = Assert.IsType<DockPanel>(back.Parent).Children.OfType<Button>().ToList();
+                Assert.Equal(3, links.Count);
+
+                // Como App.ApplyTheme: el tema escribe en los recursos de la App con la ventana ya abierta.
+                var applied = MeterThemes.Apply(app.Resources, "Carmesí", defaults);
+                Assert.NotEqual(defaults["Gold"], applied["Gold"]);
+                Assert.Equal(applied["Gold"], ColorOf(label.Foreground));
+                // Danger es semántico (no lo cambia el tema): basta con que sea el del sistema y no un color suelto.
+                Assert.Equal(ColorOf((Brush)app.Resources["Danger"]), ColorOf(delete.Foreground));
+                Assert.All(links, link => Assert.Equal(applied["Gold"], ColorOf(link.Foreground)));
+                Assert.Equal(applied["Text"], ColorOf(window.Foreground));
+                Assert.Equal(applied["InputBg"], ColorOf(note.Background));
+                Assert.Equal(applied["Text"], ColorOf(note.Foreground));
+                Assert.Equal(applied["Gold"], ColorOf(note.CaretBrush));
+            }
+            finally
+            {
+                MeterThemes.Apply(app.Resources, MeterThemes.Default, defaults);
+                window.Close();
+            }
         });
     }
 

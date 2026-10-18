@@ -32,4 +32,25 @@ public class FightActivityTests
         // Sin serie directa (sin DoT o una pelea guardada antes), el Timeline.
         Assert.Equal(FightActivity.From(actor.Timeline), FightActivity.Of(actor with { DirectTimeline = null }));
     }
+
+    [Fact]
+    public void Active_dps_counts_the_damage_and_time_of_the_active_seconds()
+    {
+        // Golpes directos en 1, 2, 3 y 8; el DoT pega del 1 al 9. El hueco del 4 al 7 (4 s) es tiempo muerto: sus ticks no
+        // cuentan, ni el del 9, después del último golpe. Daño activo: 150 · 3 + 150 = 600; tiempo, del 1 al 8 son 7 s menos
+        // los 4 muertos = 3 s.
+        long[] direct = [0, 100, 100, 100, 0, 0, 0, 0, 100];
+        long[] timeline = [0, 150, 150, 150, 50, 50, 50, 50, 150, 50];
+
+        Assert.Equal(600d / 3, FightActivity.ActiveDps(direct, timeline), 3);
+        Assert.Equal(600d / 2, FightActivity.ActiveDps(direct, timeline, maxSeconds: 2), 3); // el tope del tiempo de combate
+
+        // Sin serie directa (sin DoT), el Timeline: del 1 al 9 sin huecos, 8 s.
+        Assert.Equal(850d / 8, FightActivity.ActiveDps(null, timeline), 3);
+
+        // Sin golpes directos (todo DoT), 0; un solo golpe, su segundo sobre 1 s.
+        Assert.Equal(0d, FightActivity.ActiveDps([], timeline));
+        Assert.Equal(0d, FightActivity.ActiveDps(null, null));
+        Assert.Equal(150d, FightActivity.ActiveDps([0, 100], timeline), 3);
+    }
 }

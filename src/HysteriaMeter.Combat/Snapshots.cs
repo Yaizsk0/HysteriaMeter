@@ -51,7 +51,11 @@ public sealed record ActorSnapshot(
     long MainTargetDamage = 0,
     double MainTargetDps = 0,
     long PeriodicDamage = 0,
-    // DPS sin tiempo muerto: los huecos de más de 3 s entre golpes cuentan como 3 s.
+    // DPS sin tiempo muerto (FightActivity.ActiveDps): el daño de los segundos activos de FightActivity.Of sobre ese
+    // tiempo, sin los huecos de más de FightActivity.Tolerance s sin golpes directos ni los ticks que caen en ellos o
+    // después del último golpe (el DoT no cuenta como actividad). Pegando de punta a punta sin tiempo muerto, es el DPS.
+    // 0 si todo fue DoT.
+    // Las peleas ya guardadas conservan el cálculo anterior (huecos topeados en 3 s, DoT incluido): no se recalculan.
     double ActiveDps = 0,
     long Overkill = 0,
     // Daño por segundo desde el inicio del encuentro, para el gráfico de DPS en el tiempo.

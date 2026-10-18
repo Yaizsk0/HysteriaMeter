@@ -12,7 +12,7 @@
         Width="380" Height="300" MinWidth="260" MaxWidth="900" MinHeight="150" MaxHeight="1400"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="NoResize" ShowInTaskbar="True"
-        FontFamily="{Binding Font}" FontSize="13" Opacity="{Binding EffectiveOpacity}" MouseEnter="OnMouseEnterWindow" MouseLeave="OnMouseLeaveWindow" Foreground="{StaticResource Text}"
+        FontFamily="{Binding Font}" FontSize="13" Opacity="{Binding EffectiveOpacity}" MouseEnter="OnMouseEnterWindow" MouseLeave="OnMouseLeaveWindow" Foreground="{DynamicResource Text}"
         TextOptions.TextFormattingMode="Display">
 
     <!-- Referencia visual: redesign/project/Main, Estados, Mini, Avisos e Inicio.dc.html (DECISIONES.md). -->
@@ -27,7 +27,7 @@
             <Setter Property="Width" Value="26" />
             <Setter Property="Height" Value="26" />
             <Setter Property="Margin" Value="2,0,0,0" />
-            <Setter Property="Foreground" Value="{StaticResource TextMuted}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -37,8 +37,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource GoldDim}" />
-                                <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                                <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource GoldDim}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Gold}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -58,7 +58,7 @@
         </Style>
 
         <Style x:Key="Tab" TargetType="RadioButton">
-            <Setter Property="Foreground" Value="{StaticResource TextDim}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Margin" Value="0,0,2,0" />
@@ -70,11 +70,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Underline" Property="BorderBrush" Value="{StaticResource Gold}" />
-                                <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                                <Setter TargetName="Underline" Property="BorderBrush" Value="{DynamicResource Gold}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Gold}" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="{StaticResource Gold}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Gold}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.45" />
@@ -85,11 +85,11 @@
             </Setter>
         </Style>
 
-        <!-- Cuadro de texto del overlay: la nota de la pelea. -->
+        <!-- Cuadro de texto del overlay: la nota de la pelea. Fondo de las cajas de texto (InputBg), como InputBox. -->
         <Style x:Key="Field" TargetType="TextBox">
-            <Setter Property="Background" Value="#33000000" />
-            <Setter Property="Foreground" Value="{StaticResource Text}" />
-            <Setter Property="CaretBrush" Value="{StaticResource Gold}" />
+            <Setter Property="Background" Value="{DynamicResource InputBg}" />
+            <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource Gold}" />
             <Setter Property="BorderBrush" Value="{StaticResource Stroke}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="4,2" />
@@ -295,18 +295,19 @@
                     <DockPanel>
                         <!-- Nota de la pelea guardada: se guarda al salir del cuadro (o con Enter) -->
                         <DockPanel DockPanel.Dock="Bottom" Margin="0,3,0,1" Visibility="{Binding CanEditNote, Converter={StaticResource Visible}}">
-                            <Button DockPanel.Dock="Right" Content="Borrar pelea" Command="{Binding DeleteEncounterCommand}" Cursor="Hand"
-                                    Foreground="#E0524A" Background="Transparent" BorderThickness="0" FontSize="11" Padding="6,0,0,0" />
-                            <TextBox Style="{StaticResource Field}" Text="{Binding CurrentNote, UpdateSourceTrigger=PropertyChanged}" LostFocus="OnNoteLostFocus" KeyDown="OnNoteKeyDown"
+                            <Button x:Name="DeleteEncounterButton" DockPanel.Dock="Right" Style="{StaticResource ButtonDangerLink}" Content="Borrar pelea"
+                                    Command="{Binding DeleteEncounterCommand}" FontSize="11" Padding="6,0,0,0" />
+                            <TextBox x:Name="NoteBox" Style="{StaticResource Field}" Text="{Binding CurrentNote, UpdateSourceTrigger=PropertyChanged}" LostFocus="OnNoteLostFocus" KeyDown="OnNoteKeyDown"
                                      ToolTip="Nota de esta pelea (por ejemplo: rotación nueva, con piedra X). Se puede buscar en el historial." />
                         </DockPanel>
-                        <Button DockPanel.Dock="Right" Content="Volver al vivo" Command="{Binding BackToLiveCommand}" Cursor="Hand"
-                                Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" FontSize="11" Padding="4,0" />
-                        <Button DockPanel.Dock="Right" Content="›" Command="{Binding NewerFightCommand}" Cursor="Hand" ToolTip="Pelea siguiente (Alt+→)"
-                                Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" FontSize="13" FontWeight="Bold" Padding="4,0" />
-                        <Button DockPanel.Dock="Right" Content="‹" Command="{Binding OlderFightCommand}" Cursor="Hand" ToolTip="Pelea anterior (Alt+←)"
-                                Foreground="{StaticResource Gold}" Background="Transparent" BorderThickness="0" FontSize="13" FontWeight="Bold" Padding="4,0" />
-                        <TextBlock Text="{Binding HistoryLabel}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Gold}" VerticalAlignment="Center" />
+                        <!-- Links con el acento del tema (DynamicResource: se repintan al cambiarlo con la pelea abierta). -->
+                        <Button x:Name="BackToLiveButton" DockPanel.Dock="Right" Style="{StaticResource ButtonLink}" Content="Volver al vivo"
+                                Command="{Binding BackToLiveCommand}" FontSize="11" Padding="4,0" />
+                        <Button DockPanel.Dock="Right" Style="{StaticResource ButtonLink}" Content="›" Command="{Binding NewerFightCommand}" ToolTip="Pelea siguiente (Alt+→)"
+                                FontSize="13" FontWeight="Bold" Padding="4,0" />
+                        <Button DockPanel.Dock="Right" Style="{StaticResource ButtonLink}" Content="‹" Command="{Binding OlderFightCommand}" ToolTip="Pelea anterior (Alt+←)"
+                                FontSize="13" FontWeight="Bold" Padding="4,0" />
+                        <TextBlock x:Name="HistoryLabelText" Text="{Binding HistoryLabel}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Gold}" VerticalAlignment="Center" />
                     </DockPanel>
                 </Border>
 

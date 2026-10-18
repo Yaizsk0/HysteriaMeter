@@ -26,11 +26,17 @@ public static class FightAdvice
         {
             var at = TimeSpan.FromSeconds(activity.LongestGapAt).ToString(@"m\:ss", CultureInfo.InvariantCulture);
             tips.Add($"Pasaste {activity.DeadSeconds} s sin pegar ({activity.Uptime.ToString("P0", culture)} del tiempo activo). El hueco más largo fue de {activity.LongestGap} s, a los {at}.");
-        }
 
-        if (actor.ActiveDps > actor.Dps * 1.15 && actor.Dps > 0)
-        {
-            tips.Add($"Sin ese tiempo muerto tu DPS habría sido {ActorRowViewModel.Compact(actor.ActiveDps)} en vez de {ActorRowViewModel.Compact(actor.Dps)}.");
+            // "Ese" es el tiempo muerto de recién y nada más: el mismo daño en la pelea sin esos segundos. No es el DPS
+            // activo, que además descuenta lo que no pegó antes de su primer golpe o después del último (entrar tarde,
+            // morir y no volver) y no se le puede atribuir a este tiempo muerto. En la sesión y la run el tiempo muerto
+            // incluye los ratos entre peleas y puede pasar a la duración, que no los cuenta: ahí no se da.
+            var withoutDeadTime = snapshot.Duration.TotalSeconds - activity.DeadSeconds;
+            var hypothetical = withoutDeadTime >= 1 ? actor.Damage / withoutDeadTime : 0;
+            if (hypothetical > actor.Dps * 1.15 && actor.Dps > 0)
+            {
+                tips.Add($"Sin ese tiempo muerto tu DPS habría sido {ActorRowViewModel.Compact(hypothetical)} en vez de {ActorRowViewModel.Compact(actor.Dps)}.");
+            }
         }
 
         if (actor.Deaths > 0)

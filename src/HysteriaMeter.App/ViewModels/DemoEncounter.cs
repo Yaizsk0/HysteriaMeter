@@ -55,7 +55,8 @@ public static class DemoEncounter
                     p.Damage * 9 / 10,
                     p.Damage * 9 / 10.0 / seconds,
                     p.Damage / 10,
-                    p.Damage / (seconds * 0.92),
+                    // La demo pega todos los segundos: sin tiempo muerto, el DPS activo es el DPS (como en el motor).
+                    (double)p.Damage / seconds,
                     p.Damage / 200,
                     timeline,
                     DamageTaken: 180_000 + (i * 95_000),
