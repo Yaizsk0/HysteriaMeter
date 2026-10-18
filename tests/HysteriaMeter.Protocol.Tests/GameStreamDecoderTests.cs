@@ -270,6 +270,44 @@ public class GameStreamDecoderTests
     }
 
     [Fact]
+    public void Absurd_length_counts_a_desync()
+    {
+        // Un largo declarado mayor que MaxFrameSize (1 MiB): el framer pierde sincronía y descarta lo pendiente.
+        var decoder = CreateDecoder();
+
+        Assert.Empty(decoder.Push(VarInts(2_000_000), T0));
+        Assert.Equal(1, decoder.Stats.Desyncs);
+    }
+
+    [Fact]
+    public void Absurd_length_inside_a_bundle_counts_a_desync()
+    {
+        // El framer de cada bundle es nuevo y se descarta: su desincronización tiene que sumarse igual. Errors en 0
+        // asegura que no la tapó la excepción de un LZ4 inválido.
+        var decoder = CreateDecoder();
+
+        Assert.Empty(decoder.Push(Frame(0xFFFF, BundleDecoder.Compress(VarInts(2_000_000))), T0));
+        Assert.Equal(1, decoder.Stats.Desyncs);
+        Assert.Equal(0, decoder.Stats.Errors);
+    }
+
+    [Fact]
+    public void Desyncs_add_up_across_pushes_and_streams_sharing_the_stats()
+    {
+        // El pipeline comparte un DecoderStats entre todos los flujos: cada Push suma solo lo suyo, sin pisar ni repetir.
+        var opcodes = OpcodeTable.Load(Path.Combine(AppContext.BaseDirectory, "data", "opcodes.json"));
+        var stats = new DecoderStats();
+        var first = new GameStreamDecoder(opcodes, PacketDecoders.All, stats: stats);
+        var second = new GameStreamDecoder(opcodes, PacketDecoders.All, stats: stats);
+
+        first.Push(VarInts(2_000_000), T0);
+        first.Push(VarInts(2_000_000), T0);
+        second.Push(VarInts(2_000_000), T0);
+
+        Assert.Equal(3, stats.Desyncs);
+    }
+
+    [Fact]
     public void Unknown_opcodes_are_counted()
     {
         var decoder = CreateDecoder();

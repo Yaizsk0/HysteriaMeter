@@ -31,6 +31,9 @@ public sealed partial class MeterPipeline(
     private readonly Stopwatch _sinceLastSegment = Stopwatch.StartNew();
     private DateTimeOffset _lastSegmentAt = DateTimeOffset.UtcNow;
 
+    /// <summary>La captura en vivo, para que el tick publique sus descartes; <c>null</c> repitiendo un .pcap.</summary>
+    private LiveCaptureSource? _live;
+
     public DecoderStats Stats => stats;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -48,6 +51,7 @@ public sealed partial class MeterPipeline(
         Action<string?>? forwardRecording = null;
         if (source is LiveCaptureSource live)
         {
+            Volatile.Write(ref _live, live);
             forwardRecording = live.SetRecordPath;
             recorder.Changed += forwardRecording;
             if (recorder.CurrentPath is { } path)
@@ -150,7 +154,10 @@ public sealed partial class MeterPipeline(
         return table;
     }
 
-    /// <summary>Cierra encuentros por inactividad usando el reloj de la captura (sirve también en replay).</summary>
+    /// <summary>
+    /// Cierra encuentros por inactividad usando el reloj de la captura (sirve también en replay) y publica los
+    /// descartes de la cola de la captura en vivo para Diagnóstico.
+    /// </summary>
     private async Task TickLoopAsync(CancellationToken cancellationToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
@@ -159,6 +166,10 @@ public sealed partial class MeterPipeline(
             while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
             {
                 engine.Tick(_lastSegmentAt + _sinceLastSegment.Elapsed);
+                if (Volatile.Read(ref _live) is { } live)
+                {
+                    status.SetDropped(live.Dropped);
+                }
             }
         }
         catch (OperationCanceledException)

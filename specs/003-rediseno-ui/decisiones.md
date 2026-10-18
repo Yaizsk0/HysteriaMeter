@@ -70,6 +70,7 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 - Atajo nuevo "Cambiar pestaña" (rota DPS→CURA→RECIB. en la ventana principal), por defecto vacío.
 - Captura: selector de placa de red (LiveCaptureSource.ListDevices) guardado en preferencias, se aplica al reiniciar el meter (decirlo en la UI); "Automática" por defecto.
 - Datos del juego: carpeta %LOCALAPPDATA%\HysteriaMeter\Juego con conteos (skills con nombre, íconos, emblemas) y botón "Abrir carpeta". Se cuenta lo que carga el meter: las skills con nombre que lee SkillNames de `skills.json` y solo los `<id>.png` de `iconos\` y `clases\` (un `fondo.png` no es de ninguna skill ni clase y no cuenta). La bienvenida usa el mismo `Config.GameDataSummary`, así que las dos pantallas dan el mismo número.
+- Diagnóstico: la línea de contadores (la misma que va en "Reportar un problema") suma, después de las resincronizaciones por huecos TCP, las desincronizaciones del framer y los segmentos que la cola de la captura en vivo descartó por llena (no las pérdidas de Npcap); su tooltip explica cada número.
 - Tema: 4 tarjetas con vista previa de las paletas reales de MeterThemes, en el orden del mock: Abismo, Dorado, Mínimo, Carmesí (`ThemeCard.Order`; `MeterThemes.All` no cambia porque su primer tema es el de reemplazo).
 - Copiar imagen / Ver barras de prueba / Abrir pelea: ya no necesitan cerrar nada; la ventana queda abierta.
 

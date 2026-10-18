@@ -50,6 +50,7 @@
     {"id": 79, "text": "La cruz y la flecha de la fila se ven aunque el nombre no entre, Esc con el overlay minimizado vuelve a la pelea actual y Comparar no cuenta el DoT después de una muerte."},
     {"id": 80, "text": "ACTIVO y tiempo muerto cuentan solo tus golpes directos: un DoT que sigue pegando mientras estás muerto o quieto ya no tapa el hueco."},
     {"id": 84, "text": "Al cambiar el tema con una pelea guardada abierta, la franja de arriba del overlay toma los colores nuevos en el momento."},
-    {"id": 85, "text": "El DPS ACTIVO del detalle ya no cuenta el DoT como actividad: sin tiempo muerto es igual al DPS, y si todo tu daño fue DoT muestra \"–\"."}
+    {"id": 85, "text": "El DPS ACTIVO del detalle ya no cuenta el DoT como actividad: sin tiempo muerto es igual al DPS, y si todo tu daño fue DoT muestra \"–\"."},
+    {"id": 86, "text": "Diagnóstico muestra las desincronizaciones y los paquetes que el meter tiró por no dar abasto (antes ese contador daba siempre 0), y el reporte desde el overlay ya lleva el diagnóstico."}
   ]
 }

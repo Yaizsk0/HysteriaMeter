@@ -27,6 +27,7 @@ public sealed class CaptureStatus
 
     private readonly DateTime _startedUtc;
     private long _lastTrafficTicks;
+    private long _dropped;
     private volatile string? _failure;
 
     public CaptureStatus() : this(DateTime.UtcNow)
@@ -43,6 +44,14 @@ public sealed class CaptureStatus
     public bool HasTraffic => Interlocked.Read(ref _lastTrafficTicks) != 0;
 
     public void Fail(string message) => _failure = message;
+
+    /// <summary>
+    /// Segmentos del juego que la cola de la captura en vivo descartó por estar llena (LiveCaptureSource.Dropped).
+    /// Repitiendo un .pcap queda en 0.
+    /// </summary>
+    public long Dropped => Interlocked.Read(ref _dropped);
+
+    public void SetDropped(long count) => Interlocked.Exchange(ref _dropped, count);
 
     public CaptureState Current(DateTime utcNow)
     {

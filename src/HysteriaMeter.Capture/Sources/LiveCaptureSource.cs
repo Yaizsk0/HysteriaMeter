@@ -24,7 +24,10 @@ public sealed class LiveCaptureSource(LiveCaptureOptions options, IConnectionFil
     private string? _recordPath = options.RecordPath;
     private long _dropped;
 
-    /// <summary>Segmentos descartados porque el consumidor no daba abasto.</summary>
+    /// <summary>
+    /// Segmentos del juego que el meter descartó porque su cola estaba llena (el pipeline no daba abasto).
+    /// No son pérdidas de la placa ni del driver de Npcap: esos paquetes ya llegaron y se tiraron acá.
+    /// </summary>
     public long Dropped => Interlocked.Read(ref _dropped);
 
     /// <summary>Placa elegida (cuando ya apareció tráfico del juego).</summary>
@@ -52,11 +55,7 @@ public sealed class LiveCaptureSource(LiveCaptureOptions options, IConnectionFil
 
     public async IAsyncEnumerable<TcpSegment> ReadAllAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var channel = Channel.CreateBounded<TcpSegment>(new BoundedChannelOptions(options.QueueCapacity)
-        {
-            FullMode = BoundedChannelFullMode.DropWrite,
-            SingleReader = true,
-        });
+        var channel = CreateQueue();
 
         _devices.AddRange(CandidateDevices());
         foreach (var device in _devices)
@@ -89,6 +88,19 @@ public sealed class LiveCaptureSource(LiveCaptureOptions options, IConnectionFil
         return ValueTask.CompletedTask;
     }
 
+    /// <summary>
+    /// Cola entre el callback de captura y el pipeline. Llena, descarta el segmento nuevo; con DropWrite TryWrite
+    /// devuelve true igual, así que el descarte se cuenta en el aviso del canal y no en el resultado de TryWrite.
+    /// </summary>
+    internal Channel<TcpSegment> CreateQueue() =>
+        Channel.CreateBounded<TcpSegment>(
+            new BoundedChannelOptions(options.QueueCapacity)
+            {
+                FullMode = BoundedChannelFullMode.DropWrite,
+                SingleReader = true,
+            },
+            _ => Interlocked.Increment(ref _dropped));
+
     private void OnPacket(ILiveDevice device, PacketCapture e, ChannelWriter<TcpSegment> writer)
     {
         var raw = e.GetPacket();
@@ -102,10 +114,8 @@ public sealed class LiveCaptureSource(LiveCaptureOptions options, IConnectionFil
             _writer?.Write(raw);
         }
 
-        if (!writer.TryWrite(segment))
-        {
-            Interlocked.Increment(ref _dropped);
-        }
+        // Solo da false con la captura ya cerrada; los descartes por cola llena los cuenta CreateQueue.
+        _ = writer.TryWrite(segment);
     }
 
     /// <summary>La primera placa con tráfico del juego queda elegida; las demás se detienen.</summary>
