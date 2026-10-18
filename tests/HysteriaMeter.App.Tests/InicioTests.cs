@@ -4,6 +4,7 @@ using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
+using HysteriaMeter.App.Config;
 using HysteriaMeter.App.FightCard;
 using HysteriaMeter.App.Overlay;
 using HysteriaMeter.App.Pipeline;
@@ -105,13 +106,14 @@ public sealed class InicioTests
                   "skills": { "15280000": "Bittercold Wind", "15290000": "Frost Arrow", "x": "no", "16000000": "", },
                 }
                 """);
-            foreach (var file in new[] { @"iconos\15280000.png", @"iconos\15290000.png", @"clases\1.png", @"clases\leeme.txt" })
+            // Solo cuentan los <id>.png que carga la app: fondo.png no es de ninguna skill ni de ninguna clase.
+            foreach (var file in new[] { @"iconos\15280000.png", @"iconos\15290000.png", @"iconos\fondo.png", @"clases\1.png", @"clases\fondo.png", @"clases\leeme.txt" })
             {
                 File.WriteAllBytes(Path.Combine(folder, file), [0]);
             }
 
             var data = GameDataSummary.Read(folder);
-            Assert.Equal(new GameDataSummary(folder, HasSkillFile: true, Skills: 2, Icons: 2, Emblems: 1), data);
+            Assert.Equal(new GameDataSummary(folder, Exists: true, HasSkillFile: true, Skills: 2, Icons: 2, Emblems: 1), data);
             var step = WelcomeViewModel.GameDataStep(data);
             Assert.Equal(("✓", "Listo", false), (step.Mark, step.State, step.HasAction));
             Assert.EndsWith(": 2 skills, 2 íconos, 1 emblema", step.Hint, StringComparison.Ordinal);
@@ -151,7 +153,7 @@ public sealed class InicioTests
         var status = new CaptureStatus(DateTime.UtcNow);
         var session = new MeterSession(
             new CombatEngine(), new CaptureRecorder(), SkillNames.Empty, new MeterPreferences { WelcomeDone = false }, p => saved = p, status: status);
-        var welcome = new WelcomeViewModel(session, new CaptureSetup(true, null), new GameDataSummary(@"C:\no-existe", false, 0, 0, 0));
+        var welcome = new WelcomeViewModel(session, new CaptureSetup(true, null), new GameDataSummary(@"C:\no-existe", Exists: false, HasSkillFile: false, 0, 0, 0));
         var closed = 0;
         welcome.CloseRequested += () => closed++;
         var changes = new List<string?>();
@@ -370,8 +372,8 @@ public sealed class InicioWindowTests
                 new CombatEngine(), new CaptureRecorder(), SkillNames.Empty, new MeterPreferences { WelcomeDone = false }, _ => { }, status: status);
 
             // Con todo por revisar (con links) y con todo listo.
-            Layout(new WelcomeWindow(new WelcomeViewModel(session, new CaptureSetup(false, null), new GameDataSummary(@"C:\no-existe", false, 0, 0, 0))));
-            Layout(new WelcomeWindow(new WelcomeViewModel(session, new CaptureSetup(true, null, "pelea.pcap"), new GameDataSummary(@"C:\Juego", true, 280, 280, 9))));
+            Layout(new WelcomeWindow(new WelcomeViewModel(session, new CaptureSetup(false, null), new GameDataSummary(@"C:\no-existe", Exists: false, HasSkillFile: false, 0, 0, 0))));
+            Layout(new WelcomeWindow(new WelcomeViewModel(session, new CaptureSetup(true, null, "pelea.pcap"), new GameDataSummary(@"C:\Juego", Exists: true, HasSkillFile: true, 280, 280, 9))));
 
             ActorSnapshot me = new(1, "Yo", null, true, 3000, 300, 1, 3, 1, 1500, 0, [new SkillSnapshot(100, 3000, 3, 1, 1500, 1)]);
             var kill = new EncounterSnapshot(Guid.NewGuid(), DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddSeconds(10), "Tarka", true, 3000, [me], TargetIsBoss: true);
