@@ -740,7 +740,7 @@
                                 <StackPanel>
                                     <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
                                     <TextBlock Text="{Binding Diagnostics}" Style="{StaticResource Hint}" Margin="0,6,0,0"
-                                               ToolTip="Frames: mensajes del juego leídos. Conocidos: los que el meter sabe interpretar. Errores o resincronizaciones altos indican un problema de lectura." />
+                                               ToolTip="Frames: mensajes del juego leídos. Conocidos: los que el meter sabe interpretar. Resincronizaciones: huecos en la conexión. Desincronizaciones: el meter leyó un largo de mensaje inválido y descartó lo pendiente (puede pasar después de un hueco o al tomar la conexión a mitad de camino). Descartados: paquetes del juego que el meter tiró porque no daba abasto (no son pérdidas de la placa ni de Npcap). Errores, resincronizaciones o desincronizaciones altos indican un problema de lectura." />
                                 </StackPanel>
                             </Border>
                             <Button Style="{StaticResource ButtonGhost}" Content="Reportar un problema" Command="{Binding ReportProblemCommand}" HorizontalAlignment="Left" Margin="0,12,0,0"

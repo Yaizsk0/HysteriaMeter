@@ -1014,11 +1014,25 @@ public sealed partial class MeterViewModel : ObservableObject
         return (frames >= 3_000 && known == 0) || (errors >= 50 && errors > known / 5);
     }
 
-    public static string DescribeDecoder(long frames, long unknown, long errors, long resyncs)
+    /// <summary>
+    /// La línea de Diagnóstico (y del reporte de un problema). Resincronizaciones: huecos TCP. Desincronizaciones: largos
+    /// de frame inválidos que obligaron a descartar lo pendiente (pueden seguir a un hueco). Descartados: segmentos que
+    /// la cola de la captura tiró por llena.
+    /// </summary>
+    public static string DescribeDecoder(long frames, long unknown, long errors, long resyncs, long desyncs, long dropped)
     {
         var culture = CultureInfo.CurrentCulture;
         return $"Frames {frames.ToString("N0", culture)} · conocidos {(frames - unknown).ToString("N0", culture)} · " +
-            $"errores {errors.ToString("N0", culture)} · resincronizaciones {resyncs.ToString("N0", culture)}";
+            $"errores {errors.ToString("N0", culture)} · resincronizaciones {resyncs.ToString("N0", culture)} · " +
+            $"desincronizaciones {desyncs.ToString("N0", culture)} · descartados {dropped.ToString("N0", culture)}";
+    }
+
+    /// <summary>La línea de Diagnóstico con los contadores de ahora (los de la sesión, no los del último refresco).</summary>
+    private string CurrentDiagnostics()
+    {
+        var decoder = _session.Decoder;
+        return DescribeDecoder(decoder.TotalFrames, decoder.UnknownFrames, decoder.Errors, decoder.Resyncs, decoder.Desyncs,
+            _session.Status.Dropped);
     }
 
     /// <summary>Proporción de vida restante (0..1) para la barra.</summary>
@@ -1141,11 +1155,18 @@ public sealed partial class MeterViewModel : ObservableObject
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{CaptureRecorder.Folder}\"") { UseShellExecute = true });
     }
 
+    /// <summary>
+    /// El texto del reporte de un problema. El diagnóstico se arma en el momento: <see cref="Diagnostics"/> solo se
+    /// refresca con Configuración abierta, y el overlay también ofrece reportar (captura detenida, aviso de parche).
+    /// </summary>
+    public string BuildProblemReport() =>
+        BugReport.Build(Version, Environment.OSVersion.VersionString, StatusText, CurrentDiagnostics(), Preferences);
+
     /// <summary>Copia el reporte (versión, sistema, diagnóstico; sin nombres) y abre un issue nuevo en GitHub.</summary>
     [RelayCommand]
     private void ReportProblem()
     {
-        var report = BugReport.Build(Version, Environment.OSVersion.VersionString, StatusText, Diagnostics, Preferences);
+        var report = BuildProblemReport();
         try
         {
             System.Windows.Clipboard.SetText(report);
@@ -2027,7 +2048,7 @@ public sealed partial class MeterViewModel : ObservableObject
         var (frames, unknown, errors) = (decoder.TotalFrames, decoder.UnknownFrames, decoder.Errors);
         if (IsSettingsOpen)
         {
-            Diagnostics = DescribeDecoder(frames, unknown, errors, decoder.Resyncs);
+            Diagnostics = CurrentDiagnostics();
         }
 
         var patch = state == CaptureState.Capturing && PatchSuspected(frames, unknown, errors);
