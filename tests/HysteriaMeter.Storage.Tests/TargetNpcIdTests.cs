@@ -93,18 +93,51 @@ public sealed class TargetNpcIdTests : IDisposable
     }
 
     [Fact]
-    public async Task A_named_fight_does_not_count_as_an_attempt_against_an_unnamed_one_with_the_same_template()
+    public async Task Naming_a_template_keeps_counting_its_attempts_and_record_together()
     {
         var repository = new EncounterRepository(_path);
         await repository.InitializeAsync();
-        // Antes de agregar el NPC a data/npcs.json quedó "NPC 111"; después, con nombre. Son rótulos distintos en el
-        // historial, así que se cuentan aparte, igual que los agrupa la ventana.
-        await repository.SaveAsync(Fight(Start, null, 111, 100));
+        // Antes de agregar el NPC a data/npcs.json quedó "NPC 111"; después, con nombre. Es el mismo objetivo: la plantilla
+        // manda (FightTarget.Identity), como en el historial en memoria y en el modo dungeon.
+        await repository.SaveAsync(Fight(Start, null, 111, 150));
         await repository.SaveAsync(Fight(Start.AddMinutes(5), "Kromede", 111, 120));
 
         var listed = (await repository.ListRecentAsync()).Reverse().ToList();
 
+        Assert.Equal([1, 2], listed.Select(s => s.Attempt));
+        // El récord sigue siendo el de 150, aunque esa pelea no tenga nombre.
+        Assert.Equal([true, false], listed.Select(s => s.IsRecord));
+    }
+
+    [Fact]
+    public async Task Two_templates_with_the_same_name_are_two_targets()
+    {
+        var repository = new EncounterRepository(_path);
+        await repository.InitializeAsync();
+        await repository.SaveAsync(Fight(Start, "Kromede", 111, 100));
+        await repository.SaveAsync(Fight(Start.AddMinutes(5), "Kromede", 222, 120));
+
+        var listed = (await repository.ListRecentAsync()).Reverse().ToList();
+
         Assert.Equal([1, 1], listed.Select(s => s.Attempt));
+    }
+
+    [Fact]
+    public async Task Without_templates_the_name_decides_and_old_entity_names_are_not_names()
+    {
+        var repository = new EncounterRepository(_path);
+        await repository.InitializeAsync();
+        await repository.SaveAsync(Fight(Start, "Kromede", null, 100));
+        await repository.SaveAsync(Fight(Start.AddMinutes(5), "#81234", null, 120));
+        await repository.SaveAsync(Fight(Start.AddMinutes(10), "Kromede", null, 130));
+        await repository.SaveAsync(Fight(Start.AddMinutes(15), "#81234", null, 90));
+        // Una pelea vieja con nombre y sin plantilla no se junta con una nueva que tiene plantilla (la plantilla manda).
+        await repository.SaveAsync(Fight(Start.AddMinutes(20), "Kromede", 333, 140));
+
+        var listed = (await repository.ListRecentAsync()).Reverse().ToList();
+
+        Assert.Equal([1, 0, 2, 0, 1], listed.Select(s => s.Attempt));
+        Assert.Equal([false, false, true, false, true], listed.Select(s => s.IsRecord));
     }
 
     private static EncounterSnapshot Fight(DateTimeOffset start, string? target, uint? npc, double localDps) => new(

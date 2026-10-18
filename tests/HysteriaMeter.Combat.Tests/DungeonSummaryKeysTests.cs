@@ -113,9 +113,9 @@ public class DungeonSummaryKeysTests
     [InlineData(null, null, null)]
     [InlineData("#81234", null, null)]
     [InlineData("", null, null)]
-    public void The_target_key_is_the_name_or_else_the_npc_template(string? name, uint? npc, string? expected)
+    public void The_target_label_is_the_name_or_else_the_npc_template(string? name, uint? npc, string? expected)
     {
-        Assert.Equal(expected, FightTarget.Key(name, npc));
+        Assert.Equal(expected, FightTarget.NameOrNpc(name, npc));
         Assert.Equal(expected ?? "Encuentro", FightTarget.Label(name, npc));
     }
 

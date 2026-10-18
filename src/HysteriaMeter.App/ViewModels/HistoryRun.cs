@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Windows.Media;
+using HysteriaMeter.Combat;
 
 namespace HysteriaMeter.App.ViewModels;
 
@@ -88,28 +89,30 @@ public sealed record HistoryRun(
     }
 
     /// <summary>
-    /// "2/3 bosses · 1 wipe": bosses derrotados sobre bosses distintos intentados y cuántos wipes hubo. Un boss es un
-    /// nombre o una plantilla ("NPC 2400123"); las kills viejas sin ninguno de los dos cuentan cada una por separado.
+    /// "2/3 bosses · 1 wipe": bosses derrotados sobre bosses intentados y cuántos wipes hubo, contados como el modo dungeon
+    /// (<see cref="BossRules.GroupAttempts"/>): un boss es una plantilla o, sin plantilla, un nombre
+    /// (<see cref="HistoryItem.TargetKey"/>), y un kill lo cierra (la misma plantilla después es otro boss). Las kills
+    /// viejas sin plantilla ni nombre cuentan cada una por separado. Las peleas llegan de la más nueva a la más vieja.
     /// </summary>
     public static string BossesText(IReadOnlyCollection<HistoryItem> fights)
     {
-        static string BossKey(HistoryItem f) => f.HasTarget ? f.Target : "#" + f.Id;
-
-        var bosses = fights.Where(f => !f.IsTrash).Select(BossKey).Distinct(StringComparer.Ordinal).Count();
-        if (bosses == 0)
+        // De la más vieja a la más nueva: Reverse deja ese orden cuando faltan las horas (filas armadas a mano).
+        var attempts = fights.Where(f => !f.IsTrash).Reverse().OrderBy(f => f.Started ?? f.Ended).ToList();
+        var bosses = BossRules.GroupAttempts(attempts, f => f.TargetKey, f => f.IsKill);
+        if (bosses.Count == 0)
         {
             return "sin bosses";
         }
 
-        var killed = fights.Where(f => f.IsKill).Select(BossKey).Distinct(StringComparer.Ordinal).Count();
-        var wipes = fights.Count(f => f.IsWipe);
+        var killed = bosses.Count(b => b.Exists(f => f.IsKill));
+        var wipes = attempts.Count(f => f.IsWipe);
         var wipesText = wipes switch
         {
             0 => "sin wipes",
             1 => "1 wipe",
             _ => $"{wipes} wipes",
         };
-        return $"{killed}/{bosses} {(bosses == 1 ? "boss" : "bosses")} · {wipesText}";
+        return $"{killed}/{bosses.Count} {(bosses.Count == 1 ? "boss" : "bosses")} · {wipesText}";
     }
 
     private static string FightsText(int count) => count == 1 ? "1 pelea" : $"{count} peleas";
@@ -159,13 +162,14 @@ public sealed record BossProgress(
 
     /// <summary>
     /// El boss de la fila seleccionada; sin selección, el que deja el filtro si deja uno solo (como el progreso de antes).
-    /// La serie usa todos los intentos cargados contra ese objetivo (nombre o plantilla) y personaje, sin que Solo kills
-    /// quite los wipes. El trash no entra: no es un intento contra un boss.
+    /// La serie usa todos los intentos cargados contra ese objetivo (<see cref="HistoryItem.TargetKey"/>: la plantilla o,
+    /// sin plantilla, el nombre) y personaje, sin que Solo kills quite los wipes. El trash no entra: no es un intento
+    /// contra un boss. El título lleva el rótulo del intento más nuevo: si la plantilla ya tiene nombre en data/npcs.json,
+    /// el nombre, aunque las peleas viejas sigan diciendo "NPC 2400123".
     /// </summary>
     public static BossProgress For(IReadOnlyList<HistoryItem> matchingNewestFirst, HistoryItem? selected, DateTimeOffset now, IReadOnlyList<HistoryItem>? allNewestFirst = null)
     {
-        string target;
-        string? character;
+        HistoryItem pick;
         if (selected is not null)
         {
             if (!selected.HasTarget)
@@ -178,21 +182,23 @@ public sealed record BossProgress(
                 return Empty(TrashText);
             }
 
-            (target, character) = (selected.Target, selected.Character);
+            pick = selected;
         }
         else if (matchingNewestFirst.Where(i => i.LocalDps is > 0 && !i.IsTrash).ToList() is { Count: > 0 } candidates
-            && candidates.Select(i => (i.Target, i.Character)).Distinct().Count() == 1 && candidates[0].HasTarget)
+            && candidates.Select(i => (i.TargetKey, i.Character)).Distinct().Count() == 1 && candidates[0].HasTarget)
         {
-            (target, character) = (candidates[0].Target, candidates[0].Character);
+            pick = candidates[0];
         }
         else
         {
             return Empty(PickText);
         }
 
-        var title = $"{target.ToUpper(CultureInfo.CurrentCulture)} · {Header}";
+        var (key, character) = (pick.TargetKey, pick.Character);
         var series = (allNewestFirst ?? matchingNewestFirst)
-            .Where(i => i.Target == target && i.Character == character && i.LocalDps is > 0 && !i.IsTrash).Reverse().ToList();
+            .Where(i => i.TargetKey == key && i.Character == character && i.LocalDps is > 0 && !i.IsTrash).Reverse().ToList();
+        var target = series.Count > 0 ? series[^1].Target : pick.Target;
+        var title = $"{target.ToUpper(CultureInfo.CurrentCulture)} · {Header}";
         if (series.Count == 0)
         {
             return Empty($"No hay peleas tuyas contra {target} con estos filtros.", title);

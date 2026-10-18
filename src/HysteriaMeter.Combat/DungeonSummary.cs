@@ -35,19 +35,54 @@ public static class BossRules
     /// </summary>
     public static bool IsBossAttempt(EncounterSnapshot snapshot) =>
         IsBossAttempt(
-            snapshot.TargetKilled, FightTarget.Key(snapshot) is not null, snapshot.TargetIsBoss, snapshot.Duration, snapshot.MainTargetDuration,
+            snapshot.TargetKilled, FightTarget.Identity(snapshot) is not null, snapshot.TargetIsBoss, snapshot.Duration, snapshot.MainTargetDuration,
             snapshot.Actors.Sum(a => a.Damage), snapshot.Actors.Sum(a => a.MainTargetDamage));
 
     /// <summary>
     /// La misma regla con los datos sueltos de una pelea guardada (historial). <paramref name="hasTarget"/>: el objetivo
-    /// tiene nombre o plantilla de NPC (<see cref="FightTarget.Key(string?, uint?)"/>). Sin ninguno de los dos, un wipe
-    /// no se distingue de un pull de trash y cuenta como trash.
+    /// tiene nombre o plantilla de NPC (<see cref="FightTarget.Identity(string?, uint?)"/>). Sin ninguno de los dos, un
+    /// wipe no se distingue de un pull de trash y cuenta como trash.
     /// </summary>
     public static bool IsBossAttempt(
         bool killed, bool hasTarget, bool targetIsBoss, TimeSpan duration, TimeSpan? mainTargetDuration, long actorsDamage, long mainTargetDamage) =>
         IsBossKill(killed, targetIsBoss, duration, mainTargetDuration)
         || (!killed && hasTarget && LooksLikeBossFight(targetIsBoss, actorsDamage, mainTargetDamage)
             && (targetIsBoss || duration >= BossKillMinDuration));
+
+    /// <summary>
+    /// Junta los intentos de boss (de la más vieja a la más nueva) por objetivo, en el orden en que aparecieron: la misma
+    /// <paramref name="identity"/> (<see cref="FightTarget.Identity(string?, uint?)"/>) es el mismo boss hasta que lo
+    /// matan; después del kill, otra pelea contra él es otro boss. Un intento sin identidad no se junta con ninguno. Lo usan
+    /// el modo dungeon y el "2/3 bosses · 1 wipe" del historial, para que las dos vistas cuenten igual.
+    /// </summary>
+    public static List<List<T>> GroupAttempts<T>(IEnumerable<T> attemptsOldestFirst, Func<T, string?> identity, Func<T, bool> killed)
+    {
+        var groups = new List<List<T>>();
+        var open = new Dictionary<string, List<T>>(StringComparer.Ordinal);
+        foreach (var attempt in attemptsOldestFirst)
+        {
+            if (identity(attempt) is not { } key)
+            {
+                groups.Add([attempt]);
+                continue;
+            }
+
+            if (!open.TryGetValue(key, out var attempts))
+            {
+                attempts = [];
+                open[key] = attempts;
+                groups.Add(attempts);
+            }
+
+            attempts.Add(attempt);
+            if (killed(attempt))
+            {
+                open.Remove(key);
+            }
+        }
+
+        return groups;
+    }
 
     /// <summary>Trash, kill o wipe, como la línea de tiempo del modo dungeon y las insignias del historial.</summary>
     public static RunSegmentKind Classify(bool isBossAttempt, bool killed) =>
@@ -115,9 +150,9 @@ public sealed record DungeonSummary(
     public int Deaths => Players.Sum(p => p.Deaths);
 
     /// <summary>
-    /// Arma el resumen con las peleas de una misma entrada. Los intentos se agrupan por boss (plantilla de NPC o, sin
-    /// plantilla, nombre) en el orden en que aparecieron; un kill cierra el boss y otra pelea contra la misma plantilla
-    /// después es otro boss. Una pelea sin plantilla ni nombre (guardada antes de registrar la plantilla) no se junta con
+    /// Arma el resumen con las peleas de una misma entrada. Los intentos se agrupan por boss
+    /// (<see cref="BossRules.GroupAttempts"/>: plantilla de NPC o, sin plantilla, nombre) en el orden en que aparecieron;
+    /// un kill cierra el boss y otra pelea contra la misma plantilla después es otro boss. Una pelea sin plantilla ni nombre (guardada antes de registrar la plantilla) no se junta con
     /// ninguna: es su propio boss si fue kill, y trash si no (no hay cómo saber que fue un wipe).
     /// </summary>
     public static DungeonSummary From(IEnumerable<EncounterSnapshot> fights, DateTimeOffset? entered = null)
@@ -132,25 +167,7 @@ public sealed record DungeonSummary(
         var start = entered is { } e && e <= ordered[0].Start ? e : ordered[0].Start;
         var end = ordered.Max(f => f.End);
 
-        var groups = new List<List<EncounterSnapshot>>();
-        var open = new Dictionary<string, List<EncounterSnapshot>>(StringComparer.Ordinal);
-        foreach (var fight in ordered.Where(BossRules.IsBossAttempt))
-        {
-            var key = GroupKey(fight);
-            if (!open.TryGetValue(key, out var attempts))
-            {
-                attempts = [];
-                open[key] = attempts;
-                groups.Add(attempts);
-            }
-
-            attempts.Add(fight);
-            if (fight.TargetKilled)
-            {
-                open.Remove(key);
-            }
-        }
-
+        var groups = BossRules.GroupAttempts(ordered.Where(BossRules.IsBossAttempt), FightTarget.Identity, f => f.TargetKilled);
         var names = BossNames(groups);
         var bosses = groups.Select((g, i) => Boss(names[i], g)).ToList();
         var bossOf = groups.SelectMany((g, i) => g.Select(f => (f.Id, Name: names[i]))).ToDictionary(x => x.Id, x => x.Name);
@@ -160,7 +177,7 @@ public sealed record DungeonSummary(
             var kind = BossRules.Classify(bossOf.ContainsKey(f.Id), f.TargetKilled);
             // Una pelea vieja sin nombre ni plantilla que no murió no se puede llamar trash ni wipe: queda "Encuentro".
             var label = bossOf.GetValueOrDefault(f.Id)
-                ?? (FightTarget.Key(f) is null && !f.TargetKilled ? FightTarget.Unknown : "Trash");
+                ?? (FightTarget.Identity(f) is null && !f.TargetKilled ? FightTarget.Unknown : "Trash");
             return new RunSegment(kind, label, (f.Start - start).TotalSeconds, f.Duration.TotalSeconds, f.Id);
         }).ToList();
 
@@ -182,12 +199,6 @@ public sealed record DungeonSummary(
         return new DungeonSummary(start, end, bosses, players, timeline);
     }
 
-    /// <summary>La plantilla primero (dos plantillas con el mismo nombre son dos bosses); sin plantilla ni nombre, la pelea sola.</summary>
-    private static string GroupKey(EncounterSnapshot fight) =>
-        fight.TargetNpcId is { } npc ? "npc:" + npc.ToString(CultureInfo.InvariantCulture)
-        : FightTarget.Name(fight.TargetName) is { } name ? "nombre:" + name
-        : "pelea:" + fight.Id.ToString("N");
-
     /// <summary>
     /// El nombre de cada boss como en el overlay ("Kromede", "NPC 2400123"); sin nombre ni plantilla, "Boss N" por su
     /// lugar en la run. Si el mismo nombre vuelve (otra plantilla, u otra vez después del kill), "Kromede (2)".
@@ -198,7 +209,7 @@ public sealed record DungeonSummary(
         var names = new List<string>(groups.Count);
         for (var i = 0; i < groups.Count; i++)
         {
-            var name = FightTarget.Key(Deciding(groups[i])) ?? $"Boss {(i + 1).ToString(CultureInfo.InvariantCulture)}";
+            var name = FightTarget.NameOrNpc(Deciding(groups[i])) ?? $"Boss {(i + 1).ToString(CultureInfo.InvariantCulture)}";
             var count = seen.GetValueOrDefault(name) + 1;
             seen[name] = count;
             names.Add(count == 1 ? name : $"{name} ({count.ToString(CultureInfo.InvariantCulture)})");

@@ -173,8 +173,8 @@ public sealed class EncounterRepository(string databasePath)
 
         // Intento: cuántas veces se peleó contra ese objetivo hasta esta pelea. Récord: el mejor DPS propio contra ese objetivo.
         // Los dos son por personaje: con varios personajes, cada uno compite contra sí mismo ("IS" compara también null).
-        // "Ese objetivo" es el mismo nombre o, sin nombre en data/npcs.json, la misma plantilla de NPC (el "NPC 2400123" del
-        // overlay). Sin nombre ni plantilla (peleas viejas) no hay con qué comparar: intento 0 y sin récord.
+        // "Ese objetivo" es la misma plantilla de NPC o, sin plantilla, el mismo nombre (FightTarget.Identity). Sin nombre ni
+        // plantilla (peleas viejas) no hay con qué comparar: intento 0 y sin récord.
         // Las sumas de toda la party (daño, daño al objetivo principal, muertes) alcanzan para clasificar la pelea con
         // BossRules sin cargar cada una entera.
         var rows = await connection.QueryAsync<EncounterRow>(
@@ -207,7 +207,7 @@ public sealed class EncounterRepository(string databasePath)
             r.TotalDamage,
             r.Note,
             r.LocalDps,
-            r.TargetName is null && r.TargetNpcId is null ? 0 : (int)r.Attempt,
+            FightTarget.Identity(r.TargetName, r.TargetNpcId is { } id ? (uint)id : null) is null ? 0 : (int)r.Attempt,
             r.LocalDps is { } dps && r.BestLocalDps is { } best && dps >= best,
             r.ZoneEnteredAt,
             r.LocalName,
@@ -219,11 +219,17 @@ public sealed class EncounterRepository(string databasePath)
     }
 
     /// <summary>
-    /// La pelea <c>o</c> es contra el mismo objetivo que <c>e</c>: el mismo nombre o, si ninguna de las dos tiene nombre,
-    /// la misma plantilla de NPC. Con nombre y plantilla nulos no coincide con nada (<c>=</c> con NULL es falso).
+    /// La pelea <c>o</c> es contra el mismo objetivo que <c>e</c>, con la regla de <see cref="FightTarget.Identity(string?, uint?)"/>:
+    /// la misma plantilla de NPC si <c>e</c> la tiene (aunque una tenga nombre y la otra no: ponerle nombre en data/npcs.json
+    /// no corta los intentos); sin plantilla, el mismo nombre entre peleas sin plantilla. Los "#entidad" de versiones viejas
+    /// y el nombre vacío no son nombres. Sin nombre ni plantilla no coincide con nada (<c>=</c> con NULL es falso).
     /// </summary>
     private const string SameTarget =
-        "(o.target_name = e.target_name OR (e.target_name IS NULL AND o.target_name IS NULL AND o.target_npc_id = e.target_npc_id))";
+        """
+        ((e.target_npc_id IS NOT NULL AND o.target_npc_id = e.target_npc_id)
+         OR (e.target_npc_id IS NULL AND o.target_npc_id IS NULL AND e.target_name <> '' AND substr(e.target_name, 1, 1) <> '#'
+             AND o.target_name = e.target_name))
+        """;
 
     /// <summary>
     /// Mejor DPS propio contra ese objetivo, sin contar la pelea <paramref name="excludeId"/>. <c>null</c> si no hay otra.

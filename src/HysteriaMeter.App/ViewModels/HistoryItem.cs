@@ -47,6 +47,13 @@ public sealed record HistoryItem(
     public bool HasTarget => Target != FightTarget.Unknown;
 
     /// <summary>
+    /// Con qué se comparan los intentos (<see cref="FightTarget.Identity(string?, uint?)"/>, la misma regla que el SQL del
+    /// historial y el modo dungeon): la plantilla primero y, sin plantilla, el nombre. Una pelea vieja "NPC 2400123" y una
+    /// nueva que ya tiene nombre en data/npcs.json son el mismo objetivo. <c>null</c> en un "Encuentro" sin nada.
+    /// </summary>
+    public string? TargetKey => FightTarget.Identity(HasTarget ? Target : null, NpcId);
+
+    /// <summary>
     /// Lo que dice la columna OBJETIVO: "Trash" en un pull de trash (como el mock), el objetivo en un boss. Una pelea vieja
     /// sin nombre ni plantilla que no murió queda "Encuentro": no se puede saber si fue trash o un wipe.
     /// </summary>
@@ -113,28 +120,28 @@ public sealed record HistoryItem(
 
     /// <summary>
     /// Compara mi DPS de cada pelea con mi mejor DPS contra el mismo objetivo dentro de la lista:
-    /// "−12% vs récord" o "récord" en la mejor. Solo cuando hay más de una pelea contra ese objetivo. El objetivo es el
-    /// nombre o, sin nombre, la plantilla ("NPC 2400123"); el trash y los "Encuentro" sin objetivo no se comparan.
+    /// "−12% vs récord" o "récord" en la mejor. Solo cuando hay más de una pelea contra ese objetivo. El objetivo es
+    /// <see cref="TargetKey"/> (la plantilla o, sin plantilla, el nombre); el trash y los "Encuentro" sin objetivo no se comparan.
     /// </summary>
     public static IReadOnlyList<HistoryItem> WithComparisons(IReadOnlyList<HistoryItem> items)
     {
         var attempts = items
             .Where(i => i.LocalDps is > 0 && i.Compares)
-            .GroupBy(i => (i.Target, i.Character))
+            .GroupBy(i => (i.TargetKey, i.Character))
             .Where(g => g.Count() > 1)
             .ToDictionary(g => g.Key, g => (IReadOnlyCollection<double>)[.. g.Select(i => i.LocalDps!.Value)]);
 
         // La kill más rápida contra cada boss (por personaje), si hubo más de una kill.
         var fastest = items
             .Where(i => i.IsKill && i.Seconds is > 0 && i.HasTarget)
-            .GroupBy(i => (i.Target, i.Character))
+            .GroupBy(i => (i.TargetKey, i.Character))
             .Where(g => g.Count() > 1)
             .ToDictionary(g => g.Key, g => g.MinBy(i => i.Seconds)!.Id);
 
-        return [.. items.Select(i => i.LocalDps is { } dps && dps > 0 && i.Compares && attempts.TryGetValue((i.Target, i.Character), out var all)
+        return [.. items.Select(i => i.LocalDps is { } dps && dps > 0 && i.Compares && attempts.TryGetValue((i.TargetKey, i.Character), out var all)
             ? i with { VsBest = Compare(dps, all.Max()), Percentile = PercentileOf(dps, all) }
             : i)
-            .Select(i => fastest.TryGetValue((i.Target, i.Character), out var id) && id == i.Id ? i with { FastestTag = "· ⏱ kill más rápida" } : i)];
+            .Select(i => fastest.TryGetValue((i.TargetKey, i.Character), out var id) && id == i.Id ? i with { FastestTag = "· ⏱ kill más rápida" } : i)];
     }
 
     /// <summary>
@@ -145,7 +152,7 @@ public sealed record HistoryItem(
     public static (string Target, IReadOnlyList<double> Dps)? Progress(IEnumerable<HistoryItem> newestFirst)
     {
         var withDps = newestFirst.Where(i => i.LocalDps is > 0).ToList();
-        if (withDps.Count < 2 || withDps.Select(i => (i.Target, i.Character)).Distinct().Count() != 1 || !withDps[0].HasTarget)
+        if (withDps.Count < 2 || withDps.Select(i => (i.TargetKey, i.Character)).Distinct().Count() != 1 || !withDps[0].HasTarget)
         {
             return null;
         }
@@ -236,7 +243,9 @@ public sealed record HistoryItem(
         new[]
         {
             TargetText != Target ? $"Objetivo principal: {Target}" : string.Empty,
-            NpcId is { } npc && Target == FightTarget.NpcLabel(npc) ? $"Sin nombre en data/npcs.json: agregá el ID {npc.ToString(CultureInfo.InvariantCulture)} para ponérselo." : string.Empty,
+            NpcId is { } npc && Target == FightTarget.NpcLabel(npc)
+                ? $"Sin nombre en data/npcs.json: agregá el ID {npc.ToString(CultureInfo.InvariantCulture)} para nombrar las peleas que vengan. Los intentos se siguen contando juntos por ese ID."
+                : string.Empty,
             $"{When} · daño total {Total}{(Deaths is > 0 and var d ? $" · {d} {(d == 1 ? "muerte" : "muertes")}" : string.Empty)}",
             string.Join(" ", new[] { IsRecord ? "★ récord personal" : string.Empty, AttemptLabel, VsBest, FastestTag, CharacterTag }.Where(t => t.Length > 0)).TrimStart('·', ' '),
             HasNote ? $"Nota: {Note}" : string.Empty,
@@ -249,7 +258,7 @@ public sealed record HistoryItem(
     public static IReadOnlyList<HistoryItem> WithDeltas(IReadOnlyList<HistoryItem> newestFirst)
     {
         var result = newestFirst.ToArray();
-        var previous = new Dictionary<(string Target, string? Character), double>();
+        var previous = new Dictionary<(string? Target, string? Character), double>();
         for (var i = result.Length - 1; i >= 0; i--)
         {
             var item = result[i];
@@ -258,7 +267,7 @@ public sealed record HistoryItem(
                 continue;
             }
 
-            var key = (item.Target, item.Character);
+            var key = (item.TargetKey, item.Character);
             if (item.IsKill && previous.TryGetValue(key, out var before))
             {
                 var change = (dps / before) - 1;
@@ -277,7 +286,7 @@ public sealed record HistoryItem(
         var end = DateTimeOffset.Parse(summary.EndedAt, CultureInfo.InvariantCulture).ToLocalTime();
 
         // TargetIsBoss no se guarda (sale de data/npcs.json en vivo): acá queda la regla de duración y daño al objetivo.
-        var target = FightTarget.Key(summary.TargetName, summary.TargetNpcId);
+        var target = FightTarget.NameOrNpc(summary.TargetName, summary.TargetNpcId);
         var bossAttempt = BossRules.IsBossAttempt(
             summary.TargetKilled, target is not null, targetIsBoss: false, end - start,
             summary.MainTargetSeconds is { } main ? TimeSpan.FromSeconds(main) : null, summary.ActorsDamage, summary.MainTargetDamage);

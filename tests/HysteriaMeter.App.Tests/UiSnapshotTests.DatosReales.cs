@@ -50,6 +50,15 @@ public sealed partial class UiSnapshotTests
             return new HistoryWindow(vm);
         }),
 
+        // Después se agregó la primera plantilla a data/npcs.json: la kill nueva dice "Kromede" y es el intento 3 contra
+        // ella (el wipe y la kill de antes siguen diciendo "NPC 2400123"); TU PROGRESO junta los tres con el nombre de hoy.
+        new("07i-historial-nombre-agregado", _ =>
+        {
+            var vm = RealDataHistory(NamedLater());
+            Pump(vm.OpenEncounterCommand.ExecuteAsync(vm.HistoryRuns.SelectMany(r => r.Fights).First(i => i.NpcId == FirstBoss && i.Target == NamedBoss)));
+            return new HistoryWindow(vm);
+        }),
+
         // La run de hoy: tres bosses sin nombre, un wipe real del primero y trash.
         new("32-dungeon-sin-nombres", _ => RunSummary(RealDataHistory(), run => run.Fights.Any(f => f.NpcId == FirstBoss))),
 
@@ -66,14 +75,36 @@ public sealed partial class UiSnapshotTests
         return new DungeonWindow(summary ?? throw new InvalidOperationException("El historial no abrió el resumen de la run."));
     }
 
-    /// <summary>Historial abierto, con el reloj fijo, sobre una base propia con las peleas de <see cref="RealDataFights"/>.</summary>
-    private static MeterViewModel RealDataHistory()
+    /// <summary>Nombre de la primera plantilla una vez agregada a data/npcs.json (solo en el estado 07i).</summary>
+    private const string NamedBoss = "Kromede";
+
+    /// <summary>Una run posterior, con la primera plantilla ya nombrada en data/npcs.json: trash y su kill.</summary>
+    private static EncounterSnapshot[] NamedLater()
+    {
+        var entered = Base.AddMinutes(-30);
+        var kill = DemoEncounter.Create(entered.AddMinutes(9)) with
+        {
+            Id = Guid.NewGuid(), ZoneEnteredAt = entered, TargetName = NamedBoss, TargetNpcId = FirstBoss, TargetKilled = true,
+        };
+        var trash = DemoEncounter.Create(entered.AddMinutes(3)) with
+        {
+            Id = Guid.NewGuid(), ZoneEnteredAt = entered, TargetName = null, TargetNpcId = TrashNpc, TargetKilled = true,
+            Start = entered.AddMinutes(3).AddSeconds(-12), MainTargetDuration = TimeSpan.FromSeconds(12),
+        };
+        return [trash, kill];
+    }
+
+    /// <summary>
+    /// Historial abierto, con el reloj fijo, sobre una base propia con las peleas de <see cref="RealDataFights"/> y las
+    /// <paramref name="extra"/>.
+    /// </summary>
+    private static MeterViewModel RealDataHistory(params EncounterSnapshot[] extra)
     {
         var database = Path.Combine(Path.GetTempPath(), $"hysteria-snapshots-datos-{Guid.NewGuid():N}.db");
         SeparateDatabases.Add(database);
         var repository = new EncounterRepository(database);
         Pump(repository.InitializeAsync());
-        foreach (var fight in RealDataFights())
+        foreach (var fight in RealDataFights().Concat(extra))
         {
             Pump(repository.SaveAsync(fight));
         }
