@@ -18,7 +18,7 @@ public sealed partial class UiSnapshotTests
 
     private static readonly State[] HistorialStates =
     [
-        // Sin fila elegida y con peleas contra dos objetivos: la columna de progreso explica qué hacer.
+        // Sin fila elegida: el trash ("Encuentro" sin kill) no cuenta como otro objetivo y el progreso grafica el único boss.
         new("06-historial-abierto", h => new HistoryWindow(h.HistoryWindowOpen())),
 
         // Clic en la kill de la run: la fila queda marcada, el overlay la muestra y la columna grafica ese boss.
