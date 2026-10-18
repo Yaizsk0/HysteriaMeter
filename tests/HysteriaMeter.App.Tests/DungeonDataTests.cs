@@ -87,9 +87,13 @@ public sealed class DungeonDataTests
         Assert.Equal("Mejor DPS: Yo.", card.Note);
         Assert.False(deaths.Bosses.Single().Identified);
 
-        // Sin muertes sí se midió que fue limpio.
+        // Sin muertes se midió que nadie murió, pero no que fue el único pull: ni "Kill limpio", con o sin "Encuentro" antes.
         var clean = DungeonSummary.From([Fight(0, 100, null, killed: true, actors: [Player("Yo", 50_000)])], Entered);
-        Assert.Equal("Kill limpio. Mejor DPS: Yo.", new DungeonSummaryViewModel(clean).Cards.Single().Note);
+        Assert.Equal("Nadie murió en el kill. Mejor DPS: Yo.", new DungeonSummaryViewModel(clean).Cards.Single().Note);
+        var afterUnknown = DungeonSummary.From(
+            [Fight(0, 120, null, killed: false, actors: [Player("Yo", 9_000)]),
+             Fight(200, 100, null, killed: true, actors: [Player("Yo", 50_000)])], Entered);
+        Assert.Equal("Nadie murió en el kill. Mejor DPS: Yo.", new DungeonSummaryViewModel(afterUnknown).Cards.Single().Note);
 
         // Con plantilla, un kill sin wipes con muertes sí fue al primer intento.
         var identified = DungeonSummary.From([Fight(0, 100, 2400123, killed: true, actors: [Player("Yo", 50_000, deaths: 1)])], Entered);
@@ -102,7 +106,7 @@ public sealed class DungeonDataTests
     public void A_short_pull_of_the_same_template_before_the_kill_takes_away_the_first_attempt_claim()
     {
         // Un pull de 20 s sin kill contra la plantilla no es intento de boss (queda como trash), pero el historial lo cuenta:
-        // la tarjeta no puede decir que el kill fue al primer intento ni que fue limpio. Solo el mejor DPS.
+        // la tarjeta no puede decir que el kill fue al primer intento ni que fue limpio: sin muertes, que nadie murió.
         var pull = Fight(0, 20, 2400123, killed: false, actors: [Player("Yo", 9_000)]);
         var withDeath = DungeonSummary.From(
             [pull, Fight(100, 100, 2400123, killed: true, actors: [Player("Yo", 50_000, deaths: 1), Player("Rubia", 30_000)])], Entered);
@@ -115,7 +119,7 @@ public sealed class DungeonDataTests
         Assert.Equal(["Trash", "NPC 2400123 1:40"], view.Timeline.Select(s => s.Label));
 
         var clean = DungeonSummary.From([pull, Fight(100, 100, 2400123, killed: true, actors: [Player("Yo", 50_000)])], Entered);
-        Assert.Equal("Mejor DPS: Yo.", new DungeonSummaryViewModel(clean).Cards.Single().Note);
+        Assert.Equal("Nadie murió en el kill. Mejor DPS: Yo.", new DungeonSummaryViewModel(clean).Cards.Single().Note);
     }
 
     [Fact]
@@ -148,6 +152,12 @@ public sealed class DungeonDataTests
         Assert.Contains("> **NPC 2400123** kill 1:40 · 1 intento" + Environment.NewLine, new DungeonSummaryViewModel(once).ShareText, StringComparison.Ordinal);
 
         Assert.Contains("> **NPC 2400123** kill 3:58 · 2 intentos" + Environment.NewLine, new DungeonSummaryViewModel(Run().Run).ShareText, StringComparison.Ordinal);
+
+        // La cabecera también: "1 boss · 0 wipes · 1 muerte", no "1 bosses · 0 wipes · 1 muertes".
+        var died = DungeonSummary.From([Fight(0, 100, 2400123, killed: true, actors: [Player("Yo", 50_000, deaths: 1)])], Entered);
+        var header = new DungeonSummaryViewModel(died).ShareText.Split(Environment.NewLine)[0];
+        Assert.EndsWith(" · 1 boss · 0 wipes · 1 muerte", header, StringComparison.Ordinal);
+        Assert.EndsWith(" · 1 boss · 1 wipe · 2 muertes", new DungeonSummaryViewModel(Run().Run).ShareText.Split(Environment.NewLine)[0], StringComparison.Ordinal);
     }
 
     [Fact]

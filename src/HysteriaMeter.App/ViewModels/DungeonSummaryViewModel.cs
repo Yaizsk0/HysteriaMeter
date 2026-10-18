@@ -154,10 +154,11 @@ public sealed class DungeonSummaryViewModel
 
     /// <summary>
     /// La nota al pie de cada boss, solo con lo que se midió: cada wipe con el tiempo al que cayó y la fase más baja de
-    /// vida que se vio (75, 50 o 25 %); sin wipes, si el kill fue limpio (nadie murió) y quién hizo más DPS. "Kill al
-    /// primer intento" solo con nombre o plantilla: un "Boss N" sin identidad pudo tener wipes que no se reconocen. Si
-    /// antes hubo otra pelea contra el mismo objetivo que quedó como trash (<see cref="BossSummary.OtherPulls"/>), ni
-    /// "Kill limpio" ni "Kill al primer intento": las dos dan a entender que fue el único pull (en el mock van con 1 intento).
+    /// vida que se vio (75, 50 o 25 %); sin wipes, si el kill fue limpio (nadie murió) y quién hizo más DPS. "Kill limpio"
+    /// y "Kill al primer intento" dan a entender que fue el único pull (en el mock van con 1 intento): solo con nombre o
+    /// plantilla y sin otra pelea antes contra el mismo objetivo que quedó como trash (<see cref="BossSummary.OtherPulls"/>).
+    /// Un "Boss N" sin identidad pudo tener wipes que no se reconocen ("Encuentro"): ahí, sin muertes, solo "Nadie murió
+    /// en el kill.", que es lo que se midió.
     /// </summary>
     internal static string NoteOf(BossSummary boss)
     {
@@ -176,7 +177,14 @@ public sealed class DungeonSummaryViewModel
             return string.Empty;
         }
 
-        var kill = boss.OtherPulls ? string.Empty : boss.Deaths == 0 ? "Kill limpio." : boss.Identified ? "Kill al primer intento." : string.Empty;
+        var onlyPull = boss.Identified && !boss.OtherPulls;
+        var kill = (onlyPull, boss.Deaths == 0) switch
+        {
+            (true, true) => "Kill limpio.",
+            (true, false) => "Kill al primer intento.",
+            (false, true) => "Nadie murió en el kill.",
+            _ => string.Empty,
+        };
         var best = boss.Players.Where(p => p.Dps > 0).MaxBy(p => p.Dps) is { } top ? $"Mejor DPS: {top.Name}." : string.Empty;
         return string.Join(' ', new[] { kill, best }.Where(part => part.Length > 0));
     }
@@ -242,7 +250,9 @@ public sealed class DungeonSummaryViewModel
         get
         {
             var text = new StringBuilder();
-            text.AppendLine(CultureInfo.InvariantCulture, $"**{Title}** · {Duration} · {Bosses} bosses · {Wipes} wipes · {Deaths} muertes");
+            text.AppendLine(
+                CultureInfo.InvariantCulture,
+                $"**{Title}** · {Duration} · {Count(Summary.BossesKilled, "boss", "bosses")} · {Count(Summary.Wipes, "wipe", "wipes")} · {Count(Summary.Deaths, "muerte", "muertes")}");
             foreach (var boss in Shared.Bosses)
             {
                 text.AppendLine(CultureInfo.InvariantCulture, $"> **{boss.Name}** {(boss.Killed ? "kill " + Length(boss.Duration) : "sin kill")}{ShareAttempts(boss)}");
@@ -255,6 +265,10 @@ public sealed class DungeonSummaryViewModel
             return text.ToString();
         }
     }
+
+    /// <summary>"1 boss", "3 bosses": el número con la palabra en singular o plural.</summary>
+    private static string Count(int count, string one, string many) =>
+        $"{count.ToString(CultureInfo.InvariantCulture)} {(count == 1 ? one : many)}";
 
     /// <summary>" · 1 intento", " · 3 intentos"; nada sin nombre ni plantilla (no se sabe cuántos hubo).</summary>
     private static string ShareAttempts(BossSummary boss) =>
