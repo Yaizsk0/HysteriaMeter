@@ -145,6 +145,39 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void Damage_taken_is_split_by_the_monster_skill_that_hit()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 10, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), Boss, Me, 500, 100, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Boss, Me, 500, 200, HitModifiers.Critical));
+        engine.Apply(new DamageEvent(At(3), Boss, Me, 501, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(4), Boss, Me, 500, 300, HitModifiers.None));
+
+        foreach (var snapshot in new[] { engine.CurrentSnapshot()!, engine.SessionSnapshot()! })
+        {
+            var me = snapshot.Actors.Single(a => a.Id == Me);
+            Assert.Equal([new TakenSkillSnapshot(501, 1000, 1), new TakenSkillSnapshot(500, 600, 3)], me.DamageTakenBySkill!);
+            Assert.Equal(me.DamageTaken, me.DamageTakenBySkill!.Sum(s => s.Damage));
+            Assert.Equal(me.HitsTaken, me.DamageTakenBySkill!.Sum(s => s.Hits));
+        }
+    }
+
+    [Fact]
+    public void Without_damage_taken_there_is_no_breakdown()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 10, 1000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), Ally, Boss, 20, 500, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Boss, Ally, 500, 200, HitModifiers.None));
+
+        var actors = engine.CurrentSnapshot()!.Actors.ToDictionary(a => a.Id);
+        Assert.Equal((0L, 0), (actors[Me].DamageTaken, actors[Me].HitsTaken));
+        Assert.Null(actors[Me].DamageTakenBySkill);
+        Assert.Equal([new TakenSkillSnapshot(500, 200, 1)], actors[Ally].DamageTakenBySkill!);
+    }
+
+    [Fact]
     public void Session_adds_every_fight_using_only_combat_time()
     {
         var engine = CreateEngine();

@@ -339,6 +339,14 @@ public sealed class CombatEngine(CombatEngineOptions options)
             var actor = encounter.Actor(target);
             actor.DamageTaken += e.Amount;
             actor.HitsTaken++;
+            if (!actor.TakenBySkill.TryGetValue(e.SkillId, out var skill))
+            {
+                skill = new TakenSkillStats();
+                actor.TakenBySkill[e.SkillId] = skill;
+            }
+
+            skill.Damage += e.Amount;
+            skill.Hits++;
         }
 
         _current.AddLog(Entry(e, LogKind.Damage, npc, target, e.SkillId, e.Amount, e.Modifiers));
@@ -486,6 +494,10 @@ public sealed class CombatEngine(CombatEngineOptions options)
                 long[] timeline = [.. stats.DamageBySecond];
                 // Sin DoT sería igual al Timeline: no se guarda dos veces.
                 long[]? direct = stats.PeriodicDamage > 0 ? [.. stats.DirectDamageBySecond] : null;
+                // Sin daño recibido no hay desglose: null, como en las peleas guardadas antes de que existiera.
+                TakenSkillSnapshot[]? taken = stats.TakenBySkill.Count == 0
+                    ? null
+                    : [.. stats.TakenBySkill.Select(s => new TakenSkillSnapshot(s.Key, s.Value.Damage, s.Value.Hits)).OrderByDescending(s => s.Damage)];
                 return new ActorSnapshot(
                     id,
                     Entities.DisplayName(id),
@@ -513,7 +525,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
                     stats.Deaths,
                     profile.ItemLevel,
                     profile.CombatPower,
-                    direct);
+                    direct,
+                    taken);
             })
             .OrderByDescending(a => a.Damage)
             .ToArray();

@@ -68,10 +68,16 @@ public sealed record ActorSnapshot(
     long? CombatPower = null,
     // Como Timeline, sin los ticks periódicos (DoT): marca cuándo volvió a pegar después de morir. null si no hubo DoT
     // (sería igual a Timeline) o en las peleas guardadas antes de que existiera: en los dos casos, usar Timeline.
-    IReadOnlyList<long>? DirectTimeline = null)
+    IReadOnlyList<long>? DirectTimeline = null,
+    // DamageTaken y HitsTaken separados por la skill del monstruo que pegó, de mayor a menor daño: suman lo mismo que
+    // ellos. null si no recibió daño o en las peleas guardadas antes de que existiera (ahí DamageTaken puede no ser 0).
+    IReadOnlyList<TakenSkillSnapshot>? DamageTakenBySkill = null)
 {
     public double CritRate => Hits == 0 ? 0 : (double)Crits / Hits;
 }
+
+/// <summary>Daño y golpes que un jugador recibió de la skill <paramref name="SkillId"/> de un monstruo.</summary>
+public sealed record TakenSkillSnapshot(uint SkillId, long Damage, int Hits);
 
 public sealed record SkillSnapshot(uint SkillId, long Damage, int Hits, int Crits, long MaxHit, double Share, HitCounts? Counts = null, long PeriodicDamage = 0)
 {

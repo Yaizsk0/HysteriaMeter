@@ -126,6 +126,60 @@ public sealed class EncounterRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task Damage_taken_by_skill_survives_a_save_and_load_round_trip()
+    {
+        var repository = new EncounterRepository(_path);
+        await repository.InitializeAsync();
+        var start = new DateTimeOffset(2026, 10, 18, 21, 0, 0, TimeSpan.Zero);
+        // El local recibió de dos skills del boss; el aliado no recibió nada y queda sin desglose (NULL).
+        var fight = new EncounterSnapshot(
+            Guid.NewGuid(), start, start.AddSeconds(30), "Boss", TargetKilled: true, TotalDamage: 1_500,
+            [
+                new ActorSnapshot(1, "Local", null, true, 1_000, 33, 0.66, 4, 0, 400, 0, [], DamageTaken: 1_600, HitsTaken: 4,
+                    DamageTakenBySkill: [new TakenSkillSnapshot(501, 1_000, 1), new TakenSkillSnapshot(500, 600, 3)]),
+                new ActorSnapshot(2, "Aliado", 15, false, 500, 16, 0.33, 2, 0, 300, 0, []),
+            ]);
+        await repository.SaveAsync(fight);
+
+        var loaded = (await repository.LoadAsync(fight.Id.ToString()))!.Actors.ToDictionary(a => a.Id);
+
+        Assert.Equal(fight.Actors[0].DamageTakenBySkill!, loaded[1].DamageTakenBySkill!);
+        Assert.Equal((1_600L, 4), (loaded[1].DamageTaken, loaded[1].HitsTaken));
+        Assert.Null(loaded[2].DamageTakenBySkill);
+    }
+
+    [Fact]
+    public async Task Old_fights_without_the_breakdown_load_with_their_damage_taken()
+    {
+        // Una base de antes de damage_taken_json, con una pelea en la que el local ya había recibido daño.
+        var oldId = Guid.NewGuid().ToString();
+        await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_path}"))
+        {
+            await connection.OpenAsync();
+            using var command = connection.CreateCommand();
+            command.CommandText = $"""
+                CREATE TABLE encounters (id TEXT PRIMARY KEY, started_at TEXT NOT NULL, ended_at TEXT NOT NULL,
+                    target_name TEXT, target_killed INTEGER NOT NULL, total_damage INTEGER NOT NULL);
+                CREATE TABLE encounter_actors (encounter_id TEXT NOT NULL, actor_id INTEGER NOT NULL, name TEXT NOT NULL,
+                    class_id INTEGER, is_local INTEGER NOT NULL, damage INTEGER NOT NULL, dps REAL NOT NULL, hits INTEGER NOT NULL,
+                    crits INTEGER NOT NULL, max_hit INTEGER NOT NULL, healing INTEGER NOT NULL, skills_json TEXT NOT NULL,
+                    damage_taken INTEGER NOT NULL DEFAULT 0, hits_taken INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY (encounter_id, actor_id));
+                INSERT INTO encounters VALUES ('{oldId}', '2026-10-16T20:00:00.0000000+00:00', '2026-10-16T20:00:03.0000000+00:00', 'Boss', 1, 350);
+                INSERT INTO encounter_actors VALUES ('{oldId}', 1, 'Local', NULL, 1, 350, 116, 2, 0, 250, 0, '[]', 900, 3);
+                """;
+            await command.ExecuteNonQueryAsync();
+        }
+
+        var repository = new EncounterRepository(_path);
+        await repository.InitializeAsync();
+
+        var actor = Assert.Single((await repository.LoadAsync(oldId))!.Actors);
+        Assert.Equal((900L, 3), (actor.DamageTaken, actor.HitsTaken));
+        Assert.Null(actor.DamageTakenBySkill);
+    }
+
+    [Fact]
     public async Task Lists_when_the_latest_fight_has_no_target_name()
     {
         // La pelea más reciente sin nombre de objetivo (monstruo sin npcs.json): el récord sale NULL en la primera
