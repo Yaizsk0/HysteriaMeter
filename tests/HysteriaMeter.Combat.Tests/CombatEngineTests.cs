@@ -334,6 +334,9 @@ public class CombatEngineTests
 
         var actors = engine.CurrentSnapshot()!.Actors;
         Assert.DoesNotContain(actors, a => a.Id == Ally && a.Damage > 0);
+        // Con skill de clase sigue siendo daño recibido: a la verificación van solo los golpes a un NPC.
+        var ally = actors.Single(a => a.Id == Ally);
+        Assert.Equal((500L, 1), (ally.DamageTaken, ally.HitsTaken));
     }
 
     [Fact]
@@ -899,6 +902,82 @@ public class CombatEngineTests
         Assert.Equal(
             new TargetVerification(Boss, 12345, StartHp: 9_000, EndHp: 1_000, 10_000, Counted: 8_000, Overkill: 0, Difference: 0, Closes: true),
             Assert.Single(snapshot.Verifications!));
+    }
+
+    [Fact]
+    public void Verification_counts_ownerless_summons_when_the_owner_is_ambiguous()
+    {
+        // Un intervalo real de la comparación del 2026-10-17: la vida del boss baja de 7.549.353 a 7.528.827 (20.526) con
+        // 11.429 de jugadores y 9.097 de una invocación sin dueño (skill 15200023). Con dos jugadores de clase 15 no se
+        // adopta ni entra al ranking, pero la verificación la suma y cierra.
+        var engine = CreateEngine();
+        engine.Apply(new EntityInfoEvent(T0, Ally, "Aliado", 15));
+        engine.Apply(new EntityInfoEvent(T0, Me, "Mati", 15));
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345, Hp: 7_549_353, MaxHp: 8_208_000));
+        engine.Apply(new EntitySpawnEvent(T0, MySummon, OwnerId: null, NpcId: 2920735));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 1_360, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(0), MySummon, Boss, 15200023, 9_097, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 6_408, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(0), Ally, Boss, 1, 3_661, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(0), Boss, 7_528_827));
+
+        var snapshot = engine.CurrentSnapshot()!;
+        Assert.Equal(
+            new TargetVerification(Boss, 12345, StartHp: 7_549_353, EndHp: 7_528_827, MaxHp: 8_208_000, Counted: 20_526, Overkill: 0, Difference: 0, Closes: true),
+            Assert.Single(snapshot.Verifications!));
+        Assert.Equal([(Me, 7_768L), (Ally, 3_661L)], snapshot.Actors.Select(a => (a.Id, a.Damage)));
+        Assert.Equal(11_429, snapshot.TotalDamage);
+    }
+
+    [Fact]
+    public void Verification_leaves_out_monster_damage_that_is_not_a_player_skill()
+    {
+        // Golpes de NPC a NPC que no son daño de jugadores: entre entidades del npc 2920091 (skill 1600750), la curación
+        // del boss que se lee como daño (1910071) y la invocación que se pega a sí misma al aparecer (16990004).
+        const ulong mechanic = 901;
+        const ulong otherMechanic = 902;
+        const ulong add = 903;
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345, Hp: 10_000, MaxHp: 10_000));
+        engine.Apply(new EntitySpawnEvent(T0, mechanic, null, NpcId: 2920091, Hp: 8_208_000, MaxHp: 8_208_000));
+        engine.Apply(new EntitySpawnEvent(T0, otherMechanic, null, NpcId: 2920091, Hp: 8_208_000, MaxHp: 8_208_000));
+        engine.Apply(new EntitySpawnEvent(T0, add, null, NpcId: 777));
+        engine.Apply(new EntitySpawnEvent(T0, MySummon, OwnerId: null, NpcId: 2920113, Hp: 150_000, MaxHp: 150_000));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), mechanic, otherMechanic, 1600750, 1_768, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), add, Boss, 1910071, 31_500, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(3), MySummon, MySummon, 16990004, 100_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(4), Ally, Boss, 1, 2_000, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(4), Boss, 5_000));
+        engine.Apply(new HealthEvent(At(4), otherMechanic, 8_206_232));
+        engine.Apply(new HealthEvent(At(4), MySummon, 50_000));
+
+        Assert.Equal(
+            new TargetVerification(Boss, 12345, StartHp: 10_000, EndHp: 5_000, MaxHp: 10_000, Counted: 5_000, Overkill: 0, Difference: 0, Closes: true),
+            Assert.Single(engine.CurrentSnapshot()!.Verifications!));
+    }
+
+    [Fact]
+    public void Ownerless_summon_hits_neither_open_nor_extend_a_fight()
+    {
+        // Sin dueño, la invocación no es un jugador del ranking: sus golpes no sostienen la pelea ni abren otra.
+        var engine = CreateEngine();
+        var finished = new List<EncounterSnapshot>();
+        engine.EncounterFinished += finished.Add;
+        engine.Apply(new EntityInfoEvent(T0, Ally, "Aliado", 15));
+        engine.Apply(new EntityInfoEvent(T0, Me, "Mati", 15));
+        engine.Apply(new EntitySpawnEvent(T0, MySummon, OwnerId: null, NpcId: 2920655));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 1_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(5), MySummon, Boss, 15280142, 2_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(7.5), MySummon, Boss, 15280142, 2_000, HitModifiers.None));
+        engine.Tick(At(8.5));
+
+        var fight = Assert.Single(finished);
+        Assert.Equal(At(0), fight.End);
+        Assert.Equal([Me], fight.Actors.Select(a => a.Id));
+
+        engine.Apply(new DamageEvent(At(9), MySummon, Boss, 15280142, 2_000, HitModifiers.None));
+        Assert.Null(engine.CurrentSnapshot());
     }
 
     [Fact]

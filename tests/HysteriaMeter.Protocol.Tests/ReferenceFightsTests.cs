@@ -76,6 +76,38 @@ public class ReferenceFightsTests(ITestOutputHelper output)
         Assert.Equal(LocalPlayer(encounter).MainTargetDamage, v.Counted);
     }
 
+    // En la comparación del 2026-10-17 a los bosses les faltaba entre 3,4 y 4,8 % del daño: era entero el de invocaciones
+    // sin dueño (npc 2920655, 2920739 y 2920735) que no se adoptan porque hay dos jugadores de su clase en la party. La
+    // verificación las cuenta y las 10 cuentas de los bosses cierran exacto.
+    [ReferenceCaptureFact("comparacion-20261017-033114.pcap")]
+    public async Task Comparison_boss_verifications_close_counting_ownerless_summons()
+    {
+        uint[] bosses = [2_300_311, 2_300_312, 2_300_371];
+        var verifications = (await ReplayAsync("comparacion-20261017-033114.pcap"))
+            .SelectMany(e => e.Verifications ?? [])
+            .Where(v => v.NpcId is { } npc && bosses.Contains(npc))
+            .ToList();
+        var open = verifications.Where(v => v.Difference != 0).Select(Describe).ToList();
+        Assert.True(verifications.Count == 10 && open.Count == 0,
+            $"verificaciones de los bosses: {verifications.Count} (se esperan 10); con diferencia: {open.Count}: {string.Join("; ", open)}");
+    }
+
+    // Las que siguen sin cerrar en la comparación tienen causas que la verificación no contempla: muertes sin daño (las
+    // entidades 2920091 y 2920650 #45279 pasan a 0 sin ningún golpe) y un reinicio de vida (2300306 #39344 vuelve a la
+    // máxima a las 06:49:48 sin daño). Si este conteo cambia, hay que revisar la causa.
+    [ReferenceCaptureFact("comparacion-20261017-033114.pcap")]
+    public async Task Comparison_verifications_left_open_have_known_causes()
+    {
+        var verifications = (await ReplayAsync("comparacion-20261017-033114.pcap")).SelectMany(e => e.Verifications ?? []).ToList();
+        var open = verifications.Where(v => !v.Closes).ToList();
+        var byNpc = string.Join(", ", open
+            .GroupBy(v => v.NpcId)
+            .OrderBy(g => g.Key)
+            .Select(g => $"{g.Key?.ToString(CultureInfo.InvariantCulture) ?? "?"}: {g.Count()}"));
+        Assert.True(verifications.Count == 52 && verifications.Count - open.Count == 36 && byNpc == "2300306: 1, 2920091: 14, 2920650: 1",
+            $"de {verifications.Count} verificaciones cierran {verifications.Count - open.Count}; las que no, por npc: {byNpc} ({string.Join("; ", open.Select(Describe))})");
+    }
+
     // Sin capturas: si la elección del encuentro o del jugador local falla, el mensaje no puede llevar nombres de
     // jugadores (la salida de dotnet test termina pegada en PRs e issues).
     [Fact]
