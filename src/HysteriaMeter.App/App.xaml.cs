@@ -36,6 +36,8 @@ public partial class App : Application
         // Placa de red: la elegida en Configuración → Captura le gana a appsettings (Capture:Device) mientras siga
         // conectada. La captura la lee una sola vez, al arrancar: cambiarla pide reiniciar el meter.
         CaptureDevices.Source = CaptureDevices.FromNpcap;
+        // Npcap en modo "solo administradores" sin elevar: lo miran el overlay (en el primer corte) y la bienvenida.
+        NpcapAccess.Source = NpcapAccess.FromSystem;
         builder.Services.AddOptions<CaptureSettings>().PostConfigure<MeterSession>((settings, session) =>
         {
             var saved = session.Preferences.CaptureDevice;
@@ -143,7 +145,7 @@ public partial class App : Application
     {
         // Value ya pasó por el PostConfigure de la placa: Device es la que usa la captura y Applied, la elegida que quedó.
         var capture = _host!.Services.GetRequiredService<IOptions<CaptureSettings>>().Value;
-        var setup = CaptureSetup.From(capture, CaptureDevices.Applied, CaptureDevices.Source);
+        var setup = CaptureSetup.From(capture, CaptureDevices.Applied, CaptureDevices.Source, NpcapAccess.Source);
         var welcome = new WelcomeViewModel(session, setup, GameDataSummary.Read(AppPaths.In("Juego")));
         new WelcomeWindow(welcome) { Owner = MainWindow }.Show();
     }

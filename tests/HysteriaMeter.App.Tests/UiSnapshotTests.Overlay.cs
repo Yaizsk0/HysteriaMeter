@@ -1,3 +1,4 @@
+using HysteriaMeter.App.Config;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.App.ViewModels;
 using HysteriaMeter.Combat;
@@ -39,6 +40,28 @@ public sealed partial class UiSnapshotTests
             var vm = Refreshed(new MeterViewModel(h.Session(status: status)));
             Pump(vm.LiveQueries);
             return Overlay(vm);
+        }),
+
+        // Npcap en modo "solo administradores" y el meter sin elevar. La detección queda fija en true (no se lee el
+        // registro ni el token); lo instalado sale de wpcap.dll, como en 44. El error es de prueba: no se sabe qué texto
+        // da Npcap cuando niega el acceso.
+        new("44b-overlay-npcap-permisos", h =>
+        {
+            var previous = NpcapAccess.Source;
+            NpcapAccess.Source = () => true;
+            try
+            {
+                var status = new CaptureStatus();
+                status.Fail("[estado de prueba] acá va el mensaje de la excepción");
+                var vm = Refreshed(new MeterViewModel(h.Session(status: status)));
+                Pump(vm.LiveQueries);
+                Assert.Equal(CaptureIssue.NpcapPermission, vm.Issue);
+                return Overlay(vm);
+            }
+            finally
+            {
+                NpcapAccess.Source = previous;
+            }
         }),
         new("45-overlay-ancho-minimo", h => Overlay(Live(h.Demo()), width: 260)),
         new("46-overlay-columnas", h => Overlay(Live(h.Demo(preferences: new MeterPreferences

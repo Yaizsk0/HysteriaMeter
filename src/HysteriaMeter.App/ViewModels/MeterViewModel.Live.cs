@@ -22,6 +22,12 @@ public enum CaptureIssue
     /// <summary>La captura se cortó y Npcap no está instalado (o el error lo nombra).</summary>
     Npcap,
 
+    /// <summary>
+    /// La captura se cortó antes del primer tráfico, con Npcap instalado en modo "solo administradores" y el meter sin
+    /// elevar (ver <see cref="NpcapAccess"/>).
+    /// </summary>
+    NpcapPermission,
+
     /// <summary>Se captura, pero no llega tráfico del juego (juego cerrado, otra placa de red, VPN).</summary>
     NoTraffic,
 
@@ -78,6 +84,7 @@ public sealed partial class MeterViewModel
     private EncounterSnapshot? _liveCurrent;
 
     private bool? _npcapInstalled;
+    private bool? _npcapAdminOnly; // "solo administradores" sin elevar: NpcapAccess.Source, leído en el primer corte.
     private bool _lastFightLoaded;
     private DateTime _lastFightRetryUtc;
     private Task _lastFightQuery = Task.CompletedTask;
@@ -155,16 +162,18 @@ public sealed partial class MeterViewModel
 
     /// <summary>Hay una pelea en pantalla (en vivo, terminada o abierta del historial); sin ella va la tarjeta de espera.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowWaitingCard), nameof(ShowNpcapCard), nameof(ShowTrafficCard), nameof(ShowFailedCard), nameof(ShowClock), nameof(ShowEmptyTabText), nameof(ShowFooter))]
+    [NotifyPropertyChangedFor(nameof(ShowWaitingCard), nameof(ShowNpcapCard), nameof(ShowNpcapPermissionCard), nameof(ShowTrafficCard), nameof(ShowFailedCard), nameof(ShowClock), nameof(ShowEmptyTabText), nameof(ShowFooter))]
     public partial bool HasFight { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowWaitingCard), nameof(ShowNpcapCard), nameof(ShowTrafficCard), nameof(ShowFailedCard), nameof(ShowPatchNotice))]
+    [NotifyPropertyChangedFor(nameof(ShowWaitingCard), nameof(ShowNpcapCard), nameof(ShowNpcapPermissionCard), nameof(ShowTrafficCard), nameof(ShowFailedCard), nameof(ShowPatchNotice))]
     public partial CaptureIssue Issue { get; set; }
 
     public bool ShowWaitingCard => !HasFight && Issue is CaptureIssue.None or CaptureIssue.Patch;
 
     public bool ShowNpcapCard => !HasFight && Issue == CaptureIssue.Npcap;
+
+    public bool ShowNpcapPermissionCard => !HasFight && Issue == CaptureIssue.NpcapPermission;
 
     public bool ShowTrafficCard => !HasFight && Issue == CaptureIssue.NoTraffic;
 
@@ -224,10 +233,15 @@ public sealed partial class MeterViewModel
 
     /// <summary>
     /// Qué tarjeta de captura corresponde. Sin Npcap la excepción no siempre lo nombra (puede ser un DLL que no carga),
-    /// así que también cuenta que no esté instalado.
+    /// así que también cuenta que no esté instalado. Con Npcap en modo "solo administradores" y el meter sin elevar
+    /// (<paramref name="adminOnlyWithoutElevation"/>) va la tarjeta de permisos: el texto del error no se mira, porque no
+    /// se sabe cuál da Npcap cuando niega el acceso. Eso vale solo antes del primer tráfico (<paramref name="hasTraffic"/>):
+    /// LiveCaptureSource abre todas las placas antes de leer, así que con tráfico el permiso ya estaba y el corte es otra cosa.
     /// </summary>
-    public static CaptureIssue IssueOf(CaptureState state, string? failure, bool patch, bool npcapInstalled) => state switch
+    public static CaptureIssue IssueOf(
+        CaptureState state, string? failure, bool patch, bool npcapInstalled, bool adminOnlyWithoutElevation, bool hasTraffic) => state switch
     {
+        CaptureState.Failed when npcapInstalled && adminOnlyWithoutElevation && !hasTraffic => CaptureIssue.NpcapPermission,
         CaptureState.Failed when !npcapInstalled || (failure?.Contains("Npcap", StringComparison.OrdinalIgnoreCase) ?? false) => CaptureIssue.Npcap,
         CaptureState.Failed => CaptureIssue.Failed,
         CaptureState.NoTraffic => CaptureIssue.NoTraffic,
@@ -239,6 +253,7 @@ public sealed partial class MeterViewModel
     public static string StatusLabelOf(CaptureState state, CaptureIssue issue) => issue switch
     {
         CaptureIssue.Npcap => "Sin Npcap",
+        CaptureIssue.NpcapPermission => "Npcap pide permisos",
         CaptureIssue.Failed => "Captura detenida",
         CaptureIssue.NoTraffic => "Sin tráfico",
         CaptureIssue.Patch => "¿Juego actualizado?",
@@ -259,9 +274,10 @@ public sealed partial class MeterViewModel
         if (state == CaptureState.Failed)
         {
             _npcapInstalled ??= NpcapInstalled();
+            _npcapAdminOnly ??= NpcapAccess.Source();
         }
 
-        Issue = IssueOf(state, failure, patch, _npcapInstalled ?? true);
+        Issue = IssueOf(state, failure, patch, _npcapInstalled ?? true, _npcapAdminOnly ?? false, _session.Status.HasTraffic);
         StatusLabel = StatusLabelOf(state, Issue);
         WaitingTitle = state == CaptureState.Starting ? StatusText : WaitingReady;
         FailedDetail = failure ?? string.Empty;

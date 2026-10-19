@@ -28,12 +28,17 @@ public sealed record SetupStep(int Number, string Title, string Hint, string Sta
 /// <param name="ReplayFile">En modo repetición, el .pcap que se reproduce: no hay placa.</param>
 /// <param name="DeviceLabel">La descripción de Npcap de esa placa ("Intel Ethernet"); sin ella se muestra el nombre.</param>
 /// <param name="DeviceOrigin">De dónde salió la placa (ver <see cref="CaptureDevices.Describe"/>).</param>
+/// <param name="NpcapAdminOnly">
+/// Npcap en modo "solo administradores" y el meter sin elevar (<see cref="NpcapAccess"/>): Windows pide permiso al
+/// abrir la captura.
+/// </param>
 public sealed record CaptureSetup(
     bool NpcapInstalled,
     string? Device,
     string? ReplayFile = null,
     string? DeviceLabel = null,
-    CaptureDeviceOrigin DeviceOrigin = CaptureDeviceOrigin.Automatic)
+    CaptureDeviceOrigin DeviceOrigin = CaptureDeviceOrigin.Automatic,
+    bool NpcapAdminOnly = false)
 {
     /// <summary>
     /// Npcap deja wpcap.dll en System32\Npcap (y también en System32 con el modo compatible con WinPcap). Es solo
@@ -45,16 +50,19 @@ public sealed record CaptureSetup(
 
     /// <summary>
     /// La captura ya resuelta (<see cref="CaptureDevices.Resolve"/>): <paramref name="applied"/> es la elegida que quedó
-    /// (<see cref="CaptureDevices.Applied"/>). Las placas de Npcap se listan solo si hay una placa en vivo que nombrar.
+    /// (<see cref="CaptureDevices.Applied"/>). Las placas de Npcap se listan solo si hay una placa en vivo que nombrar, y
+    /// <paramref name="adminOnly"/> (<see cref="NpcapAccess.Source"/>) se pregunta solo en vivo: repitiendo un .pcap no
+    /// se abre ninguna placa.
     /// </summary>
-    public static CaptureSetup From(CaptureSettings settings, string applied, Func<IReadOnlyList<(string Name, string Description)>> devices)
+    public static CaptureSetup From(
+        CaptureSettings settings, string applied, Func<IReadOnlyList<(string Name, string Description)>> devices, Func<bool> adminOnly)
     {
         var device = string.IsNullOrWhiteSpace(settings.Device) ? null : settings.Device;
         var replay = settings.Mode == CaptureMode.Replay && settings.ReplayPath is { Length: > 0 } path ? Path.GetFileName(path) : null;
         var (label, origin) = settings.Mode == CaptureMode.Live && device is not null
             ? CaptureDevices.Describe(applied, device, devices())
             : (null, CaptureDeviceOrigin.Automatic);
-        return new(NpcapPresent(), device, replay, label, origin);
+        return new(NpcapPresent(), device, replay, label, origin, settings.Mode == CaptureMode.Live && adminOnly());
     }
 }
 
@@ -139,14 +147,33 @@ public sealed partial class WelcomeViewModel : ObservableObject
     ];
 
     private IReadOnlyList<SetupStep> BuildSteps() =>
-        [NpcapStep(_capture.NpcapInstalled), DeviceStep(_capture, _session.Status), GameDataStep(_gameData)];
+        [NpcapStep(_capture.NpcapInstalled, _capture.NpcapAdminOnly), DeviceStep(_capture, _session.Status), GameDataStep(_gameData)];
 
     /// <summary>Qué hacer sin Npcap (mock Inicio): lo comparten la bienvenida y la tarjeta del overlay.</summary>
     public const string NpcapMissingText =
         "El meter necesita Npcap para leer la red. Instalalo con la opción \"WinPcap API-compatible mode\" y volvé a abrir el meter.";
 
-    public static SetupStep NpcapStep(bool installed) => installed
-        ? new SetupStep(1, "Npcap instalado", "Driver de captura de red", "Listo", true)
+    /// <summary>
+    /// Npcap en modo "solo administradores" y el meter sin elevar, para la bienvenida (la captura recién se abre). Los
+    /// tres caminos salen de la guía de Npcap (NpcapHelper.exe pide elevación por cada proceso que abre una captura).
+    /// </summary>
+    public const string NpcapAdminOnlyText =
+        NpcapAdminOnlyCause + " Aceptá ese pedido, abrí el meter como administrador o reinstalá Npcap sin esa opción.";
+
+    /// <summary>
+    /// Lo mismo para la tarjeta del overlay: ahí la captura ya se cortó y no se vuelve a abrir sola, así que el pedido
+    /// aparece recién al abrir otra vez el meter.
+    /// </summary>
+    public const string NpcapAdminOnlyReopenText =
+        NpcapAdminOnlyCause + " Volvé a abrir el meter y aceptá ese pedido, abrilo como administrador o reinstalá Npcap sin esa opción.";
+
+    private const string NpcapAdminOnlyCause =
+        "Npcap está instalado con la opción \"Restrict Npcap driver's access to Administrators only\": por eso Windows pide "
+        + "permiso (UAC) cada vez que el meter abre la captura.";
+
+    /// <summary>Instalado sigue listo aunque esté en modo "solo administradores": el detalle avisa del pedido de permiso.</summary>
+    public static SetupStep NpcapStep(bool installed, bool adminOnly = false) => installed
+        ? new SetupStep(1, "Npcap instalado", adminOnly ? NpcapAdminOnlyText : "Driver de captura de red", "Listo", true)
         : new SetupStep(
             1,
             "No se encontró Npcap",

@@ -46,6 +46,12 @@ public sealed partial class UiSnapshotTests
             return Welcome(h.Session(new MeterPreferences { WelcomeDone = false }, failed), new CaptureSetup(NpcapInstalled: false, Device: null));
         }),
 
+        // Npcap instalado con "solo administradores" y el meter sin elevar: el paso sigue listo y avisa que Windows pide
+        // permiso al abrir la captura. El flag va fijo: no se lee el registro ni el token.
+        new("14-bienvenida-npcap-permisos", h => Welcome(
+            h.Session(new MeterPreferences { WelcomeDone = false }),
+            new CaptureSetup(NpcapInstalled: true, Device: null, NpcapAdminOnly: true))),
+
         // Fin de pelea con intentos anteriores: la demo como kill de boss, después de las tres guardadas en el
         // historial del arnés. Son la misma demo, así que la comparación da "igual" y el percentil, 100.
         new("17-fin-de-pelea", h =>
