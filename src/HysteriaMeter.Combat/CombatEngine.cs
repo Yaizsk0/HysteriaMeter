@@ -4,7 +4,10 @@ namespace HysteriaMeter.Combat;
 
 public sealed record CombatEngineOptions
 {
-    /// <summary>Sin daño durante este tiempo, el encuentro se cierra (valor inicial de <see cref="CombatEngine.IdleTimeout"/>).</summary>
+    /// <summary>
+    /// Sin daño hecho, ni recibido de un NPC que no sea el objetivo principal, durante este tiempo, el encuentro se cierra
+    /// (valor inicial de <see cref="CombatEngine.IdleTimeout"/>).
+    /// </summary>
     public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromSeconds(8);
 
     /// <summary>Cerrar el encuentro cuando muere el objetivo principal.</summary>
@@ -55,7 +58,10 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
     public EntityRegistry Entities { get; } = new();
 
-    /// <summary>Sin daño durante este tiempo, el encuentro se cierra. Se puede cambiar en caliente.</summary>
+    /// <summary>
+    /// Sin daño hecho, ni recibido de un NPC que no sea el objetivo principal, durante este tiempo, el encuentro se cierra.
+    /// Se puede cambiar en caliente.
+    /// </summary>
     public TimeSpan IdleTimeout
     {
         get { lock (_gate) { return _idleTimeout; } }
@@ -118,7 +124,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
     {
         lock (_gate)
         {
-            if (_splitEncounters && _current is not null && now - _current.LastActivity > _idleTimeout)
+            if (IsIdle(now))
             {
                 Finish();
             }
@@ -238,12 +244,24 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
         var source = Entities.Canonical(e.SourceId);
         var target = Entities.Canonical(e.TargetId);
-        if (Entities.IsNpc(source) && Entities.IsNpc(target) && Entities.TryAdoptSummon(source, e.SkillId, out var owner))
+
+        // Una invocación que pega antes de su spawn no tiene npcId todavía: se la trata como una sin dueño, no como jugador.
+        var npcSource = Entities.IsNpc(source) || Entities.IsPresumedSummon(e.SourceId, e.SkillId, target);
+        if (npcSource && source != target && Entities.IsNpc(target) && Entities.TryAdoptSummon(source, e.SkillId, out var owner))
         {
             source = owner; // invocación sin dueño que le pega a un monstruo con una skill de jugador
+            npcSource = false;
         }
 
-        if (Entities.IsNpc(source))
+        // Con los dueños resueltos, la invocación que se pega a sí misma al vencer (su vida más 100.000, skill 16990004),
+        // la que le pega a su dueño o el dueño que le pega a su invocación quedan de un jugador a sí mismo: no es daño a
+        // un enemigo ni daño recibido.
+        if (source == target && (source != e.SourceId || target != e.TargetId))
+        {
+            return;
+        }
+
+        if (npcSource)
         {
             // Invocación sin dueño que no se pudo atribuir (por ejemplo, dos jugadores de su clase en la party): no entra al
             // ranking ni sostiene la pelea, pero le baja la vida al monstruo, así que la verificación la suma, como a los
@@ -380,8 +398,25 @@ public sealed class CombatEngine(CombatEngineOptions options)
             return;
         }
 
+        // Sin un Tick intermedio, un golpe tardío tampoco revive una pelea vencida.
+        if (IsIdle(e.Timestamp))
+        {
+            Finish();
+            return;
+        }
+
+        // Solo los golpes de otro NPC sostienen la pelea en una pausa del daño hecho. Los del objetivo principal no:
+        // Combat Analysis cortó a Destroyer Tarka en una pausa de 9,7 s aunque el boss le siguió pegando al local. En la
+        // comparación del 2026-10-17 (en party, sin Combat Analysis; la referencia es otro medidor) la pelea contra
+        // 2300371 sigue en pausas de 8,5 y 9,1 s en las que solo pegan sus entidades (npc 2920343 y 2920347).
+        var sustains = _current.MainTarget is not { } main || (main != npc && main != e.SourceId);
         foreach (var encounter in Running())
         {
+            if (sustains)
+            {
+                encounter.RegisterCombatActivity(e.Timestamp);
+            }
+
             var actor = encounter.Actor(target);
             actor.DamageTaken += e.Amount;
             actor.HitsTaken++;
@@ -434,7 +469,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var dead = Entities.Canonical(e.EntityId);
-        if (_current is not null && !Entities.IsNpc(dead) && InScope(dead))
+        // El daño de una invocación es del dueño; la muerte del NPC físico no es una muerte del jugador.
+        if (_current is not null && !Entities.IsNpc(e.EntityId) && !Entities.IsNpc(dead) && InScope(dead))
         {
             // Los golpes que recibió en los últimos segundos: el último es el que lo mató.
             var since = e.Timestamp - DeathRecap.Window;
@@ -459,8 +495,11 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
     }
 
+    private bool IsIdle(DateTimeOffset at) =>
+        _splitEncounters && _current is not null && at - _current.LastCombatActivity > _idleTimeout;
+
     private bool OpensEncounter(DateTimeOffset at) =>
-        _current is null || (_splitEncounters && at - _current.LastActivity > _idleTimeout);
+        _current is null || IsIdle(at);
 
     /// <summary>La pelea en curso si sigue viva en <paramref name="at"/>: pasada la inactividad, el próximo golpe abre otra.</summary>
     private Encounter? LiveFight(DateTimeOffset at) => OpensEncounter(at) ? null : _current;
@@ -475,7 +514,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
     private Encounter EnsureEncounter(DateTimeOffset at)
     {
-        if (_splitEncounters && _current is not null && at - _current.LastActivity > _idleTimeout)
+        if (IsIdle(at))
         {
             Finish();
         }

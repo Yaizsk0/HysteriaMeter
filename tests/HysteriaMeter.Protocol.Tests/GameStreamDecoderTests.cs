@@ -232,6 +232,68 @@ public class GameStreamDecoderTests
         Assert.Equal((30599UL, (uint?)2920655, (string?)null), (spawn.EntityId, spawn.NpcId, spawn.OwnerName));
     }
 
+    // El espíritu del Hechicero no trae el nombre del dueño, pero sí su id en la cola, después de 07 02 06.
+    [Fact]
+    public void Summon_spawn_reads_the_owner_id_from_the_tail()
+    {
+        var events = CreateDecoder().Push(Frame(0x3641, Hex(RealCapture.SummonWithOwnerInTailBody)), T0);
+
+        var spawn = Assert.IsType<EntitySpawnEvent>(Assert.Single(events));
+        Assert.Equal((17893UL, (uint?)2920655, (string?)null), (spawn.EntityId, spawn.NpcId, spawn.OwnerName));
+        Assert.Equal((ulong?)16028, spawn.OwnerId);
+        Assert.Equal(((long?)15438, (long?)15438), (spawn.Hp, spawn.MaxHp));
+    }
+
+    // Fuera de la forma de un bloque el mismo campo apunta a bosses o a otras invocaciones: los monstruos de la dungeon y del
+    // login traen la marca dos veces, el del mini boss no la trae y las invocaciones recortadas no tienen cola.
+    [Theory]
+    [InlineData(RealCapture.NpcSpawnBody)]
+    [InlineData(RealCapture.NpcSpawnWithTailBody)]
+    [InlineData(RealCapture.NpcSpawnWithExtraBlockBody)]
+    [InlineData(RealCapture.NpcSpawnWithExtraBlockType0DBody)]
+    [InlineData(RealCapture.SummonWithOwnerBody)]
+    [InlineData(RealCapture.SummonWithoutOwnerBody)]
+    public void Spawn_without_the_one_block_shape_has_no_owner_id(string body)
+    {
+        var spawn = Assert.IsType<EntitySpawnEvent>(Assert.Single(CreateDecoder().Push(Frame(0x3641, Hex(body)), T0)));
+
+        Assert.Null(spawn.OwnerId);
+    }
+
+    // Variantes de la invocación real: con 07 02 01 (en la comparación, dos invocaciones sin golpes después del spawn), con
+    // la marca dos veces o sin el 02 que sigue a k1, no hay dueño.
+    [Theory]
+    [InlineData("07 02 06 9c 3e", "07 02 01 9c 3e")]
+    [InlineData("2d 00 00 00 00", "2d 00 00 00 00 80 75 d5 2a bb 03 00 00")]
+    [InlineData("e5 8b 01 01 02 6b", "e5 8b 01 01 03 6b")]
+    public void Summon_spawn_outside_the_exact_shape_has_no_owner_id(string original, string replacement)
+    {
+        var body = RealCapture.SummonWithOwnerInTailBody.Replace(original, replacement, StringComparison.Ordinal);
+        Assert.NotEqual(RealCapture.SummonWithOwnerInTailBody, body);
+        var decoder = CreateDecoder();
+
+        var spawn = Assert.IsType<EntitySpawnEvent>(Assert.Single(decoder.Push(Frame(0x3641, Hex(body)), T0)));
+
+        Assert.Equal((17893UL, (ulong?)null), (spawn.EntityId, spawn.OwnerId));
+        Assert.Equal(0, decoder.Stats.Errors);
+    }
+
+    // Cortada en el medio del dueño o justo después de la marca: no hay dueño, la vida se lee igual y no es un error.
+    [Theory]
+    [InlineData("9c 3e 00 00 de", 5)]
+    [InlineData("bb 03 00 00 e5 8b", 11)]
+    public void Truncated_summon_spawn_has_no_owner_id(string anchor, int keep)
+    {
+        var body = RealCapture.SummonWithOwnerInTailBody;
+        body = body[..(body.IndexOf(anchor, StringComparison.Ordinal) + keep)];
+        var decoder = CreateDecoder();
+
+        var spawn = Assert.IsType<EntitySpawnEvent>(Assert.Single(decoder.Push(Frame(0x3641, Hex(body)), T0)));
+
+        Assert.Equal((17893UL, (ulong?)null, (long?)15438), (spawn.EntityId, spawn.OwnerId, spawn.Hp));
+        Assert.Equal(0, decoder.Stats.Errors);
+    }
+
     [Fact]
     public void Decodes_dot_tick_as_damage_over_time()
     {

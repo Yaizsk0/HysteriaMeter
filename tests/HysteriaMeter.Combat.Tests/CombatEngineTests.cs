@@ -124,6 +124,8 @@ public class CombatEngineTests
     public void Counts_damage_taken_from_monsters_and_deaths_with_last_hits()
     {
         var engine = CreateEngine();
+        // Este caso prueba el recap de 10 s; la pausa de 18 s no debe cerrar su encuentro.
+        engine.IdleTimeout = TimeSpan.FromSeconds(30);
         engine.Apply(new DamageEvent(At(0), Me, Boss, 10, 1000, HitModifiers.None));
         engine.Apply(new DamageEvent(At(1), Boss, Me, 500, 300, HitModifiers.None));
         engine.Apply(new DamageEvent(At(2), Boss, Ally, 501, 200, HitModifiers.Critical));

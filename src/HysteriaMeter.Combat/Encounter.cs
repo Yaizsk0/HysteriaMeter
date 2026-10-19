@@ -11,6 +11,12 @@ internal sealed class Encounter(DateTimeOffset start)
 
     public DateTimeOffset LastActivity { get; set; } = start;
 
+    /// <summary>
+    /// Último daño aceptado, hecho o recibido de un NPC que no es el objetivo principal; solo determina el cierre por
+    /// inactividad.
+    /// </summary>
+    public DateTimeOffset LastCombatActivity { get; private set; } = start;
+
     public Dictionary<ulong, ActorStats> Actors { get; } = [];
 
     /// <summary>Daño recibido por cada objetivo; el que más recibió es el "objetivo principal" (boss).</summary>
@@ -63,6 +69,15 @@ internal sealed class Encounter(DateTimeOffset start)
         DamageTaken[target] = DamageTaken.GetValueOrDefault(target) + amount;
         TargetWindows[target] = TargetWindows.TryGetValue(target, out var window) ? (window.First, at) : (at, at);
         LastActivity = at;
+        RegisterCombatActivity(at);
+    }
+
+    public void RegisterCombatActivity(DateTimeOffset at)
+    {
+        if (at > LastCombatActivity)
+        {
+            LastCombatActivity = at;
+        }
     }
 
     public ActorStats Actor(ulong id)

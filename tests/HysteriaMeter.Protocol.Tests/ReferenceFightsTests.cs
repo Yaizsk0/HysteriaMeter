@@ -79,7 +79,9 @@ public class ReferenceFightsTests(ITestOutputHelper output)
     // En la comparación del 2026-10-17 a los bosses les faltaba entre 3,4 y 4,8 % del daño: era entero el de invocaciones
     // sin dueño (npc 2920655, 2920739 y 2920735) que no se adoptan porque el motor ve más de un jugador conocido de su
     // clase (los ids de conexiones anteriores y una entidad que trata como jugador solo por sus skills). La verificación
-    // las cuenta y las 10 cuentas de los bosses cierran exacto.
+    // las cuenta y las 8 cuentas de los bosses cierran exacto. Son 8 y no 10 porque la pelea contra 2300371 de las
+    // 06:55:23 es una sola: sus entidades (npc 2920343 y 2920347) la sostienen en dos pausas del daño hecho de 8,5 y
+    // 9,1 s (ver combat-regressions.md de la 001).
     [ReferenceCaptureFact("comparacion-20261017-033114.pcap")]
     public async Task Comparison_boss_verifications_close_counting_ownerless_summons()
     {
@@ -89,13 +91,15 @@ public class ReferenceFightsTests(ITestOutputHelper output)
             .Where(v => v.NpcId is { } npc && bosses.Contains(npc))
             .ToList();
         var open = verifications.Where(v => v.Difference != 0).Select(Describe).ToList();
-        Assert.True(verifications.Count == 10 && open.Count == 0,
-            $"verificaciones de los bosses: {verifications.Count} (se esperan 10); con diferencia: {open.Count}: {string.Join("; ", open)}");
+        Assert.True(verifications.Count == 8 && open.Count == 0,
+            $"verificaciones de los bosses: {verifications.Count} (se esperan 8); con diferencia: {open.Count}: {string.Join("; ", open)}");
     }
 
     // Las que siguen sin cerrar en la comparación tienen causas que la verificación no contempla: muertes sin daño (las
-    // entidades 2920091 y 2920650 #45279 pasan a 0 sin ningún golpe) y un reinicio de vida (2300306 #39344 vuelve a la
-    // máxima a las 06:49:48 sin daño). Si este conteo cambia, hay que revisar la causa.
+    // entidades 2920091 pasan a 0 sin ningún golpe) y un reinicio de vida (2300306 #39344 vuelve a la máxima a las
+    // 06:49:48 sin daño). 2920650 #45279, que también moría sin daño, trae su dueño en la cola del spawn y ya no se
+    // verifica. Hay 49 y no 52 porque las entidades de 2300371 sostienen esa pelea en dos pausas del daño hecho (ver
+    // combat-regressions.md de la 001). Si este conteo cambia, hay que revisar la causa.
     [ReferenceCaptureFact("comparacion-20261017-033114.pcap")]
     public async Task Comparison_verifications_left_open_have_known_causes()
     {
@@ -105,7 +109,7 @@ public class ReferenceFightsTests(ITestOutputHelper output)
             .GroupBy(v => v.NpcId)
             .OrderBy(g => g.Key)
             .Select(g => $"{g.Key?.ToString(CultureInfo.InvariantCulture) ?? "?"}: {g.Count()}"));
-        Assert.True(verifications.Count == 52 && verifications.Count - open.Count == 36 && byNpc == "2300306: 1, 2920091: 14, 2920650: 1",
+        Assert.True(verifications.Count == 49 && verifications.Count - open.Count == 34 && byNpc == "2300306: 1, 2920091: 14",
             $"de {verifications.Count} verificaciones cierran {verifications.Count - open.Count}; las que no, por npc: {byNpc} ({string.Join("; ", open.Select(Describe))})");
     }
 
