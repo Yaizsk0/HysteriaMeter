@@ -60,6 +60,7 @@
     {"id": 101, "text": "El overkill de los golpes sobre jugadores ya no sale de más después de un revivir: el meter lee todas las actualizaciones de vida del servidor."},
     {"id": 104, "text": "El menú \"⋯\" del overlay ya no cierra el meter al abrirlo."},
     {"id": 105, "text": "Punishing Strike, Decisive Strike, Desperate Strike y la teostone Ulgorn's Will ya aparecen con su nombre en el detalle."},
-    {"id": 106, "text": "El detalle muestra por skill el % de golpes perfectos, dobles, de frente, por la espalda y múltiples, como Combat Analysis."}
+    {"id": 106, "text": "El detalle muestra por skill el % de golpes perfectos, dobles, de frente, por la espalda y múltiples, como Combat Analysis."},
+    {"id": 107, "text": "En modo compacto, la franja de arriba muestra el objetivo de la pelea y su % de vida."}
   ]
 }

@@ -208,7 +208,8 @@
                                     <RadioButton Style="{StaticResource SegmentTabTaken}" GroupName="MeterTab" Content="RECIB." IsChecked="{Binding IsTakenTab}" Padding="9,3" ToolTip="Daño recibido de los monstruos; pendiente de validar contra Combat Analysis"/>
                                 </StackPanel>
                             </Border>
-                            <StackPanel x:Name="LiveActions" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="4,0,0,0">
+                            <DockPanel Grid.Column="2" Margin="4,0,0,0" VerticalAlignment="Center">
+                            <StackPanel x:Name="LiveActions" DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                 <TextBlock Style="{StaticResource RecBadge}"/>
                                 <Ellipse Style="{StaticResource StatusDot}"/>
                                 <TextBlock Text="{Binding Elapsed}" Style="{StaticResource NumberText}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" Visibility="{Binding ShowClock, Converter={StaticResource Visible}}"/>
@@ -223,6 +224,19 @@
                                 </Button>
                                 <Button x:Name="MoreButton" Style="{StaticResource LiveIcon}" Content="⋯" ToolTip="Más opciones" Click="OnMoreClick" AutomationProperties.Name="Más opciones" ContextMenu="{StaticResource OverlayMenu}"/>
                             </StackPanel>
+                            <!-- El modo compacto no muestra el bloque del objetivo: la franja dice contra quién es la pelea y su vida,
+                                 en el lugar que dejan las pestañas. Se recorta con "…" antes de tocar las acciones. -->
+                            <DockPanel x:Name="CompactTarget" VerticalAlignment="Center" Margin="2,0,6,0" ToolTip="{Binding Title}">
+                                <DockPanel.Style><Style TargetType="DockPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers>
+                                    <MultiDataTrigger><MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsCompact}" Value="True"/>
+                                        <Condition Binding="{Binding HasFight}" Value="True"/>
+                                    </MultiDataTrigger.Conditions><Setter Property="Visibility" Value="Visible"/></MultiDataTrigger>
+                                </Style.Triggers></Style></DockPanel.Style>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding TargetHealthPercent}" ToolTip="{Binding TargetHealthTip}" Style="{StaticResource NumberText}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource GoldBright}" Margin="6,0,0,0" VerticalAlignment="Center" Visibility="{Binding HasTargetHealth, Converter={StaticResource Visible}}"/>
+                                <TextBlock x:Name="CompactTargetName" Text="{Binding Title}" Style="{StaticResource NumberText}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            </DockPanel>
                         </Grid>
                     </Border>
                     <Border x:Name="PauseHeader" Background="{DynamicResource AccentSoft}" CornerRadius="9,9,0,0" Padding="10,8" Visibility="{Binding IsPauseBannerVisible, Converter={StaticResource Visible}}" MouseLeftButtonDown="OnHeaderMouseDown" Cursor="{Binding CanMoveWindow, Converter={StaticResource MoveCursor}}">

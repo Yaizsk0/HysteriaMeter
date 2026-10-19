@@ -25,3 +25,4 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Bienvenida: la placa de red con la descripción de Npcap (`CaptureDevices.Describe`, la misma búsqueda que la captura) y de dónde salió: "elegida en la configuración" solo si es la guardada aplicada, "fijada en appsettings.json" si es `Capture:Device`; las placas se listan solo si hay una fija en vivo.
 - [X] Overlay: el menú "⋯" ya no cierra la app al abrirlo (sin ItemContainerStyle de MenuItem, que WPF también aplica a los Separator) y los separadores toman su línea del diseño con MenuItem.SeparatorStyleKey.
 - [X] Detalle: columnas PERF., DOBLE, FRENTE, ESPALDA y MULTI en la tabla de skills y en TOTAL, como Combat Analysis; ventana de 1120 y las cinco ocultas por debajo de 1040.
+- [X] Overlay: en modo compacto la franja muestra el objetivo y su % de vida durante la pelea, recortado antes de las acciones.

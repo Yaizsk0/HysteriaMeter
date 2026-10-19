@@ -45,7 +45,7 @@ Como en Details!, el menú ⋯ → Nueva ventana abre otro overlay: cada uno eli
 
 En la bandeja del sistema aparece un rombo dorado: clic para mostrar u ocultar el overlay (sirve aunque esté en modo atravesable) y clic derecho para reiniciar la pelea, abrir la carpeta de datos o salir.
 
-Doble clic en el encabezado alterna el modo compacto (solo filas y reloj). El overlay se vuelve opaco al pasar el mouse y, si lo activás, se atenúa cuando no hay combate. El punto del encabezado indica la captura: verde en combate, ámbar sin tráfico del juego, rojo si se cortó. En configuración, "Ver barras de prueba" muestra una pelea inventada para acomodar todo sin combatir.
+Doble clic en el encabezado alterna el modo compacto (solo filas, reloj y, durante la pelea, el objetivo con su % de vida). El overlay se vuelve opaco al pasar el mouse y, si lo activás, se atenúa cuando no hay combate. El punto del encabezado indica la captura: verde en combate, ámbar sin tráfico del juego, rojo si se cortó. En configuración, "Ver barras de prueba" muestra una pelea inventada para acomodar todo sin combatir.
 
 En el primer arranque aparece una bienvenida con el estado real de Npcap, la captura y los datos locales del juego. Al derrotar un boss, una tarjeta debajo del overlay muestra tu resultado y permite abrir el detalle o guardar la captura de esa pelea, incluso si el overlay estaba pausado. Se cierra a los 12 segundos, con Esc o al empezar otra pelea. La bandeja mantiene los accesos a Historial, Configuración y la carpeta de datos, y muestra los atajos configurados; las novedades se presentan dentro del overlay.
 
@@ -143,6 +143,8 @@ El menú "⋯" del overlay se abre sin problemas. Desde el rediseño, abrirlo ce
 Cuatro skills que el detalle mostraba como "Skill 12060240" y parecidos ya tienen nombre: Punishing Strike, Decisive Strike y Desperate Strike del Templario, y la teostone Ulgorn's Will. Salen de comparar una pelea con la vista detallada de Combat Analysis, donde coincidían el daño, los golpes y los críticos, y van en `data/skills.json`, que completa la lista de MetaBot.GG.
 
 La tabla de skills del detalle suma las columnas PERF., DOBLE, FRENTE, ESPALDA y MULTI, como la vista detallada de Combat Analysis: el % de golpes perfectos, dobles, de frente, por la espalda y múltiples de cada skill, y el de todas juntas en TOTAL. La ventana arranca un poco más ancha para que entren; si la achicás por debajo de 1040 se ocultan y ESPALDA vuelve al tooltip de la fila.
+
+En modo compacto, durante la pelea la franja de arriba muestra contra quién es (el mismo rótulo del bloque del objetivo, que ese modo oculta) y su % de vida si el servidor la mandó. Si no entra, se recorta con "…" sin tapar el reloj ni los botones.
 
 ## Spec Kit
 
