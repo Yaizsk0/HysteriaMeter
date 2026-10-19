@@ -45,7 +45,7 @@ Como en Details!, el menú ⋯ → Nueva ventana abre otro overlay: cada uno eli
 
 En la bandeja del sistema aparece un rombo dorado: clic para mostrar u ocultar el overlay (sirve aunque esté en modo atravesable) y clic derecho para reiniciar la pelea, abrir la carpeta de datos o salir.
 
-Doble clic en el encabezado alterna el modo compacto (solo filas y reloj). El overlay se vuelve opaco al pasar el mouse y, si lo activás, se atenúa cuando no hay combate. El punto del encabezado indica la captura: verde en combate, ámbar sin tráfico del juego, rojo si se cortó. En configuración, "Ver barras de prueba" muestra una pelea inventada para acomodar todo sin combatir.
+Doble clic en el encabezado alterna el modo compacto (solo filas, reloj y, durante la pelea, el objetivo con su % de vida). El overlay se vuelve opaco al pasar el mouse y, si lo activás, se atenúa cuando no hay combate. El punto del encabezado indica la captura: verde en combate, ámbar sin tráfico del juego, rojo si se cortó. En configuración, "Ver barras de prueba" muestra una pelea inventada para acomodar todo sin combatir.
 
 En el primer arranque aparece una bienvenida con el estado real de Npcap, la captura y los datos locales del juego. Al derrotar un boss, una tarjeta debajo del overlay muestra tu resultado y permite abrir el detalle o guardar la captura de esa pelea, incluso si el overlay estaba pausado. Se cierra a los 12 segundos, con Esc o al empezar otra pelea. La bandeja mantiene los accesos a Historial, Configuración y la carpeta de datos, y muestra los atajos configurados; las novedades se presentan dentro del overlay.
 
