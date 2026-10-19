@@ -138,6 +138,8 @@ Si Npcap se instaló con la opción "Restrict Npcap driver's access to Administr
 
 El meter lee todas las actualizaciones de vida que manda el servidor, también las que traen varios valores juntos, como la del jugador al revivir. Antes se perdían y el overkill de los golpes sobre un jugador se medía contra una vida vieja, por ejemplo la de su muerte, y salía de más. El daño, el DPS y la verificación de los monstruos no cambian. Las peleas ya guardadas conservan el overkill con el que se guardaron.
 
+El menú "⋯" del overlay se abre sin problemas. Desde el rediseño, abrirlo cerraba el meter por un error de estilo en los separadores del menú. Ahora se ve como en el diseño: los ítems con el estilo del overlay y los separadores como una línea fina.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
