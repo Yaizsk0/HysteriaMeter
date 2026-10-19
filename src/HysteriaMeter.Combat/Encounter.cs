@@ -37,6 +37,9 @@ internal sealed class Encounter(DateTimeOffset start)
     /// <summary>Fases cruzadas por cada objetivo (75, 50 y 25 %), en orden.</summary>
     public Dictionary<ulong, List<HealthPhase>> Phases { get; } = [];
 
+    /// <summary>Cuenta de cada NPC golpeado en esta pelea para <see cref="TargetVerification"/>. Solo la lleva la pelea.</summary>
+    public Dictionary<ulong, VerificationCount> Verifications { get; } = [];
+
     /// <summary>Entrada a la zona donde empezó la pelea (ver <see cref="EntityRegistry.ZoneEnteredAt"/>).</summary>
     public DateTimeOffset? ZoneEnteredAt { get; init; }
 
@@ -188,6 +191,104 @@ internal sealed class TakenSkillStats
     public long Damage { get; set; }
 
     public int Hits { get; set; }
+}
+
+/// <summary>
+/// Lo que pide <see cref="TargetVerification"/> de un objetivo: la vida del servidor al empezar la cuenta, el daño
+/// contado desde ahí y la última lectura positiva de la pelea con el daño contado hasta ella. Con la muerte, la cuenta
+/// se congela.
+/// </summary>
+internal sealed class VerificationCount
+{
+    /// <param name="serverHp">Vida del servidor antes del primer golpe; <c>null</c> si no se conoce todavía. Una de 0
+    /// (la lectura de su muerte) cuenta como desconocida.</param>
+    public VerificationCount(long? serverHp)
+    {
+        if (serverHp is { } hp && hp > 0)
+        {
+            Start(hp);
+        }
+    }
+
+    /// <summary>Vida del servidor al empezar la cuenta; <c>null</c> hasta la primera lectura si el spawn no la trajo.</summary>
+    public long? StartHp { get; private set; }
+
+    public long Counted { get; private set; }
+
+    /// <summary>Última vida positiva que informó el servidor; al empezar, la inicial.</summary>
+    public long LastReading { get; private set; }
+
+    public long CountedAtReading { get; private set; }
+
+    /// <summary>Llegó al menos una lectura después de empezar la cuenta.</summary>
+    public bool HasReading { get; private set; }
+
+    public bool Killed { get; private set; }
+
+    /// <summary>Sin vida inicial todavía, el golpe no se cuenta: la primera lectura ya lo refleja.</summary>
+    public void AddHit(long amount)
+    {
+        if (StartHp is not null && !Killed)
+        {
+            Counted += amount;
+        }
+    }
+
+    /// <summary>
+    /// Un 0x8D00 del objetivo. Llega después de los golpes que refleja, así que se compara con lo contado hasta acá.
+    /// Si la cuenta no había empezado, empieza con esta lectura. La de 0 se ignora: llega después del golpe mortal, que
+    /// pasa de la última lectura positiva, y el overkill sale de esa (la muerte la marca el 0x8D04).
+    /// </summary>
+    public void Reading(long hp)
+    {
+        if (hp <= 0 || Killed)
+        {
+            return;
+        }
+
+        if (StartHp is null)
+        {
+            Start(hp);
+            return;
+        }
+
+        LastReading = hp;
+        CountedAtReading = Counted;
+        HasReading = true;
+    }
+
+    public void Kill() => Killed = true;
+
+    /// <summary>
+    /// La verificación, o <c>null</c> sin vida inicial, sin lectura después de empezar ni muerte, o sin vida perdida.
+    /// Sin muerte se compara la última lectura con lo contado hasta ella; con muerte, la vida final es 0 y lo contado
+    /// después de la última lectura positiva que pasa de esa vida es overkill.
+    /// </summary>
+    public TargetVerification? Result(ulong targetId, uint? npcId, long? maxHp)
+    {
+        if (StartHp is not { } start || !(HasReading || Killed))
+        {
+            return null;
+        }
+
+        var (end, counted, overkill) = Killed
+            ? (0L, Counted, Math.Max(0, Counted - CountedAtReading - LastReading))
+            : (LastReading, CountedAtReading, 0L);
+        var lost = start - end;
+        if (lost <= 0)
+        {
+            return null;
+        }
+
+        var difference = counted - overkill - lost;
+        return new TargetVerification(targetId, npcId, start, end, maxHp ?? start, counted, overkill, difference, Math.Abs(difference) * 100 <= lost);
+    }
+
+    private void Start(long hp)
+    {
+        StartHp = hp;
+        LastReading = hp;
+    }
 }
 
 /// <summary>Cuenta golpes por modificador, igual que las columnas de Combat Analysis. Los ticks de DoT no son golpes.</summary>

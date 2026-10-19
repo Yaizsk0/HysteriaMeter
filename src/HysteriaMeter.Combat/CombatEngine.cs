@@ -103,6 +103,11 @@ public sealed class CombatEngine(CombatEngineOptions options)
                     break;
                 case HealthEvent health:
                     TrackPhases(health.EntityId, null, health.Timestamp);
+                    if (LiveFight(health.Timestamp) is { } fight && fight.Verifications.TryGetValue(health.EntityId, out var count))
+                    {
+                        count.Reading(health.Hp);
+                    }
+
                     break;
             }
         }
@@ -247,7 +252,13 @@ public sealed class CombatEngine(CombatEngineOptions options)
         Entities.ObserveSkill(source, e.SkillId);
         if (!InScope(source))
         {
-            return; // jugadores fuera del filtro no cuentan ni abren encuentros
+            // Jugadores fuera del filtro no cuentan ni abren encuentros, pero le bajan la vida al objetivo: la verificación los suma.
+            if (LiveFight(e.Timestamp) is { } fight)
+            {
+                CountForVerification(fight, e);
+            }
+
+            return;
         }
 
         if (OpensEncounter(e.Timestamp) && !CanOpenEncounter(source, Entities.Canonical(e.TargetId)))
@@ -256,6 +267,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var encounter = EnsureEncounter(e.Timestamp);
+        CountForVerification(encounter, e);
         var before = HealthPercent(e.TargetId);
         var overkill = Entities.ApplyDamage(e.TargetId, e.Amount);
         TrackPhases(e.TargetId, before, e.Timestamp);
@@ -295,6 +307,26 @@ public sealed class CombatEngine(CombatEngineOptions options)
                 phases.Add(new HealthPhase(threshold, Math.Max(0, (int)(at - encounter.Start).TotalSeconds)));
             }
         }
+    }
+
+    /// <summary>
+    /// Suma el golpe a la verificación de su objetivo (solo NPCs). Con el primer golpe de la pelea sobre él se anota la
+    /// vida que informó el servidor hasta ahí (ver <see cref="TargetVerification"/>).
+    /// </summary>
+    private void CountForVerification(Encounter encounter, DamageEvent e)
+    {
+        if (!Entities.IsNpc(Entities.Canonical(e.TargetId)))
+        {
+            return;
+        }
+
+        if (!encounter.Verifications.TryGetValue(e.TargetId, out var count))
+        {
+            count = new VerificationCount(Entities.ServerHealthOf(e.TargetId)?.Hp);
+            encounter.Verifications[e.TargetId] = count;
+        }
+
+        count.AddHit(e.Amount);
     }
 
     private static void RecordHit(Encounter encounter, ulong source, DamageEvent e, long overkill)
@@ -381,6 +413,12 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
     private void OnDeath(DeathEvent e)
     {
+        // Antes del cierre por la muerte del objetivo principal: su cuenta queda congelada acá.
+        if (LiveFight(e.Timestamp) is { } fight && fight.Verifications.TryGetValue(e.EntityId, out var count))
+        {
+            count.Kill();
+        }
+
         var dead = Entities.Canonical(e.EntityId);
         if (_current is not null && !Entities.IsNpc(dead) && InScope(dead))
         {
@@ -409,6 +447,9 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
     private bool OpensEncounter(DateTimeOffset at) =>
         _current is null || (_splitEncounters && at - _current.LastActivity > _idleTimeout);
+
+    /// <summary>La pelea en curso si sigue viva en <paramref name="at"/>: pasada la inactividad, el próximo golpe abre otra.</summary>
+    private Encounter? LiveFight(DateTimeOffset at) => OpensEncounter(at) ? null : _current;
 
     /// <summary>
     /// Solo un golpe a un monstruo vivo abre una pelea. Al morir el boss siguen llegando golpes que ya estaban
@@ -531,6 +572,15 @@ public sealed class CombatEngine(CombatEngineOptions options)
             .OrderByDescending(a => a.Damage)
             .ToArray();
 
+        // Solo la pelea tiene cuentas: la sesión y la run quedan sin verificación.
+        TargetVerification[] verifications =
+        [
+            .. encounter.Verifications
+                .Select(kv => kv.Value.Result(kv.Key, Entities.Profile(kv.Key).NpcId, Entities.ServerHealthOf(kv.Key)?.MaxHp))
+                .OfType<TargetVerification>()
+                .OrderByDescending(v => v.Counted),
+        ];
+
         return new EncounterSnapshot(
             encounter.Id,
             encounter.Start,
@@ -548,7 +598,8 @@ public sealed class CombatEngine(CombatEngineOptions options)
             [.. encounter.Marks],
             encounter.ZoneEnteredAt,
             targetNpc is { } enrageNpc ? Entities.Npcs.Of(enrageNpc)?.EnrageSeconds : null,
-            target is { } tp && encounter.Phases.TryGetValue(tp, out var phases) && phases.Count > 0 ? [.. phases] : null);
+            target is { } tp && encounter.Phases.TryGetValue(tp, out var phases) && phases.Count > 0 ? [.. phases] : null,
+            verifications.Length > 0 ? verifications : null);
     }
 
     private static double Share(long part, long total) => total == 0 ? 0 : (double)part / total;

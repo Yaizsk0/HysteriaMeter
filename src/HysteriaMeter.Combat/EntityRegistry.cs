@@ -19,6 +19,7 @@ public sealed class EntityRegistry
     private readonly Dictionary<ulong, string> _pendingOwnerNames = [];
     private readonly Dictionary<ulong, DateTimeOffset> _partySeenAt = [];
     private readonly Dictionary<ulong, Health> _health = [];
+    private readonly Dictionary<ulong, Health> _serverHealth = [];
     private readonly HashSet<ulong> _deadNpcs = [];
     private DateTimeOffset _now;
     private string? _localName;
@@ -68,6 +69,7 @@ public sealed class EntityRegistry
                 _health[health.EntityId] = _health.TryGetValue(health.EntityId, out var known)
                     ? new Health(health.Hp, Math.Max(known.MaxHp, health.Hp))
                     : new Health(health.Hp, health.Hp);
+                _serverHealth[health.EntityId] = _health[health.EntityId];
                 break;
             case PartyMemberSeenEvent member:
                 _partySeenAt[member.EntityId] = member.Timestamp;
@@ -91,7 +93,13 @@ public sealed class EntityRegistry
 
                 if (spawn is { Hp: { } hp, MaxHp: { } maxHp })
                 {
-                    _health[spawn.EntityId] = new Health(hp, maxHp);
+                    _health[spawn.EntityId] = _serverHealth[spawn.EntityId] = new Health(hp, maxHp);
+                }
+                else
+                {
+                    // Si el id vuelve a aparecer sin vida, la del servidor que quedó (el 0 de su muerte, la de un wipe) ya
+                    // no es la suya: la verificación arranca en su próxima lectura.
+                    _serverHealth.Remove(spawn.EntityId);
                 }
 
                 break;
@@ -127,6 +135,12 @@ public sealed class EntityRegistry
 
     /// <summary>Vida conocida de una entidad: la del último 0x8D00 menos el daño registrado desde entonces.</summary>
     public Health? HealthOf(ulong id) => _health.TryGetValue(id, out var health) ? health : null;
+
+    /// <summary>
+    /// Vida que informó el servidor (spawn 0x3641 o último 0x8D00), sin descontar los golpes como <see cref="HealthOf"/>:
+    /// la base de <see cref="TargetVerification"/>. El máximo es el mismo. Un spawn sin vida la borra.
+    /// </summary>
+    public Health? ServerHealthOf(ulong id) => _serverHealth.TryGetValue(id, out var health) ? health : null;
 
     /// <summary>
     /// Descuenta un golpe de la vida conocida y devuelve el overkill: la parte que pasó de la vida que le quedaba.

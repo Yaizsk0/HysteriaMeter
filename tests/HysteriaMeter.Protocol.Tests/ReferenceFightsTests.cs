@@ -44,6 +44,38 @@ public class ReferenceFightsTests(ITestOutputHelper output)
         Assert.True(error < 0.01, $"daño local contra el objetivo: {local.MainTargetDamage:N0}; Combat Analysis: {Expected:N0} (diferencia {error:P2})");
     }
 
+    // Auto-verificación (US6 de la 002): el daño contado contra el boss cierra con la vida que perdió según el servidor.
+    [ReferenceCaptureFact("dungeon-20261014-184438.pcap")]
+    public async Task Dungeon_boss_verification_closes()
+    {
+        var v = Verification(BossKill(await ReplayAsync("dungeon-20261014-184438.pcap"), DivineAuldor), DivineAuldor);
+        Assert.True(v.Closes, Describe(v));
+    }
+
+    // Todos los objetivos verificables de la dungeon, no solo el boss. El add de las 21:48:05 no cerraba porque la vida
+    // de su spawn se leía del final del paquete (20 de 91 en vez de 103.148 de 435.000).
+    [ReferenceCaptureFact("dungeon-20261014-184438.pcap")]
+    public async Task Dungeon_verifications_all_close()
+    {
+        var verifications = (await ReplayAsync("dungeon-20261014-184438.pcap")).SelectMany(e => e.Verifications ?? []).ToList();
+        var open = verifications.Where(v => !v.Closes).Select(Describe).ToList();
+        Assert.True(verifications.Count > 0 && open.Count == 0, $"de {verifications.Count} verificaciones no cierran {open.Count}: {string.Join("; ", open)}");
+    }
+
+    // El mini boss no cierra: su vida baja 30/7 del daño decodificado, una escala sin explicar (ver "Validación contra el
+    // juego" en protocol-notes.md de la 001). Si esto cambia, hay que revisar la escala.
+    [ReferenceCaptureFact("miniboss-20261015-103328.pcap")]
+    public async Task Mini_boss_verification_does_not_close_by_the_unexplained_health_scale()
+    {
+        var encounter = BossKill(await ReplayAsync("miniboss-20261015-103328.pcap"), DestroyerTarka);
+        var v = Verification(encounter, DestroyerTarka);
+
+        Assert.False(v.Closes, Describe(v));
+        // Todo lo contado es del local: no hay otro jugador pegándole.
+        Assert.Equal(648_468, v.Counted);
+        Assert.Equal(LocalPlayer(encounter).MainTargetDamage, v.Counted);
+    }
+
     // Sin capturas: si la elección del encuentro o del jugador local falla, el mensaje no puede llevar nombres de
     // jugadores (la salida de dotnet test termina pegada en PRs e issues).
     [Fact]
@@ -57,7 +89,22 @@ public class ReferenceFightsTests(ITestOutputHelper output)
         Assert.DoesNotContain(Name, Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => LocalPlayer(Encounter(Actor(1, false), Actor(2, false)))).Message);
         Assert.DoesNotContain(Name, Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => LocalPlayer(Encounter(Actor(1, true), Actor(2, true)))).Message);
         Assert.DoesNotContain(Name, Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => BossKill([Encounter(Actor(1, true))], npcId: 2)).Message);
+        Assert.DoesNotContain(Name, Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => Verification(Encounter(Actor(1, true)), npcId: 1)).Message);
     }
+
+    /// <summary>La verificación del objetivo <paramref name="npcId"/>, que tiene que ser una sola. El mensaje lleva solo ids.</summary>
+    private static TargetVerification Verification(EncounterSnapshot encounter, uint npcId)
+    {
+        var verified = encounter.Verifications ?? [];
+        var checks = verified.Where(v => v.NpcId == npcId).ToList();
+        Assert.True(checks.Count == 1,
+            $"verificaciones del npc {npcId}: {checks.Count} (npcs verificados: {string.Join(", ", verified.Select(v => v.NpcId))})");
+        return checks[0];
+    }
+
+    /// <summary>Los números de la cuenta (vida inicial y final, contado, overkill y diferencia), para ver qué falta. Sin nombres.</summary>
+    private static string Describe(TargetVerification v) => string.Create(CultureInfo.InvariantCulture,
+        $"npc {v.NpcId?.ToString(CultureInfo.InvariantCulture) ?? "?"} #{v.TargetId}: vida inicial {v.StartHp}, final {v.EndHp}, máx {v.MaxHp}, contado {v.Counted}, overkill {v.Overkill}, diferencia {v.Difference} · {(v.Closes ? "cierra" : "no cierra")}");
 
     /// <summary>
     /// La pelea de referencia es el encuentro que termina con la muerte del objetivo <paramref name="npcId"/>. Las
@@ -144,6 +191,10 @@ public class ReferenceFightsTests(ITestOutputHelper output)
                 $"[{encounter.Start:HH:mm:ss}] npc {encounter.TargetNpcId?.ToString(CultureInfo.InvariantCulture) ?? "?"} · vida máx {encounter.TargetHealth?.MaxHp ?? 0} · {encounter.Duration.TotalSeconds:0.0}s · {(encounter.TargetKilled ? "muerto" : "sin terminar")}"
                 + $" · local {(local is null ? "-" : $"#{local.Id} objetivo {local.MainTargetDamage} total {local.Damage}")}"
                 + $" · golpes {c.Hits} CRI {c.Critical} PERF {c.Perfect} DOUB {c.DoubleHit} FRNT {c.Front} BACK {c.Back} MULT {c.MultiHit}"));
+            foreach (var v in encounter.Verifications ?? [])
+            {
+                output.WriteLine($"    verificación {Describe(v)}");
+            }
         }
 
         return encounters;
