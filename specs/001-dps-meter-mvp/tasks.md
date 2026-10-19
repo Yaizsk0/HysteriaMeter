@@ -62,7 +62,7 @@ description: "Tareas del MVP de Hysteria Meter"
 
 - [X] T026 [US2] Canonicalización de entidades y atribución de invocaciones en `src/HysteriaMeter.Combat/EntityRegistry.cs`
 - [X] T027 [P] [US2] `NpcSpawnDecoder` (NpcId) + test con bytes reales
-- [ ] T027b [US2] Dueño de invocaciones (✓ por nombre en `0x3641`; faltan las que no traen dueño)
+- [X] T027b [US2] Dueño de invocaciones (✓ por nombre en `0x3641`; ✓ las que no traen nombre, por el id de la cola: T020 de la 002)
 - [X] T028 [P] [US2] `EntityInfoDecoder` (nombre, clase) + test (es `PlayerSpawnDecoder`, `0x3645`; la clase no viene en el paquete y se deduce del prefijo de las skills en `EntityRegistry`)
 - [ ] T029 [US2] Remapear IDs huérfanos al cambiar de zona/pull (edge case) + test en `tests/HysteriaMeter.Combat.Tests/`
 
