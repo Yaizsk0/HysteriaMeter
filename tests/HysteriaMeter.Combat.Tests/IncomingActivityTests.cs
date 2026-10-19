@@ -2,13 +2,17 @@ using HysteriaMeter.Protocol.Events;
 
 namespace HysteriaMeter.Combat.Tests;
 
-/// <summary>Eventos sintéticos de pausas de DPS durante las que los NPC siguen atacando.</summary>
+/// <summary>
+/// Eventos sintéticos de pausas de DPS durante las que los NPC siguen atacando: los golpes de otro NPC (un add) sostienen
+/// la pelea, los del objetivo principal no.
+/// </summary>
 public sealed class IncomingActivityTests
 {
     private const ulong Me = 1;
     private const ulong Ally = 2;
     private const ulong Stranger = 3;
     private const ulong Npc = 900;
+    private const ulong Add = 901;
     private static readonly DateTimeOffset Start = DateTimeOffset.UnixEpoch;
 
     [Theory]
@@ -72,6 +76,52 @@ public sealed class IncomingActivityTests
         Assert.Equal(100, snapshot.TotalDamage);
         Assert.Equal(Start, snapshot.End);
         Assert.Equal(TimeSpan.FromSeconds(1), snapshot.Duration);
+    }
+
+    // Destroyer Tarka (mini boss del 2026-10-15): Combat Analysis cortó la pelea en una pausa de 9,7 s del daño hecho
+    // aunque el boss le siguió pegando al local. Esos golpes cuentan como daño recibido, pero no sostienen la pelea.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Hits_from_the_main_target_do_not_keep_the_encounter_open(bool tickDuringPause)
+    {
+        var engine = CreateEngine();
+        var finished = new List<EncounterSnapshot>();
+        engine.EncounterFinished += finished.Add;
+        engine.Apply(Outgoing(0, 100));
+        var id = engine.CurrentSnapshot()!.Id;
+        engine.Apply(Incoming(3, Me, source: Npc));
+        engine.Apply(Incoming(6, Me, source: Npc));
+        if (tickDuringPause)
+        {
+            engine.Tick(At(9));
+        }
+
+        engine.Apply(Outgoing(10, 200));
+
+        var first = Assert.Single(finished);
+        Assert.Equal(id, first.Id);
+        Assert.Equal(100, first.TotalDamage);
+        Assert.Equal(100, Assert.Single(first.Actors).DamageTaken);
+        var current = engine.CurrentSnapshot()!;
+        Assert.NotEqual(id, current.Id);
+        Assert.Equal(200, current.TotalDamage);
+    }
+
+    [Fact]
+    public void Idle_counts_from_the_last_hit_of_another_npc_not_of_the_main_target()
+    {
+        var engine = CreateEngine();
+        var finished = new List<EncounterSnapshot>();
+        engine.EncounterFinished += finished.Add;
+        engine.Apply(Outgoing(0, 100));
+        engine.Apply(Incoming(6, Me));
+        engine.Apply(Incoming(7, Me, source: Npc));
+
+        engine.Tick(At(14.001));
+
+        Assert.Null(engine.CurrentSnapshot());
+        Assert.Equal(100, Assert.Single(Assert.Single(finished).Actors).DamageTaken);
     }
 
     [Theory]
@@ -223,6 +273,7 @@ public sealed class IncomingActivityTests
         engine.Apply(new EntityInfoEvent(Start, Stranger, "Otro", 12));
         // Sin catálogo ni HP: la actividad entrante debe bastar, como en la captura real.
         engine.Apply(new EntitySpawnEvent(Start, Npc, null, NpcId: 12345));
+        engine.Apply(new EntitySpawnEvent(Start, Add, null, NpcId: 12346));
         return engine;
     }
 
@@ -231,6 +282,7 @@ public sealed class IncomingActivityTests
     private static DamageEvent Outgoing(double seconds, long amount) =>
         new(At(seconds), Me, Npc, 10, amount, HitModifiers.None);
 
-    private static DamageEvent Incoming(double seconds, ulong target) =>
-        new(At(seconds), Npc, target, 500, 50, HitModifiers.None);
+    /// <summary>Un golpe de <paramref name="source"/> (por omisión, el add) a un jugador.</summary>
+    private static DamageEvent Incoming(double seconds, ulong target, ulong source = Add) =>
+        new(At(seconds), source, target, 500, 50, HitModifiers.None);
 }

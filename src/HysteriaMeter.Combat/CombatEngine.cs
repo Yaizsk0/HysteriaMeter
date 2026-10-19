@@ -4,7 +4,10 @@ namespace HysteriaMeter.Combat;
 
 public sealed record CombatEngineOptions
 {
-    /// <summary>Sin daño hecho o recibido durante este tiempo, el encuentro se cierra (valor inicial de <see cref="CombatEngine.IdleTimeout"/>).</summary>
+    /// <summary>
+    /// Sin daño hecho, ni recibido de un NPC que no sea el objetivo principal, durante este tiempo, el encuentro se cierra
+    /// (valor inicial de <see cref="CombatEngine.IdleTimeout"/>).
+    /// </summary>
     public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromSeconds(8);
 
     /// <summary>Cerrar el encuentro cuando muere el objetivo principal.</summary>
@@ -55,7 +58,10 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
     public EntityRegistry Entities { get; } = new();
 
-    /// <summary>Sin daño hecho o recibido durante este tiempo, el encuentro se cierra. Se puede cambiar en caliente.</summary>
+    /// <summary>
+    /// Sin daño hecho, ni recibido de un NPC que no sea el objetivo principal, durante este tiempo, el encuentro se cierra.
+    /// Se puede cambiar en caliente.
+    /// </summary>
     public TimeSpan IdleTimeout
     {
         get { lock (_gate) { return _idleTimeout; } }
@@ -399,9 +405,18 @@ public sealed class CombatEngine(CombatEngineOptions options)
             return;
         }
 
+        // Solo los golpes de otro NPC sostienen la pelea en una pausa del daño hecho. Los del objetivo principal no:
+        // Combat Analysis cortó a Destroyer Tarka en una pausa de 9,7 s aunque el boss le siguió pegando al local. En la
+        // comparación del 2026-10-17 (en party, sin Combat Analysis; la referencia es otro medidor) la pelea contra
+        // 2300371 sigue en pausas de 8,5 y 9,1 s en las que solo pegan sus entidades (npc 2920343 y 2920347).
+        var sustains = _current.MainTarget is not { } main || (main != npc && main != e.SourceId);
         foreach (var encounter in Running())
         {
-            encounter.RegisterCombatActivity(e.Timestamp);
+            if (sustains)
+            {
+                encounter.RegisterCombatActivity(e.Timestamp);
+            }
+
             var actor = encounter.Actor(target);
             actor.DamageTaken += e.Amount;
             actor.HitsTaken++;
