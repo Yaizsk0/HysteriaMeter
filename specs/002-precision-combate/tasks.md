@@ -71,7 +71,7 @@ description: "Tareas de la feature 002: precisión del combate"
 
 ## Phase 9: Polish
 
-- [ ] T029 Actualizar `protocol-notes.md` con todos los layouts nuevos y su confianza
+- [X] T029 Actualizar `protocol-notes.md` con todos los layouts nuevos y su confianza (convención de confianza y el porqué en cada fila de "Opcodes identificados"; filas nuevas de `0x3656`, `0x920E`/`0x921A`, `0x8A05`, `0x5611` y `0x8D57`/`0x8A03`; `0x3806` pasa a baja y `0x9200` a sin decodificar; layouts nuevos de `0x8D04`, `0x8D00` y `0x921B`; reglas del framing y de cada decoder; tabla de las capturas citadas; layouts viejos de `0x3804`, `0x3805` y `0x3645` corregidos según el código. Sin tocar código; en `data/opcodes.json` solo se corrigió el comentario de movimiento (`0x3600` no es movimiento; `0x371D` sin decodificar). Queda afuera: el fixture real de `0x8D00` (principio IV), medir las altas "sin conteo" y alinear con el doc los comentarios de `KillPacketDecoder` (u16 "¿nivel y clase?"), `PlayerSpawnDecoder` ("¿clase o nivel?"), `PeriodicEffectDecoder` (layout sin el varint del `0x0B`), `NpcSpawnDecoder` (solo tipo `0x5F`) y `ReferenceFightsTests` ("dos jugadores de su clase en la party"))
 - [ ] T030 Re-correr la validación completa (SC-001 a SC-005) y cerrar `validation.md`
 
 ## Dependencies & Execution Order
