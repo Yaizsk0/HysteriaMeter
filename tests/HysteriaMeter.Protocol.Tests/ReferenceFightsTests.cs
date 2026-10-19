@@ -77,8 +77,9 @@ public class ReferenceFightsTests(ITestOutputHelper output)
     }
 
     // En la comparación del 2026-10-17 a los bosses les faltaba entre 3,4 y 4,8 % del daño: era entero el de invocaciones
-    // sin dueño (npc 2920655, 2920739 y 2920735) que no se adoptan porque hay dos jugadores de su clase en la party. La
-    // verificación las cuenta y las 10 cuentas de los bosses cierran exacto.
+    // sin dueño (npc 2920655, 2920739 y 2920735) que no se adoptan porque el motor ve más de un jugador conocido de su
+    // clase (los ids de conexiones anteriores y una entidad que trata como jugador solo por sus skills). La verificación
+    // las cuenta y las 10 cuentas de los bosses cierran exacto.
     [ReferenceCaptureFact("comparacion-20261017-033114.pcap")]
     public async Task Comparison_boss_verifications_close_counting_ownerless_summons()
     {

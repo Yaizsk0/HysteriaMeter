@@ -6,7 +6,8 @@ namespace HysteriaMeter.Protocol.Decoding;
 
 /// <summary>
 /// Aparición de otro jugador (opcode 0x3645, 1,5–2 KB). Leemos el nombre, y el item level y el power con <see cref="PlayerGear"/>:
-/// <code>varint entity | u8 | u16 ? | u8 | u8 07 | string name | u32 ? (¿clase o nivel?) | ... posición, legión, equipo</code>
+/// <code>varint entity | u8 | u16 ? | u8 | u8 07 | string name | u32 ? | ... posición, legión, equipo</code>
+/// El u32 que sigue al nombre vale 26 en los fixtures: no es un número de clase (11–18).
 /// El campo después de la entidad es un u16 fijo, no un varint: leído como varint, cuando su primer byte es
 /// menor a 0x80 el nombre salía corrido (largo 1, "\x07").
 /// El jugador local no llega por acá: su aparición se manda al loguear o al cambiar de zona.

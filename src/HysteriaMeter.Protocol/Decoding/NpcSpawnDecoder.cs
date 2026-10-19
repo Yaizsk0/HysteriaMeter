@@ -7,8 +7,10 @@ namespace HysteriaMeter.Protocol.Decoding;
 /// <summary>
 /// Aparición de un NPC, monstruo o invocación (opcode 0x3641):
 /// <code>varint entityId | u8 tipo | u8 | u8 hasOwnerName | [string ownerName] | u32 npcId | u8 flags | u8 | pos 3×f32 | f32 | [12 bytes si flags tiene 0x08] | 3 bytes | varint HP | varint HPmax | ...</code>
-/// Las invocaciones de jugadores (tipo 0x5F) a veces traen el nombre del dueño; con eso el motor
-/// les asigna el daño. Los monstruos normales traen <c>hasOwnerName = 0</c>.
+/// Las invocaciones de jugadores (tipos 0x5F, 0x1F, 0x1C y 0x2F) a veces traen el nombre del dueño; con eso el motor
+/// les asigna el daño. Los monstruos normales traen <c>hasOwnerName = 0</c>. El decoder no mira el tipo. Las de un
+/// bloque traen además el id del dueño en la cola, que todavía no se lee (T020 de la 002; ver "Dueño de la invocación"
+/// en <c>protocol-notes.md</c>).
 /// </summary>
 public sealed class NpcSpawnDecoder : IPacketDecoder
 {

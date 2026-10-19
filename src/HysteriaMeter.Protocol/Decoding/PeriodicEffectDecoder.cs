@@ -10,10 +10,13 @@ namespace HysteriaMeter.Protocol.Decoding;
 /// <c>instance</c> y <c>skillId</c> coinciden con los del 0x3804 que aplicó el efecto. Validado en una
 /// dungeon: daño directo (0x3804) + ticks de daño cierran exacto contra las bajadas de HP (0x8D00) y
 /// contra el total de Combat Analysis. Los ticks con <c>type = 0x00</c> tienen otro formato y no llevan monto.
+/// Las curaciones no están validadas: el <c>type = 0x0B</c> trae un varint más entre <c>amount</c> y <c>skillId</c> que
+/// todavía no se lee (su skill sale mal), y el monto no parece lo curado por tick. Se cambia con T022 de la 002
+/// (ver "Layout de 0x3805" en <c>protocol-notes.md</c>).
 /// </summary>
 public sealed class PeriodicEffectDecoder : IPacketDecoder
 {
-    internal const byte SelfHeal = 0x09;
+    internal const byte SelfHeal = 0x09; // Nombre heredado: el 0x09 no es solo la curación propia.
     internal const byte DamageTick = 0x0A;
     internal const byte Heal = 0x0B;
 
