@@ -57,6 +57,7 @@
     {"id": 94, "text": "Diagnóstico muestra si el daño contado cierra con la vida que perdió cada monstruo según el servidor. El tooltip de la vida del objetivo y el reporte de un problema también lo traen."},
     {"id": 95, "text": "La verificación de Diagnóstico cuenta también el daño de las invocaciones que el meter no puede atribuir (por ejemplo, con dos jugadores de la misma clase en la party): los bosses que quedaban un 4 % cortos ahora cierran."},
     {"id": 96, "text": "Si Npcap está instalado en modo solo administradores, la bienvenida y el overlay lo avisan y explican cómo dar el permiso, en vez de mostrar un error genérico."},
-    {"id": 101, "text": "El overkill de los golpes sobre jugadores ya no sale de más después de un revivir: el meter lee todas las actualizaciones de vida del servidor."}
+    {"id": 101, "text": "El overkill de los golpes sobre jugadores ya no sale de más después de un revivir: el meter lee todas las actualizaciones de vida del servidor."},
+    {"id": 104, "text": "El menú \"⋯\" del overlay ya no cierra el meter al abrirlo."}
   ]
 }
