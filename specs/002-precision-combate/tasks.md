@@ -52,7 +52,7 @@ description: "Tareas de la feature 002: precisión del combate"
 
 ## Phase 6: User Story 4 - Invocaciones (P2)
 
-- [ ] T019 [US4] Research: resolver el dueño de invocaciones sin nombre (cast `0x3802` + tiempo + posición)
+- [X] T019 [US4] Research: resolver el dueño de invocaciones sin nombre (cast `0x3802` + tiempo + posición) (resuelto: el dueño viene en el propio `0x3641`, como u32 después de `07 02 06` en la cola de un bloque, con una sola marca `80 75 d5 2a bb 03 00 00`. Acierta 100 de 100 con dueño conocido (17 discriminantes) y asigna 106 de los 108 spawns sin nombre de la comparación, sin contradicciones. El `0x3802` y la posición no lo traen; el `0x3804` con `flags 0x00` del dueño 39–112 ms antes sirve de respaldo, con 0 errores contra el u32. Falta confirmarlo con dos jugadores de la misma clase en una conexión, que no está en ninguna captura. Detalle en "Dueño de la invocación" y en el punto 5 de "Pendiente" de `protocol-notes.md` de la 001)
 - [ ] T020 [US4] Resolución de dueño en `EntityRegistry` + test con la captura de la dungeon
 - [ ] T021 [US4] Opción "invocaciones separadas" y total sin invocaciones para comparar con Combat Analysis
 
