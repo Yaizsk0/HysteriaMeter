@@ -136,6 +136,8 @@ El meter comprueba solo si leyó todo el daño. En Configuración → Diagnósti
 
 Si Npcap se instaló con la opción "Restrict Npcap driver's access to Administrators only", Windows pide permiso (UAC) cada vez que el meter abre la captura, y la bienvenida ya lo avisa en el paso de Npcap. Si la captura se corta antes de que llegue tráfico, el overlay explica que falta ese permiso. Da tres salidas: volver a abrir el meter y aceptar el pedido, abrirlo como administrador o reinstalar Npcap sin esa opción. Igual muestra el error real y el botón para reportar un problema, por si el corte fue por otra cosa. Para saberlo, el meter solo lee del registro la opción con la que se instaló Npcap y no cambia nada del sistema.
 
+El meter lee todas las actualizaciones de vida que manda el servidor, también las que traen varios valores juntos, como la del jugador al revivir. Antes se perdían y el overkill de los golpes sobre un jugador se medía contra una vida vieja, por ejemplo la de su muerte, y salía de más. El daño, el DPS y la verificación de los monstruos no cambian. Las peleas ya guardadas conservan el overkill con el que se guardaron.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
