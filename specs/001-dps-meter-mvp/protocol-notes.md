@@ -81,12 +81,17 @@ varint target | u8 type | varint source | varint tickSeq | u32 instance | varint
 ### Layout de `0x3641`
 
 ```text
-varint entity | u8 tipo | u8 | u8 hasOwnerName | [varint len + UTF-8 ownerName] | u32 npcId | u8 | u8 | pos 3×f32 | ... | varint HP | varint HPmax
+varint entity | u8 tipo | u8 | u8 hasOwnerName | [varint len + UTF-8 ownerName] | u32 npcId | u8 flags | u8 | pos 3×f32 | f32
+| [12 bytes si flags & 0x08] | 3 bytes | varint HP | varint HPmax | ...
 ```
 
 - Monstruos: `hasOwnerName = 0`. Invocaciones de jugadores (tipos `0x5F`, `0x1C`): a veces traen el nombre del dueño; el motor lo resuelve contra los nombres conocidos.
 - Hay invocaciones sin nombre de dueño y sin ID de dueño en el spawn (por ejemplo el espíritu del Hechicero, skill 15280143 Bittercold Wind: 605k en Kromede, todos críticos). Si le pegan a un monstruo con una skill de jugador (prefijo de clase 11–18) y hay un solo jugador conocido de esa clase, el motor le asigna la invocación. Con dos jugadores de la misma clase sigue sin atribuirse: falta encontrar el dueño real en el protocolo (grabar una pelea con un Hechicero).
-- HP y HPmax son los dos últimos varints del cuerpo (validado: 119.700/119.700). Lo que hay entre la posición y el HP no es un solo varint (`9a 38 01` antes del HP), por eso se leen desde el final. El motor toma el máximo visto en `0x8D00` como HPmax y calcula el overkill del golpe final con el HP restante.
+- HP y HPmax van en posición fija, 21 bytes después del `npcId`: dos u8, la posición, un f32 y tres bytes sin identificar (`9a 38 01` en el fixture), con 12 bytes más antes de los tres si el primer u8 tiene el bit `0x08` (ver abajo). El último de los tres es `0x01` en 2.891 de los 2.893 spawns de las seis capturas de referencia; los otros dos, un `0x2C` (npc 2920021, 0 de 435.000) y un `0x2F` (npc 2920626, 0 de 19.211), traen `00`. Después de la vida puede venir más, de 0 a unos 190 bytes. Antes se leían como los dos últimos varints del cuerpo, que solo sirve sin nada después (el fixture de 119.700/119.700): en la dungeon y el mini boss, los 76 cuerpos en los que los dos últimos varints pasaban por vida daban basura (20/91, 0/168.274.232, …).
+- En la posición fija, 22 spawns de la dungeon y del mini boss cierran exacto con su primera lectura (vida del spawn = `0x8D00` + golpes anteriores), entre ellos el add y el boss de la dungeon; los que tienen lectura y no cierran son monstruos del mini boss (con otra escala, ver "Validación contra el juego") o invocaciones (algunas se pegan a sí mismas al aparecer). En la de comparación del 2026-10-17 traen vida los 2.207 spawns y cierran exacto 114 de los 115 que tienen lectura; en la de login traen vida los 111 y cierran exacto los 19 que tienen lectura. En ninguna de las seis la primera lectura (antes de que el id vuelva a aparecer) queda por encima de la vida del spawn.
+- Un spawn puede traer la vida incompleta: el add 2300215 de la dungeon aparece con 103.148 de 435.000.
+- **Bloque de 12 bytes:** con el bit `0x08` en el u8 que sigue al `npcId` vienen 12 bytes más, sin identificar, antes de los tres bytes y la vida. Ese u8 vale `0x00`, `0x40` (no agrega nada) u `0x08`, y no depende del tipo: en las seis capturas hay 11 spawns con `0x08`, 4 del tipo `0x85` (npc 2910001: 4.655 de 4.655), 6 del `0x0D` (npc 2600091, en la de login: 20.000.000 de 20.000.000, la misma vida que sus 17 spawns del tipo `0x0F`) y 1 del `0x5D` (npc 2920115: 23.983 de 23.983). En la posición de siempre daban basura y 6 de los 11 pasaban la validación (HP ≤ HPmax: 23/234.659.361, 8.706/1.481.659, 43/1.679.750, …). Ninguna de esas entidades tiene una lectura positiva en las capturas, así que la vida nueva no está validada contra un `0x8D00`: solo es consistente (vida llena, la misma en las 4 apariciones del 2910001).
+- Sin la vida del spawn, el motor toma el máximo visto en `0x8D00` como HPmax. El overkill del golpe final sale del HP restante.
 
 ### Layout de `0x3645` (parcial)
 
