@@ -144,6 +144,8 @@ Cuatro skills que el detalle mostraba como "Skill 12060240" y parecidos ya tiene
 
 La tabla de skills del detalle suma las columnas PERF., DOBLE, FRENTE, ESPALDA y MULTI, como la vista detallada de Combat Analysis: el % de golpes perfectos, dobles, de frente, por la espalda y múltiples de cada skill, y el de todas juntas en TOTAL. La ventana arranca un poco más ancha para que entren; si la achicás por debajo de 1040 se ocultan y ESPALDA vuelve al tooltip de la fila.
 
+En modo compacto, durante la pelea la franja de arriba muestra contra quién es (el mismo rótulo del bloque del objetivo, que ese modo oculta) y su % de vida si el servidor la mandó. Si no entra, se recorta con "…" sin tapar el reloj ni los botones.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
