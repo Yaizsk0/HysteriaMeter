@@ -55,6 +55,7 @@
     {"id": 88, "text": "La bienvenida muestra el nombre de tu placa de red en vez de un código, y si la elegiste en la configuración o viene de appsettings.json."},
     {"id": 92, "text": "La vida de los monstruos al aparecer se lee bien. Antes muchas veces salía mal: inflaba el overkill de los primeros golpes y podía dejar la pelea sin las marcas de fase."},
     {"id": 94, "text": "Diagnóstico muestra si el daño contado cierra con la vida que perdió cada monstruo según el servidor. El tooltip de la vida del objetivo y el reporte de un problema también lo traen."},
-    {"id": 95, "text": "La verificación de Diagnóstico cuenta también el daño de las invocaciones que el meter no puede atribuir (por ejemplo, con dos jugadores de la misma clase en la party): los bosses que quedaban un 4 % cortos ahora cierran."}
+    {"id": 95, "text": "La verificación de Diagnóstico cuenta también el daño de las invocaciones que el meter no puede atribuir (por ejemplo, con dos jugadores de la misma clase en la party): los bosses que quedaban un 4 % cortos ahora cierran."},
+    {"id": 96, "text": "Si Npcap está instalado en modo solo administradores, la bienvenida y el overlay lo avisan y explican cómo dar el permiso, en vez de mostrar un error genérico."}
   ]
 }
