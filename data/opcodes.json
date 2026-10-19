@@ -24,7 +24,8 @@
   //   0x9200  lista completa de la party (entidad, GUID, ID de personaje, nombre, HP, legión); layout variable por miembro
   //   0x920E, 0x921A  estado de miembros de la party, incluido el local
   //   0x3620  una vez por conexión: u16 0 | varint entidad local | u32 0 | u32 ID de personaje | ... zlib
-  //   0x371A-0x371D, 0x3600  movimiento de entidades
+  //   0x371A-0x371D  movimiento de entidades (0x371D sin decodificar)
+  //   0x3600  u64 LE que sube 50 por mensaje, uno cada 50 ms (INTERPRETADO: reloj del servidor)
   "opcodes": {
     "Bundle": ["0xFFFF"],
     "LocalPlayer": ["0x364A"],
