@@ -32,3 +32,7 @@ La captura local terminó antes que la pelea completa. El replay comprueba los e
 - La revisión independiente no encontró regresiones concretas.
 
 Se detectó además un caso distinto de presencia: algunos primeros golpes de un pull preceden a la actualización de party, después de que venciera su ventana de diez segundos. En el replay quedan 41.686 puntos de invocaciones en esas ventanas; ni siquiera asignarles dueño basta porque el filtro de actores también los excluye. Requiere validar la vigencia de party, separado de estas dos correcciones.
+
+## Regresión conocida: corte de Combat Analysis
+
+Con la unión por daño recibido, el replay del mini boss junta los primeros 3 s contra Destroyer Tarka (cortados por inactividad) con la pelea del kill: el local queda con 665.522 de daño al objetivo y Combat Analysis muestra 648.468, solo la pelea del kill. En la comparación del 2026-10-17, las verificaciones de los bosses pasan de 10 a 8 (las 8 siguen con diferencia 0) y el total, de 52 a 49. `Mini_boss_matches_combat_analysis_exactly`, `Mini_boss_verification_does_not_close_by_the_unexplained_health_scale` y `Comparison_boss_verifications_close_counting_ownerless_summons` fallan con `HYSTERIA_CAPTURES`; la CI no los corre. Pendiente: que la continuidad respete el corte de Combat Analysis.

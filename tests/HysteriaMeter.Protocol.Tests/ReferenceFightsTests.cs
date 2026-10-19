@@ -94,8 +94,10 @@ public class ReferenceFightsTests(ITestOutputHelper output)
     }
 
     // Las que siguen sin cerrar en la comparación tienen causas que la verificación no contempla: muertes sin daño (las
-    // entidades 2920091 y 2920650 #45279 pasan a 0 sin ningún golpe) y un reinicio de vida (2300306 #39344 vuelve a la
-    // máxima a las 06:49:48 sin daño). Si este conteo cambia, hay que revisar la causa.
+    // entidades 2920091 pasan a 0 sin ningún golpe) y un reinicio de vida (2300306 #39344 vuelve a la máxima a las
+    // 06:49:48 sin daño). 2920650 #45279, que también moría sin daño, trae su dueño en la cola del spawn y ya no se
+    // verifica. Hay 49 y no 52 porque el daño recibido une los tramos de una pelea (la misma unión que mueve a Tarka;
+    // ver combat-regressions.md de la 001). Si este conteo cambia, hay que revisar la causa.
     [ReferenceCaptureFact("comparacion-20261017-033114.pcap")]
     public async Task Comparison_verifications_left_open_have_known_causes()
     {
@@ -105,7 +107,7 @@ public class ReferenceFightsTests(ITestOutputHelper output)
             .GroupBy(v => v.NpcId)
             .OrderBy(g => g.Key)
             .Select(g => $"{g.Key?.ToString(CultureInfo.InvariantCulture) ?? "?"}: {g.Count()}"));
-        Assert.True(verifications.Count == 52 && verifications.Count - open.Count == 36 && byNpc == "2300306: 1, 2920091: 14, 2920650: 1",
+        Assert.True(verifications.Count == 49 && verifications.Count - open.Count == 34 && byNpc == "2300306: 1, 2920091: 14",
             $"de {verifications.Count} verificaciones cierran {verifications.Count - open.Count}; las que no, por npc: {byNpc} ({string.Join("; ", open.Select(Describe))})");
     }
 
