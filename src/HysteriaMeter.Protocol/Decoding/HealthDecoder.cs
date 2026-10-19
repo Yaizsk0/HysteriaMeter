@@ -5,9 +5,11 @@ using HysteriaMeter.Protocol.Opcodes;
 namespace HysteriaMeter.Protocol.Decoding;
 
 /// <summary>
-/// Actualización de un recurso (opcode 0x8D00). Para la vida:
+/// Actualización de valores de una entidad (opcode 0x8D00). Para la vida:
 /// <code>varint entity | 02 01 00 | u32 HP</code>
-/// Con otro prefijo es otro recurso (maná, etc.) y se ignora.
+/// Solo se lee ese prefijo. Cualquier otro se ignora, aunque traiga la vida: <c>02 01 07</c> es otro valor (el HP
+/// máximo en el fixture de los tests), pero <c>02 02 00</c> son dos entradas, la vida (id 00) y el id 07 (ver
+/// RealCapture.TwoEntryHealthBody en los tests).
 /// </summary>
 public sealed class HealthDecoder : IPacketDecoder
 {

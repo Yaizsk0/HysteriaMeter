@@ -8,14 +8,15 @@ Capturas citadas abajo (los `.pcap` están fuera del repo, en `captures/`):
 
 | Nombre en este doc | Fecha | Archivo y contenido |
 |---|---|---|
-| primera | 2026-10-14 | Sin verificar el nombre del archivo. Monstruos de campo (la de arriba) |
+| primera | 2026-10-14 | No está en `captures/`: ningún `.pcap` de la carpeta es anterior a la dungeon. Monstruos de campo (la de arriba) |
 | dungeon | 2026-10-14 | `dungeon-20261014-184438.pcap`: la segunda de arriba, Divine Auldor (npc 2300218; referencia 1 de `references.md` de la 002) |
+| dungeon2 | 2026-10-14 | `dungeon2-20261014-190313.pcap`: contenido sin documentar |
 | mini boss | 2026-10-15 | `miniboss-20261015-103328.pcap`: Destroyer Tarka (npc 2101106, vida máx 2.700.000), solo (referencia 2) |
-| login | 2026-10-15 | Sin verificar el nombre del archivo. Desde el login (ver "Jugador local") |
+| login | 2026-10-15 | `login-20261015-110829.pcap`: desde el login (ver "Jugador local") |
 | comparación | 2026-10-17 | `comparacion-20261017-033114.pcap`: bosses 2300311, 2300312 y 2300371 |
-| continuación | 2026-10-17 | `comparacion-continuacion-20261017-0402` (así la cita "Validación contra el juego"; sin verificar el nombre completo del archivo): sin daño |
+| continuación | 2026-10-17 | `comparacion-continuacion-20261017-0402.pcap`: sin daño |
 
-INTERPRETADO: son "las seis capturas" que se citan abajo (de tres días distintos). No consta cuáles son las "3 capturas" de `0x364A` ni "las tres grabaciones" del item level; las dos notas se escribieron el 2026-10-15. `ReferenceFightsTests` hace replay de la dungeon, el mini boss y la comparación.
+Los seis `.pcap` de `captures/` son los de la tabla menos la primera. INTERPRETADO: son "las seis capturas" que se citan abajo, de tres días distintos, porque los análisis del 2026-10-18 y del 2026-10-19 se corrieron sobre esa carpeta (`HYSTERIA_CAPTURES`). No consta cuáles son las "3 capturas" de `0x364A` ni "las tres grabaciones" del item level: las dos notas se escribieron el 2026-10-15. `ReferenceFightsTests` hace replay de la dungeon, el mini boss y la comparación.
 
 ## Validación contra el juego
 
@@ -58,7 +59,7 @@ Confianza: **Alta**, el valor cierra en un conteo contra el juego (Combat Analys
 | `0x3645` | Aparición de otro jugador (1,5–2 KB): nombre, item level y power | Alta para el nombre (fixtures `PlayerSpawnBody` y `PlayerSpawnLowByteBody`; con el u16 fijo dejaron de salir nombres `\x07` en el mini boss; sin conteo). Media para item level y power (se buscan por su forma; validados contra `0x8A05`, sin conteo; fixture `PlayerGearSections`; ver "Item level, power y clase") | `PlayerSpawnDecoder` + `PlayerGear` |
 | `0x8D04` | Muerte: víctima, skill, quien mató, nombre y legión (en dungeons llega con killer 0 y sin nombre; ver "Layout de `0x8D04`") | Alta para la víctima (en el replay de la dungeon y del mini boss, la pelea del boss termina con su `0x8D04`, `ReferenceFightsTests`). Alta para el nombre del que mató (fixture `KillBody`, de la primera captura; sin conteo) | `KillPacketDecoder` |
 | `0x3802` | Lanzamiento de skill: fuente, skill u32, seq, mode, objetivo y, con `mode 0x02`, la posición del objetivo (ver "Layout de `0x3802`") | Alta para fuente y skill (el layout consume el cuerpo exacto en 66.778 de 66.992 casts de las seis capturas; la clase de la skill coincide con la de la fuente en 47.448 de 47.627 casts de jugadores). Media para objetivo y posición (objetivo ya conocido en 37.109 de 37.522 casts de la comparación; la posición solo se puede medir en el 8 % de los casts `mode 0x02`). Sin fixture ni decoder; ver "Layout de `0x3802`" | — |
-| `0x8D00` | Actualización de recurso: `varint entidad \| 02 01 00 \| u32 HP` para HP (con otros bytes, como `02 02 00`, se ignora; ver "Layout de `0x8D00`") | Alta (cierra con los golpes en 1.630 de 1.631 lecturas del boss de la dungeon y 1 a 1 en la comparación, ver "Validación contra el juego"; bytes armados, falta un fixture real) | `HealthDecoder` |
+| `0x8D00` | Valores de una entidad, como entradas `id \| valor`: la vida es el id `00` y el HP máximo el `07`. El decoder solo lee `varint entidad \| 02 01 00 \| u32 HP` (ver "Layout de `0x8D00`") | Alta para la vida `02 01 00` (cierra con los golpes en 1.630 de 1.631 lecturas del boss de la dungeon y 1 a 1 en la comparación, ver "Validación contra el juego"; fixture `BossHealthBody`). Media para el resto de la gramática (cierra el largo de todos los `0x8D00` de las seis capturas; los ids `00` y `07`, comparados con `0x921B` en una sola entidad; fixtures `OtherResourceBody` y `TwoEntryHealthBody`) | `HealthDecoder` |
 | `0x364A` | Solo del jugador local (¿stats o buffs?): el primer varint es su entidad | Alta para la entidad (0 falsos positivos en 3 capturas, nunca otro jugador ni un NPC; fixture `LocalPlayerBody`, del mini boss). El resto: Sin decodificar (en el único fixture sobran 8 bytes en 0, ver "Jugador local") | `LocalPlayerDecoder` |
 | `0x3633` | Datos del jugador local al entrar a una zona (~2,3 KB): entidad, nombre, nivel e item level | Alta para entidad y nombre (fixture `LocalPlayerInfoBody`, de la de login; sin conteo). Media para el item level (validado contra `0x8A05`, sin conteo; fixture `LocalPlayerInfoWithItemLevelBody`). Media para el nivel, sin referencia (`0x8A05` no trae el nivel; 45 en el fixture; el decoder solo lo usa como guarda de 1 a 99 y no lo emite) | `LocalPlayerInfoDecoder` |
 | `0x3656` | Power (CP) del jugador local: `u64 actual \| u64 ?` (16 bytes); llega varias veces al cargar y vale el último | Media (validado contra `0x8A05`, sin conteo; fixture `LocalCombatPowerBody`, de la de login) | `LocalCombatPowerDecoder` |
@@ -225,11 +226,19 @@ varint victim | u32 skillId | varint killer | u16 ? | varint len + UTF-8 nombre 
 ### Layout de `0x8D00`
 
 ```text
-varint entity | 02 01 00 | u32 HP
+varint entity | u8 flags | [u8 n | n × (u8 id | u32)] si flags & 0x01 | [u8 n | n × (u8 id | u64)] si flags & 0x02
+lo que lee el decoder:  varint entity | 02 01 00 | u32 HP | (4 bytes que no lee)
 ```
 
-- Con otros tres bytes después de la entidad (por ejemplo `02 02 00`) se ignora. INTERPRETADO: son otros recursos (maná, etc.). El decoder no mira si sigue algo después del u32.
-- El test usa bytes armados con este layout, no un fixture de captura: falta uno real (principio IV). La confianza sale de las verificaciones contra los golpes (ver "Validación contra el juego").
+- **El decoder** solo lee `02 01 00`: flags `0x02` con una sola entrada u64, de id `00`, de la que toma la mitad baja. Los 4 bytes que siguen al u32 valen `00 00 00 00` en las 31.359 lecturas `02 01 00` de las seis capturas (dungeon 3.637, comparación 19.487, dungeon2 23, login 692 y mini boss 7.520). Cualquier otra forma se ignora sin contar un error.
+- **Gramática completa** (medida el 2026-10-19 con una sonda sobre las seis capturas): cierra con el largo de todos los `0x8D00`. En el bloque u64, el id `00` es la vida y el id `07` el HP máximo: en la entidad 14895 de la dungeon, un compañero de party, coinciden con su `0x921B` (14.567/15.795 y 8 lecturas más). Sin identificar: los ids del bloque u32 (`01`, `03`, `04`, `06`, `08` y `0a`–`0d`). La comparación con `0x921B` es de una sola entidad.
+- **Lecturas que hoy se pierden:** las que traen la vida con flags `0x03` o con más de una entrada en el bloque u64. Son 524 en las seis capturas (dungeon 105, comparación 337, dungeon2 5, login 30 y mini boss 47), de 14 entidades, y ninguna tiene spawn de NPC en su captura. Las que se pudieron identificar son jugadores: el local y un compañero de la party. Hoy no cambia la vida de ningún objetivo ni `TargetVerification`, pero un NPC que mande su vida así no se leería.
+- Fixtures de la dungeon, copiados tal cual:
+  - `BossHealthBody` (21:48:31 UTC): entidad 22430, npc 2300218, 9.857.918 (los 9.860.000 del spawn menos el primer golpe, de 2.082).
+  - `OtherResourceBody` (`02 01 07`): entidad 14895, 15.795, el HP máximo de su `0x921B`.
+  - `TwoEntryHealthBody` (`02 02 00`, el único de la dungeon): la misma entidad, con id `00` = 14.507 e id `07` = 14.507.
+
+  El test de `TwoEntryHealthBody` fija la lectura de hoy (no lee la vida), no la correcta.
 - Uso: es la vida del servidor para `TargetVerification`. Sin la vida del spawn, el HPmax es la mayor lectura vista.
 
 ### Jugador local (captura de login, 2026-10-15)

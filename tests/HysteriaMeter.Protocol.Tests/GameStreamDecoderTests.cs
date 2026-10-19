@@ -114,13 +114,48 @@ public class GameStreamDecoderTests
     [Fact]
     public void Decodes_health_update_and_ignores_other_resources()
     {
-        // Armados con el layout de 0x8D00: entidad 20402, prefijo 02 01 00 (vida) o 02 02 00 (otro recurso).
+        // Armados con el layout de 0x8D00: entidad 20402, entrada única de vida (02 01 00, sin los 4 bytes en 0 que traen
+        // los reales) o de otro valor (02 01 07, completa como RealCapture.OtherResourceBody). Errors en 0: se ignora por
+        // el prefijo, no por un error de lectura.
         var hp = CreateDecoder().Push(Frame(0x8D00, Hex("b2 9f 01 02 01 00 a0 86 01 00")), T0);
-        var other = CreateDecoder().Push(Frame(0x8D00, Hex("b2 9f 01 02 02 00 a0 86 01 00")), T0);
+        var otherDecoder = CreateDecoder();
+        var other = otherDecoder.Push(Frame(0x8D00, Hex("b2 9f 01 02 01 07 a0 86 01 00 00 00 00 00")), T0);
 
         var health = Assert.IsType<HealthEvent>(Assert.Single(hp));
         Assert.Equal((20402UL, 100000L), (health.EntityId, health.Hp));
         Assert.Empty(other);
+        Assert.Equal(0, otherDecoder.Stats.Errors);
+    }
+
+    [Fact]
+    public void Decodes_real_boss_health_update()
+    {
+        var events = CreateDecoder().Push(Frame(0x8D00, Hex(RealCapture.BossHealthBody)), T0);
+
+        // Los 4 bytes en 0 que siguen al u32 no cambian la lectura.
+        var health = Assert.IsType<HealthEvent>(Assert.Single(events));
+        Assert.Equal((22430UL, 9_857_918L), (health.EntityId, health.Hp));
+    }
+
+    [Fact]
+    public void Real_update_of_another_resource_produces_no_event()
+    {
+        var decoder = CreateDecoder();
+
+        Assert.Empty(decoder.Push(Frame(0x8D00, Hex(RealCapture.OtherResourceBody)), T0));
+        Assert.Equal(0, decoder.Stats.Errors);
+    }
+
+    [Fact]
+    public void Health_inside_a_two_entry_update_is_not_read_yet()
+    {
+        // Fija la lectura actual, no la correcta: el cuerpo trae la vida (id 00) y la vida máxima (id 07), pero el decoder
+        // solo entiende 02 01 00. En las seis capturas solo pasa con entidades sin spawn de NPC en la captura (en la
+        // dungeon, el jugador local y uno de la party).
+        var decoder = CreateDecoder();
+
+        Assert.Empty(decoder.Push(Frame(0x8D00, Hex(RealCapture.TwoEntryHealthBody)), T0));
+        Assert.Equal(0, decoder.Stats.Errors);
     }
 
     [Fact]
