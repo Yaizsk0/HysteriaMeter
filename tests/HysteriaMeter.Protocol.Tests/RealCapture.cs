@@ -123,6 +123,23 @@ internal static class RealCapture
     /// <summary>Invocación sin nombre de dueño: entidad 30599, NPC 2920655.</summary>
     public const string SummonWithoutOwnerBody = "87 ef 01 5f 00 00 cf 90 2c 00 40 02";
 
+    /// <summary>
+    /// Invocación de un bloque sin nombre de dueño (0x3641 tipo 0x5F, dungeon, 21:45:16 UTC), completa: entidad 17893,
+    /// NPC 2920655 (el espíritu del Hechicero, que pega con Bittercold Wind), vida 15.438 de 15.438 (<c>ce 78 ce 78</c>). En
+    /// la cola (byte 35) viene una sola marca <c>80 75 d5 2a bb 03 00 00</c> (byte 69 de la cola) y después <c>e5 8b 01</c>
+    /// (e2 = 17893, la propia invocación), <c>01</c> (k1), <c>02</c>, la posición del spawn y <c>07 02 06 9c 3e 00 00</c>: el
+    /// dueño, 16028 (byte 97 de la cola), el jugador de clase 15 de la dungeon (el de <see cref="PlayerSpawnBody"/>), que
+    /// es el único de su clase en la party. La cadena de 8 bytes con prefijo de largo que sigue (INTERPRETADO: el nombre de
+    /// la legión) se reemplazó por "Legiones"; el resto son los bytes de la captura.
+    /// </summary>
+    public const string SummonWithOwnerInTailBody =
+        "e5 8b 01 5f 00 00 cf 90 2c 00 40 02 6b 6e f7 44 a9 63 64 c5 00 00 1c c3 c3 a4 8a 43 2f c5 01 ce "
+        + "78 ce 78 3e 0e 00 00 3e 0e 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 3f 02 00 64 00 00 00 f0 "
+        + "49 02 00 01 00 00 00 00 00 00 00 a0 86 01 00 00 00 00 00 d0 4e 09 00 01 01 01 11 01 81 96 98 00 "
+        + "ff ff ff ff ff ff ff ff 80 75 d5 2a bb 03 00 00 e5 8b 01 01 02 6b 6e f7 44 a9 63 64 c5 00 00 1c "
+        + "c3 07 02 06 9c 3e 00 00 de 00 00 00 00 00 79 05 08 4c 65 67 69 6f 6e 65 73 01 00 01 00 00 00 00 "
+        + "00 00 00 00 00 00 00 00 00 00 00 02 cd 00 5e 09 00 00 d0 00 73 01 00 00 2d 00 00 00 00";
+
     /// <summary>Paquete del jugador local (0x364A, captura del mini boss): entidad 1879.</summary>
     public const string LocalPlayerBody = "d7 0e 01 38 00 e0 00 00 00 00 00 00 00 00 00 00 00";
 
