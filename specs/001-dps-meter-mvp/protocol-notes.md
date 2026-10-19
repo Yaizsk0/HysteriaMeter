@@ -27,7 +27,7 @@ Segunda captura: 2026-10-14, dungeon en party de 5 (7 min, 3,7 MB, Wi-Fi). Serve
 |---|---|---|---|
 | `0xFFFF` | Bundle LZ4 | Alta (82/82 descomprimen) | `GameStreamDecoder` |
 | `0x3804` | Resultado de efecto sobre un objetivo; con `flags & 0x04` trae daño | Alta en el layout (913/913 parsean) y en la escala (ver "Validación contra el juego") | `DamagePacketDecoder` |
-| `0x3805` | Tick de efecto periódico: type `0x0A` = DoT, `0x0B` = curación a otro, `0x09` = curación propia | Alta para DoT; curación sin validar | `PeriodicEffectDecoder` |
+| `0x3805` | Tick de efecto periódico: type `0x0A` = DoT, `0x0B` = curación a otro, `0x09` = curación propia | Alta para DoT; curación sin validar (hay fixture real de `0x09` y `0x0B`; el `0x0B` trae un varint más antes del `skillId` y el monto que se lee hoy no parece lo curado por tick, ver el layout) | `PeriodicEffectDecoder` |
 | `0x3641` | Aparición de NPC o invocación: entidad, nombre del dueño opcional, ID de NPC, posición, HP actual y máximo | Alta | `NpcSpawnDecoder` |
 | `0x3645` | Aparición de otro jugador (1,5–2 KB) con su nombre | Alta para el nombre | `PlayerSpawnDecoder` |
 | `0x8D04` | Muerte: víctima, skill, quien mató, nombre y legión (en dungeons llega con killer 0 y sin nombre) | Alta | `KillPacketDecoder` |
@@ -74,6 +74,9 @@ varint target | u8 type | varint source | varint tickSeq | u32 instance | varint
 
 - `instance` y `skillId` coinciden con los del `0x3804` que aplicó el efecto.
 - `type = 0x00`: otro formato, sin monto (se ignora).
+- `type = 0x0B` trae un varint más entre `amount` y `skillId` (captura de comparación del 2026-10-17: así cierran los 3.309 ticks y las skills coinciden con las de `0x09` y `0x0A`; con el layout de arriba sobran 1 o 2 bytes). El decoder todavía no lo lee, así que la skill de esos ticks sale mal.
+- En esa captura, `amount` no parece lo curado por tick, ni en el `0x09` ni en el `0x0B`. Con A = `amount` y B = el varint extra del `0x0B`: de un `0x0B` al siguiente del mismo efecto (objetivo, instancia, fuente y skill), A baja exactamente B (2.803 de 2.825 pares), y el primer `0x0B` después de un `0x09` cumple A = `amount` del `0x09` − B (431 de 431). En el efecto del fixture, el `0x09` trae 8411 y los 14 `0x0B` siguientes, cada 2 s, traen A = 7851, 7291, …, 571 con B = 560. Se ve como si el `0x09` trajera el total del HoT, A lo que queda y B lo curado en el tick, pero falta confirmarlo contra el juego (T022). Mientras tanto, el monto que emite hoy el decoder para `0x09` y `0x0B` no sirve como curación: ese efecto suma 67.365 (8411 + 58.954) contra 7.840 de B.
+- `type = 0x09` no es solo la curación propia: en esa captura 388 tienen fuente igual al objetivo y 353 distinta (el del fixture también).
 
 ### Layout de `0x3641`
 

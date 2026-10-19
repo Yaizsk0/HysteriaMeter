@@ -35,7 +35,8 @@ public sealed class PeriodicEffectDecoder : IPacketDecoder
         var amount = (long)reader.ReadVarUInt();
         var skill = reader.ReadUInt32();
 
-        // Las curaciones usan el mismo layout pero todavía no están validadas contra el juego.
+        // Las curaciones todavía no están validadas contra el juego: el 0x0B trae un varint más antes de la skill
+        // y el monto que se lee acá no parece lo curado por tick (ver protocol-notes, T022).
         output.Add(type == DamageTick
             ? new DamageEvent(timestamp, source, target, skill, amount, HitModifiers.DamageOverTime)
             : new HealEvent(timestamp, source, target, skill, amount));

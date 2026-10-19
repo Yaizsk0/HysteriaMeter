@@ -59,7 +59,7 @@ description: "Tareas de la feature 002: precisión del combate"
 ## Phase 7: User Story 5 - Curación y daño recibido (P2)
 
 - [ ] T022 [US5] Research: validar `0x3805` `0x09`/`0x0B` y encontrar la curación directa con un healer en party
-- [ ] T023 [P] [US5] `HealEvent` desde los decoders validados + test con bytes reales
+- [ ] T023 [P] [US5] `HealEvent` desde los decoders validados + test con bytes reales (parcial: los ticks `0x09` y `0x0B` de `0x3805` ya tienen fixture real de la captura de comparación del 2026-10-17. El `0x09` cierra con el layout del decoder; el `0x0B` trae un varint más (B) entre el monto (A) y la skill, y el decoder lee mal la skill. El monto que emite hoy tampoco sirve como curación: en la captura A baja exactamente B de un `0x0B` al siguiente (2.803/2.825 pares; en el fixture, de 560 en 560 desde 7851 hasta 571) y el primer `0x0B` cumple A = monto del `0x09` − B (431/431), así que el `0x09` parece el total del HoT y B lo curado por tick. Falta T022: confirmarlo contra el juego y recién ahí cambiar el decoder y los tests, que hoy fijan la lectura actual)
 - [ ] T024 [P] [US5] Daño recibido por jugador y por skill de origen en `CombatEngine` + test
 - [ ] T025 [US5] Sobrecuración cuando se conoce la vida del objetivo + test
 

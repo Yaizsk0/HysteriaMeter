@@ -126,13 +126,24 @@ public class GameStreamDecoderTests
     }
 
     [Fact]
+    public void Decodes_heal_start_tick_as_heal()
+    {
+        var events = CreateDecoder().Push(Frame(0x3805, Hex(RealCapture.HealStartTickBody)), T0);
+
+        // 8411 es lo que lee hoy el decoder, no un monto validado: en la captura parece el total del HoT (T022).
+        var heal = Assert.IsType<HealEvent>(Assert.Single(events));
+        Assert.Equal((3000UL, 2000UL, 0x0104C6B6U, 8411L), (heal.SourceId, heal.TargetId, heal.SkillId, heal.Amount));
+    }
+
+    [Fact]
     public void Decodes_heal_tick_as_heal()
     {
-        var body = Hex(RealCapture.DotTickBody);
-        body[3] = 0x0B; // mismo layout, tipo curación
+        var events = CreateDecoder().Push(Frame(0x3805, Hex(RealCapture.HealTickBody)), T0);
 
-        var heal = Assert.IsType<HealEvent>(Assert.Single(CreateDecoder().Push(Frame(0x3805, body), T0)));
-        Assert.Equal((1244UL, 22430UL, 1401L), (heal.SourceId, heal.TargetId, heal.Amount));
+        // Fija la lectura actual, no un monto validado: el 7851 baja 560 por tick, como si fuera el resto del HoT.
+        // Sin la skill: en el 0x0B viene después de un varint que el decoder no lee (falta validar, T022).
+        var heal = Assert.IsType<HealEvent>(Assert.Single(events));
+        Assert.Equal((3000UL, 2000UL, 7851L), (heal.SourceId, heal.TargetId, heal.Amount));
     }
 
     [Fact]
