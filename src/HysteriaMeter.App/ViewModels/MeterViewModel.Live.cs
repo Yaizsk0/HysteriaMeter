@@ -310,7 +310,7 @@ public sealed partial class MeterViewModel
     [ObservableProperty]
     public partial string TargetHealthPercent { get; set; } = string.Empty;
 
-    /// <summary>Vida absoluta, "muere en m:ss" y la auto-verificación del daño, en el tooltip del porcentaje.</summary>
+    /// <summary>Vida absoluta, "muere en m:ss" y la verificación del objetivo principal, en el tooltip del porcentaje.</summary>
     [ObservableProperty]
     public partial string TargetHealthTip { get; set; } = string.Empty;
 
