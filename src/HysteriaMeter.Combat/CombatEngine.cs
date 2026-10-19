@@ -238,12 +238,24 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
         var source = Entities.Canonical(e.SourceId);
         var target = Entities.Canonical(e.TargetId);
-        if (Entities.IsNpc(source) && Entities.IsNpc(target) && Entities.TryAdoptSummon(source, e.SkillId, out var owner))
+
+        // Una invocación que pega antes de su spawn no tiene npcId todavía: se la trata como una sin dueño, no como jugador.
+        var npcSource = Entities.IsNpc(source) || Entities.IsPresumedSummon(e.SourceId, e.SkillId, target);
+        if (npcSource && source != target && Entities.IsNpc(target) && Entities.TryAdoptSummon(source, e.SkillId, out var owner))
         {
             source = owner; // invocación sin dueño que le pega a un monstruo con una skill de jugador
+            npcSource = false;
         }
 
-        if (Entities.IsNpc(source))
+        // Con los dueños resueltos, la invocación que se pega a sí misma al vencer (su vida más 100.000, skill 16990004),
+        // la que le pega a su dueño o el dueño que le pega a su invocación quedan de un jugador a sí mismo: no es daño a
+        // un enemigo ni daño recibido.
+        if (source == target && (source != e.SourceId || target != e.TargetId))
+        {
+            return;
+        }
+
+        if (npcSource)
         {
             // Invocación sin dueño que no se pudo atribuir (por ejemplo, dos jugadores de su clase en la party): no entra al
             // ranking ni sostiene la pelea, pero le baja la vida al monstruo, así que la verificación la suma, como a los

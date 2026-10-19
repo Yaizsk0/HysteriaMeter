@@ -147,6 +147,126 @@ public class SummonAttributionTests
         Assert.Equal(OldCaster, engine.Entities.Canonical(Summon));
     }
 
+    [Fact]
+    public void The_owner_id_of_the_spawn_wins_over_the_class_even_before_the_owner_is_seen()
+    {
+        // El dueño de la cola del 0x3641 puede no haber aparecido todavía: igual es él, no el único jugador conocido de
+        // la clase.
+        var engine = CreateEngine();
+        engine.Scope = ActorScope.Everyone;
+        engine.Apply(new EntityInfoEvent(T0, Caster, "Hechicera", 15));
+        engine.Apply(new PartyMemberSeenEvent(T0, Caster));
+        engine.Apply(new EntitySpawnEvent(T0, Summon, OldCaster, NpcId: 2_920_650));
+
+        engine.Apply(Hit(1, 2_000));
+
+        var actor = Assert.Single(engine.CurrentSnapshot()!.Actors);
+        Assert.Equal((OldCaster, 2_000L), (actor.Id, actor.Damage));
+    }
+
+    [Theory]
+    [InlineData("id")]
+    [InlineData("nombre")]
+    [InlineData("clase")]
+    public void A_respawned_id_forgets_its_previous_owner(string previousOwner)
+    {
+        var engine = CreateEngine();
+        engine.Apply(new EntityInfoEvent(T0, Caster, "Hechicera", 15));
+        engine.Apply(new PartyMemberSeenEvent(T0, Caster));
+        switch (previousOwner)
+        {
+            case "id":
+                engine.Apply(new EntitySpawnEvent(T0, Summon, Caster, NpcId: 2_920_650));
+                break;
+            case "nombre":
+                engine.Apply(new EntitySpawnEvent(T0, Summon, null, NpcId: 2_920_650, OwnerName: "Hechicera"));
+                break;
+            default:
+                engine.Apply(Hit(1, 2_000)); // adoptada por la clase
+                break;
+        }
+
+        Assert.Equal(Caster, engine.Entities.Canonical(Summon));
+
+        // El juego reusa el id: para la invocación de otro jugador y después para un monstruo.
+        engine.Apply(new EntitySpawnEvent(At(10), Summon, OldCaster, NpcId: 2_920_650));
+        Assert.Equal(OldCaster, engine.Entities.Canonical(Summon));
+        engine.Apply(new EntitySpawnEvent(At(20), Summon, null, NpcId: 12_346));
+        Assert.Equal(Summon, engine.Entities.Canonical(Summon));
+    }
+
+    [Fact]
+    public void A_summon_hitting_before_its_spawn_is_not_ranked_but_the_verification_counts_it()
+    {
+        // Antes de su 0x3641 la invocación no tiene npcId. Pega con una skill que hasta ahí solo usaron invocaciones, así
+        // que no es un jugador; con dos jugadores de su clase no se adopta, pero le baja la vida al boss.
+        var engine = CreateEngine();
+        engine.Scope = ActorScope.Everyone;
+        engine.Apply(new EntityInfoEvent(T0, Caster, "Hechicera", 15));
+        engine.Apply(new EntityInfoEvent(T0, OldCaster, "OtraHechicera", 15));
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12_345, Hp: 10_000, MaxHp: 10_000));
+        engine.Apply(new DamageEvent(At(1), Me, Boss, 1, 1_000, HitModifiers.None));
+        engine.Apply(Hit(2, 2_000));
+        engine.Apply(new DamageEvent(At(3), UnknownSource, Boss, BittercoldWind, 3_000, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(3), Boss, 4_000));
+
+        var snapshot = engine.CurrentSnapshot()!;
+        Assert.Equal([(Me, 1_000L)], snapshot.Actors.Select(a => (a.Id, a.Damage)));
+        var verification = Assert.Single(snapshot.Verifications!);
+        Assert.Equal((6_000L, true), (verification.Counted, verification.Closes));
+    }
+
+    [Fact]
+    public void A_summon_hitting_before_its_spawn_goes_to_the_only_player_of_its_class_until_the_spawn_says_otherwise()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new EntityInfoEvent(T0, Caster, "Hechicera", 15));
+        engine.Apply(new PartyMemberSeenEvent(T0, Caster));
+        engine.Apply(Hit(1, 2_000));
+
+        engine.Apply(new DamageEvent(At(2), UnknownSource, Boss, BittercoldWind, 3_000, HitModifiers.None));
+
+        var actor = Assert.Single(engine.CurrentSnapshot()!.Actors);
+        Assert.Equal((Caster, 5_000L), (actor.Id, actor.Damage));
+        Assert.Equal(Caster, engine.Entities.Canonical(UnknownSource));
+
+        // Su spawn trae otro dueño en la cola: manda sobre la adopción.
+        engine.Apply(new EntitySpawnEvent(At(3), UnknownSource, OldCaster, NpcId: 2_920_655));
+        Assert.Equal(OldCaster, engine.Entities.Canonical(UnknownSource));
+    }
+
+    [Fact]
+    public void A_skill_a_known_player_used_does_not_make_an_unknown_source_a_summon()
+    {
+        var engine = CreateEngine();
+        engine.Scope = ActorScope.Everyone;
+        engine.Apply(new EntityInfoEvent(T0, Caster, "Hechicera", 15));
+        engine.Apply(new EntityInfoEvent(T0, OldCaster, "OtraHechicera", 15));
+        engine.Apply(Hit(1, 2_000));
+        engine.Apply(new DamageEvent(At(2), Caster, Boss, BittercoldWind, 1_000, HitModifiers.None));
+
+        engine.Apply(new DamageEvent(At(3), UnknownSource, Boss, BittercoldWind, 3_000, HitModifiers.None));
+
+        Assert.Equal([(Caster, 1_000L), (UnknownSource, 3_000L)],
+            engine.CurrentSnapshot()!.Actors.Select(a => (a.Id, a.Damage)).OrderBy(a => a.Id));
+    }
+
+    [Fact]
+    public void Hits_between_a_player_and_its_own_summon_are_neither_damage_nor_damage_taken()
+    {
+        // La invocación que se pega a sí misma al vencer (su vida más 100.000), la que le pega a su dueño y el dueño que
+        // le pega a su invocación: con el dueño resuelto son de un jugador a sí mismo.
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, Summon, Me, NpcId: 2_920_113));
+        engine.Apply(new DamageEvent(At(1), Me, Boss, 1, 1_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Summon, Summon, 16_990_004, 114_071, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(3), Summon, Me, 1_600_865, 2_363, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(4), Me, Summon, 16_770_001, 300, HitModifiers.None));
+
+        var actor = Assert.Single(engine.CurrentSnapshot()!.Actors);
+        Assert.Equal((Me, 1_000L, 0L), (actor.Id, actor.Damage, actor.DamageTaken));
+    }
+
     private static CombatEngine CreateEngine()
     {
         var engine = new CombatEngine();

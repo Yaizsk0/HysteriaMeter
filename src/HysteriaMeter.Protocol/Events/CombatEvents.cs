@@ -7,9 +7,9 @@ public abstract record CombatEvent(DateTimeOffset Timestamp);
 public sealed record LocalPlayerEvent(DateTimeOffset Timestamp, ulong EntityId, string? Name) : CombatEvent(Timestamp);
 
 /// <summary>
-/// Aparece una entidad. <paramref name="OwnerId"/> se completa para invocaciones / entidades de combate transitorias.
-/// Algunas invocaciones no traen el ID del dueño sino su nombre (<paramref name="OwnerName"/>); el motor lo
-/// resuelve contra los nombres de jugadores que conoce.
+/// Aparece una entidad. <paramref name="OwnerId"/> es el id de entidad del dueño de una invocación, leído de la cola
+/// del 0x3641 cuando tiene la forma conocida. Algunas traen además, o en su lugar, el nombre del dueño
+/// (<paramref name="OwnerName"/>); el motor lo resuelve contra los nombres de jugadores que conoce.
 /// </summary>
 public sealed record EntitySpawnEvent(DateTimeOffset Timestamp, ulong EntityId, ulong? OwnerId, uint? NpcId, string? OwnerName = null, long? Hp = null, long? MaxHp = null) : CombatEvent(Timestamp);
 

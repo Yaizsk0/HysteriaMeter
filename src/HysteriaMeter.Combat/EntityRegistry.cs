@@ -4,7 +4,9 @@ namespace HysteriaMeter.Combat;
 
 /// <summary>
 /// Canonicaliza IDs: un jugador puede pegar con IDs transitorios (entidad de combate, invocaciones)
-/// que se reasignan a su ID "dueño" estable. Además guarda nombres y clase cuando llegan.
+/// que se reasignan a su ID "dueño" estable. El dueño sale, en este orden, del id de la cola del spawn, del nombre
+/// del dueño o de la clase de la skill (<see cref="TryAdoptSummon"/>); un spawn nuevo del mismo id lo borra. Además
+/// guarda nombres y clase cuando llegan.
 /// </summary>
 public sealed class EntityRegistry
 {
@@ -21,6 +23,12 @@ public sealed class EntityRegistry
     private readonly Dictionary<ulong, Health> _health = [];
     private readonly Dictionary<ulong, Health> _serverHealth = [];
     private readonly HashSet<ulong> _deadNpcs = [];
+
+    /// <summary>Skills de clase que se vieron en una invocación (un cuerpo con npcId) pegándole a otro NPC.</summary>
+    private readonly HashSet<uint> _summonSkills = [];
+
+    /// <summary>Skills de clase que se vieron en un jugador con identidad (ver <see cref="HasPlayerIdentity"/>).</summary>
+    private readonly HashSet<uint> _playerSkills = [];
     private DateTimeOffset _now;
     private string? _localName;
     private (int? ItemLevel, long? CombatPower)? _localGear;
@@ -75,8 +83,12 @@ public sealed class EntityRegistry
                 _partySeenAt[member.EntityId] = member.Timestamp;
                 break;
             case EntitySpawnEvent spawn:
+                // El juego reusa ids: el dueño anterior (de la cola, por nombre o adoptado por clase) ya no vale.
+                _owners.Remove(spawn.EntityId);
+                _pendingOwnerNames.Remove(spawn.EntityId);
                 if (spawn.OwnerId is { } owner && owner != spawn.EntityId)
                 {
+                    // El id del dueño de la cola del 0x3641 manda sobre el nombre y sobre la adopción por clase.
                     _owners[spawn.EntityId] = owner;
                 }
                 else if (spawn.OwnerName is { } ownerName)
@@ -118,6 +130,9 @@ public sealed class EntityRegistry
                     Update(localId, p => p with { CombatPower = power.CombatPower });
                 }
 
+                break;
+            case DamageEvent damage when damage.Amount > 0 && ClassOfSkill(damage.SkillId) is not null:
+                LearnSkillUser(damage);
                 break;
             case DeathEvent death when IsNpc(death.EntityId):
                 _deadNpcs.Add(death.EntityId);
@@ -270,6 +285,47 @@ public sealed class EntityRegistry
         owner = uniqueOwner;
         _owners[summonId] = owner;
         return true;
+    }
+
+    /// <summary>
+    /// Evidencia de que una entidad es un jugador y no una invocación: el local, un nombre, el equipo (item level o
+    /// power) o haberla visto en la party. La clase no cuenta: se deduce del daño y una invocación también la tiene.
+    /// </summary>
+    public bool HasPlayerIdentity(ulong id) =>
+        id == LocalPlayerId
+        || _partySeenAt.ContainsKey(id)
+        || Profile(id) is { NpcId: null } profile && (profile.Name is not null || profile.ItemLevel is not null || profile.CombatPower is not null);
+
+    /// <summary>
+    /// Una invocación que pega antes de su spawn, o cuyo spawn no se capturó: todavía no tiene npcId, así que se vería
+    /// como un jugador. Lo es si no tiene dueño ni identidad de jugador y le pega a un NPC con una skill de clase que
+    /// hasta ahora solo usaron invocaciones (nunca un jugador con identidad). La primera vez que se ve una skill no hay
+    /// de dónde saberlo.
+    /// </summary>
+    public bool IsPresumedSummon(ulong sourceId, uint skillId, ulong canonicalTarget) =>
+        !IsNpc(sourceId)
+        && Canonical(sourceId) == sourceId
+        && !_pendingOwnerNames.ContainsKey(sourceId)
+        && !HasPlayerIdentity(sourceId)
+        && sourceId != canonicalTarget
+        && IsNpc(canonicalTarget)
+        && _summonSkills.Contains(skillId)
+        && !_playerSkills.Contains(skillId);
+
+    /// <summary>Anota quién usa una skill de clase: una invocación contra otro NPC o un jugador con identidad.</summary>
+    private void LearnSkillUser(DamageEvent damage)
+    {
+        if (IsNpc(damage.SourceId))
+        {
+            if (damage.SourceId != damage.TargetId && IsNpc(Canonical(damage.TargetId)))
+            {
+                _summonSkills.Add(damage.SkillId);
+            }
+        }
+        else if (HasPlayerIdentity(damage.SourceId))
+        {
+            _playerSkills.Add(damage.SkillId);
+        }
     }
 
     private bool TryGetOwner(ulong id, out ulong owner)
