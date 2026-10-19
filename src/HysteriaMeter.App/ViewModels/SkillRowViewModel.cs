@@ -26,7 +26,7 @@ public sealed partial class SkillRowViewModel : ObservableObject
 
     private string _dotNote = string.Empty;
 
-    /// <summary>Tooltip de la fila: las columnas que el mock no muestra (ESPALDA y PROM.) y cómo renombrarla.</summary>
+    /// <summary>Tooltip de la fila: PROM., ESPALDA (su columna se oculta con la ventana angosta) y cómo renombrarla.</summary>
     [ObservableProperty]
     public partial string Tip { get; set; } = string.Empty;
 
@@ -50,7 +50,19 @@ public sealed partial class SkillRowViewModel : ObservableObject
     public partial string Critical { get; set; } = string.Empty;
 
     [ObservableProperty]
+    public partial string Perfect { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string DoubleHit { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Front { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial string Back { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string MultiHit { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string MaxHit { get; set; } = string.Empty;
@@ -78,12 +90,25 @@ public sealed partial class SkillRowViewModel : ObservableObject
         Share = skill.Share.ToString("P1", culture);
         Hits = skill.Hits.ToString("N0", culture);
         Critical = Rate(skill.Hits, skill.Crits);
-        Back = Rate(counts.Hits, counts.Back);
+        SetModifiers(counts);
         MaxHit = skill.Hits == 0 ? "–" : ActorRowViewModel.Compact(skill.MaxHit);
         Average = skill.Hits == 0 ? "–" : ActorRowViewModel.Compact((double)skill.DirectDamage / skill.Hits);
         Dps = ActorRowViewModel.Compact(skill.Damage / duration.TotalSeconds);
         Bar = top == 0 ? 0 : (double)skill.Damage / top;
         Tip = TipText(Back, Average) + Environment.NewLine + "Doble clic para ponerle nombre";
+    }
+
+    /// <summary>
+    /// PERF., DOBLE, FRENTE, ESPALDA y MULTI: el % de golpes con ese modificador, como las columnas de Combat Analysis.
+    /// Van sobre los golpes con modificadores leídos (<see cref="HitCounts.Hits"/>), no sobre GOLPES.
+    /// </summary>
+    public void SetModifiers(HitCounts counts)
+    {
+        Perfect = Rate(counts.Hits, counts.Perfect);
+        DoubleHit = Rate(counts.Hits, counts.DoubleHit);
+        Front = Rate(counts.Hits, counts.Front);
+        Back = Rate(counts.Hits, counts.Back);
+        MultiHit = Rate(counts.Hits, counts.MultiHit);
     }
 
     /// <summary>"Por la espalda 25% · promedio 9.0k por golpe directo (sin ticks de DoT)".</summary>
