@@ -140,6 +140,8 @@ El meter lee todas las actualizaciones de vida que manda el servidor, también l
 
 El menú "⋯" del overlay se abre sin problemas. Desde el rediseño, abrirlo cerraba el meter por un error de estilo en los separadores del menú. Ahora se ve como en el diseño: los ítems con el estilo del overlay y los separadores como una línea fina.
 
+Cuatro skills que el detalle mostraba como "Skill 12060240" y parecidos ya tienen nombre: Punishing Strike, Decisive Strike y Desperate Strike del Templario, y la teostone Ulgorn's Will. Salen de comparar una pelea con la vista detallada de Combat Analysis, donde coincidían el daño, los golpes y los críticos, y van en `data/skills.json`, que completa la lista de MetaBot.GG.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).

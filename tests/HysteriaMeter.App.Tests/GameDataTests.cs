@@ -35,6 +35,19 @@ public class GameDataTests
     }
 
     [Fact]
+    public void Published_skill_names_cover_the_skills_compared_with_Combat_Analysis()
+    {
+        var names = SkillNames.Load(FindRepoFile("skills.json"));
+
+        // Los IDs como llegaron en la pelea comparada: las variantes de clase toman el nombre de la base.
+        Assert.Equal("Punishing Strike", names.Of(12060240));
+        Assert.Equal("Decisive Strike", names.Of(12020040));
+        Assert.Equal("Desperate Strike", names.Of(12030040));
+        Assert.Equal("Theostone: Ulgorn's Will", names.Of(3000019));
+        Assert.Equal("Skill 1900911", names.Of(1900911));
+    }
+
+    [Fact]
     public void Skill_icons_fall_back_to_the_base_skill()
     {
         var folder = Directory.CreateTempSubdirectory().FullName;
@@ -79,5 +92,20 @@ public class GameDataTests
         var npcs = NpcTable.Load(extracted, broken);
 
         Assert.Equal("Ambición de Kromede", npcs.Of(2300371)?.Name);
+    }
+
+    /// <summary>Sube desde la carpeta de salida hasta la raíz del repo y devuelve <c>data/&lt;archivo&gt;</c>.</summary>
+    private static string FindRepoFile(string name)
+    {
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        {
+            var candidate = Path.Combine(dir.FullName, "data", name);
+            if (File.Exists(candidate) && File.Exists(Path.Combine(dir.FullName, "HysteriaMeter.slnx")))
+            {
+                return candidate;
+            }
+        }
+
+        throw new FileNotFoundException($"No se encontró data/{name} en la raíz del repo.");
     }
 }
