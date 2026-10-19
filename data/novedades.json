@@ -62,6 +62,7 @@
     {"id": 105, "text": "Punishing Strike, Decisive Strike, Desperate Strike y la teostone Ulgorn's Will ya aparecen con su nombre en el detalle."},
     {"id": 106, "text": "El detalle muestra por skill el % de golpes perfectos, dobles, de frente, por la espalda y múltiples, como Combat Analysis."},
     {"id": 107, "text": "En modo compacto, la franja de arriba muestra el objetivo de la pelea y su % de vida."},
-    {"id": 108, "text": "Divine Auldor y Destroyer Tarka se ven con su nombre, como en Combat Analysis."}
+    {"id": 108, "text": "Divine Auldor y Destroyer Tarka se ven con su nombre, como en Combat Analysis."},
+    {"id": 102, "text": "Las invocaciones sin nombre suman al DPS de su dueño, que el meter lee del juego en vez de adivinarlo por la clase."}
   ]
 }

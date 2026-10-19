@@ -148,6 +148,10 @@ En modo compacto, durante la pelea la franja de arriba muestra contra quién es 
 
 `data/npcs.json` ya trae los bosses de las dos peleas de referencia, con el nombre que muestra Combat Analysis: Divine Auldor (Urugugu Canyon) y Destroyer Tarka. Las peleas nuevas contra ellos ya no salen como "NPC 2300218" o "NPC 2101106" y cuentan como boss aunque sean cortas. Los demás monstruos siguen con su plantilla hasta que se agreguen.
 
+Las invocaciones sin nombre suman al DPS de su dueño: el meter lo lee del aviso de aparición que manda el juego, en vez de adivinarlo por la clase. Las que pegan antes de aparecer ya no figuran como jugadores, sus muertes no cuentan como muertes de jugadores y los golpes entre un jugador y su propia invocación no suman DPS.
+
+En una pausa del daño, la pelea sigue abierta solo si pegan otros NPC (los adds), no el objetivo principal: así corta Combat Analysis. Contra Destroyer Tarka, el intento de 3 s ya no se une al kill y el daño vuelve a dar 648.468, igual que el juego.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
