@@ -61,6 +61,29 @@ internal static class RealCapture
     /// <summary>Tick de DoT (0x3805, type 0x0A) de la dungeon: objetivo 22430, fuente 1244, valor 1401, skill 0x00B87B76.</summary>
     public const string DotTickBody = "9e af 01 0a dc 09 07 1b e8 0f 48 f9 0a 76 7b b8 00";
 
+    /// <summary>
+    /// Primera lectura de vida (0x8D00) del boss de la dungeon (21:48:31 UTC): entidad 22430 (npc 2300218, el objetivo de
+    /// <see cref="DotTickBody"/>), 9.857.918 = 9.860.000 de su spawn menos el primer golpe (2.082). Después del u32 vienen
+    /// 4 bytes que el decoder no lee: <c>00 00 00 00</c> en las 31.359 lecturas <c>02 01 00</c> de las seis capturas
+    /// (con las entradas de 8 bytes de <see cref="TwoEntryHealthBody"/>, parecen la mitad alta de un u64).
+    /// </summary>
+    public const string BossHealthBody = "9e af 01 02 01 00 7e 6b 96 00 00 00 00 00";
+
+    /// <summary>
+    /// 0x8D00 de otro recurso (prefijo <c>02 01 07</c>) de un compañero de party, entidad 14895: 15.795, el HP máximo que
+    /// trae su 0x921B. Entrada única con id 07: no es la vida (id 00).
+    /// </summary>
+    public const string OtherResourceBody = "af 74 02 01 07 b3 3d 00 00 00 00 00 00";
+
+    /// <summary>
+    /// El único 0x8D00 <c>02 02 00</c> de la dungeon, de la misma entidad 14895, 400 ms antes de
+    /// <see cref="OtherResourceBody"/>. No es otro recurso: el segundo byte cuenta entradas (id + 8 bytes), y trae la vida
+    /// (id 00, 14.507) y el HP máximo (id 07, 14.507). Los 0x8D00 de las seis capturas cierran con
+    /// <c>u8 flags | [u8 n | (id u32)×n] si flags &amp; 1 | [u8 n | (id u64)×n] si flags &amp; 2</c>, y en los siguientes de
+    /// esta entidad el id 00 y el id 07 coinciden con su 0x921B (14.567/15.795). El decoder no la lee.
+    /// </summary>
+    public const string TwoEntryHealthBody = "af 74 02 02 00 ab 38 00 00 00 00 00 00 07 ab 38 00 00 00 00 00 00";
+
     /// <summary>0x3805 con type 0x00: otro formato, sin monto.</summary>
     public const string PeriodicWithoutAmountBody = "a3 81 02 00 a3 81 02 01 0a e1 f5 05";
 
