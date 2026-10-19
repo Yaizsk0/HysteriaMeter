@@ -11,8 +11,9 @@
   //   0x8D04  muerte, con skill, ID y nombre del que mató (en dungeons llega vacío)
   //   0x364A  solo del jugador local: el primer varint es su entidad (llega en el primer bundle de
   //           cada conexión; cada cambio de zona abre conexión nueva y cambia la entidad)
-  //   0x8D00  vida actual: varint entidad | 02 01 00 | u32 HP (solo se lee ese prefijo; 02 01 07 es otro valor y
-  //           02 02 00 trae dos entradas, la vida con id 00 y el id 07)
+  //   0x8D00  valores de una entidad: varint entidad | u8 flags | [u8 n | n × (u8 id | u32)] si flags & 0x01 |
+  //           [u8 n | n × (u8 id | u64)] si flags & 0x02. Se lee entera y se emite la vida, el id 00 del bloque u64
+  //           (el id 07 es el HP máximo y no se emite; los ids del bloque u32, sin identificar)
   //   0x921B  HP/MP de un miembro de la party (~1 por segundo y por miembro): varint entidad | varint hp | varint hpMax | ...
   //           Solo llega para compañeros de party, desde el primer segundo de la conexión.
   //   0x3633  datos del jugador local al entrar a una zona: varint entidad | 4 bytes | u8 | string nombre |

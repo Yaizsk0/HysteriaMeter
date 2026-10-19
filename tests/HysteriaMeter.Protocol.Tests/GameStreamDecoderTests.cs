@@ -114,10 +114,9 @@ public class GameStreamDecoderTests
     [Fact]
     public void Decodes_health_update_and_ignores_other_resources()
     {
-        // Armados con el layout de 0x8D00: entidad 20402, entrada única de vida (02 01 00, sin los 4 bytes en 0 que traen
-        // los reales) o de otro valor (02 01 07, completa como RealCapture.OtherResourceBody). Errors en 0: se ignora por
-        // el prefijo, no por un error de lectura.
-        var hp = CreateDecoder().Push(Frame(0x8D00, Hex("b2 9f 01 02 01 00 a0 86 01 00")), T0);
+        // Armados con el layout de 0x8D00: entidad 20402, entrada u64 única de vida (02 01 00) o de otro valor (02 01 07,
+        // como RealCapture.OtherResourceBody). Errors en 0: se ignora porque no trae la vida, no por un error de lectura.
+        var hp = CreateDecoder().Push(Frame(0x8D00, Hex("b2 9f 01 02 01 00 a0 86 01 00 00 00 00 00")), T0);
         var otherDecoder = CreateDecoder();
         var other = otherDecoder.Push(Frame(0x8D00, Hex("b2 9f 01 02 01 07 a0 86 01 00 00 00 00 00")), T0);
 
@@ -132,7 +131,7 @@ public class GameStreamDecoderTests
     {
         var events = CreateDecoder().Push(Frame(0x8D00, Hex(RealCapture.BossHealthBody)), T0);
 
-        // Los 4 bytes en 0 que siguen al u32 no cambian la lectura.
+        // La mitad alta del u64 viene en 0, como en todas las lecturas de las capturas.
         var health = Assert.IsType<HealthEvent>(Assert.Single(events));
         Assert.Equal((22430UL, 9_857_918L), (health.EntityId, health.Hp));
     }
@@ -147,15 +146,72 @@ public class GameStreamDecoderTests
     }
 
     [Fact]
-    public void Health_inside_a_two_entry_update_is_not_read_yet()
+    public void Decodes_health_from_a_two_entry_update()
     {
-        // Fija la lectura actual, no la correcta: el cuerpo trae la vida (id 00) y la vida máxima (id 07), pero el decoder
-        // solo entiende 02 01 00. En las seis capturas solo pasa con entidades sin spawn de NPC en la captura (en la
-        // dungeon, el jugador local y uno de la party).
+        // La vida (id 00) y el HP máximo (id 07) en el mismo bloque u64: sale una sola lectura, la del id 00. En el cuerpo
+        // real valen lo mismo, así que en la variante el id 07 pasa a 15.795 (el máximo de su 0x921B posterior).
+        var decoder = CreateDecoder();
+        var otherMax = Hex(RealCapture.TwoEntryHealthBody);
+        otherMax[14] = 0xb3;
+        otherMax[15] = 0x3d;
+
+        var health = Assert.IsType<HealthEvent>(Assert.Single(decoder.Push(Frame(0x8D00, Hex(RealCapture.TwoEntryHealthBody)), T0)));
+        var withOtherMax = Assert.IsType<HealthEvent>(Assert.Single(decoder.Push(Frame(0x8D00, otherMax), T0)));
+
+        Assert.Equal((14895UL, 14_507L), (health.EntityId, health.Hp));
+        Assert.Equal(14_507L, withOtherMax.Hp);
+        Assert.Equal(0, decoder.Stats.Errors);
+    }
+
+    [Fact]
+    public void Decodes_health_after_the_u32_block_of_a_flags_03_update()
+    {
         var decoder = CreateDecoder();
 
-        Assert.Empty(decoder.Push(Frame(0x8D00, Hex(RealCapture.TwoEntryHealthBody)), T0));
+        var health = Assert.IsType<HealthEvent>(Assert.Single(decoder.Push(Frame(0x8D00, Hex(RealCapture.FlagsBothHealthBody)), T0)));
+
+        Assert.Equal((1244UL, 23_656L), (health.EntityId, health.Hp));
         Assert.Equal(0, decoder.Stats.Errors);
+    }
+
+    [Fact]
+    public void Health_is_a_u64_bounded_to_the_u32_range()
+    {
+        // Armados: la vida es el u64 entero, no su mitad baja, con tope en uint.MaxValue (en las capturas la mitad alta
+        // siempre vale 0 y la mayor vida es 89.988.206). Una mayor cuenta como error y no se emite: 2^32 con la mitad baja
+        // salía 0, y 2^57 o una que no entra en un long desbordarían la cuenta de la verificación del motor.
+        var decoder = CreateDecoder();
+
+        var maxU32 = Assert.IsType<HealthEvent>(Assert.Single(decoder.Push(Frame(0x8D00, Hex("9e af 01 02 01 00 ff ff ff ff 00 00 00 00")), T0)));
+        Assert.Equal(4_294_967_295L, maxU32.Hp);
+        Assert.Equal(0, decoder.Stats.Errors);
+
+        Assert.Empty(decoder.Push(Frame(0x8D00, Hex("9e af 01 02 01 00 00 00 00 00 01 00 00 00")), T0)); // 2^32
+        Assert.Empty(decoder.Push(Frame(0x8D00, Hex("9e af 01 02 01 00 00 00 00 00 00 00 00 02")), T0)); // 2^57
+        Assert.Empty(decoder.Push(Frame(0x8D00, Hex("9e af 01 02 01 00 ff ff ff ff ff ff ff ff")), T0)); // no entra en un long
+        Assert.Equal(3, decoder.Stats.Errors);
+    }
+
+    // Armados a partir de RealCapture.BossHealthBody y TwoEntryHealthBody: ninguna forma de las capturas. Con bits de flags
+    // desconocidos es otra forma y se ignora sin error, como un type desconocido de 0x3805. Si la gramática no cierra con el
+    // cuerpo (termina antes de una entrada, sobran bytes o un n no coincide con las entradas) es un error de lectura: los
+    // 0x8D00 de las capturas cierran exacto, así que una cola es un cambio de formato o una mala lectura y queda a la vista
+    // en Errors. En los dos casos no sale ninguna lectura, tampoco la del id 00 que alcanzó a leerse.
+    [Theory]
+    [InlineData("9e af 01 06 01 00 7e 6b 96 00 00 00 00 00", 0)] // flags 0x06: bit 0x04 desconocido
+    [InlineData("9e af 01 82 01 00 7e 6b 96 00 00 00 00 00", 0)] // flags 0x82
+    [InlineData("9e af 01 02 01 00 7e 6b 96 00 00 00 00 00 00", 1)] // un byte de más
+    [InlineData("af 74 02 01 00 ab 38 00 00 00 00 00 00 07 ab 38 00 00 00 00 00 00", 1)] // n = 1 con dos entradas: sobra la segunda
+    [InlineData("9e af 01 02 01 00 7e 6b 96 00", 1)] // cortado en la mitad baja del u64
+    [InlineData("af 74 02 02 00 ab 38 00 00 00 00 00 00 07 ab 38", 1)] // cortado en la segunda entrada, después de la vida
+    [InlineData("9e af 01 02 ff 00 7e 6b 96 00 00 00 00 00", 1)] // n = 255 con una sola entrada
+    [InlineData("9e af 01 03 03 01 94 03 00 00 01 00 7e 6b 96 00 00 00 00 00", 1)] // n del bloque u32 que se come la vida
+    public void Malformed_health_update_produces_no_event(string body, int errors)
+    {
+        var decoder = CreateDecoder();
+
+        Assert.Empty(decoder.Push(Frame(0x8D00, Hex(body)), T0));
+        Assert.Equal(errors, decoder.Stats.Errors);
     }
 
     [Fact]
