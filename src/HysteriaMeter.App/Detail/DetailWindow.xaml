@@ -5,10 +5,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:HysteriaMeter.App.ViewModels"
         xmlns:local="clr-namespace:HysteriaMeter.App.Detail"
+        xmlns:conv="clr-namespace:HysteriaMeter.App.Converters"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:ActorDetailViewModel}"
         Title="{Binding Name, StringFormat='Detalle · {0}'}"
-        Width="1040" Height="680" MinWidth="760" MinHeight="420"
+        Width="1120" Height="680" MinWidth="760" MinHeight="420"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ResizeMode="CanResizeWithGrip" ShowInTaskbar="False"
         FontSize="13" Foreground="{DynamicResource Text}" FontFamily="{DynamicResource BodyFont}"
@@ -37,6 +38,23 @@
                 <Setter Property="FontFamily" Value="{StaticResource NumberFont}" />
                 <Setter Property="FontWeight" Value="Bold" />
                 <Setter Property="Foreground" Value="{DynamicResource Text}" />
+            </Style>
+            <!-- PERF., DOBLE, FRENTE, ESPALDA y MULTI de la tabla de skills, como en Combat Analysis. Van en columnas Auto: con
+                 la ventana angosta se ocultan para no comerse el nombre de la skill (ESPALDA sigue en el tooltip de la fila).
+                 Las cinco ocupan 320 px; por debajo de 1040 la columna SKILL quedaría con menos de ~150. -->
+            <conv:OverlayNarrowConverter x:Key="Narrow" />
+            <Style x:Key="ModifierCell" TargetType="TextBlock" BasedOn="{StaticResource Cell}">
+                <Setter Property="Width" Value="56" />
+                <Setter Property="TextAlignment" Value="Right" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Narrow}, ConverterParameter=1040}" Value="True">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+            <Style x:Key="ModifierHeader" TargetType="TextBlock" BasedOn="{StaticResource ModifierCell}">
+                <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
             </Style>
 
             <!-- KPI: etiqueta, valor grande y una línea chica (diferencia o dato de contexto) -->
@@ -124,7 +142,7 @@
                 </Style.Triggers>
             </Style>
 
-            <!-- Columnas de la tabla de skills (mock: 1fr 90 64 64 64 84 84) -->
+            <!-- Columnas de la tabla de skills (mock: 1fr 90 64 64 64 84 84), más las cinco de modificadores después de CRÍT. -->
             <DataTemplate x:Key="SkillRowCells" DataType="vm:SkillRowViewModel">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -133,6 +151,11 @@
                         <ColumnDefinition Width="72" />
                         <ColumnDefinition Width="72" />
                         <ColumnDefinition Width="72" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="92" />
                         <ColumnDefinition Width="92" />
                     </Grid.ColumnDefinitions>
@@ -149,8 +172,13 @@
                     <TextBlock Grid.Column="2" Text="{Binding Share}" Style="{StaticResource Cell}" />
                     <TextBlock Grid.Column="3" Text="{Binding Hits}" Style="{StaticResource Cell}" />
                     <TextBlock Grid.Column="4" Text="{Binding Critical}" Style="{StaticResource Cell}" />
-                    <TextBlock Grid.Column="5" Text="{Binding MaxHit}" Style="{StaticResource Cell}" />
-                    <TextBlock Grid.Column="6" Text="{Binding Dps}" Style="{StaticResource Cell}" Foreground="{DynamicResource Text}" />
+                    <TextBlock Grid.Column="5" Text="{Binding Perfect}" Style="{StaticResource ModifierCell}" />
+                    <TextBlock Grid.Column="6" Text="{Binding DoubleHit}" Style="{StaticResource ModifierCell}" />
+                    <TextBlock Grid.Column="7" Text="{Binding Front}" Style="{StaticResource ModifierCell}" />
+                    <TextBlock Grid.Column="8" Text="{Binding Back}" Style="{StaticResource ModifierCell}" />
+                    <TextBlock Grid.Column="9" Text="{Binding MultiHit}" Style="{StaticResource ModifierCell}" />
+                    <TextBlock Grid.Column="10" Text="{Binding MaxHit}" Style="{StaticResource Cell}" />
+                    <TextBlock Grid.Column="11" Text="{Binding Dps}" Style="{StaticResource Cell}" Foreground="{DynamicResource Text}" />
                 </Grid>
             </DataTemplate>
 
@@ -163,6 +191,11 @@
                         <ColumnDefinition Width="72" />
                         <ColumnDefinition Width="72" />
                         <ColumnDefinition Width="72" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="92" />
                         <ColumnDefinition Width="92" />
                     </Grid.ColumnDefinitions>
@@ -171,8 +204,13 @@
                     <TextBlock Grid.Column="2" Text="{Binding Share}" Style="{StaticResource Cell}" />
                     <TextBlock Grid.Column="3" Text="{Binding Hits}" Style="{StaticResource Cell}" />
                     <TextBlock Grid.Column="4" Text="{Binding Critical}" Style="{StaticResource Cell}" />
-                    <TextBlock Grid.Column="5" Text="{Binding MaxHit}" Style="{StaticResource Cell}" />
-                    <TextBlock Grid.Column="6" Text="{Binding Dps}" Style="{StaticResource Cell}" Foreground="{DynamicResource Text}" />
+                    <TextBlock Grid.Column="5" Text="{Binding Perfect}" Style="{StaticResource ModifierCell}" />
+                    <TextBlock Grid.Column="6" Text="{Binding DoubleHit}" Style="{StaticResource ModifierCell}" />
+                    <TextBlock Grid.Column="7" Text="{Binding Front}" Style="{StaticResource ModifierCell}" />
+                    <TextBlock Grid.Column="8" Text="{Binding Back}" Style="{StaticResource ModifierCell}" />
+                    <TextBlock Grid.Column="9" Text="{Binding MultiHit}" Style="{StaticResource ModifierCell}" />
+                    <TextBlock Grid.Column="10" Text="{Binding MaxHit}" Style="{StaticResource Cell}" />
+                    <TextBlock Grid.Column="11" Text="{Binding Dps}" Style="{StaticResource Cell}" Foreground="{DynamicResource Text}" />
                 </Grid>
             </DataTemplate>
 
@@ -492,17 +530,27 @@
                                         <ColumnDefinition Width="72" />
                                         <ColumnDefinition Width="72" />
                                         <ColumnDefinition Width="72" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="92" />
                                         <ColumnDefinition Width="92" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="SKILL" Style="{StaticResource HeaderCell}" HorizontalAlignment="Left" Margin="0"
-                                               ToolTip="Pasá el mouse por una fila para ver ESPALDA y PROM.; doble clic para renombrarla" />
+                                               ToolTip="Pasá el mouse por una fila para ver PROM. (y ESPALDA si la ventana es angosta); doble clic para renombrarla" />
                                     <TextBlock Grid.Column="1" Text="DAÑO" Style="{StaticResource HeaderCell}" />
                                     <TextBlock Grid.Column="2" Text="%" Style="{StaticResource HeaderCell}" />
                                     <TextBlock Grid.Column="3" Text="GOLPES" Style="{StaticResource HeaderCell}" />
                                     <TextBlock Grid.Column="4" Text="CRÍT." Style="{StaticResource HeaderCell}" />
-                                    <TextBlock Grid.Column="5" Text="MÁX." Style="{StaticResource HeaderCell}" />
-                                    <TextBlock Grid.Column="6" Text="DPS" Style="{StaticResource HeaderCell}" />
+                                    <TextBlock Grid.Column="5" Text="PERF." Style="{StaticResource ModifierHeader}" ToolTip="Golpes perfectos" />
+                                    <TextBlock Grid.Column="6" Text="DOBLE" Style="{StaticResource ModifierHeader}" ToolTip="Golpes dobles" />
+                                    <TextBlock Grid.Column="7" Text="FRENTE" Style="{StaticResource ModifierHeader}" ToolTip="Golpes de frente" />
+                                    <TextBlock Grid.Column="8" Text="ESPALDA" Style="{StaticResource ModifierHeader}" ToolTip="Golpes por la espalda" />
+                                    <TextBlock Grid.Column="9" Text="MULTI" Style="{StaticResource ModifierHeader}" ToolTip="Golpes múltiples" />
+                                    <TextBlock Grid.Column="10" Text="MÁX." Style="{StaticResource HeaderCell}" />
+                                    <TextBlock Grid.Column="11" Text="DPS" Style="{StaticResource HeaderCell}" />
                                 </Grid>
                             </Border>
                             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">

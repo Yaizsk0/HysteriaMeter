@@ -72,6 +72,64 @@ public sealed class OverlayFidelityTests
         });
     }
 
+    [Theory]
+    [InlineData(260)]
+    [InlineData(380)]
+    public void Compact_mode_names_the_target_in_the_header_without_covering_the_actions(double width)
+    {
+        RunOnSta(() =>
+        {
+            Application.ResourceAssembly ??= typeof(App).Assembly;
+            var app = TestApp.CurrentOrWithoutStartup();
+            app.InitializeComponent();
+            var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty,
+                new MeterPreferences { LastSeenNews = 1 }, _ => { });
+            var vm = new MeterViewModel(session);
+            session.Engine.Apply(new LocalPlayerEvent(DateTimeOffset.UnixEpoch, 1, "Local"));
+            session.Engine.Apply(new DamageEvent(DateTimeOffset.UnixEpoch, 1, 900, 100, 1000, HitModifiers.None));
+            vm.BossOnly = false;
+            vm.IsCompact = true;
+
+            var window = new OverlayWindow(vm);
+            try
+            {
+                var content = Assert.IsAssignableFrom<FrameworkElement>(window.Content);
+                content.Measure(new Size(width, 300));
+                content.Arrange(new Rect(0, 0, width, 300));
+                content.UpdateLayout();
+                var header = Assert.IsType<Grid>(window.FindName("LiveHeaderGrid"));
+                var target = Assert.IsType<DockPanel>(window.FindName("CompactTarget"));
+                var actions = Assert.IsType<StackPanel>(window.FindName("LiveActions"));
+
+                // Sin el bloque del objetivo (oculto en compacto), la franja dice contra quién es la pelea.
+                Assert.Equal(Visibility.Collapsed, Assert.IsType<Border>(window.FindName("TargetBlock")).Visibility);
+                Assert.Equal(Visibility.Visible, target.Visibility);
+                Assert.False(string.IsNullOrEmpty(vm.Title));
+                Assert.Equal(vm.Title, Assert.IsType<TextBlock>(window.FindName("CompactTargetName")).Text);
+
+                // Se recorta antes de las acciones, que siguen pegadas al borde derecho.
+                var targetBounds = target.TransformToAncestor(header).TransformBounds(new Rect(target.RenderSize));
+                var actionBounds = actions.TransformToAncestor(header).TransformBounds(new Rect(actions.RenderSize));
+                Assert.True(targetBounds.Right < actionBounds.Left, $"{targetBounds} pisa {actionBounds}");
+                Assert.InRange(actionBounds.Right, header.ActualWidth - 0.5, header.ActualWidth + 0.5);
+                if (width >= 380)
+                {
+                    Assert.True(targetBounds.Width > 20);
+                }
+
+                // Con el overlay completo vuelve el bloque del objetivo y la franja muestra las pestañas.
+                vm.IsCompact = false;
+                content.UpdateLayout();
+                Assert.Equal(Visibility.Collapsed, target.Visibility);
+                Assert.Equal(Visibility.Visible, Assert.IsType<Border>(window.FindName("TargetBlock")).Visibility);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
     private static void RunOnSta(Action action)
     {
         ExceptionDispatchInfo? failure = null;
