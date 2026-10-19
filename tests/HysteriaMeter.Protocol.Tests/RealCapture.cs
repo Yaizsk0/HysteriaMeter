@@ -21,6 +21,40 @@ internal static class RealCapture
     /// <summary>Aparición de NPC: entidad 20402, NPC 0x00203430.</summary>
     public const string NpcSpawnBody = "b2 9f 01 04 20 00 30 34 20 00 00 02 db 96 ae 47 ee f3 3e c8 00 00 82 42 f2 31 9f 42 9a 38 01 94 a7 07 94 a7 07";
 
+    /// <summary>
+    /// Aparición de un monstruo con datos después de la vida (dungeon): entidad 34157, NPC 2300215, vida 103.148 de
+    /// 435.000 (<c>ec a5 06 b8 c6 1a</c>). Los dos últimos varints (20 y 91) no son la vida.
+    /// </summary>
+    public const string NpcSpawnWithTailBody =
+        "ed 8a 02 0c 20 00 37 19 23 00 40 02 31 59 8d 47 2a 19 36 c7 00 9c 12 47 df 10 b3 42 2c 5e 01 ec a5 06 b8 c6 1a "
+        + "64 00 00 00 64 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 dc 05 00 00 dc 05 00 00 01 00 00 00 "
+        + "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 06 03 11 01 81 96 98 00 ff ff ff ff ff ff ff ff 80 75 d5 "
+        + "2a bb 03 00 00 ed 8a 02 01 08 4e 30 81 47 87 f4 18 c7 00 98 0a 47 11 02 84 96 98 00 ff ff ff ff ff ff ff ff "
+        + "80 75 d5 2a bb 03 00 00 ed 8a 02 01 4e 30 81 47 87 f4 18 c7 00 98 0a 47 13 04 cb 99 31 0b 88 13 00 00 00 00 "
+        + "00 00 bf 10 63 3c a1 01 00 00 87 6a 0d 61 8f 1e 01 d1 e3 8d 47 1d b0 35 c7 00 9c 12 47 01 00 36 00 00 00 41 "
+        + "6e 14 db 00";
+
+    /// <summary>
+    /// Aparición con el bit 0x08 en el u8 que sigue al npcId (mini boss): entidad 28030, NPC 2910001, tipo 0x85. La vida
+    /// (4.655 de 4.655, <c>af 24 af 24</c>) viene 12 bytes más adelante; en la posición de siempre se leía 23 de 234.659.361.
+    /// </summary>
+    public const string NpcSpawnWithExtraBlockBody =
+        "fe da 01 85 21 00 31 67 2c 00 08 02 c4 36 13 c8 79 14 0e 48 ec 49 2e 47 2a 8a 6e 43 9a a9 16 17 a1 bc f2 6f 03 bd b8 3b "
+        + "46 bb 01 af 24 af 24 64 00 00 00 64 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 64 00 00 00 64 00 00 00 01 "
+        + "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0e 00 08 01 00 14 00 00 00 07 c9 c1 2d 2b 1f ec 1b e5 e8 20 00 "
+        + "56 16 80 ac 00";
+
+    /// <summary>
+    /// Lo mismo con tipo 0x0D (login): entidad 21692, NPC 2600091, vida 20.000.000 de 20.000.000 (<c>80 da c4 09</c>), la misma
+    /// que traen sus apariciones sin el bit. En la posición de siempre se leía 43 de 1.679.750.
+    /// </summary>
+    public const string NpcSpawnWithExtraBlockType0DBody =
+        "bc a9 01 0d 20 00 9b ac 27 00 08 02 b0 3e e4 c6 1e ff c2 46 e0 44 c6 46 94 4f 0c 43 c7 63 bd 2b 86 c3 66 b2 5e 43 6e d8 "
+        + "ef 41 01 80 da c4 09 80 da c4 09 64 00 00 00 64 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 50 c3 00 00 50 "
+        + "c3 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 02 11 01 81 96 98 00 ff ff ff ff ff ff ff ff 80 "
+        + "75 d5 2a bb 03 00 00 bc a9 01 01 04 7c a8 e6 c6 72 04 c7 46 e7 1a c6 46 11 02 84 96 98 00 ff ff ff ff ff ff ff ff 80 75 "
+        + "d5 2a bb 03 00 00 bc a9 01 01 7c a8 e6 c6 72 04 c7 46 e7 1a c6 46 09 01 00 32 00 00 00 3d f0 90 31 00";
+
     /// <summary>Muerte de la entidad 20402 a manos de 12157 ("Tester", legión "Legion").</summary>
     public const string KillBody = "b2 9f 01 54 c0 f4 00 fd 5e 79 05 06 54 65 73 74 65 72 06 4c 65 67 69 6f 6e 01 00 00 00 00 00 00 01 00";
 

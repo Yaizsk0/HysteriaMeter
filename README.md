@@ -130,6 +130,8 @@ DIAGNÓSTICO y "Reportar un problema" suman dos contadores: las desincronizacion
 
 En la bienvenida, el paso de la placa de red muestra el nombre de la placa ("Intel(R) Ethernet Connection…") en vez del `\Device\NPF_{GUID}`, y dice de dónde salió: "elegida en la configuración" si es la que guardaste y sigue conectada, "fijada en appsettings.json" si viene de `Capture:Device`. Si la guardada no está, nombra la que de verdad usa la captura.
 
+La vida de los monstruos se lee bien desde que aparecen. Antes se tomaba de los últimos bytes del paquete de aparición, que en casi todos los monstruos de la dungeon y del mini boss son otros datos. Así salía basura (un add de 435.000 de vida aparecía con 20 de 91) o no salía nada. Eso contaba overkill falso en los primeros golpes y podía dejar a ese objetivo sin las marcas de fase del 75, el 50 y el 25 %. Ahora la vida se lee en su posición fija, y en las capturas de referencia coincide con la primera actualización de vida del servidor.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).

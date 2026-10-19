@@ -6,12 +6,23 @@ namespace HysteriaMeter.Protocol.Decoding;
 
 /// <summary>
 /// Aparición de un NPC, monstruo o invocación (opcode 0x3641):
-/// <code>varint entityId | u8 tipo | u8 | u8 hasOwnerName | [string ownerName] | u32 npcId | u8 | u8 | pos 3×f32 | ... | varint HP | varint HPmax</code>
+/// <code>varint entityId | u8 tipo | u8 | u8 hasOwnerName | [string ownerName] | u32 npcId | u8 flags | u8 | pos 3×f32 | f32 | [12 bytes si flags tiene 0x08] | 3 bytes | varint HP | varint HPmax | ...</code>
 /// Las invocaciones de jugadores (tipo 0x5F) a veces traen el nombre del dueño; con eso el motor
 /// les asigna el daño. Los monstruos normales traen <c>hasOwnerName = 0</c>.
 /// </summary>
 public sealed class NpcSpawnDecoder : IPacketDecoder
 {
+    /// <summary>Bytes entre el npcId y la vida: dos u8, la posición, un f32 y tres bytes sin identificar.</summary>
+    private const int BytesBeforeHealth = 2 + (4 * 4) + 3;
+
+    /// <summary>
+    /// Con este bit en el u8 que sigue al npcId vienen 12 bytes más, sin identificar, antes de la vida. En las capturas el
+    /// u8 vale 0x00, 0x40 (no agrega nada) o 0x08, y el bit no depende del tipo.
+    /// </summary>
+    private const byte ExtraBlockFlag = 0x08;
+
+    private const int ExtraBlockBytes = 12;
+
     public PacketKind Kind => PacketKind.EntitySpawn;
 
     public void Decode(ReadOnlySpan<byte> body, DateTimeOffset timestamp, ICollection<CombatEvent> output)
@@ -21,7 +32,7 @@ public sealed class NpcSpawnDecoder : IPacketDecoder
         reader.Skip(2);
         var ownerName = reader.ReadByte() != 0 ? reader.ReadUtf8String() : null;
         var npcId = reader.ReadUInt32();
-        var (hp, maxHp) = ReadTrailingHealth(body);
+        var (hp, maxHp) = ReadHealth(body[reader.Position..]);
         output.Add(new EntitySpawnEvent(
             timestamp, entity, OwnerId: null, NpcId: npcId,
             OwnerName: ownerName is not null && PlayerNames.IsPlausible(ownerName) ? ownerName : null,
@@ -29,13 +40,20 @@ public sealed class NpcSpawnDecoder : IPacketDecoder
     }
 
     /// <summary>
-    /// HP y HP máximo son los dos últimos varints del paquete. Se leen desde el final porque los campos
-    /// entre la posición y la vida todavía no están claros. Si no cierran (HP mayor al máximo), se ignoran.
+    /// HP y HP máximo van en posición fija después del npcId, 12 bytes más adelante con <see cref="ExtraBlockFlag"/>.
+    /// Después puede venir más (casi todos los cuerpos de la dungeon y del mini boss), así que no se leen desde el final:
+    /// los dos últimos varints daban basura. Las invocaciones sin posición no los traen, y si no cierran (sin máximo, o HP
+    /// mayor al máximo) se ignoran.
     /// </summary>
-    internal static (long? Hp, long? MaxHp) ReadTrailingHealth(ReadOnlySpan<byte> body)
+    private static (long? Hp, long? MaxHp) ReadHealth(ReadOnlySpan<byte> afterNpcId)
     {
-        if (!TryReadLastVarUInt(body, out var maxHp, out var maxStart)
-            || !TryReadLastVarUInt(body[..maxStart], out var hp, out _))
+        if (afterNpcId.IsEmpty)
+        {
+            return (null, null);
+        }
+
+        var offset = BytesBeforeHealth + ((afterNpcId[0] & ExtraBlockFlag) != 0 ? ExtraBlockBytes : 0);
+        if (!TryReadVarUInt(afterNpcId, ref offset, out var hp) || !TryReadVarUInt(afterNpcId, ref offset, out var maxHp))
         {
             return (null, null);
         }
@@ -43,29 +61,16 @@ public sealed class NpcSpawnDecoder : IPacketDecoder
         return maxHp > 0 && hp <= maxHp ? ((long)hp, (long)maxHp) : (null, null);
     }
 
-    /// <summary>
-    /// Lee el varint que termina en el último byte: ese byte tiene el bit alto en 0 y los anteriores del
-    /// mismo varint lo tienen en 1.
-    /// </summary>
-    private static bool TryReadLastVarUInt(ReadOnlySpan<byte> data, out ulong value, out int start)
+    /// <summary>Lee un varint de hasta <see cref="VarInt.MaxBytes"/> bytes: un cuerpo corto o raro da <c>false</c>, no una excepción.</summary>
+    private static bool TryReadVarUInt(ReadOnlySpan<byte> data, ref int offset, out ulong value)
     {
         value = 0;
-        start = data.Length - 1;
-        if (start < 0 || (data[start] & 0x80) != 0)
+        if (offset >= data.Length || !VarInt.TryRead(data[offset..Math.Min(data.Length, offset + VarInt.MaxBytes)], out value, out var read))
         {
             return false;
         }
 
-        while (start > 0 && (data[start - 1] & 0x80) != 0 && data.Length - start < 10)
-        {
-            start--;
-        }
-
-        for (var i = data.Length - 1; i >= start; i--)
-        {
-            value = (value << 7) | (byte)(data[i] & 0x7F);
-        }
-
+        offset += read;
         return true;
     }
 }

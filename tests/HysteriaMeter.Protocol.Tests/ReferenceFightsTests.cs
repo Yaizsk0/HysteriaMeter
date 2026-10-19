@@ -18,8 +18,8 @@ namespace HysteriaMeter.Protocol.Tests;
 public class ReferenceFightsTests(ITestOutputHelper output)
 {
     // Objetivos principales por ID de plantilla (npcId del spawn 0x3641), tal como salen en el replay.
-    private const uint DestroyerTarka = 2_101_106; // vida máx 2.684.259
-    private const uint DivineAuldor = 2_300_218; // vida máx 9.857.918 (protocol-notes.md de la 001 la anota como 9.860.000)
+    private const uint DestroyerTarka = 2_101_106; // vida máx 2.700.000
+    private const uint DivineAuldor = 2_300_218; // vida máx 9.860.000, la misma que muestra el juego
 
     // Combat Analysis cuenta solo el objetivo elegido: se compara MainTargetDamage, no Damage (en la dungeon Damage
     // incluye los adds).

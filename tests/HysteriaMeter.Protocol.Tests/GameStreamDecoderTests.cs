@@ -76,6 +76,32 @@ public class GameStreamDecoderTests
         Assert.Equal(((long?)119700, (long?)119700), (spawn.Hp, spawn.MaxHp));
     }
 
+    // La vida va en una posición fija después de la de la entidad, no al final: en las capturas de la dungeon y del mini
+    // boss casi todos los cuerpos traen más datos después, y leer los dos últimos varints daba basura (acá, 20 de 91).
+    [Fact]
+    public void Npc_spawn_health_is_read_after_the_position_not_from_the_end()
+    {
+        var events = CreateDecoder().Push(Frame(0x3641, Hex(RealCapture.NpcSpawnWithTailBody)), T0);
+
+        var spawn = Assert.IsType<EntitySpawnEvent>(Assert.Single(events));
+        Assert.Equal((34157UL, (uint?)2300215), (spawn.EntityId, spawn.NpcId));
+        Assert.Equal(((long?)103148, (long?)435000), (spawn.Hp, spawn.MaxHp));
+    }
+
+    // Con el bit 0x08 en el u8 que sigue al npcId vienen 12 bytes más antes de la vida, sea cual sea el tipo. En la posición
+    // de siempre los dos varints pasaban la validación (HP ≤ HPmax) con basura.
+    [Theory]
+    [InlineData(RealCapture.NpcSpawnWithExtraBlockBody, 28030UL, 2910001U, 4655L)]
+    [InlineData(RealCapture.NpcSpawnWithExtraBlockType0DBody, 21692UL, 2600091U, 20_000_000L)]
+    public void Npc_spawn_with_the_extra_block_has_its_health_twelve_bytes_later(string body, ulong entity, uint npc, long health)
+    {
+        var events = CreateDecoder().Push(Frame(0x3641, Hex(body)), T0);
+
+        var spawn = Assert.IsType<EntitySpawnEvent>(Assert.Single(events));
+        Assert.Equal((entity, (uint?)npc), (spawn.EntityId, spawn.NpcId));
+        Assert.Equal(((long?)health, (long?)health), (spawn.Hp, spawn.MaxHp));
+    }
+
     [Fact]
     public void Spawn_without_health_fields_still_decodes()
     {
