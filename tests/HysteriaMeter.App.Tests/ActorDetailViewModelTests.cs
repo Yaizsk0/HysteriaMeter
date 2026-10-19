@@ -429,6 +429,30 @@ public class ActorDetailViewModelTests
         Assert.Equal([10.0, 15.0, 20.0], ActorDetailViewModel.CumulativeDps([10, 20, 30]));
     }
 
+    // ===================== Tabla de skills =====================
+
+    [Fact]
+    public void The_skill_table_shows_the_modifier_rates_like_Combat_Analysis()
+    {
+        using var _ = new CultureScope(CultureInfo.InvariantCulture);
+        // Los conteos de Punishing Strike en una pelea en vivo; Combat Analysis mostró 3 / 7 / 55 / 14 / 17 % para esa fila.
+        var punishing = Skill(12060240, 181_736, 29) with { Counts = new HitCounts(29, 5, 1, 2, 16, 4, 5) };
+        // Los % van sobre los golpes con modificadores leídos (11), no sobre GOLPES (12).
+        var other = Skill(9001, 1_000, 12) with { Counts = new HitCounts(11, 0, 3, 0, 4, 6, 1) };
+        var withoutCounts = Skill(9002, 100, 3);
+        var detail = DetailOf(Fight(Guid.NewGuid(), null, Actor(1, "Vos", local: true, skills: [punishing, other, withoutCounts])), 1);
+
+        static (string, string, string, string, string) Modifiers(SkillRowViewModel row) =>
+            (row.Perfect, row.DoubleHit, row.Front, row.Back, row.MultiHit);
+
+        Assert.Equal(("3 %", "7 %", "55 %", "14 %", "17 %"), Modifiers(detail.Skills[0]));
+        Assert.Equal(("27 %", "0 %", "36 %", "55 %", "9 %"), Modifiers(detail.Skills[1]));
+        Assert.Equal(("–", "–", "–", "–", "–"), Modifiers(detail.Skills[2]));
+
+        // TOTAL suma los conteos de todas las skills: 40 golpes leídos.
+        Assert.Equal(("10 %", "5 %", "50 %", "25 %", "15 %"), Modifiers(detail.Totals));
+    }
+
     // ===================== Renombrar skill =====================
 
     [Fact]

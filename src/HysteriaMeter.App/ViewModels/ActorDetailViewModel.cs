@@ -678,14 +678,15 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
 
         var hits = skills.Sum(s => s.Hits);
         var counts = skills.Select(s => s.Counts ?? HitCounts.Empty).ToList();
-        var countedHits = counts.Sum(c => c.Hits);
         var direct = skills.Sum(s => s.DirectDamage);
         Totals.Name = "TOTAL";
         Totals.Damage = ActorRowViewModel.Compact(actor.Damage);
         Totals.Share = actor.Damage == 0 ? "–" : 1d.ToString("P0", culture);
         Totals.Hits = hits.ToString("N0", culture);
         Totals.Critical = SkillRowViewModel.Rate(hits, skills.Sum(s => s.Crits));
-        Totals.Back = SkillRowViewModel.Rate(countedHits, counts.Sum(c => c.Back));
+        Totals.SetModifiers(new HitCounts(
+            counts.Sum(c => c.Hits), counts.Sum(c => c.Critical), counts.Sum(c => c.Perfect), counts.Sum(c => c.DoubleHit),
+            counts.Sum(c => c.Front), counts.Sum(c => c.Back), counts.Sum(c => c.MultiHit)));
         Totals.MaxHit = hits == 0 ? "–" : ActorRowViewModel.Compact(actor.MaxHit);
         Totals.Average = hits == 0 ? "–" : ActorRowViewModel.Compact((double)direct / hits);
         Totals.Dps = ActorRowViewModel.Compact(actor.Dps);

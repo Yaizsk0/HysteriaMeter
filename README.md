@@ -142,6 +142,8 @@ El menú "⋯" del overlay se abre sin problemas. Desde el rediseño, abrirlo ce
 
 Cuatro skills que el detalle mostraba como "Skill 12060240" y parecidos ya tienen nombre: Punishing Strike, Decisive Strike y Desperate Strike del Templario, y la teostone Ulgorn's Will. Salen de comparar una pelea con la vista detallada de Combat Analysis, donde coincidían el daño, los golpes y los críticos, y van en `data/skills.json`, que completa la lista de MetaBot.GG.
 
+La tabla de skills del detalle suma las columnas PERF., DOBLE, FRENTE, ESPALDA y MULTI, como la vista detallada de Combat Analysis: el % de golpes perfectos, dobles, de frente, por la espalda y múltiples de cada skill, y el de todas juntas en TOTAL. La ventana arranca un poco más ancha para que entren; si la achicás por debajo de 1040 se ocultan y ESPALDA vuelve al tooltip de la fila.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
