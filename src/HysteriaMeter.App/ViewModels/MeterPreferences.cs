@@ -165,4 +165,10 @@ public sealed record MeterPreferences
 
     // "TextFont" y no "Font": así las preferencias guardadas con la fuente vieja no pisan la nueva por defecto.
     public string TextFont { get; init; } = "IBM Plex Sans";
+
+    /// <summary>Escala de la interfaz: agranda texto y controles de todas las ventanas (Themes/UiScale).</summary>
+    public static IReadOnlyList<double> ScaleOptions { get; } = [1.0, 1.1, 1.25, 1.5];
+
+    /// <summary>Depende del monitor de cada PC: el perfil exportado no la lleva.</summary>
+    public double UiScale { get; init; } = 1.0;
 }

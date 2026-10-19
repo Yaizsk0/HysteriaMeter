@@ -41,13 +41,14 @@
             </Style>
             <!-- PERF., DOBLE, FRENTE, ESPALDA y MULTI de la tabla de skills, como en Combat Analysis. Van en columnas Auto: con
                  la ventana angosta se ocultan para no comerse el nombre de la skill (ESPALDA sigue en el tooltip de la fila).
-                 Las cinco ocupan 320 px; por debajo de 1040 la columna SKILL quedaría con menos de ~150. -->
+                 Las cinco ocupan 320 px; por debajo de 1040 la columna SKILL quedaría con menos de ~150. Se mide el contenido y
+                 no la ventana: con la escala de la interfaz (Themes/UiScale) la ventana crece y el contenido sigue en 1040. -->
             <conv:OverlayNarrowConverter x:Key="Narrow" />
             <Style x:Key="ModifierCell" TargetType="TextBlock" BasedOn="{StaticResource Cell}">
                 <Setter Property="Width" Value="56" />
                 <Setter Property="TextAlignment" Value="Right" />
                 <Style.Triggers>
-                    <DataTrigger Binding="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Narrow}, ConverterParameter=1040}" Value="True">
+                    <DataTrigger Binding="{Binding Content.ActualWidth, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource Narrow}, ConverterParameter=1040}" Value="True">
                         <Setter Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
                 </Style.Triggers>

@@ -6,6 +6,7 @@
         xmlns:vm="clr-namespace:HysteriaMeter.App.ViewModels"
         xmlns:conv="clr-namespace:HysteriaMeter.App.Converters"
         xmlns:welcome="clr-namespace:HysteriaMeter.App.Welcome"
+        xmlns:ui="clr-namespace:HysteriaMeter.App.Themes"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MeterViewModel}"
         Title="Hysteria Meter"
@@ -63,7 +64,7 @@
                         <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" />
                         <TextBlock x:Name="Arrow" Grid.Column="2" Text="›" Visibility="Collapsed" />
                         <Popup x:Name="PART_Popup" Placement="Right" IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}" AllowsTransparency="True" Focusable="False">
-                            <Border Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="5"><ItemsPresenter/></Border>
+                            <Border Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="5" ui:UiScale.Factor="{DynamicResource UiScale}"><ItemsPresenter/></Border>
                         </Popup>
                     </Grid>
                 </Border>
@@ -98,7 +99,7 @@
         </DataTemplate>
         <!-- Sin ItemContainerStyle: WPF también se lo aplica a los Separator y tira al abrir el menú. Los MenuItem toman el
              estilo implícito y los Separator el de MenuItem.SeparatorStyleKey, que el menú les fija por encima del implícito. -->
-<ContextMenu x:Key="OverlayMenu" x:Shared="False" DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}" FontFamily="{DynamicResource BodyFont}">
+<ContextMenu x:Key="OverlayMenu" x:Shared="False" DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}" FontFamily="{DynamicResource BodyFont}" ui:UiScale.Factor="{DynamicResource UiScale}">
                                             <ContextMenu.Resources><Style TargetType="MenuItem" BasedOn="{StaticResource LiveMenuItem}"/><Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator"><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Separator"><Border Height="1" Background="{DynamicResource Track}" Margin="5,4"/></ControlTemplate></Setter.Value></Setter></Style></ContextMenu.Resources>
                                             <ContextMenu.Template><ControlTemplate TargetType="ContextMenu"><Border Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="5" MinWidth="195"><StackPanel IsItemsHost="True"/></Border></ControlTemplate></ContextMenu.Template>
                                             <MenuItem Header="Configuración" Command="{Binding ToggleSettingsCommand}"/>

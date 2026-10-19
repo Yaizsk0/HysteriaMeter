@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:ui="clr-namespace:HysteriaMeter.App.Themes">
     <!--
         Sistema visual del rediseño. Referencia: los mocks redesign/project/*.dc.html (Main, Estados, Mini, Detalle,
         Muertes, Comparar, Historial, Config, Inicio, Avisos y Dungeon), que reemplazan a los aprobados el 2026-10-15
@@ -742,9 +743,10 @@
                                           Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                           ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
                                           ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" />
+                        <!-- El desplegable se dibuja en su propia ventana: la escala de la interfaz (Themes/UiScale) va en su Border. -->
                         <Popup x:Name="PART_Popup" Placement="Bottom" VerticalOffset="4" AllowsTransparency="True" Focusable="False"
                                PopupAnimation="None" IsOpen="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
-                            <Border Style="{StaticResource MenuPanel}" MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                            <Border Style="{StaticResource MenuPanel}" MaxHeight="{TemplateBinding MaxDropDownHeight}" ui:UiScale.Factor="{DynamicResource UiScale}"
                                     MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
                                 <ScrollViewer>
                                     <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
@@ -936,6 +938,8 @@
     <!-- ===================== Tooltip ===================== -->
     <!-- Oscuro, como el de la fila del mock Estados. El tooltip rico de la fila agrega su propio margen (14 × 12). -->
     <Style x:Key="ToolTipDark" TargetType="ToolTip">
+        <!-- El tooltip se dibuja en su propia ventana: la escala de la interfaz (Themes/UiScale) se le aplica acá. -->
+        <Setter Property="ui:UiScale.Factor" Value="{DynamicResource UiScale}" />
         <Setter Property="Background" Value="{DynamicResource PanelSolid}" />
         <Setter Property="Foreground" Value="{DynamicResource Text}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Stroke}" />

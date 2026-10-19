@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using HysteriaMeter.App.Themes;
 using HysteriaMeter.App.ViewModels;
 
 namespace HysteriaMeter.App.Registro;
@@ -10,6 +11,7 @@ public partial class LogWindow : Window
     public LogWindow(LogViewModel viewModel)
     {
         InitializeComponent();
+        UiScale.Follow(this);
         DataContext = viewModel;
     }
 

@@ -937,6 +937,13 @@ public sealed partial class MeterViewModel : ObservableObject
 
     public FontFamily Font => FontOf(Preferences.TextFont);
 
+    /// <summary>Escala de la interfaz (Configuración → Apariencia); la App la publica en el recurso UiScale.</summary>
+    public double UiScale
+    {
+        get => Preferences.UiScale;
+        set => Update(Preferences with { UiScale = Themes.UiScale.Normalize(value) }, nameof(UiScale));
+    }
+
     /// <summary>
     /// La familia de una fuente de texto elegible: las embebidas (<see cref="MeterPreferences.BundledFonts"/>) salen de
     /// Assets/Fonts y las demás del sistema. App.xaml.cs la usa para el recurso BodyFont de las ventanas.
