@@ -45,7 +45,7 @@ Como en Details!, el menú ⋯ → Nueva ventana abre otro overlay: cada uno eli
 
 En la bandeja del sistema aparece un rombo dorado: clic para mostrar u ocultar el overlay (sirve aunque esté en modo atravesable) y clic derecho para reiniciar la pelea, abrir la carpeta de datos o salir.
 
-Doble clic en el encabezado alterna el modo compacto (solo filas y reloj). El overlay se vuelve opaco al pasar el mouse y, si lo activás, se atenúa cuando no hay combate. El punto del encabezado indica la captura: verde en combate, ámbar sin tráfico del juego, rojo si se cortó. En configuración, "Ver barras de prueba" muestra una pelea inventada para acomodar todo sin combatir.
+Doble clic en el encabezado alterna el modo compacto (solo filas, reloj y, durante la pelea, el objetivo con su % de vida). El overlay se vuelve opaco al pasar el mouse y, si lo activás, se atenúa cuando no hay combate. El punto del encabezado indica la captura: verde en combate, ámbar sin tráfico del juego, rojo si se cortó. En configuración, "Ver barras de prueba" muestra una pelea inventada para acomodar todo sin combatir.
 
 En el primer arranque aparece una bienvenida con el estado real de Npcap, la captura y los datos locales del juego. Al derrotar un boss, una tarjeta debajo del overlay muestra tu resultado y permite abrir el detalle o guardar la captura de esa pelea, incluso si el overlay estaba pausado. Se cierra a los 12 segundos, con Esc o al empezar otra pelea. La bandeja mantiene los accesos a Historial, Configuración y la carpeta de datos, y muestra los atajos configurados; las novedades se presentan dentro del overlay.
 
@@ -91,7 +91,7 @@ El menú ⋯ → Minimizar convierte el overlay a una pastilla con tu DPS y tu p
 
 Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: doble clic en una skill del detalle para ponerle nombre (queda guardado en tus preferencias), o cargalos en `data/skills.json` para toda la legión.
 
-Los monstruos tampoco traen nombre: si una pelea sale como "NPC 2001234", agregá ese ID a `data/npcs.json` con su nombre, la dungeon y si es boss (`"2001234": { "name": "Destroyer Tarka", "dungeon": "...", "boss": true }`) y la próxima vez se ve con nombre, también en el historial y en el progreso por boss.
+Los monstruos tampoco traen nombre: si una pelea sale como "NPC 2001234", agregá ese ID a `data/npcs.json` con su nombre, la dungeon y si es boss (`"2001234": { "name": "Nombre del boss", "dungeon": "...", "boss": true }`) y la próxima vez se ve con nombre, también en el historial y en el progreso por boss.
 
 Si además le ponés `"enrage": 480` (segundos de pelea hasta el enrage), la vida del boss en el overlay dice "enrage en 1:20" y se pone roja cuando, al DPS actual, el boss muere después del enrage. Con "Sonido en las alertas" (configuración) suena un aviso de Windows en ese caso, al batir un récord y al terminar la prueba de DPS.
 
@@ -137,6 +137,16 @@ El meter comprueba solo si leyó todo el daño. En Configuración → Diagnósti
 Si Npcap se instaló con la opción "Restrict Npcap driver's access to Administrators only", Windows pide permiso (UAC) cada vez que el meter abre la captura, y la bienvenida ya lo avisa en el paso de Npcap. Si la captura se corta antes de que llegue tráfico, el overlay explica que falta ese permiso. Da tres salidas: volver a abrir el meter y aceptar el pedido, abrirlo como administrador o reinstalar Npcap sin esa opción. Igual muestra el error real y el botón para reportar un problema, por si el corte fue por otra cosa. Para saberlo, el meter solo lee del registro la opción con la que se instaló Npcap y no cambia nada del sistema.
 
 El meter lee todas las actualizaciones de vida que manda el servidor, también las que traen varios valores juntos, como la del jugador al revivir. Antes se perdían y el overkill de los golpes sobre un jugador se medía contra una vida vieja, por ejemplo la de su muerte, y salía de más. El daño, el DPS y la verificación de los monstruos no cambian. Las peleas ya guardadas conservan el overkill con el que se guardaron.
+
+El menú "⋯" del overlay se abre sin problemas. Desde el rediseño, abrirlo cerraba el meter por un error de estilo en los separadores del menú. Ahora se ve como en el diseño: los ítems con el estilo del overlay y los separadores como una línea fina.
+
+Cuatro skills que el detalle mostraba como "Skill 12060240" y parecidos ya tienen nombre: Punishing Strike, Decisive Strike y Desperate Strike del Templario, y la teostone Ulgorn's Will. Salen de comparar una pelea con la vista detallada de Combat Analysis, donde coincidían el daño, los golpes y los críticos, y van en `data/skills.json`, que completa la lista de MetaBot.GG.
+
+La tabla de skills del detalle suma las columnas PERF., DOBLE, FRENTE, ESPALDA y MULTI, como la vista detallada de Combat Analysis: el % de golpes perfectos, dobles, de frente, por la espalda y múltiples de cada skill, y el de todas juntas en TOTAL. La ventana arranca un poco más ancha para que entren; si la achicás por debajo de 1040 se ocultan y ESPALDA vuelve al tooltip de la fila.
+
+En modo compacto, durante la pelea la franja de arriba muestra contra quién es (el mismo rótulo del bloque del objetivo, que ese modo oculta) y su % de vida si el servidor la mandó. Si no entra, se recorta con "…" sin tapar el reloj ni los botones.
+
+`data/npcs.json` ya trae los bosses de las dos peleas de referencia, con el nombre que muestra Combat Analysis: Divine Auldor (Urugugu Canyon) y Destroyer Tarka. Las peleas nuevas contra ellos ya no salen como "NPC 2300218" o "NPC 2101106" y cuentan como boss aunque sean cortas. Los demás monstruos siguen con su plantilla hasta que se agreguen.
 
 ## Spec Kit
 

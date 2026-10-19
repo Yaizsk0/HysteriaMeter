@@ -908,7 +908,7 @@ public sealed partial class MeterViewModel : ObservableObject
     // Cuándo se abrió la pelea guardada: si arranca una pelea nueva después, se vuelve al vivo.
     private DateTimeOffset _pinnedAt;
 
-    /// <summary>Modo compacto de esta ventana: sin objetivo, pestañas, encabezados ni pie.</summary>
+    /// <summary>Modo compacto de esta ventana: sin el bloque del objetivo (su rótulo pasa a la franja), pestañas, encabezados ni pie.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsExpanded))]
     public partial bool IsCompact { get; set; }
