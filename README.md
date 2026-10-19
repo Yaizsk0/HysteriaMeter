@@ -146,6 +146,8 @@ La tabla de skills del detalle suma las columnas PERF., DOBLE, FRENTE, ESPALDA y
 
 En modo compacto, durante la pelea la franja de arriba muestra contra quién es (el mismo rótulo del bloque del objetivo, que ese modo oculta) y su % de vida si el servidor la mandó. Si no entra, se recorta con "…" sin tapar el reloj ni los botones.
 
+`data/npcs.json` ya trae los bosses de las dos peleas de referencia, con el nombre que muestra Combat Analysis: Divine Auldor (Urugugu Canyon) y Destroyer Tarka. Las peleas nuevas contra ellos ya no salen como "NPC 2300218" o "NPC 2101106" y cuentan como boss aunque sean cortas. Los demás monstruos siguen con su plantilla hasta que se agreguen.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
