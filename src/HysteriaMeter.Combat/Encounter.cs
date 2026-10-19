@@ -91,6 +91,9 @@ internal sealed class ActorStats
 
     public int HitsTaken { get; set; }
 
+    /// <summary>Daño y golpes recibidos por skill del monstruo que pegó: se suman junto con DamageTaken y HitsTaken.</summary>
+    public Dictionary<uint, TakenSkillStats> TakenBySkill { get; } = [];
+
     public int Deaths { get; set; }
 
     /// <summary>Daño que pasó de la vida que le quedaba al objetivo. Se informa aparte; no se descuenta del daño.</summary>
@@ -178,6 +181,13 @@ internal sealed class SkillStats
     public long MaxHit { get; set; }
 
     public HitCounter Counts { get; } = new();
+}
+
+internal sealed class TakenSkillStats
+{
+    public long Damage { get; set; }
+
+    public int Hits { get; set; }
 }
 
 /// <summary>Cuenta golpes por modificador, igual que las columnas de Combat Analysis. Los ticks de DoT no son golpes.</summary>

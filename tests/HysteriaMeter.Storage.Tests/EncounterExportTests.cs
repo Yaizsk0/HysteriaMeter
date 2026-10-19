@@ -59,6 +59,37 @@ public sealed class EncounterExportTests
         Assert.True(read.Actors[1].IsLocalPlayer);
     }
 
+    [Fact]
+    public void Json_carries_the_damage_taken_by_skill()
+    {
+        var fight = Fight();
+        fight = fight with
+        {
+            Actors = [fight.Actors[0], fight.Actors[1] with { DamageTaken = 700, HitsTaken = 3, DamageTakenBySkill = [new TakenSkillSnapshot(501, 500, 1), new TakenSkillSnapshot(500, 200, 2)] }],
+        };
+
+        var read = EncounterExport.FromJson(EncounterExport.ToJson(fight))!;
+
+        Assert.Equal(fight.Actors[1].DamageTakenBySkill!, read.Actors[1].DamageTakenBySkill!);
+        Assert.Null(read.Actors[0].DamageTakenBySkill);
+    }
+
+    [Fact]
+    public void Json_from_before_the_breakdown_still_imports()
+    {
+        // Un export de antes del desglose: el jugador trae el daño recibido pero no DamageTakenBySkill.
+        const string json = """
+            {"Id":"6f1c0a52-3c1e-4a4e-9a51-8a3c2f0d7b11","Start":"2026-10-15T21:42:00+00:00","End":"2026-10-15T21:43:00+00:00",
+             "TargetName":"Boss","TargetKilled":true,"TotalDamage":100,
+             "Actors":[{"Id":1,"Name":"Local","IsLocalPlayer":true,"Damage":100,"Skills":[],"DamageTaken":700,"HitsTaken":3}]}
+            """;
+
+        var actor = Assert.Single(EncounterExport.FromJson(json)!.Actors);
+
+        Assert.Equal((700L, 3), (actor.DamageTaken, actor.HitsTaken));
+        Assert.Null(actor.DamageTakenBySkill);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("no es json")]
