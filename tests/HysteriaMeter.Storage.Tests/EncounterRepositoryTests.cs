@@ -180,6 +180,67 @@ public sealed class EncounterRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task Target_verification_survives_a_save_and_load_round_trip()
+    {
+        var repository = new EncounterRepository(_path);
+        await repository.InitializeAsync();
+        var start = new DateTimeOffset(2026, 10, 18, 21, 0, 0, TimeSpan.Zero);
+        // El boss cierra con overkill; al add le falta daño.
+        var fight = new EncounterSnapshot(
+            Guid.NewGuid(), start, start.AddSeconds(30), "Boss", TargetKilled: true, TotalDamage: 16_500,
+            [new ActorSnapshot(1, "Local", null, true, 16_500, 550, 1, 6, 0, 3_000, 0, [])],
+            Verifications:
+            [
+                new TargetVerification(900, 12345, 10_000, 0, 10_000, 10_500, 500, 0, true),
+                new TargetVerification(901, null, 8_000, 2_000, 8_000, 4_000, 0, -2_000, false),
+            ]);
+        await repository.SaveAsync(fight);
+
+        var loaded = await repository.LoadAsync(fight.Id.ToString());
+
+        Assert.Equal(fight.Verifications, loaded!.Verifications!);
+    }
+
+    [Fact]
+    public async Task Old_fights_without_verification_load_without_it()
+    {
+        // Una base de antes de verification_json, con una pelea guardada: carga sin verificación.
+        var oldId = Guid.NewGuid().ToString();
+        await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_path}"))
+        {
+            await connection.OpenAsync();
+            using var command = connection.CreateCommand();
+            command.CommandText = $$"""
+                CREATE TABLE encounters (id TEXT PRIMARY KEY, started_at TEXT NOT NULL, ended_at TEXT NOT NULL,
+                    target_name TEXT, target_killed INTEGER NOT NULL, total_damage INTEGER NOT NULL, phases_json TEXT);
+                CREATE TABLE encounter_actors (encounter_id TEXT NOT NULL, actor_id INTEGER NOT NULL, name TEXT NOT NULL,
+                    class_id INTEGER, is_local INTEGER NOT NULL, damage INTEGER NOT NULL, dps REAL NOT NULL, hits INTEGER NOT NULL,
+                    crits INTEGER NOT NULL, max_hit INTEGER NOT NULL, healing INTEGER NOT NULL, skills_json TEXT NOT NULL,
+                    PRIMARY KEY (encounter_id, actor_id));
+                INSERT INTO encounters VALUES ('{{oldId}}', '2026-10-16T20:00:00.0000000+00:00', '2026-10-16T20:00:03.0000000+00:00', 'Boss', 1, 350,
+                    '[{"Percent":75,"Second":1}]');
+                INSERT INTO encounter_actors VALUES ('{{oldId}}', 1, 'Local', NULL, 1, 350, 116, 2, 0, 250, 0, '[]');
+                """;
+            await command.ExecuteNonQueryAsync();
+        }
+
+        var repository = new EncounterRepository(_path);
+        await repository.InitializeAsync();
+
+        await using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_path}"))
+        {
+            await connection.OpenAsync();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('encounters') WHERE name = 'verification_json'";
+            Assert.Equal(1L, await command.ExecuteScalarAsync());
+        }
+
+        var loaded = await repository.LoadAsync(oldId);
+        Assert.Equal([new HealthPhase(75, 1)], loaded!.Phases!);
+        Assert.Null(loaded.Verifications);
+    }
+
+    [Fact]
     public async Task Lists_when_the_latest_fight_has_no_target_name()
     {
         // La pelea más reciente sin nombre de objetivo (monstruo sin npcs.json): el récord sale NULL en la primera

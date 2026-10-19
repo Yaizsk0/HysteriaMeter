@@ -85,6 +85,9 @@ public sealed class EncounterRepository(string databasePath)
         // Daño y golpes recibidos por skill del monstruo que pegó. Las peleas viejas y los jugadores que no recibieron
         // daño quedan en NULL: damage_taken y hits_taken siguen teniendo el total.
         await AddColumnIfMissingAsync(connection, "encounter_actors", "damage_taken_json", "TEXT").ConfigureAwait(false);
+        // Si el daño contado contra cada objetivo cierra con la vida que perdió (TargetVerification). Las peleas viejas y las
+        // que no tuvieron objetivos verificables quedan en NULL.
+        await AddColumnIfMissingAsync(connection, "encounters", "verification_json", "TEXT").ConfigureAwait(false);
         await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS ix_encounters_target ON encounters(target_name, started_at)").ConfigureAwait(false);
         await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS ix_encounters_npc ON encounters(target_npc_id, started_at)").ConfigureAwait(false);
     }
@@ -109,9 +112,9 @@ public sealed class EncounterRepository(string databasePath)
         await connection.ExecuteAsync(
             """
             INSERT OR REPLACE INTO encounters (id, started_at, ended_at, target_name, target_killed, total_damage, main_target_seconds, deaths_json,
-                                               zone_entered_at, marks_json, phases_json, target_npc_id)
+                                               zone_entered_at, marks_json, phases_json, target_npc_id, verification_json)
             VALUES (@Id, @Start, @End, @TargetName, @TargetKilled, @TotalDamage, @MainTargetSeconds, @DeathsJson, @ZoneEnteredAt, @MarksJson, @PhasesJson,
-                    @TargetNpcId)
+                    @TargetNpcId, @VerificationJson)
             """,
             new
             {
@@ -127,6 +130,7 @@ public sealed class EncounterRepository(string databasePath)
                 MarksJson = encounter.Marks is { Count: > 0 } marks ? JsonSerializer.Serialize(marks) : null,
                 PhasesJson = encounter.Phases is { Count: > 0 } phases ? JsonSerializer.Serialize(phases) : null,
                 TargetNpcId = (long?)encounter.TargetNpcId,
+                VerificationJson = encounter.Verifications is { Count: > 0 } verifications ? JsonSerializer.Serialize(verifications) : null,
             },
             transaction).ConfigureAwait(false);
 
@@ -509,7 +513,7 @@ public sealed class EncounterRepository(string databasePath)
             SELECT id AS Id, started_at AS StartedAt, ended_at AS EndedAt, target_name AS TargetName,
                    target_killed AS TargetKilled, total_damage AS TotalDamage, main_target_seconds AS MainTargetSeconds,
                    deaths_json AS DeathsJson, zone_entered_at AS ZoneEnteredAt, marks_json AS MarksJson, phases_json AS PhasesJson,
-                   target_npc_id AS TargetNpcId
+                   target_npc_id AS TargetNpcId, verification_json AS VerificationJson
             FROM encounters WHERE id = @id
             """,
             new { id }).ConfigureAwait(false);
@@ -571,7 +575,8 @@ public sealed class EncounterRepository(string databasePath)
             TargetNpcId: encounter.TargetNpcId is { } npcId ? (uint)npcId : null,
             Marks: encounter.MarksJson is null ? null : JsonSerializer.Deserialize<int[]>(encounter.MarksJson),
             Phases: encounter.PhasesJson is null ? null : JsonSerializer.Deserialize<HealthPhase[]>(encounter.PhasesJson),
-            ZoneEnteredAt: encounter.ZoneEnteredAt is null ? null : DateTimeOffset.Parse(encounter.ZoneEnteredAt, CultureInfo.InvariantCulture));
+            ZoneEnteredAt: encounter.ZoneEnteredAt is null ? null : DateTimeOffset.Parse(encounter.ZoneEnteredAt, CultureInfo.InvariantCulture),
+            Verifications: encounter.VerificationJson is null ? null : JsonSerializer.Deserialize<TargetVerification[]>(encounter.VerificationJson));
     }
 
     private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken)
@@ -638,7 +643,7 @@ internal sealed class EncounterRow
 
 internal sealed record EncounterDetailRow(
     string Id, string StartedAt, string EndedAt, string? TargetName, long TargetKilled, long TotalDamage, double? MainTargetSeconds, string? DeathsJson,
-    string? ZoneEnteredAt, string? MarksJson, string? PhasesJson, long? TargetNpcId);
+    string? ZoneEnteredAt, string? MarksJson, string? PhasesJson, long? TargetNpcId, string? VerificationJson);
 
 internal sealed record ActorRow(
     long ActorId, string Name, long? ClassId, long IsLocal, long Damage, double Dps, long Hits, long Crits, long MaxHit, long Healing,

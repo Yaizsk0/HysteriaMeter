@@ -84,10 +84,22 @@ public sealed class EncounterExportTests
              "Actors":[{"Id":1,"Name":"Local","IsLocalPlayer":true,"Damage":100,"Skills":[],"DamageTaken":700,"HitsTaken":3}]}
             """;
 
-        var actor = Assert.Single(EncounterExport.FromJson(json)!.Actors);
+        var read = EncounterExport.FromJson(json)!;
+        var actor = Assert.Single(read.Actors);
 
         Assert.Equal((700L, 3), (actor.DamageTaken, actor.HitsTaken));
         Assert.Null(actor.DamageTakenBySkill);
+        Assert.Null(read.Verifications); // tampoco traía la verificación
+    }
+
+    [Fact]
+    public void Json_carries_the_target_verification()
+    {
+        var fight = Fight() with { Verifications = [new TargetVerification(900, 12345, 10_000, 2_000, 10_000, 6_000, 0, -2_000, false)] };
+
+        var read = EncounterExport.FromJson(EncounterExport.ToJson(EncounterExport.Anonymize(fight)))!;
+
+        Assert.Equal(fight.Verifications, read.Verifications!);
     }
 
     [Theory]

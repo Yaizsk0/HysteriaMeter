@@ -753,4 +753,186 @@ public class CombatEngineTests
 
         Assert.Equal([new HealthPhase(25, 2)], engine.CurrentSnapshot()!.Phases);
     }
+
+    [Fact]
+    public void Server_health_is_kept_apart_from_the_damage_we_count()
+    {
+        // HealthOf descuenta nuestros golpes (overkill, fases, tooltip); la vida del servidor es la que informó y nada más.
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345, Hp: 1000, MaxHp: 1000));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 400, HitModifiers.None));
+        Assert.Equal((new Health(600, 1000), new Health(1000, 1000)), (engine.Entities.HealthOf(Boss), engine.Entities.ServerHealthOf(Boss)));
+
+        engine.Apply(new HealthEvent(At(1), Boss, 500));
+        engine.Apply(new DamageEvent(At(2), Me, Boss, 1, 100, HitModifiers.None));
+        Assert.Equal((new Health(400, 1000), new Health(500, 1000)), (engine.Entities.HealthOf(Boss), engine.Entities.ServerHealthOf(Boss)));
+        Assert.Null(engine.Entities.ServerHealthOf(Ally));
+    }
+
+    [Fact]
+    public void Verification_finds_the_damage_missing_from_what_the_server_reports()
+    {
+        // 10.000 de vida y dos golpes de 3.000, pero el servidor informa 2.000: faltan 2.000 de daño (un golpe sin decodificar).
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345, Hp: 10_000, MaxHp: 10_000));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), Ally, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(1), Boss, 2_000));
+
+        Assert.Equal(
+            new TargetVerification(Boss, 12345, StartHp: 10_000, EndHp: 2_000, MaxHp: 10_000, Counted: 6_000, Overkill: 0, Difference: -2_000, Closes: false),
+            Assert.Single(engine.CurrentSnapshot()!.Verifications!));
+        // Solo la pelea: la sesión y la run suman peleas distintas.
+        Assert.Null(engine.SessionSnapshot()!.Verifications);
+        Assert.Null(engine.RunSnapshot()!.Verifications);
+    }
+
+    [Fact]
+    public void Verification_closes_when_every_hit_is_counted_up_to_the_kill()
+    {
+        // 3.000 + 3.000 + 2.000 y el servidor informa 2.000: cierra. El golpe final de 2.500 lo mata con 500 de overkill y
+        // sigue cerrando: 10.500 contados − 500 de overkill = los 10.000 que perdió.
+        var engine = CreateEngine();
+        var finished = new List<EncounterSnapshot>();
+        engine.EncounterFinished += finished.Add;
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345, Hp: 10_000, MaxHp: 10_000));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), Ally, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Me, Boss, 1, 2_000, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(2), Boss, 2_000));
+
+        Assert.Equal(
+            new TargetVerification(Boss, 12345, 10_000, 2_000, 10_000, Counted: 8_000, Overkill: 0, Difference: 0, Closes: true),
+            Assert.Single(engine.CurrentSnapshot()!.Verifications!));
+
+        engine.Apply(new DamageEvent(At(3), Me, Boss, 1, 2_500, HitModifiers.None));
+        engine.Apply(new DeathEvent(At(3), Boss));
+
+        Assert.Equal(
+            new TargetVerification(Boss, 12345, 10_000, EndHp: 0, 10_000, Counted: 10_500, Overkill: 500, Difference: 0, Closes: true),
+            Assert.Single(Assert.Single(finished).Verifications!));
+    }
+
+    [Fact]
+    public void Verification_shows_a_final_hit_that_could_not_have_killed()
+    {
+        // Quedaban 2.000 y el golpe final fue de 1.500: con la muerte faltan 500 de daño (10 veces la tolerancia de 100).
+        // El servidor manda igual su 0x8D00 de 0, el del golpe mortal que no decodificamos.
+        var engine = CreateEngine();
+        var finished = new List<EncounterSnapshot>();
+        engine.EncounterFinished += finished.Add;
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345, Hp: 10_000, MaxHp: 10_000));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), Ally, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Me, Boss, 1, 2_000, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(2), Boss, 2_000));
+        engine.Apply(new DamageEvent(At(3), Me, Boss, 1, 1_500, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(3), Boss, 0));
+        engine.Apply(new DeathEvent(At(3), Boss));
+
+        Assert.Equal(
+            new TargetVerification(Boss, 12345, 10_000, 0, 10_000, Counted: 9_500, Overkill: 0, Difference: -500, Closes: false),
+            Assert.Single(Assert.Single(finished).Verifications!));
+    }
+
+    [Fact]
+    public void Verification_takes_the_overkill_from_the_last_positive_reading()
+    {
+        // Así llega una muerte en las capturas: el 0x8D00 de 0 después del golpe mortal, golpes que ya estaban en vuelo y
+        // recién ahí el 0x8D04. Quedaban 2.000: los 500 que pasó el golpe de 2.500 y los 300 de después son overkill.
+        var engine = CreateEngine();
+        var finished = new List<EncounterSnapshot>();
+        engine.EncounterFinished += finished.Add;
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345, Hp: 10_000, MaxHp: 10_000));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), Ally, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Me, Boss, 1, 2_000, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(2), Boss, 2_000));
+        engine.Apply(new DamageEvent(At(3), Me, Boss, 1, 2_500, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(3), Boss, 0));
+        engine.Apply(new DamageEvent(At(3), Ally, Boss, 1, 300, HitModifiers.None));
+        engine.Apply(new DeathEvent(At(3), Boss));
+
+        Assert.Equal(
+            new TargetVerification(Boss, 12345, 10_000, 0, 10_000, Counted: 10_800, Overkill: 800, Difference: 0, Closes: true),
+            Assert.Single(Assert.Single(finished).Verifications!));
+    }
+
+    [Fact]
+    public void Verification_of_a_respawn_without_health_starts_at_its_first_reading()
+    {
+        // El mismo id vuelve a aparecer con un spawn sin vida: la que informó el servidor antes (el 0 de su muerte) ya no
+        // es la suya, así que la cuenta de la pelea nueva arranca en su primera lectura.
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345, Hp: 10_000, MaxHp: 10_000));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 10_000, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(0), Boss, 0));
+        engine.Apply(new DeathEvent(At(0), Boss));
+
+        engine.Apply(new EntitySpawnEvent(At(60), Boss, null, NpcId: 12345));
+        engine.Apply(new DamageEvent(At(61), Me, Boss, 1, 2_000, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(61), Boss, 8_000));
+        engine.Apply(new DamageEvent(At(62), Ally, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(62), Boss, 5_000));
+
+        Assert.Equal(
+            new TargetVerification(Boss, 12345, StartHp: 8_000, EndHp: 5_000, MaxHp: 10_000, Counted: 3_000, Overkill: 0, Difference: 0, Closes: true),
+            Assert.Single(engine.CurrentSnapshot()!.Verifications ?? []));
+    }
+
+    [Fact]
+    public void Verification_counts_players_outside_the_filter()
+    {
+        // Con el filtro de party, el golpe de un jugador de afuera no entra al ranking pero le baja la vida al boss. El
+        // que da antes de que haya pelea no abre ninguna ni se cuenta: la vida inicial ya lo refleja.
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, Boss, null, NpcId: 12345, Hp: 10_000, MaxHp: 10_000));
+        engine.Apply(new DamageEvent(At(0), Stranger, Boss, 1, 1_000, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(0), Boss, 9_000));
+        engine.Apply(new DamageEvent(At(1), Me, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Stranger, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(3), Ally, Boss, 1, 2_000, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(3), Boss, 1_000));
+
+        var snapshot = engine.CurrentSnapshot()!;
+        Assert.Equal([Me, Ally], snapshot.Actors.Select(a => a.Id));
+        Assert.Equal(
+            new TargetVerification(Boss, 12345, StartHp: 9_000, EndHp: 1_000, 10_000, Counted: 8_000, Overkill: 0, Difference: 0, Closes: true),
+            Assert.Single(snapshot.Verifications!));
+    }
+
+    [Fact]
+    public void Verification_starts_at_the_first_reading_when_the_spawn_had_no_health()
+    {
+        // Sin la vida del spawn (no la trajo, o se empezó a capturar después de la aparición), el primer 0x8D00 llega después
+        // del primer golpe, que ya refleja (como el del boss de la dungeon de la 001). La cuenta arranca en esa lectura; el
+        // golpe de antes no se cuenta.
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 2_082, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(0), Boss, 7_918));
+        engine.Apply(new DamageEvent(At(1), Ally, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new HealthEvent(At(1), Boss, 4_918));
+
+        Assert.Equal(
+            new TargetVerification(Boss, 12345, StartHp: 7_918, EndHp: 4_918, MaxHp: 7_918, Counted: 3_000, Overkill: 0, Difference: 0, Closes: true),
+            Assert.Single(engine.CurrentSnapshot()!.Verifications!));
+    }
+
+    [Fact]
+    public void Targets_without_server_health_or_a_later_reading_are_not_verified()
+    {
+        // Sin vida del servidor no hay con qué comparar; con vida pero sin ninguna lectura después del primer golpe ni
+        // muerte, tampoco: no se inventa un "cierra".
+        const ulong add = 901;
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, add, null, NpcId: 777, Hp: 5_000, MaxHp: 5_000));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1, 3_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), Me, add, 1, 1_000, HitModifiers.None));
+
+        Assert.Null(engine.CurrentSnapshot()!.Verifications);
+
+        // La única lectura del boss es la primera de la pelea: de ahí arranca la cuenta, todavía sin nada que verificar.
+        engine.Apply(new HealthEvent(At(2), Boss, 4_000));
+        Assert.Null(engine.CurrentSnapshot()!.Verifications);
+    }
 }

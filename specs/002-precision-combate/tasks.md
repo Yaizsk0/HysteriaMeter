@@ -66,7 +66,7 @@ description: "Tareas de la feature 002: precisión del combate"
 ## Phase 8: User Story 6 - DPS activo y verificación (P3)
 
 - [X] T026 [P] [US6] DPS activo (sin tiempo muerto ni sin objetivo) en `CombatEngine` + test
-- [ ] T027 [P] [US6] `TargetVerification` por objetivo con HP conocido, guardada en el encuentro + test sintético que no cierra
+- [X] T027 [P] [US6] `TargetVerification` por objetivo con HP conocido, guardada en el encuentro + test sintético que no cierra (sin UI: cada pelea guarda en `EncounterSnapshot.Verifications` y `verification_json`, por NPC golpeado, si el daño de todos los jugadores cierra con 1 % de tolerancia con la vida que perdió según el servidor; sin vida en el spawn, la cuenta arranca en la primera lectura. Cierran las 6 de la dungeon y el mini boss no cierra por la escala 30/7 sin explicar entre el daño y la vida: ver "Validación contra el juego" en `protocol-notes.md` de la 001)
 - [ ] T028 [US6] Mostrar el resultado de la verificación en el diagnóstico
 
 ## Phase 9: Polish
