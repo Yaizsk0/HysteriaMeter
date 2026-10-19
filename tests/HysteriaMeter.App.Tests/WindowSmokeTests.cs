@@ -463,16 +463,6 @@ public sealed partial class WindowSmokeTests
     }
 
     [Fact]
-    public void Health_check_compares_counted_damage_with_lost_health()
-    {
-        Assert.Null(MeterViewModel.HealthCheck(null, 100));
-        Assert.Null(MeterViewModel.HealthCheck(new Health(1000, 1000), 100));
-        var text = MeterViewModel.HealthCheck(new Health(600, 1000), 400);
-        Assert.NotNull(text);
-        Assert.Contains("100", text, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void Patch_is_suspected_only_with_traffic_and_nothing_known()
     {
         Assert.False(MeterViewModel.PatchSuspected(frames: 500, unknown: 500, errors: 0));
@@ -798,7 +788,7 @@ public sealed partial class WindowSmokeTests
     public void Bug_report_has_the_diagnostics_but_no_webhook()
     {
         var preferences = new MeterPreferences { DiscordWebhook = "https://discord.com/api/webhooks/1/secreto" };
-        var report = BugReport.Build("v0.15.0 · abc1234", "Windows 11", "En combate", "frames 10\nconocidos 9", preferences);
+        var report = BugReport.Build("v0.15.0 · abc1234", "Windows 11", "En combate", "frames 10\nconocidos 9", preferences, fight: null);
 
         Assert.Contains("v0.15.0 · abc1234", report);
         Assert.Contains("frames 10 conocidos 9", report);

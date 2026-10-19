@@ -132,6 +132,8 @@ En la bienvenida, el paso de la placa de red muestra el nombre de la placa ("Int
 
 La vida de los monstruos se lee bien desde que aparecen. Antes se tomaba de los últimos bytes del paquete de aparición, que en casi todos los monstruos de la dungeon y del mini boss son otros datos. Así salía basura (un add de 435.000 de vida aparecía con 20 de 91) o no salía nada. Eso contaba overkill falso en los primeros golpes y podía dejar a ese objetivo sin las marcas de fase del 75, el 50 y el 25 %. Ahora la vida se lee en su posición fija, y en las capturas de referencia coincide con la primera actualización de vida del servidor.
 
+El meter comprueba solo si leyó todo el daño. En Configuración → Diagnóstico, el bloque Verificación compara, para cada monstruo de la pelea, el daño que contó (de todos los jugadores, también los que el filtro deja afuera) con la vida que perdió según el servidor, con 1 % de tolerancia, y dice si cierra o cuánto falta o sobra. El objetivo principal también lo muestra en el tooltip de su vida, y el reporte de un problema lo incluye sin nombres. En la dungeon de referencia cierran todos; en algunos monstruos del mundo abierto la vida baja más que el daño, por una escala que todavía no se explica, así que ahí va a decir que no cierra.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).

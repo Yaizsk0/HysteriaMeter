@@ -980,29 +980,13 @@ public sealed partial class MeterViewModel : ObservableObject
     [ObservableProperty]
     public partial string TargetHealthText { get; set; } = string.Empty;
 
-    /// <summary>Auto-verificación: cuánto de la vida que perdió el boss explica el daño contado.</summary>
+    /// <summary>La verificación del objetivo principal en el tooltip de la vida (<see cref="HealthCheck"/>); <c>null</c> sin ella.</summary>
     [ObservableProperty]
     public partial string? TargetHealthCheck { get; set; }
 
     /// <summary>Contadores de captura y decodificación, en configuración.</summary>
     [ObservableProperty]
     public partial string Diagnostics { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Auto-verificación (MT-11): el daño que contamos contra el boss comparado con la vida que perdió desde el spawn.
-    /// Con el filtro de party no incluye a jugadores de afuera, así que puede dar menos de 100 % sin ser un error.
-    /// </summary>
-    public static string? HealthCheck(Health? health, long countedDamage)
-    {
-        if (health is not { MaxHp: > 0 } || health.MaxHp - health.Hp is var lost && lost <= 0)
-        {
-            return null;
-        }
-
-        var ratio = (double)countedDamage / lost;
-        return $"El daño contado explica el {ratio.ToString("P0", CultureInfo.CurrentCulture)} de la vida que perdió ({ActorRowViewModel.Compact(lost)}). " +
-            "Menos de 100 %: pegaron jugadores fuera del filtro o el boss ya estaba herido; más: curación del boss.";
-    }
 
     /// <summary>
     /// Aviso de parche (RB-01): mucho tráfico del juego pero ningún paquete conocido, o muchos errores al leer los
@@ -1157,10 +1141,11 @@ public sealed partial class MeterViewModel : ObservableObject
 
     /// <summary>
     /// El texto del reporte de un problema. El diagnóstico se arma en el momento: <see cref="Diagnostics"/> solo se
-    /// refresca con Configuración abierta, y el overlay también ofrece reportar (captura detenida, aviso de parche).
+    /// refresca con Configuración abierta, y el overlay también ofrece reportar (captura detenida, aviso de parche). La
+    /// verificación es la de la pelea de Diagnóstico, que el refresco guarda aunque Configuración esté cerrada.
     /// </summary>
     public string BuildProblemReport() =>
-        BugReport.Build(Version, Environment.OSVersion.VersionString, StatusText, CurrentDiagnostics(), Preferences);
+        BugReport.Build(Version, Environment.OSVersion.VersionString, StatusText, CurrentDiagnostics(), Preferences, _verified);
 
     /// <summary>Copia el reporte (versión, sistema, diagnóstico; sin nombres) y abre un issue nuevo en GitHub.</summary>
     [RelayCommand]
@@ -1747,6 +1732,7 @@ public sealed partial class MeterViewModel : ObservableObject
         }
 
         _pinned = snapshot;
+        _savedPinned = snapshot;
         _pinnedAt = DateTimeOffset.Now;
         PinnedHistoryId = item.Id;
         CurrentNote = (_allHistory.Find(i => i.Id == item.Id) ?? item).Note ?? string.Empty;
@@ -1853,7 +1839,14 @@ public sealed partial class MeterViewModel : ObservableObject
             return false;
         }
 
+        // Un archivo editado a mano puede traer verificaciones null ("Verifications": [null]): se descartan acá, como
+        // FromJson descarta los jugadores null. Sin ninguna queda como una pelea guardada sin verificación.
+        snapshot = snapshot with
+        {
+            Verifications = snapshot.Verifications?.OfType<TargetVerification>().ToArray() is { Length: > 0 } verifications ? verifications : null,
+        };
         _pinned = snapshot;
+        _savedPinned = snapshot;
         PinnedHistoryId = null;
         CanEditNote = false;
         IsViewingHistory = true;
@@ -2009,6 +2002,8 @@ public sealed partial class MeterViewModel : ObservableObject
         PinnedHistoryId = null;
         CanEditNote = false;
         _shown = null;
+        _verified = null;
+        UpdateVerification();
         IsViewingHistory = false;
         Actors.Clear();
         Title = NoTarget;
@@ -2105,6 +2100,7 @@ public sealed partial class MeterViewModel : ObservableObject
         CheckPractice(current);
         IsLive = _pinned is null && current is not null;
         TrackLive(current);
+        var fight = current;
         if (_pinned is null && IsRunView)
         {
             current = _engine.RunSnapshot();
@@ -2119,6 +2115,9 @@ public sealed partial class MeterViewModel : ObservableObject
             return;
         }
 
+        // La verificación es por pelea: con la vista RUN o SESIÓN, la de la pelea en curso o la última.
+        _verified = _pinned ?? fight ?? _lastFinished;
+        UpdateVerification();
         var snapshot = _pinned ?? current ?? _lastFinished;
         if (snapshot is null)
         {
@@ -2132,7 +2131,7 @@ public sealed partial class MeterViewModel : ObservableObject
         Title = TitleOf(snapshot);
         Elapsed = snapshot.Duration.ToString(@"mm\:ss", CultureInfo.InvariantCulture);
         UpdateTargetHealth(snapshot.TargetHealth);
-        TargetHealthCheck = HealthCheck(snapshot.TargetHealth, snapshot.Actors.Sum(a => a.MainTargetDamage));
+        TargetHealthCheck = HealthCheck(snapshot);
         var ttk = IsLive && HasTargetHealth ? EstimateTimeToKill(snapshot.TargetHealth!.Hp, snapshot.Actors.Sum(a => a.MainTargetDps)) : null;
         if (ttk is { } kill)
         {

@@ -744,7 +744,30 @@
                                 </StackPanel>
                             </Border>
                             <Button Style="{StaticResource ButtonGhost}" Content="Reportar un problema" Command="{Binding ReportProblemCommand}" HorizontalAlignment="Left" Margin="0,12,0,0"
-                                    ToolTip="Copia la versión y el diagnóstico (sin nombres de personajes) y abre un issue en GitHub para contar qué pasó" />
+                                    ToolTip="Copia la versión, el diagnóstico y la verificación (sin nombres de personajes ni de NPC) y abre un issue en GitHub para contar qué pasó" />
+                        </StackPanel>
+                        <!-- La verificación por objetivo de la pelea que muestra el meter (con la vista RUN o SESIÓN, la pelea en
+                             curso o la última): el resumen y una línea por objetivo, que se oculta sin verificación. -->
+                        <StackPanel Style="{StaticResource Block}">
+                            <TextBlock Text="VERIFICACIÓN" Style="{StaticResource BlockLabel}" />
+                            <Border Style="{StaticResource CardPanel}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Verification}" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding VerificationDetail}" Margin="0,6,0,0" LineHeight="18">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                                                <Style.Triggers>
+                                                    <Trigger Property="Text" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0"
+                                       Text="Compara el daño de todos los jugadores contra cada objetivo (también los que el filtro deja fuera) con la vida que perdió según el servidor, con 1 % de tolerancia. «No cierra» puede ser un golpe que el meter no leyó o algo del juego que cambia la vida sin daño: en algunos monstruos del mundo abierto la vida baja más que el daño, por una escala que todavía no se explica." />
                         </StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="PROGRAMA" Style="{StaticResource BlockLabel}" />

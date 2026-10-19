@@ -146,8 +146,9 @@ public sealed partial class MeterViewModel
     }
 
     /// <summary>
-    /// Al abrir la configuración se vuelven a leer las placas y la carpeta del juego: pueden haber cambiado. Al cerrarla,
-    /// la próxima vez abre en Apariencia (salvo que la abra <see cref="OpenSettings"/>).
+    /// Al abrir la configuración se vuelven a leer las placas y la carpeta del juego: pueden haber cambiado. La
+    /// verificación de Diagnóstico se arma enseguida, también en pausa (el refresco la deja de lado mientras está cerrada).
+    /// Al cerrarla, la próxima vez abre en Apariencia (salvo que la abra <see cref="OpenSettings"/>).
     /// </summary>
     partial void OnIsSettingsOpenChanged(bool value)
     {
@@ -165,6 +166,7 @@ public sealed partial class MeterViewModel
         OnPropertyChanged(nameof(CaptureDeviceMissing));
         OnPropertyChanged(nameof(CaptureRestartPending));
         OnPropertyChanged(nameof(GameData));
+        UpdateVerification();
     }
 
 }
