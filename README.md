@@ -91,7 +91,7 @@ El menú ⋯ → Minimizar convierte el overlay a una pastilla con tu DPS y tu p
 
 Clic en una fila del overlay abre el desglose por skill de ese jugador (daño, %, golpes, crítico, espalda, máximo, promedio y DPS). El paquete de daño solo trae el ID de la skill: doble clic en una skill del detalle para ponerle nombre (queda guardado en tus preferencias), o cargalos en `data/skills.json` para toda la legión.
 
-Los monstruos tampoco traen nombre: si una pelea sale como "NPC 2001234", agregá ese ID a `data/npcs.json` con su nombre, la dungeon y si es boss (`"2001234": { "name": "Destroyer Tarka", "dungeon": "...", "boss": true }`) y la próxima vez se ve con nombre, también en el historial y en el progreso por boss.
+Los monstruos tampoco traen nombre: si una pelea sale como "NPC 2001234", agregá ese ID a `data/npcs.json` con su nombre, la dungeon y si es boss (`"2001234": { "name": "Nombre del boss", "dungeon": "...", "boss": true }`) y la próxima vez se ve con nombre, también en el historial y en el progreso por boss.
 
 Si además le ponés `"enrage": 480` (segundos de pelea hasta el enrage), la vida del boss en el overlay dice "enrage en 1:20" y se pone roja cuando, al DPS actual, el boss muere después del enrage. Con "Sonido en las alertas" (configuración) suena un aviso de Windows en ese caso, al batir un récord y al terminar la prueba de DPS.
 
@@ -145,6 +145,8 @@ Cuatro skills que el detalle mostraba como "Skill 12060240" y parecidos ya tiene
 La tabla de skills del detalle suma las columnas PERF., DOBLE, FRENTE, ESPALDA y MULTI, como la vista detallada de Combat Analysis: el % de golpes perfectos, dobles, de frente, por la espalda y múltiples de cada skill, y el de todas juntas en TOTAL. La ventana arranca un poco más ancha para que entren; si la achicás por debajo de 1040 se ocultan y ESPALDA vuelve al tooltip de la fila.
 
 En modo compacto, durante la pelea la franja de arriba muestra contra quién es (el mismo rótulo del bloque del objetivo, que ese modo oculta) y su % de vida si el servidor la mandó. Si no entra, se recorta con "…" sin tapar el reloj ni los botones.
+
+`data/npcs.json` ya trae los bosses de las dos peleas de referencia, con el nombre que muestra Combat Analysis: Divine Auldor (Urugugu Canyon) y Destroyer Tarka. Las peleas nuevas contra ellos ya no salen como "NPC 2300218" o "NPC 2101106" y cuentan como boss aunque sean cortas. Los demás monstruos siguen con su plantilla hasta que se agreguen.
 
 ## Spec Kit
 

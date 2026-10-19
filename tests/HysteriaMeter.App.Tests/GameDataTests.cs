@@ -1,5 +1,6 @@
 using System.IO;
 using HysteriaMeter.App.ViewModels;
+using HysteriaMeter.Combat;
 
 namespace HysteriaMeter.App.Tests;
 
@@ -92,6 +93,17 @@ public class GameDataTests
         var npcs = NpcTable.Load(extracted, broken);
 
         Assert.Equal("Ambición de Kromede", npcs.Of(2300371)?.Name);
+    }
+
+    [Fact]
+    public void Published_npc_names_cover_the_reference_fights()
+    {
+        var npcs = NpcTable.Load(FindRepoFile("npcs.json"));
+
+        // Las dos peleas de referencia de la 002, con el nombre que muestra Combat Analysis y sin enrage medido.
+        Assert.Equal(new NpcInfo("Divine Auldor", "Urugugu Canyon", IsBoss: true), npcs.Of(2300218));
+        Assert.Equal(new NpcInfo("Destroyer Tarka", IsBoss: true), npcs.Of(2101106));
+        Assert.Null(npcs.Of(2400123));
     }
 
     /// <summary>Sube desde la carpeta de salida hasta la raíz del repo y devuelve <c>data/&lt;archivo&gt;</c>.</summary>
