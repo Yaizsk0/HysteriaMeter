@@ -64,6 +64,36 @@ public sealed class InicioTests
     }
 
     [Fact]
+    public void Npcap_step_warns_about_admin_only_but_stays_ready()
+    {
+        // Instalado con "solo administradores" y el meter sin elevar: no es un error, pero avisa del pedido de permiso.
+        var adminOnly = WelcomeViewModel.NpcapStep(installed: true, adminOnly: true);
+        Assert.Equal(("✓", "Npcap instalado", "Listo", true, false), (adminOnly.Mark, adminOnly.Title, adminOnly.State, adminOnly.IsReady, adminOnly.HasAction));
+        Assert.Equal(WelcomeViewModel.NpcapAdminOnlyText, adminOnly.Hint);
+        Assert.Contains("Restrict Npcap driver's access to Administrators only", adminOnly.Hint, StringComparison.Ordinal);
+        Assert.NotEqual(adminOnly.Hint, WelcomeViewModel.NpcapStep(installed: true).Hint);
+
+        // Sin Npcap instalado, lo que falta es Npcap.
+        Assert.Equal(WelcomeViewModel.NpcapStep(installed: false), WelcomeViewModel.NpcapStep(installed: false, adminOnly: true));
+
+        // El overlay la muestra con la captura ya cortada, que no se reabre sola: el pedido vuelve al abrir otra vez el meter.
+        Assert.Contains("Restrict Npcap driver's access to Administrators only", WelcomeViewModel.NpcapAdminOnlyReopenText, StringComparison.Ordinal);
+        Assert.Contains("Volvé a abrir el meter y aceptá ese pedido", WelcomeViewModel.NpcapAdminOnlyReopenText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Volvé a abrir", WelcomeViewModel.NpcapAdminOnlyText, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(1, null, false, true)]
+    [InlineData(1, null, true, false)]
+    [InlineData(null, 1, false, true)] // antes de Npcap 0.93 el valor estaba en Services\npcap
+    [InlineData(0, 1, false, false)] // si está en Parameters, manda ese
+    [InlineData(0, null, false, false)]
+    [InlineData(null, null, false, false)]
+    [InlineData("1", null, false, false)] // no es un REG_DWORD
+    public void Npcap_admin_only_needs_the_dword_checked_and_no_elevation(object? parameters, object? legacy, bool elevated, bool expected) =>
+        Assert.Equal(expected, NpcapAccess.AdminOnlyWithoutElevation(parameters, legacy, elevated));
+
+    [Fact]
     public void Device_step_waits_for_game_traffic_and_shows_failures()
     {
         var automatic = new CaptureSetup(NpcapInstalled: true, Device: null);
@@ -118,15 +148,48 @@ public sealed class InicioTests
             return [(@"\Device\NPF_{X}", "Intel Ethernet")];
         }
 
-        var chosen = CaptureSetup.From(new CaptureSettings { Device = @"\Device\NPF_{X}" }, @"\Device\NPF_{X}", Devices);
+        var chosen = CaptureSetup.From(new CaptureSettings { Device = @"\Device\NPF_{X}" }, @"\Device\NPF_{X}", Devices, () => false);
         Assert.Equal(("Intel Ethernet", CaptureDeviceOrigin.Preferences), (chosen.DeviceLabel, chosen.DeviceOrigin));
         Assert.Equal(1, listed);
 
         // Automática o repitiendo un .pcap no hay placa que nombrar: no se listan las placas.
-        Assert.Equal(CaptureDeviceOrigin.Automatic, CaptureSetup.From(new CaptureSettings(), string.Empty, Devices).DeviceOrigin);
-        var replay = CaptureSetup.From(new CaptureSettings { Mode = CaptureMode.Replay, ReplayPath = @"C:\pcap\pelea.pcap", Device = "Intel" }, string.Empty, Devices);
+        Assert.Equal(CaptureDeviceOrigin.Automatic, CaptureSetup.From(new CaptureSettings(), string.Empty, Devices, () => false).DeviceOrigin);
+        var replay = CaptureSetup.From(new CaptureSettings { Mode = CaptureMode.Replay, ReplayPath = @"C:\pcap\pelea.pcap", Device = "Intel" }, string.Empty, Devices, () => false);
         Assert.Equal("pelea.pcap", replay.ReplayFile);
         Assert.Equal(1, listed);
+    }
+
+    [Fact]
+    public void Capture_setup_asks_for_admin_only_only_in_live_mode()
+    {
+        var asked = 0;
+        bool AdminOnly()
+        {
+            asked++;
+            return true;
+        }
+
+        static IReadOnlyList<(string Name, string Description)> NoDevices() => [];
+
+        Assert.True(CaptureSetup.From(new CaptureSettings(), string.Empty, NoDevices, AdminOnly).NpcapAdminOnly);
+        Assert.Equal(1, asked);
+        Assert.False(CaptureSetup.From(new CaptureSettings(), string.Empty, NoDevices, () => false).NpcapAdminOnly);
+
+        // Repitiendo un .pcap no se abre ninguna placa: no hay pedido de permiso que avisar.
+        var replay = CaptureSetup.From(new CaptureSettings { Mode = CaptureMode.Replay, ReplayPath = @"C:\pcap\pelea.pcap" }, string.Empty, NoDevices, AdminOnly);
+        Assert.False(replay.NpcapAdminOnly);
+        Assert.Equal(1, asked);
+    }
+
+    [Fact]
+    public void Welcome_first_step_uses_the_admin_only_flag()
+    {
+        var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty, new MeterPreferences { WelcomeDone = false }, _ => { });
+        var data = new GameDataSummary(@"C:\no-existe", Exists: false, HasSkillFile: false, 0, 0, 0);
+
+        var adminOnly = new WelcomeViewModel(session, new CaptureSetup(true, null, NpcapAdminOnly: true), data).Steps[0];
+        Assert.Equal((WelcomeViewModel.NpcapAdminOnlyText, true), (adminOnly.Hint, adminOnly.IsReady));
+        Assert.Equal(WelcomeViewModel.NpcapStep(installed: true), new WelcomeViewModel(session, new CaptureSetup(true, null), data).Steps[0]);
     }
 
     [Fact]

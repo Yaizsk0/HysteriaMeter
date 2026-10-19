@@ -329,6 +329,14 @@
                                 <Button Content="Descargar Npcap ↗" Style="{StaticResource ButtonLink}" Command="{Binding OpenNpcapDownloadCommand}" HorizontalAlignment="Left"/>
                             </StackPanel>
                         </Border>
+                        <!-- Antes del tráfico el error no se mira (no se sabe qué texto da Npcap al negar el acceso): el mensaje real y el reporte quedan a la vista por si el corte fue por otra cosa. -->
+                        <Border x:Name="NpcapPermissionCard" Style="{StaticResource CaptureCard}" BorderBrush="{DynamicResource DangerBorder}" Visibility="{Binding ShowNpcapPermissionCard, Converter={StaticResource Visible}}">
+                            <StackPanel><TextBlock Text="Npcap pide permisos de administrador" Foreground="{DynamicResource Danger}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="{x:Static welcome:WelcomeViewModel.NpcapAdminOnlyReopenText}" Foreground="{DynamicResource TextMuted}" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                <TextBlock FontSize="11" Foreground="{DynamicResource TextDim}" Margin="0,6,0,8" TextWrapping="Wrap"><Run Text="La captura se detuvo: "/><Run Text="{Binding FailedDetail, Mode=OneWay}"/></TextBlock>
+                                <Button Content="Reportar un problema" Style="{StaticResource ButtonSoft}" Command="{Binding ReportProblemCommand}" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Border>
                         <Border x:Name="TrafficCard" Style="{StaticResource CaptureCard}" BorderBrush="{DynamicResource WarningLine}" Visibility="{Binding ShowTrafficCard, Converter={StaticResource Visible}}">
                             <StackPanel><TextBlock Text="Capturando, pero no llega nada de AION 2" Foreground="{DynamicResource Warning}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
                                 <TextBlock Text="¿Está abierto el juego? Si usás VPN o varias placas de red, elegí la correcta en Configuración → Captura." FontSize="12" Foreground="{DynamicResource TextMuted}" TextWrapping="Wrap" Margin="0,6,0,10"/>

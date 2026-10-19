@@ -9,6 +9,7 @@ using HysteriaMeter.App.Config;
 using HysteriaMeter.App.Overlay;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.App.ViewModels;
+using HysteriaMeter.App.Welcome;
 using HysteriaMeter.Combat;
 using HysteriaMeter.Protocol.Events;
 
@@ -134,13 +135,86 @@ public sealed class OverlayLiveTests
     }
 
     [Theory]
-    [InlineData(CaptureState.Failed, "falló una DLL", false, CaptureIssue.Npcap)]
-    [InlineData(CaptureState.Failed, "Npcap no responde", true, CaptureIssue.Npcap)]
-    [InlineData(CaptureState.Failed, "acceso denegado", true, CaptureIssue.Failed)]
-    [InlineData(CaptureState.NoTraffic, null, true, CaptureIssue.NoTraffic)]
-    [InlineData(CaptureState.Capturing, null, true, CaptureIssue.Patch)]
-    public void Capture_cards_distinguish_missing_driver_silence_and_unknown_protocol(CaptureState state, string? error, bool installed, CaptureIssue expected) =>
-        Assert.Equal(expected, MeterViewModel.IssueOf(state, error, patch: true, installed));
+    [InlineData(CaptureState.Failed, "falló una DLL", false, false, false, CaptureIssue.Npcap)]
+    [InlineData(CaptureState.Failed, "Npcap no responde", true, false, false, CaptureIssue.Npcap)]
+    [InlineData(CaptureState.Failed, "acceso denegado", true, false, false, CaptureIssue.Failed)]
+    [InlineData(CaptureState.NoTraffic, null, true, false, false, CaptureIssue.NoTraffic)]
+    [InlineData(CaptureState.Capturing, null, true, false, true, CaptureIssue.Patch)]
+    // Npcap instalado con "solo administradores" y el meter sin elevar: la tarjeta de permisos, aunque el error nombre a
+    // Npcap. Elevado, el flag llega en false y queda lo de siempre. Sin Npcap instalado manda la tarjeta de Npcap.
+    [InlineData(CaptureState.Failed, "Npcap no responde", true, true, false, CaptureIssue.NpcapPermission)]
+    [InlineData(CaptureState.Failed, "acceso denegado", true, true, false, CaptureIssue.NpcapPermission)]
+    [InlineData(CaptureState.Failed, "falló una DLL", false, true, false, CaptureIssue.Npcap)]
+    [InlineData(CaptureState.NoTraffic, null, true, true, false, CaptureIssue.NoTraffic)]
+    [InlineData(CaptureState.Capturing, null, true, true, true, CaptureIssue.Patch)]
+    // Antes del tráfico el texto no se mira: una placa que no existe también cae en permisos (la tarjeta muestra el error).
+    [InlineData(CaptureState.Failed, "No existe la placa 'placa-inexistente'.", true, true, false, CaptureIssue.NpcapPermission)]
+    // Con tráfico la captura ya se había abierto, así que el permiso estaba: el corte es otra cosa y queda lo de siempre.
+    [InlineData(CaptureState.Failed, "falló el decodificador", true, true, true, CaptureIssue.Failed)]
+    [InlineData(CaptureState.Failed, "Npcap no responde", true, true, true, CaptureIssue.Npcap)]
+    [InlineData(CaptureState.Failed, "falló una DLL", false, true, true, CaptureIssue.Npcap)]
+    public void Capture_cards_distinguish_missing_driver_silence_and_unknown_protocol(
+        CaptureState state, string? error, bool installed, bool adminOnly, bool hasTraffic, CaptureIssue expected) =>
+        Assert.Equal(expected, MeterViewModel.IssueOf(state, error, patch: true, installed, adminOnly, hasTraffic));
+
+    [Fact]
+    public void Npcap_permission_has_its_own_status_label()
+    {
+        Assert.Equal("Npcap pide permisos", MeterViewModel.StatusLabelOf(CaptureState.Failed, CaptureIssue.NpcapPermission));
+        Assert.Equal("Sin Npcap", MeterViewModel.StatusLabelOf(CaptureState.Failed, CaptureIssue.Npcap));
+    }
+
+    [Fact]
+    public void Npcap_admin_only_is_read_once_and_only_after_a_failure()
+    {
+        RunOnSta(() =>
+        {
+            var previous = NpcapAccess.Source;
+            var reads = 0;
+            NpcapAccess.Source = () =>
+            {
+                reads++;
+                return true;
+            };
+            try
+            {
+                var status = new CaptureStatus(DateTime.UtcNow);
+                var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty,
+                    new MeterPreferences { LastSeenNews = 1 }, _ => { }, status: status);
+                var vm = new MeterViewModel(session);
+                vm.IsPaused = true;
+                vm.IsPaused = false; // Refresh y UpdateStatus
+                Assert.Equal(0, reads);
+
+                status.Fail("[prueba] la captura se cortó");
+                vm.IsPaused = true;
+                vm.IsPaused = false;
+                vm.IsPaused = true;
+                vm.IsPaused = false;
+                Assert.Equal(1, reads);
+
+                // Instalado sale de wpcap.dll en System32: sin Npcap en la máquina manda la tarjeta de Npcap.
+                Assert.Equal(vm.Issue == CaptureIssue.Npcap ? "Sin Npcap" : "Npcap pide permisos", vm.StatusLabel);
+                Assert.NotEqual(CaptureIssue.Failed, vm.Issue);
+
+                // Si ya había llegado tráfico, la captura se había abierto: un corte posterior no es de permisos.
+                var opened = new CaptureStatus(DateTime.UtcNow);
+                opened.MarkTraffic(DateTime.UtcNow);
+                opened.Fail("[prueba] la captura se cortó");
+                var after = new MeterViewModel(new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty,
+                    new MeterPreferences { LastSeenNews = 1 }, _ => { }, status: opened));
+                after.IsPaused = true;
+                after.IsPaused = false;
+                Assert.Equal(2, reads);
+                Assert.Equal(after.Issue == CaptureIssue.Npcap ? "Sin Npcap" : "Captura detenida", after.StatusLabel);
+                Assert.NotEqual(CaptureIssue.NpcapPermission, after.Issue);
+            }
+            finally
+            {
+                NpcapAccess.Source = previous;
+            }
+        });
+    }
 
     [Fact]
     public void Empty_overlay_shows_waiting_and_capture_cards_and_keeps_the_menu_accessible()
@@ -171,6 +245,25 @@ public sealed class OverlayLiveTests
             Assert.Equal(Visibility.Collapsed, waiting.Visibility);
             var npcap = Assert.IsAssignableFrom<FrameworkElement>(window.FindName("NpcapCard"));
             Assert.Equal(Visibility.Visible, npcap.Visibility);
+            var permission = Assert.IsAssignableFrom<FrameworkElement>(window.FindName("NpcapPermissionCard"));
+            Assert.Equal(Visibility.Collapsed, permission.Visibility);
+
+            // Npcap en modo "solo administradores": su tarjeta sola, sin la de Npcap ni la del error genérico.
+            vm.Issue = CaptureIssue.NpcapPermission;
+            vm.FailedDetail = "No existe la placa 'placa-inexistente'.";
+            window.UpdateLayout();
+            Assert.Equal(Visibility.Visible, permission.Visibility);
+            Assert.Equal(Visibility.Collapsed, npcap.Visibility);
+            Assert.Equal(Visibility.Collapsed, waiting.Visibility);
+            Assert.False(vm.ShowFailedCard || vm.ShowTrafficCard || vm.ShowNpcapCard || vm.ShowWaitingCard);
+
+            // El corte no tiene vuelta atrás, así que el texto pide volver a abrir el meter. Como antes del tráfico el
+            // error no se mira, la tarjeta muestra el mensaje real y deja reportarlo, igual que la del error genérico.
+            var permissionPanel = Assert.IsType<StackPanel>(Assert.IsType<Border>(permission).Child);
+            var permissionTexts = permissionPanel.Children.OfType<TextBlock>().Select(t => t.Text).ToList();
+            Assert.Contains(WelcomeViewModel.NpcapAdminOnlyReopenText, permissionTexts);
+            Assert.Contains(permissionTexts, t => t.Contains(vm.FailedDetail, StringComparison.Ordinal));
+            Assert.Same(vm.ReportProblemCommand, Assert.Single(permissionPanel.Children.OfType<Button>()).Command);
 
             vm.Issue = CaptureIssue.NoTraffic;
             window.UpdateLayout();
