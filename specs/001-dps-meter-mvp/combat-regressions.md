@@ -4,7 +4,7 @@
 
 Una pelea podía cerrarse a los ocho segundos sin daño saliente aunque los NPC siguieran atacando al grupo. Al volver a atacar se abría otro encuentro, dividiendo el daño y cambiando la ventana del DPS.
 
-El motor mantiene ahora un reloj monótono de actividad de combate separado del reloj del daño saliente. Los golpes recibidos válidos actualizan el primero, después de comprobar el alcance de jugadores. Curación, vida y presencia en party no evitan el cierre. Un golpe recibido después del vencimiento tampoco revive ni abre un encuentro. Las fórmulas del DPS y las ventanas del objetivo conservan su comportamiento.
+El motor mantiene ahora un reloj monótono de actividad de combate separado del reloj del daño saliente. Los golpes recibidos válidos de un NPC que no es el objetivo principal actualizan el primero, después de comprobar el alcance de jugadores (ver "Solo los golpes de otro NPC"). Curación, vida y presencia en party no evitan el cierre. Un golpe recibido después del vencimiento tampoco revive ni abre un encuentro. Las fórmulas del DPS y las ventanas del objetivo conservan su comportamiento.
 
 `IncomingActivityTests` cubre continuidad con y sin Tick, daño al local y a la party, vencimiento, eventos fuera del alcance, señales sin daño, eventos fuera de orden, muerte del objetivo y separación desactivada. Los casos nuevos reprodujeron nueve fallos antes del cambio; los quince pasan con el arreglo.
 
