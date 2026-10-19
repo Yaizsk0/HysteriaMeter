@@ -52,6 +52,7 @@
     {"id": 84, "text": "Al cambiar el tema con una pelea guardada abierta, la franja de arriba del overlay toma los colores nuevos en el momento."},
     {"id": 85, "text": "El DPS ACTIVO del detalle ya no cuenta el DoT como actividad: sin tiempo muerto es igual al DPS, y si todo tu daño fue DoT muestra \"–\"."},
     {"id": 86, "text": "Diagnóstico muestra las desincronizaciones y los paquetes que el meter tiró por no dar abasto (antes ese contador daba siempre 0), y el reporte desde el overlay ya lleva el diagnóstico."},
-    {"id": 88, "text": "La bienvenida muestra el nombre de tu placa de red en vez de un código, y si la elegiste en la configuración o viene de appsettings.json."}
+    {"id": 88, "text": "La bienvenida muestra el nombre de tu placa de red en vez de un código, y si la elegiste en la configuración o viene de appsettings.json."},
+    {"id": 92, "text": "La vida de los monstruos al aparecer se lee bien. Antes muchas veces salía mal: inflaba el overkill de los primeros golpes y podía dejar la pelea sin las marcas de fase."}
   ]
 }
