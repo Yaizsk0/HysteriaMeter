@@ -11,7 +11,10 @@ internal sealed class Encounter(DateTimeOffset start)
 
     public DateTimeOffset LastActivity { get; set; } = start;
 
-    /// <summary>Último daño aceptado, hecho o recibido; solo determina el cierre por inactividad.</summary>
+    /// <summary>
+    /// Último daño aceptado, hecho o recibido de un NPC que no es el objetivo principal; solo determina el cierre por
+    /// inactividad.
+    /// </summary>
     public DateTimeOffset LastCombatActivity { get; private set; } = start;
 
     public Dictionary<ulong, ActorStats> Actors { get; } = [];
