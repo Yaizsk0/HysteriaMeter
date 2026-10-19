@@ -40,7 +40,9 @@ public sealed record HealthPhase(int Percent, int Second);
 /// <summary>
 /// Auto-verificación de un objetivo: si el daño contado en la pelea cierra con la vida que perdió según el servidor
 /// (spawn <c>0x3641</c> y <c>0x8D00</c>, sin el descuento de <see cref="EntityRegistry.ApplyDamage"/>), con 1 % de tolerancia.
-/// Cuenta el daño de todos los jugadores, también los que el filtro deja fuera del ranking: a la vida le bajan igual.
+/// Cuenta el daño de todos los jugadores, también los que el filtro deja fuera del ranking, y el de las invocaciones sin
+/// dueño que pegan con una skill de clase, aunque no se sepa de quién son: a la vida le bajan igual. Que cierre significa
+/// que se decodificó todo el daño que le bajó la vida, no que se le atribuyó todo a un jugador.
 /// <para>
 /// El <c>0x8D00</c> llega después de los golpes que refleja, en el mismo bundle (dungeon de la 001: 1.630 de 1.631
 /// lecturas del boss cierran exacto con los golpes anteriores; contando el golpe siguiente, 5), así que la lectura se

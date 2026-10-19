@@ -237,14 +237,26 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
 
         var source = Entities.Canonical(e.SourceId);
-        if (Entities.IsNpc(source) && Entities.IsNpc(Entities.Canonical(e.TargetId))
-            && Entities.TryAdoptSummon(source, e.SkillId, out var owner))
+        var target = Entities.Canonical(e.TargetId);
+        if (Entities.IsNpc(source) && Entities.IsNpc(target) && Entities.TryAdoptSummon(source, e.SkillId, out var owner))
         {
             source = owner; // invocación sin dueño que le pega a un monstruo con una skill de jugador
         }
 
         if (Entities.IsNpc(source))
         {
+            // Invocación sin dueño que no se pudo atribuir (por ejemplo, dos jugadores de su clase en la party): no entra al
+            // ranking ni sostiene la pelea, pero le baja la vida al monstruo, así que la verificación la suma, como a los
+            // jugadores fuera del filtro. Solo con skill de clase y a otro NPC: los monstruos entre sí, las invocaciones que
+            // se pegan a sí mismas y las curaciones del boss leídas como daño no son daño de jugadores. Volver acá no saltea
+            // nada: con un objetivo NPC, OnDamageTaken no hace nada.
+            if (source != target && Entities.IsNpc(target) && EntityRegistry.ClassOfSkill(e.SkillId) is not null
+                && LiveFight(e.Timestamp) is { } fight)
+            {
+                CountForVerification(fight, e);
+                return;
+            }
+
             OnDamageTaken(e, source);
             return;
         }
@@ -310,8 +322,10 @@ public sealed class CombatEngine(CombatEngineOptions options)
     }
 
     /// <summary>
-    /// Suma el golpe a la verificación de su objetivo (solo NPCs). Con el primer golpe de la pelea sobre él se anota la
-    /// vida que informó el servidor hasta ahí (ver <see cref="TargetVerification"/>).
+    /// Suma el golpe a la verificación de su objetivo (solo NPCs): los de todos los jugadores, también los que el filtro
+    /// deja fuera, y los de las invocaciones sin dueño que pegan con una skill de clase, aunque no entren al ranking. Con
+    /// el primer golpe de la pelea sobre él se anota la vida que informó el servidor hasta ahí (ver
+    /// <see cref="TargetVerification"/>).
     /// </summary>
     private void CountForVerification(Encounter encounter, DamageEvent e)
     {
