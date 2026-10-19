@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
+using HysteriaMeter.App.Themes;
 
 namespace HysteriaMeter.App.Welcome;
 
@@ -16,6 +17,7 @@ public partial class WelcomeWindow : Window
     public WelcomeWindow(WelcomeViewModel viewModel)
     {
         InitializeComponent();
+        UiScale.Follow(this);
         DataContext = _viewModel = viewModel;
         _timer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => _viewModel.Refresh(), Dispatcher);
         viewModel.CloseRequested += Close;

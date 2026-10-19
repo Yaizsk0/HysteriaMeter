@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Threading;
 using HysteriaMeter.App.Interop;
+using HysteriaMeter.App.Themes;
 
 namespace HysteriaMeter.App.FightCard;
 
@@ -27,6 +28,7 @@ public partial class FightCardWindow : Window
     public FightCardWindow(FightCardViewModel viewModel, bool clickThrough = false)
     {
         InitializeComponent();
+        UiScale.Follow(this);
         DataContext = _viewModel = viewModel;
         _clickThrough = clickThrough;
         _timer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => Tick(), Dispatcher);

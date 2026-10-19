@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using HysteriaMeter.App.Themes;
 using HysteriaMeter.App.ViewModels;
 
 namespace HysteriaMeter.App.Config;
@@ -23,6 +24,7 @@ public partial class ConfigWindow : Window
     {
         _viewModel = viewModel;
         InitializeComponent();
+        UiScale.Follow(this);
         DataContext = viewModel;
         Navigation(section).IsChecked = true;
 

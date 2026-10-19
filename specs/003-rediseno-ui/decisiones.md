@@ -74,6 +74,13 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 - Diagnóstico: la línea de contadores (la misma que va en "Reportar un problema") suma, después de las resincronizaciones por huecos TCP, las desincronizaciones del framer y los segmentos que la cola de la captura en vivo descartó por llena (no las pérdidas de Npcap); su tooltip explica cada número.
 - Tema: 4 tarjetas con vista previa de las paletas reales de MeterThemes, en el orden del mock: Abismo, Dorado, Mínimo, Carmesí (`ThemeCard.Order`; `MeterThemes.All` no cambia porque su primer tema es el de reemplazo).
 - Copiar imagen / Ver barras de prueba / Abrir pelea: ya no necesitan cerrar nada; la ventana queda abierta.
+- Escala de la interfaz (Apariencia → ESCALA: 100, 110, 125 y 150 %): con Windows al 100 % en monitores grandes el texto se
+  ve chico. `Themes/UiScale` pone un LayoutTransform en el contenido de cada ventana en vez de tocar los tamaños de fuente
+  (están fijos en muchos estilos) y agranda en la misma proporción el tamaño y el mínimo de la ventana, sin pasarse del área
+  de trabajo. Se aplica en vivo por el recurso `UiScale` de la App. Los popups (tooltips, desplegables y el menú "⋯" del
+  overlay con su submenú) son otra ventana y llevan su propio `UiScale.Factor`. El overlay la multiplica por su zoom de
+  Ctrl + rueda y guarda su tamaño y zoom sin la escala. Las columnas PERF. a MULTI del detalle miden el contenido, no la
+  ventana. El perfil exportado no la lleva: depende del monitor de cada PC.
 
 ## Detalle (Detalle, Muertes, Comparar)
 - DetailWindow rediseñada como el mock: cabecera con avatar (emblema PNG o inicial de clase en su color), nombre, clase, perfil (formato actual con NumberStyle, no romper tests), "Comparar con" (sin preselección), cerrar.

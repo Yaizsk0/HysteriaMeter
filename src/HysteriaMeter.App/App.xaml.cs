@@ -3,6 +3,7 @@ using System.Windows;
 using HysteriaMeter.App.Config;
 using HysteriaMeter.App.Overlay;
 using HysteriaMeter.App.Pipeline;
+using HysteriaMeter.App.Themes;
 using HysteriaMeter.App.ViewModels;
 using HysteriaMeter.App.Welcome;
 using HysteriaMeter.Combat;
@@ -106,6 +107,7 @@ public partial class App : Application
         MeterThemes.Defaults = MeterThemes.Snapshot(Resources);
         ApplyTheme(session.Preferences.Theme);
         Resources["BodyFont"] = MeterViewModel.FontOf(session.Preferences.TextFont);
+        Resources[UiScale.ResourceKey] = UiScale.Normalize(session.Preferences.UiScale);
         session.PreferencesChanged += names =>
         {
             if (MeterSession.Touches(names, nameof(MeterViewModel.SelectedTheme)))
@@ -116,6 +118,12 @@ public partial class App : Application
             if (MeterSession.Touches(names, nameof(MeterViewModel.FontName)))
             {
                 Dispatcher.InvokeAsync(() => Resources["BodyFont"] = MeterViewModel.FontOf(session.Preferences.TextFont));
+            }
+
+            // La escala de la interfaz: las ventanas abiertas y sus popups la siguen por el recurso (Themes/UiScale).
+            if (MeterSession.Touches(names, nameof(MeterViewModel.UiScale)))
+            {
+                Dispatcher.InvokeAsync(() => Resources[UiScale.ResourceKey] = UiScale.Normalize(session.Preferences.UiScale));
             }
         };
 

@@ -5,6 +5,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using HysteriaMeter.App.Themes;
 using HysteriaMeter.App.ViewModels;
 
 namespace HysteriaMeter.App.Detail;
@@ -20,6 +21,7 @@ public partial class DetailWindow : Window
     public DetailWindow(ActorDetailViewModel viewModel)
     {
         InitializeComponent();
+        UiScale.Follow(this);
         DataContext = _viewModel = viewModel;
         viewModel.LogRequested += ShowLog;
         viewModel.PropertyChanged += OnViewModelChanged;

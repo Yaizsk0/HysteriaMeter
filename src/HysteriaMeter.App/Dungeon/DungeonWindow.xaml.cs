@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using HysteriaMeter.App.Themes;
 using HysteriaMeter.App.ViewModels;
 
 namespace HysteriaMeter.App.Dungeon;
@@ -15,6 +16,7 @@ public partial class DungeonWindow : Window
     public DungeonWindow(DungeonSummaryViewModel viewModel)
     {
         InitializeComponent();
+        UiScale.Follow(this);
         _viewModel = viewModel;
         DataContext = viewModel;
     }

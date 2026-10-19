@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using HysteriaMeter.App.Themes;
 using HysteriaMeter.App.ViewModels;
 
 namespace HysteriaMeter.App.History;
@@ -13,6 +14,7 @@ public partial class HistoryWindow : Window
     public HistoryWindow(MeterViewModel viewModel)
     {
         InitializeComponent();
+        UiScale.Follow(this);
         DataContext = viewModel;
     }
 

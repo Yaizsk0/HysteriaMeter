@@ -27,3 +27,4 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Detalle: columnas PERF., DOBLE, FRENTE, ESPALDA y MULTI en la tabla de skills y en TOTAL, como Combat Analysis; ventana de 1120 y las cinco ocultas por debajo de 1040.
 - [X] Overlay: en modo compacto la franja muestra el objetivo y su % de vida durante la pelea, recortado antes de las acciones.
 - [X] Datos: `data/npcs.json` con los bosses de las peleas de referencia (2300218 Divine Auldor, Urugugu Canyon; 2101106 Destroyer Tarka), con el nombre de Combat Analysis, marcados como boss y sin enrage.
+- [X] Configuración: escala de la interfaz (100–150 %) para todas las ventanas y sus popups, en vivo; el overlay la suma a su zoom y guarda su tamaño sin ella; el perfil exportado no la lleva.

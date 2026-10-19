@@ -408,6 +408,17 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
+                                <!-- Escala de la interfaz (Themes/UiScale): agranda todas las ventanas y sus popups, en vivo. -->
+                                <TextBlock Text="ESCALA" Style="{StaticResource BlockLabel}" Margin="0,6,0,10" />
+                                <ListBox Style="{StaticResource Chips}" ItemsSource="{x:Static vm:MeterPreferences.ScaleOptions}" SelectedItem="{Binding UiScale}"
+                                         AutomationProperties.Name="Escala de la interfaz">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding StringFormat='{}{0:P0}'}" />
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock Text="Texto y controles de todas las ventanas; el overlay además tiene su zoom (Ctrl + rueda)" Style="{StaticResource Hint}" />
                             </StackPanel>
                             <StackPanel Grid.Column="2">
                                 <TextBlock Text="VENTANA" Style="{StaticResource BlockLabel}" />

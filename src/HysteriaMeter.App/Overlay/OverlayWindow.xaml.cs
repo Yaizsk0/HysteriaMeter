@@ -11,11 +11,12 @@ using HysteriaMeter.App.Detail;
 using HysteriaMeter.App.History;
 using HysteriaMeter.App.FightCard;
 using HysteriaMeter.App.Interop;
+using HysteriaMeter.App.Themes;
 using HysteriaMeter.App.ViewModels;
 
 namespace HysteriaMeter.App.Overlay;
 
-public partial class OverlayWindow : Window
+public partial class OverlayWindow : Window, IUiScaled
 {
     private const int ToggleClickThroughHotKey = 1;
     private const int ResetHotKey = 2;
@@ -35,12 +36,22 @@ public partial class OverlayWindow : Window
     private Config.ConfigWindow? _config;
     private FightCardWindow? _fightCard;
 
+    // Límites de la ventana sin la escala de la interfaz (los de OverlayWindow.xaml), y el zoom de Ctrl + rueda. Lo que
+    // se ve es zoom × escala; lo guardado (OverlayLayout) va sin la escala, que es de cada PC.
+    private readonly Size _minimum;
+    private readonly Size _maximum;
+    private double _zoom = 1;
+    private double _uiScale = 1;
+
     /// <param name="windows">Gestor de ventanas; <c>null</c> en pruebas, sin atajos globales.</param>
     public OverlayWindow(MeterViewModel viewModel, OverlayLayout? layout = null, OverlayWindows? windows = null)
     {
         InitializeComponent();
         DataContext = _viewModel = viewModel;
         _windows = windows;
+        _minimum = new Size(MinWidth, MinHeight);
+        _maximum = new Size(MaxWidth, MaxHeight);
+        UiScale.Follow(this);
         RestoreLayout(layout);
         Loaded += (_, _) =>
         {
@@ -93,7 +104,7 @@ public partial class OverlayWindow : Window
     public OverlayLayout? CurrentLayout() =>
         double.IsNaN(Left) || double.IsNaN(Top)
             ? null
-            : new OverlayLayout(Left, Top, Width, Zoom.ScaleX, Height, _viewModel.Tab, _viewModel.ShowHealing, _viewModel.IsCompact, _viewModel.IsSessionView, _viewModel.BossOnly, _viewModel.IsRunView);
+            : new OverlayLayout(Left, Top, Width / _uiScale, _zoom, Height / _uiScale, _viewModel.Tab, _viewModel.ShowHealing, _viewModel.IsCompact, _viewModel.IsSessionView, _viewModel.BossOnly, _viewModel.IsRunView);
 
     /// <summary>Copia el overlay como imagen (para pegar en Discord), al tamaño real en pantalla.</summary>
     private void CopyImage()
@@ -382,10 +393,10 @@ public partial class OverlayWindow : Window
             return;
         }
 
-        Width = Math.Clamp(layout.Width, MinWidth, MaxWidth);
+        Width = Math.Clamp(layout.Width * _uiScale, MinWidth, MaxWidth);
         if (layout.Height > 0)
         {
-            Height = Math.Clamp(layout.Height, MinHeight, MaxHeight);
+            Height = Math.Clamp(layout.Height * _uiScale, MinHeight, MaxHeight);
         }
 
         SetZoom(layout.Zoom);
@@ -402,9 +413,30 @@ public partial class OverlayWindow : Window
 
     private void SetZoom(double zoom)
     {
-        zoom = Math.Round(Math.Clamp(zoom, MinZoom, MaxZoom), 2);
-        Zoom.ScaleX = zoom;
-        Zoom.ScaleY = zoom;
+        _zoom = Math.Round(Math.Clamp(zoom, MinZoom, MaxZoom), 2);
+        ApplyZoom();
+    }
+
+    private void ApplyZoom()
+    {
+        Zoom.ScaleX = _zoom * _uiScale;
+        Zoom.ScaleY = _zoom * _uiScale;
+    }
+
+    /// <summary>
+    /// La escala de la interfaz se suma al zoom propio: crecen el contenido, el tamaño y los límites de la ventana en la
+    /// misma proporción, y Ctrl + rueda sigue moviendo solo el zoom.
+    /// </summary>
+    public void ApplyUiScale(double before, double after)
+    {
+        _uiScale = after;
+        MinWidth = _minimum.Width * after;
+        MinHeight = _minimum.Height * after;
+        MaxWidth = _maximum.Width * after;
+        MaxHeight = _maximum.Height * after;
+        ApplyZoom();
+        Width = Math.Clamp(Width * after / before, MinWidth, MaxWidth);
+        Height = Math.Clamp(Height * after / before, MinHeight, MaxHeight);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -631,10 +663,10 @@ public partial class OverlayWindow : Window
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
         {
             // El tamaño acompaña al zoom para que las columnas no se aprieten.
-            var before = Zoom.ScaleX;
+            var before = _zoom;
             SetZoom(before + (Math.Sign(e.Delta) * ZoomStep));
-            Width = Math.Clamp(Width * Zoom.ScaleX / before, MinWidth, MaxWidth);
-            Height = Math.Clamp(Height * Zoom.ScaleY / before, MinHeight, MaxHeight);
+            Width = Math.Clamp(Width * _zoom / before, MinWidth, MaxWidth);
+            Height = Math.Clamp(Height * _zoom / before, MinHeight, MaxHeight);
             e.Handled = true;
         }
     }

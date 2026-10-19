@@ -5,7 +5,8 @@ namespace HysteriaMeter.App.ViewModels;
 
 /// <summary>
 /// Perfil de configuración para pasar a otra PC o compartir con la legión (como los perfiles de Details!).
-/// El webhook de Discord no se exporta: es una URL privada del canal. La placa de red tampoco: es de cada PC.
+/// El webhook de Discord no se exporta: es una URL privada del canal. La placa de red y la escala de la interfaz
+/// tampoco: son de cada PC (la escala depende del monitor).
 /// </summary>
 public static class ProfileFile
 {
@@ -14,11 +15,11 @@ public static class ProfileFile
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, Converters = { new JsonStringEnumConverter() } };
 
     public static string ToJson(MeterPreferences preferences) =>
-        JsonSerializer.Serialize(preferences with { DiscordWebhook = string.Empty, DiscordOnKill = false, CaptureDevice = string.Empty }, Json);
+        JsonSerializer.Serialize(preferences with { DiscordWebhook = string.Empty, DiscordOnKill = false, CaptureDevice = string.Empty, UiScale = 1.0 }, Json);
 
     /// <summary>
-    /// Las preferencias del archivo, conservando el webhook, la placa y el estado de bienvenida/novedades propios;
-    /// null si el archivo no es un perfil válido.
+    /// Las preferencias del archivo, conservando el webhook, la placa, la escala y el estado de bienvenida/novedades
+    /// propios; null si el archivo no es un perfil válido.
     /// </summary>
     public static MeterPreferences? FromJson(string json, MeterPreferences current)
     {
@@ -32,6 +33,7 @@ public static class ProfileFile
                     DiscordOnKill = current.DiscordOnKill,
                     WelcomeDone = current.WelcomeDone,
                     LastSeenNews = current.LastSeenNews,
+                    UiScale = current.UiScale,
                 }
                 : null;
         }
