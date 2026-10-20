@@ -87,7 +87,7 @@ varint target | u8 flags | u8 flags2 | varint source | u32 skillId | u8 seq | u8
 ```
 
 - `flags & 0x04`: lleva un monto, que en lo validado es el daño (ver "Validación contra el juego"). `flags = 0x00`: aplicación/tick de buff sin valor. Cada frame con daño es **un golpe** para Combat Analysis; los ticks de `0x3805` suman daño pero no golpes.
-- INTERPRETADO: el monto no siempre es daño. En el mini boss, un `0x3804` de 31.500 con fuente NPC y skill 1910071 sube la vida del boss (ver "Validación contra el juego"), y el decoder lo emite igual como daño.
+- INTERPRETADO: el monto no siempre es daño. En el mini boss, un `0x3804` de 31.500 con fuente NPC y skill 1910071 sube la vida del boss (ver "Validación contra el juego"), y el decoder lo emite igual como daño. Tampoco lo son los 500.000.000 de la skill 1000007, que el motor descarta (ver "Golpes de 500.000.000").
 - Cuando es daño, `value` es el daño exacto del juego.
 - `seq` y `count` no tienen significado conocido (`count` vale 1 en los tres fixtures). El decoder lee `unk` y lo descarta.
 
@@ -107,6 +107,18 @@ Modificadores, validados contra el detalle de Combat Analysis de Destroyer Tarka
 - Parada, bloqueo y evasión: **sin identificar**. `HitModifiers` los tiene (`Parried`, `Blocked`, `Evaded`), pero ningún decoder los marca y quedan fuera de `ModifierCoverage.Identified`, así que se muestran como "sin identificar" y no como 0 %.
 - `unk` es un valor propio de cada personaje (11660 para el local en el análisis de los modificadores, del 2026-10-15; otros valores para cada jugador de la party) y 10000 o 0 para NPCs e invocaciones. No marca al jugador local. En los tres fixtures de la primera captura, la fuente 12157 trae 11910: sin verificar si es el mismo personaje o si el valor cambia entre días.
 - Duración del juego: del primer al último golpe de la pelea (27,65 s ⇒ 23.453 DPS).
+
+### Golpes de 500.000.000 (skill 1000007, investigado el 2026-10-20)
+
+Sobre el historial local (`hysteria-meter.db`, leído en solo lectura): 870 peleas, del 2026-10-15 al 2026-10-20.
+
+- En dos peleas del 2026-10-15 (18:55:35 y 21:56:27 UTC, de 3:22 y 3:40, en party de 5), cuatro jugadores por pelea pegan con la skill 1000007. Son 14 golpes, todos de exactamente 500.000.000 (varint `80 CA B5 EE 01`) y en segundos distintos de la pelea. Suman 7.000.000.000, el 86,4 % de los 8.100 millones de daño de toda la base. Ninguna otra pelea de la base trae esa skill. Tampoco aparece en las seis capturas de `captures/`: de 47.138 `0x3804` con monto, el mayor es de 167.071. No hay `.pcap` de esas peleas (ni en `captures/` ni en `Grabaciones`), así que no se pudo ver el `0x3804` entero.
+- Cada golpe fue a una entidad distinta que no recibió ningún otro. El objetivo principal (la entidad con más daño) quedó en las dos peleas con 500.000.000 de un solo jugador y 0 s contra él: ninguna entidad sumó más que eso, así que ninguna recibió dos de esos golpes ni otro daño aparte.
+- No es un error al leer el monto. El mismo valor redondo en 14 golpes, de 8 entidades de jugador y en dos runs con 3 horas de diferencia, no sale de un varint corrido. Además, la lectura del monto (`instance` y `count`, `unk`, `value`) no cambió desde el primer decoder (2026-10-14): la versión de ese día leía igual que la de hoy. El resto del daño de esas peleas es normal. Sin la 1000007 quedan 7.945.196 y 9.623.327, como las otras peleas largas de esas dos runs (de 2 a 6 minutos y de 7 a 16 millones).
+- La skill no es de clase (prefijo 1, no 11–18) y no está en `skills.json` (ni en MetaBot.GG ni en taengu). El golpe real más grande de la base es de 399.000 (skill 5004, Bomb Throw). El de una skill de clase es de 219.046. La vida más grande verificada es de 15.504.000 (npc 2920601). Que falte la clase de esos jugadores no es una pista: ninguna de las 629 filas del 2026-10-15 la tiene (versión de la app de ese día).
+- INTERPRETADO: es una mecánica del juego, no daño. Sin captura no se sabe cuál: hace falta grabar esa pelea para ver los flags, el tipo, la cola y la entidad objetivo.
+- Cuánto inflaba: el total daba 4.507.945.196 en vez de 7.945.196 (×567) y 2.509.623.327 en vez de 9.623.327 (×261). En la primera pelea, el local salía con el 66,6 % del total (era el 24,9 %) y el que más daño hizo de verdad (27,0 %) salía último, con el 0,05 %. En cada jugador con esos golpes, la 1000007 era el 99,5 al 99,9 % de su daño. Como la entidad de los 500.000.000 pasaba a ser el objetivo principal, las dos peleas quedaron sin boss, sin kill y con 0 s contra el objetivo.
+- `CombatEngine` ignora todo monto de más de 100.000.000 (`MaxRealHit`): 250 veces el golpe real más grande y más de 6 veces la vida más grande. Ese golpe no suma ni abre la pelea, no elige el objetivo principal y no entra en la verificación ni en el daño recibido. Las dos peleas ya guardadas quedan como estaban.
 
 ### Layout de `0x3805`
 
