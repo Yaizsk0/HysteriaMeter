@@ -18,6 +18,8 @@ namespace HysteriaMeter.App.Tests;
 [Collection("Overlay WPF")]
 public sealed class TrayScaleTests
 {
+    private static readonly double[] ScaleChanges = [1.5, 1.25, 1.0];
+
     [Fact]
     public void Menu_is_created_at_the_saved_scale()
     {
@@ -43,7 +45,7 @@ public sealed class TrayScaleTests
             AssertMeasures(menu, 1.0);
             var height = menu.GetPreferredSize(System.Drawing.Size.Empty).Height;
 
-            foreach (var scale in new[] { 1.5, 1.25, 1.0 })
+            foreach (var scale in ScaleChanges)
             {
                 var previous = menu.Font;
                 session.Update(session.Preferences with { UiScale = scale });
