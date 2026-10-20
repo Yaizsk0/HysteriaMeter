@@ -545,7 +545,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
             return true;
         }
 
-        return _scope == ActorScope.Party && Entities.IsPartyMember(canonicalSource);
+        return _scope == ActorScope.Party && Entities.WasInPartyThisZone(canonicalSource);
     }
 
     private void Finish()

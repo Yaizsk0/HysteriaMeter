@@ -176,6 +176,19 @@ public sealed class EntityRegistry
     public bool IsPartyMember(ulong canonicalId) =>
         _partySeenAt.TryGetValue(canonicalId, out var seenAt) && _now - seenAt <= PartyMemberTimeout;
 
+    /// <summary>
+    /// Para el filtro de party: un compañero que vimos en la party desde que entramos a esta zona, o hace menos de
+    /// <see cref="PartyMemberTimeout"/>. El servidor manda el HP/MP de los compañeros cuando cambia, no a cada segundo:
+    /// con la vida y el maná llenos (antes del pull, o un rato sin recibir daño) pasan más de 10 s sin datos, y con solo
+    /// el corte por tiempo sus golpes quedaban afuera del filtro (la apertura, por ejemplo). Las entidades cambian con la
+    /// zona, así que las de la zona anterior dejan de contar al vencer el corte. Quien deja la party sin cambiar de zona
+    /// sigue contando hasta el próximo cambio. Para elegir la identidad actual entre entidades con el mismo nombre (el
+    /// dueño de una invocación) vale <see cref="IsPartyMember"/>.
+    /// </summary>
+    public bool WasInPartyThisZone(ulong canonicalId) =>
+        IsPartyMember(canonicalId)
+        || (ZoneEnteredAt is { } zone && _partySeenAt.TryGetValue(canonicalId, out var seenAt) && seenAt >= zone);
+
     public ulong Canonical(ulong id)
     {
         for (var depth = 0; depth < MaxOwnerDepth && TryGetOwner(id, out var owner); depth++)
