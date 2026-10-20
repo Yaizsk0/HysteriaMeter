@@ -264,7 +264,8 @@ varint entity | varint HP | varint HPmax | u32 mp? | u32 mpMax? | u64 0 | u32 ? 
 
 - Consume exacto los 33 bytes del fixture `PartyMemberBody` (dungeon en party): entidad 15000, HP 16.915 de 16.915; después 4.194, 4.783, 0, 3.650, 150.000 y `01`.
 - El decoder solo lee la entidad: que llegue ya dice que es de la party. HP y HPmax no están validados contra `0x8D00`. INTERPRETADO: que los dos u32 que siguen sean el maná y su máximo. Los dos u32 del final, sin identificar.
-- Uso: para el alcance "party", `EntityRegistry` cuenta como compañero a quien mandó uno en los últimos 10 s. Para ser "jugador conocido" (por ejemplo, al adoptar invocaciones) alcanza con haber mandado uno alguna vez.
+- Uso: para el alcance "party", `EntityRegistry.WasInPartyThisZone` cuenta como compañero a quien mandó uno desde que entramos a la zona actual (o en los últimos 10 s). Para elegir la identidad actual entre entidades con el mismo nombre (el dueño de una invocación) vale `IsPartyMember`: los últimos 10 s. Para ser "jugador conocido" alcanza con haber mandado uno alguna vez.
+- VERIFICADO (2026-10-19, `comparacion-20261017-033114.pcap`): el servidor no lo manda a cada segundo sino cuando cambian HP o MP. Con el corte de 10 s quedaban afuera 85 golpes de compañeros con nombre (81 de ellos vistos en la party en la misma zona 10 a 60 s antes, 306 K de daño, muchos en la apertura). No hay un paquete conocido de salida de la party: quien sale sin cambiar de zona sigue contando hasta el próximo cambio.
 
 ### Item level, power y clase (2026-10-15)
 

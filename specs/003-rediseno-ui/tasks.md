@@ -32,3 +32,4 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Configuración → Apariencia: "Volver a la vista de fábrica" deja las filas como el diseño (DPS y %, colores por clase, sin línea de DPS, item level ni columnas extra, y no solo tu fila) y saca del compacto a esa ventana; no toca tema, fuente, opacidad, alto de fila, atajos ni captura.
 - [X] Historial: la cabecera queda en una línea con el filtro de personaje y en el ancho mínimo; se achica la búsqueda en vez de bajar el filtro abajo del título.
 - [X] Escala: el menú de la bandeja (WinForms, sin LayoutTransform) agranda su fuente, el relleno de los ítems, el separador y los márgenes y el radio del resaltado con la escala de la interfaz, cada vez que se abre.
+- [X] Combat: el filtro de party cuenta a quien estuvo en la party en esta zona aunque no mande HP/MP hace más de 10 s; ya no se pierde su daño (la apertura, por ejemplo).

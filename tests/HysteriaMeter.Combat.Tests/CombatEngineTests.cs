@@ -680,6 +680,38 @@ public class CombatEngineTests
         Assert.Equal([Me, Ally], engine.CurrentSnapshot()!.Actors.Select(a => a.Id));
     }
 
+    [Fact]
+    public void Party_scope_keeps_a_member_seen_in_this_zone_even_without_fresh_hp()
+    {
+        // El HP/MP del compañero llega cuando cambia: con la vida llena pasan más de 10 s sin datos.
+        var engine = CreateEngine();
+        for (var second = 1; second <= 31; second += 5)
+        {
+            engine.Apply(new DamageEvent(At(second), Me, Boss, 1, 100, HitModifiers.None));
+        }
+
+        engine.Apply(new DamageEvent(At(30), Ally, Boss, 1, 700, HitModifiers.None));
+        engine.Apply(new HealEvent(At(31), Ally, Me, 7, 300));
+
+        var ally = engine.CurrentSnapshot()!.Actors.Single(a => a.Id == Ally);
+        Assert.Equal((700L, 300L), (ally.Damage, ally.Healing));
+        Assert.False(engine.Entities.IsPartyMember(Ally));
+        Assert.True(engine.Entities.WasInPartyThisZone(Ally));
+    }
+
+    [Fact]
+    public void Party_scope_drops_a_member_of_the_previous_zone()
+    {
+        const ulong MeInNewZone = 11;
+        var engine = CreateEngine();
+        engine.Apply(new LocalPlayerEvent(At(5), MeInNewZone, "Mati"));
+        engine.Apply(new DamageEvent(At(20), MeInNewZone, Boss, 1, 100, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(21), Ally, Boss, 1, 700, HitModifiers.None));
+
+        Assert.Equal([MeInNewZone], engine.CurrentSnapshot()!.Actors.Select(a => a.Id));
+        Assert.False(engine.Entities.WasInPartyThisZone(Ally));
+    }
+
     [Theory]
     [InlineData(ActorScope.Me, 1)]
     [InlineData(ActorScope.Party, 2)]
@@ -708,13 +740,14 @@ public class CombatEngineTests
     }
 
     [Fact]
-    public void Member_that_stops_reporting_leaves_the_party()
+    public void Member_that_stops_reporting_stays_in_the_party_until_the_zone_changes()
     {
+        // No hay un paquete conocido de salida de la party: el corte es el cambio de zona.
         var engine = CreateEngine();
         engine.Apply(new DamageEvent(At(30), Me, Boss, 1, 100, HitModifiers.None));
         engine.Apply(new DamageEvent(At(31), Ally, Boss, 1, 100, HitModifiers.None)); // sin HP/MP hace 31 s
 
-        Assert.Equal([Me], engine.CurrentSnapshot()!.Actors.Select(a => a.Id));
+        Assert.Equal([Me, Ally], engine.CurrentSnapshot()!.Actors.Select(a => a.Id));
     }
 
     [Fact]

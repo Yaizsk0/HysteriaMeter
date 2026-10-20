@@ -162,6 +162,8 @@ La cabecera del Historial queda en una sola línea aunque haya peleas de más de
 
 El menú del ícono de la bandeja también sigue la escala: al 125 o 150 % su texto y sus opciones salen más grandes, como en las demás ventanas. El cambio se ve la próxima vez que se abre el menú.
 
+Con el alcance "Party", cuenta el daño de todos los que estuvieron en la party en esta zona, aunque haga más de 10 s que no llega su vida y su maná: el juego los manda solo cuando cambian, y antes se perdía el daño de un compañero con la vida llena (la apertura de la pelea, por ejemplo). Quien sale de la party sin cambiar de zona sigue contando hasta el próximo cambio.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
