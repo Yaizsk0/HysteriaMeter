@@ -26,7 +26,7 @@ public static class SmoothBar
     public static readonly DependencyProperty ScaleXProperty = DependencyProperty.RegisterAttached(
         "ScaleX", typeof(double), typeof(SmoothBar), new PropertyMetadata(double.NaN, OnScaleXChanged));
 
-    private static readonly IEasingFunction Ease = Frozen(new CubicEase { EasingMode = EasingMode.EaseOut });
+    private static readonly CubicEase Ease = Frozen(new CubicEase { EasingMode = EasingMode.EaseOut });
 
     /// <summary>Windows con "Mostrar animaciones" apagado: la barra salta como antes. Los tests lo reemplazan.</summary>
     internal static Func<bool> Enabled { get; set; } = () => SystemParameters.ClientAreaAnimation;
@@ -68,7 +68,7 @@ public static class SmoothBar
         return animation;
     }
 
-    private static IEasingFunction Frozen(CubicEase ease)
+    private static CubicEase Frozen(CubicEase ease)
     {
         ease.Freeze();
         return ease;
