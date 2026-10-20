@@ -52,6 +52,15 @@ public sealed partial class UiSnapshotTests
             return new HistoryWindow(vm);
         }),
 
+        // Con peleas de más de un personaje aparece el filtro de personaje: tiene que entrar en la cabecera sin bajar de línea.
+        new("07j-historial-personajes", h => new HistoryWindow(h.HistoryWithCharacters())),
+        new("07k-historial-personajes-ancho-minimo", h =>
+        {
+            var window = new HistoryWindow(h.HistoryWithCharacters());
+            window.Width = window.MinWidth;
+            return window;
+        }),
+
         // Sin base de historial: nada guardado todavía.
         new("07d-historial-vacio", h => new HistoryWindow(h.HistoryWindowOpen(withHistory: false))),
 
@@ -94,6 +103,18 @@ public sealed partial class UiSnapshotTests
             vm.HistoryClock = () => HistoryNow;
             Pump(vm.ToggleHistoryCommand.ExecuteAsync(null));
             Assert.True(vm.IsHistoryOpen);
+            return vm;
+        }
+
+        /// <summary>
+        /// Historial con el filtro de personaje a la vista (en "Todos"): las peleas del arnés son de un solo personaje, así
+        /// que el otro se agrega a la lista como lo haría UpdateHistoryCharacters.
+        /// </summary>
+        public MeterViewModel HistoryWithCharacters()
+        {
+            var vm = HistoryWindowOpen();
+            vm.HistoryCharacters.Add("[personaje de prueba]");
+            vm.HasSeveralCharacters = true;
             return vm;
         }
 
