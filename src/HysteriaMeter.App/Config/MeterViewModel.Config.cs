@@ -146,6 +146,34 @@ public sealed partial class MeterViewModel
     }
 
     /// <summary>
+    /// "Volver a la vista de fábrica": las filas como el diseño (DPS y %, colores por clase, sin línea de DPS, sin item
+    /// level ni las columnas TOTAL, 10 s, CRIT y MÁX, y no solo tu fila) y esta ventana sin modo compacto. Las preferencias
+    /// guardadas antes del rediseño no se migran solas (decisiones.md); esto les pone los valores de una instalación nueva.
+    /// No toca tema, fuente, números, opacidad, alto de fila, máximo de jugadores, atajos, captura ni historial.
+    /// </summary>
+    [RelayCommand]
+    private void ResetView()
+    {
+        var fresh = new MeterPreferences();
+        Update(
+            Preferences with
+            {
+                Sparklines = fresh.Sparklines,
+                ShowGear = fresh.ShowGear,
+                ColorByClass = fresh.ColorByClass,
+                ShowTotalColumn = fresh.ShowTotalColumn,
+                ShowShareColumn = fresh.ShowShareColumn,
+                ShowRecentColumn = fresh.ShowRecentColumn,
+                ShowCritColumn = fresh.ShowCritColumn,
+                ShowMaxHitColumn = fresh.ShowMaxHitColumn,
+                OnlyMe = fresh.OnlyMe,
+            },
+            nameof(ShowSparklines), nameof(ShowGear), nameof(ColorByClass), nameof(ShowTotalColumn), nameof(ShowShareColumn),
+            nameof(ShowRecentColumn), nameof(ShowCritColumn), nameof(ShowMaxHitColumn), nameof(OnlyMe));
+        IsCompact = false;
+    }
+
+    /// <summary>
     /// Al abrir la configuración se vuelven a leer las placas y la carpeta del juego: pueden haber cambiado. La
     /// verificación de Diagnóstico se arma enseguida, también en pausa (el refresco la deja de lado mientras está cerrada).
     /// Al cerrarla, la próxima vez abre en Apariencia (salvo que la abra <see cref="OpenSettings"/>).

@@ -275,6 +275,70 @@ public sealed class ConfigTests
             Assert.False(vm.IsSettingsOpen || vm.IsHistoryOpen);
         });
     }
+
+    [Fact]
+    public void Factory_view_resets_the_rows_and_compact_mode_and_keeps_the_rest()
+    {
+        RunOnSta(() =>
+        {
+            // Preferencias guardadas antes del rediseño: el rediseño no las migra.
+            var old = new MeterPreferences
+            {
+                Sparklines = true,
+                ShowGear = true,
+                ColorByClass = false,
+                ShowTotalColumn = true,
+                ShowShareColumn = false,
+                ShowRecentColumn = true,
+                ShowCritColumn = true,
+                ShowMaxHitColumn = true,
+                OnlyMe = true,
+                Theme = "Abismo",
+                TextFont = "Segoe UI",
+                Opacity = 0.7,
+                RowHeight = 36,
+                MaxRows = 8,
+                HotkeyReset = "Ctrl+Shift+F9",
+                CaptureDevice = @"\Device\NPF_{prueba}",
+                LastSeenNews = 100,
+                UiScale = 1.25,
+            };
+            var (session, vm) = Meter(old);
+            vm.IsCompact = true;
+            var changed = new List<string?>();
+            vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+            vm.ResetViewCommand.Execute(null);
+
+            // Filas y columnas con los valores de una instalación nueva; lo demás queda como estaba.
+            var fresh = new MeterPreferences();
+            var expected = old with
+            {
+                Sparklines = fresh.Sparklines,
+                ShowGear = fresh.ShowGear,
+                ColorByClass = fresh.ColorByClass,
+                ShowTotalColumn = fresh.ShowTotalColumn,
+                ShowShareColumn = fresh.ShowShareColumn,
+                ShowRecentColumn = fresh.ShowRecentColumn,
+                ShowCritColumn = fresh.ShowCritColumn,
+                ShowMaxHitColumn = fresh.ShowMaxHitColumn,
+                OnlyMe = fresh.OnlyMe,
+            };
+            Assert.Equal(expected, session.Preferences);
+            Assert.False(session.Preferences.Sparklines || session.Preferences.ShowGear || session.Preferences.ShowTotalColumn);
+            Assert.True(session.Preferences.ShowShareColumn && session.Preferences.ColorByClass);
+            Assert.Equal("Abismo", session.Preferences.Theme);
+            Assert.Equal(36, session.Preferences.RowHeight);
+
+            // Esta ventana sale del compacto y, con solo DPS y %, sin encabezado de columnas.
+            Assert.False(vm.IsCompact);
+            Assert.False(vm.ShowColumnHeaders);
+            Assert.Contains(nameof(MeterViewModel.ShowSparklines), changed);
+            Assert.Contains(nameof(MeterViewModel.ShowCritColumn), changed);
+            Assert.Contains(nameof(MeterViewModel.IsCompact), changed);
+        });
+    }
+
     private static (MeterSession Session, MeterViewModel ViewModel) Meter(MeterPreferences preferences)
     {
         var session = new MeterSession(new CombatEngine(), new CaptureRecorder(), SkillNames.Empty, preferences, _ => { });
