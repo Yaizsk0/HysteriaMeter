@@ -50,11 +50,21 @@
                     <TextBlock DockPanel.Dock="Right" Text="{Binding HistoryCountText}" FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource TextDim}"
                                VerticalAlignment="Center" Margin="12,0,0,0" Background="Transparent"
                                ToolTip="Peleas que dejan la búsqueda y el filtro, entre las últimas 200 guardadas" />
-                    <WrapPanel VerticalAlignment="Center">
+                    <!-- Una sola línea, como el mock. Si no entra (ventana angosta, filtro de personaje, contador largo), se achica
+                         la búsqueda hasta su mínimo en vez de bajar el filtro de personaje abajo del título. La búsqueda pesa 1000
+                         veces más que el relleno: se lleva todo el ancho que sobra hasta su máximo (264 + 12 de margen, su ancho
+                         de siempre) y lo que queda va al relleno, entre los filtros y el contador. -->
+                    <Grid VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="1000*" MinWidth="172" MaxWidth="276" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
                         <TextBlock Text="Historial" Style="{StaticResource WindowTitle}" VerticalAlignment="Center" Margin="0,0,28,0" />
 
                         <!-- Búsqueda: lupa y caja sin borde propio; el marco se pinta del acento con el foco -->
-                        <Border x:Name="SearchBox" Height="36" Padding="10,0" Margin="0,0,12,0" VerticalAlignment="Center" Background="{DynamicResource InputBg}"
+                        <Border x:Name="SearchBox" Grid.Column="1" Height="36" Padding="10,0" Margin="0,0,12,0" VerticalAlignment="Center" Background="{DynamicResource InputBg}"
                                 BorderThickness="1" CornerRadius="{StaticResource RadiusControl}" Cursor="IBeam">
                             <Border.Style>
                                 <Style TargetType="Border">
@@ -73,7 +83,7 @@
                                         <Path Data="M10.5,10.5 L14,14" Stroke="{DynamicResource TextDim}" StrokeThickness="1.6" />
                                     </Canvas>
                                 </Viewbox>
-                                <Grid Width="220" VerticalAlignment="Center">
+                                <Grid VerticalAlignment="Center">
                                     <TextBox x:Name="Search" Style="{StaticResource InputBox}" Text="{Binding HistorySearch, UpdateSourceTrigger=PropertyChanged}"
                                              Background="Transparent" BorderThickness="0" Padding="0" MinHeight="0"
                                              AutomationProperties.Name="Buscar" ToolTip="Buscar por boss o por nota" />
@@ -93,18 +103,21 @@
                             </DockPanel>
                         </Border>
 
-                        <!-- Chips excluyentes -->
-                        <RadioButton Style="{StaticResource FilterChip}" GroupName="HistoryFilter" Content="Todas" IsChecked="{Binding FilterAll}" VerticalAlignment="Center" />
-                        <RadioButton Style="{StaticResource FilterChip}" GroupName="HistoryFilter" Content="Solo kills" IsChecked="{Binding OnlyKills}" VerticalAlignment="Center"
-                                     ToolTip="Bosses derrotados (✓)" />
-                        <RadioButton Style="{StaticResource FilterChip}" GroupName="HistoryFilter" Content="Solo bosses" IsChecked="{Binding FilterBosses}" VerticalAlignment="Center"
-                                     ToolTip="Kills y wipes: peleas de al menos 30 s con casi todo el daño a un objetivo, como en el modo dungeon" />
-                        <RadioButton Style="{StaticResource FilterChip}" GroupName="HistoryFilter" Content="Esta semana" IsChecked="{Binding FilterThisWeek}" VerticalAlignment="Center"
-                                     ToolTip="Los últimos 7 días" />
-                        <ComboBox ItemsSource="{Binding HistoryCharacters}" SelectedItem="{Binding SelectedCharacter}" MinWidth="120" Height="32" VerticalAlignment="Center"
-                                  FontSize="{StaticResource FontSizeSmall}" ToolTip="Personaje: récords, intentos y percentiles se cuentan por personaje"
-                                  Visibility="{Binding HasSeveralCharacters, Converter={StaticResource Visible}}" />
-                    </WrapPanel>
+                        <!-- Chips excluyentes y, con más de un personaje, el filtro de personaje (no está en el mock) -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <RadioButton Style="{StaticResource FilterChip}" GroupName="HistoryFilter" Content="Todas" IsChecked="{Binding FilterAll}" VerticalAlignment="Center" />
+                            <RadioButton Style="{StaticResource FilterChip}" GroupName="HistoryFilter" Content="Solo kills" IsChecked="{Binding OnlyKills}" VerticalAlignment="Center"
+                                         ToolTip="Bosses derrotados (✓)" />
+                            <RadioButton Style="{StaticResource FilterChip}" GroupName="HistoryFilter" Content="Solo bosses" IsChecked="{Binding FilterBosses}" VerticalAlignment="Center"
+                                         ToolTip="Kills y wipes: peleas de al menos 30 s con casi todo el daño a un objetivo, como en el modo dungeon" />
+                            <RadioButton Style="{StaticResource FilterChip}" GroupName="HistoryFilter" Content="Esta semana" IsChecked="{Binding FilterThisWeek}" VerticalAlignment="Center"
+                                         ToolTip="Los últimos 7 días" />
+                            <!-- Ancho topeado: un nombre largo se corta en vez de empujar el contador fuera de la ventana. -->
+                            <ComboBox ItemsSource="{Binding HistoryCharacters}" SelectedItem="{Binding SelectedCharacter}" MinWidth="120" MaxWidth="170" Height="32" VerticalAlignment="Center"
+                                      FontSize="{StaticResource FontSizeSmall}" ToolTip="Personaje: récords, intentos y percentiles se cuentan por personaje"
+                                      Visibility="{Binding HasSeveralCharacters, Converter={StaticResource Visible}}" />
+                        </StackPanel>
+                    </Grid>
                 </DockPanel>
             </Border>
 

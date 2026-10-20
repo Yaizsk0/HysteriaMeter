@@ -33,6 +33,12 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 - Encabezado de columnas: se oculta cuando solo se ven DPS y %; si hay columnas opcionales (CRIT, MÁX, total, etc.) se muestra.
 - Pie: "Total X · N jugadores" a la izquierda y "Clic en una fila: detalle" a la derecha (se mantiene clic simple = detalle; doble clic = compacto, como hoy). Crít./Máx. del local pasan al tooltip del total.
 - Defaults para instalaciones nuevas como el mock: texto IBM Plex Sans, Sparklines=false y ColorByClass=true, entre otros. No se reemplazan los valores guardados ni se fuerza una migración de fuente o de columnas al usuario.
+  Por eso quien venía de antes del rediseño seguía viendo su compacto, la línea de DPS, el item level y las columnas
+  TOTAL/HPS, CRIT y MÁX, y el overlay no se parecía al mock. Configuración → Apariencia tiene "Volver a la vista de
+  fábrica" (`ResetView`): pone en las filas los valores de `new MeterPreferences()` (línea de DPS, item level, colores por
+  clase, columnas TOTAL, %, 10 s, CRIT y MÁX, "Solo mi fila") y saca del compacto a la ventana de esa configuración. Lo
+  pide el usuario con un clic; tema, fuente, números, opacidad, alto de fila, máximo de jugadores, atajos, captura e
+  historial no se tocan.
 - Compacto: como hoy (oculta pestañas, filas 22). Como también oculta el bloque del objetivo, con pelea la franja muestra en el lugar de las pestañas el rótulo del objetivo (el mismo `Title`: nombre, "NPC …" o "Encuentro") y su % de vida si hay dato, recortado con "…" antes de las acciones (`CompactTarget`).
 - Tarjeta de espera ("Listo para la próxima pelea"): solo cuando el overlay está vacío de verdad (arranque o después de Reiniciar). Entre peleas siguen visibles las filas de la última pelea, como hoy. Sin nombre de zona (no existe): muestra "Última: <objetivo> · <duración>" si hay.
 - Vista RUN: título "Run · entrada HH:mm" (no hay nombre de zona); chips por tramo (Trash agrupa tramos consecutivos; kill dorado/verde; wipe rojo con nombre del boss); tiempo = hasta el último golpe (como RunTitle).
@@ -54,6 +60,7 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 - Fila: insignia ✓ kill / ✕ wipe / · trash, objetivo, duración, tu DPS, delta vs intento anterior contra ese boss (solo kills), "intento N" (conteo histórico actual), MUERTES (suma de encounter_actors.deaths de la pelea: consulta nueva con test). ★ récord, fecha/hora y nota van en la fila de forma discreta o tooltip; no se pierden.
 - Panel lateral "TU PROGRESO": del boss de la fila seleccionada (o del filtro si deja uno); sin selección, estado vacío con texto. Gráfico con color por percentil real. KILLS k/n = kills sobre las peleas de boss contra ese objetivo (la misma plantilla o, sin plantilla, el mismo nombre: `HistoryItem.TargetKey`) con tu DPS y el mismo personaje; el trash no entra en la serie (ver "Objetivos sin nombre, intentos y wipes").
 - Contador "N peleas · M runs" de lo filtrado. Estados vacíos con texto.
+- La cabecera va en una sola línea, como el mock, también con el filtro de personaje (no está en el mock: aparece con peleas de más de un personaje) y en el ancho mínimo (940). Es una grilla: título, búsqueda, chips y filtro de personaje, relleno y contador. Si no entra, se achica la búsqueda (de 264 hasta 160 px) antes de que algo baje de línea; el filtro de personaje tiene tope de 170 px. Antes era un WrapPanel y a 940 el filtro caía abajo del título. Estados del arnés: 07j y 07k.
 
 ## Objetivos sin nombre, intentos y wipes (datos reales)
 - data/npcs.json casi no trae nombres: el objetivo se muestra con su nombre o, sin nombre, con su plantilla de NPC con el mismo rótulo del overlay, "NPC 2400123" (`FightTarget.NameOrNpc`/`Label` en Combat). Sin nombre ni plantilla (peleas guardadas antes de registrarla) es "Encuentro" y no se compara con nada. Los nombres "#entidad" de versiones viejas y el nombre vacío cuentan como sin nombre.
