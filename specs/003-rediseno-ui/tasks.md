@@ -29,3 +29,4 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Datos: `data/npcs.json` con los bosses de las peleas de referencia (2300218 Divine Auldor, Urugugu Canyon; 2101106 Destroyer Tarka), con el nombre de Combat Analysis, marcados como boss y sin enrage.
 - [X] Configuración: escala de la interfaz (100–150 %) para todas las ventanas y sus popups, en vivo; el overlay la suma a su zoom y guarda su tamaño sin ella; el perfil exportado no la lleva.
 - [X] Escala: los desplegables y el submenú del "⋯" ya no se escalan dos veces (heredan la de su ventana) y el overlay que crece cerca del borde se corre para no salirse del monitor.
+- [X] Configuración → Apariencia: "Volver a la vista de fábrica" deja las filas como el diseño (DPS y %, colores por clase, sin línea de DPS, item level ni columnas extra, y no solo tu fila) y saca del compacto a esa ventana; no toca tema, fuente, opacidad, alto de fila, atajos ni captura.
