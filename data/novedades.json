@@ -71,6 +71,7 @@
     {"id": 113, "text": "Historial: con más de un personaje, el filtro de personaje ya no se baja abajo del título en la ventana angosta."},
     {"id": 112, "text": "El menú del ícono de la bandeja también se agranda con la escala de la interfaz."},
     {"id": 114, "text": "Party: ya no se pierde el daño de un compañero que lleva un rato con la vida llena; el total del boss coincide con su vida."},
-    {"id": 115, "text": "El overlay pasó una vez a la vista del diseño nuevo: sin compacto y sin columnas extra. Para volver a prenderlas: Configuración → Apariencia."}
+    {"id": 115, "text": "El overlay pasó una vez a la vista del diseño nuevo: sin compacto y sin columnas extra. Para volver a prenderlas: Configuración → Apariencia."},
+    {"id": 116, "text": "Las barras de daño del overlay y del detalle se deslizan hasta el valor nuevo en vez de saltar en cada refresco."}
   ]
 }
