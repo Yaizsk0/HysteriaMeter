@@ -5,6 +5,7 @@ using System.Drawing.Text;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
+using HysteriaMeter.App.Themes;
 using HysteriaMeter.App.ViewModels;
 using DPoint = System.Drawing.Point;
 using DrawingSystemColors = System.Drawing.SystemColors;
@@ -42,46 +43,43 @@ public sealed class TrayIcon : IDisposable
 
     /// <summary>
     /// El menú con los colores del tema (MenuBg, borde Stroke, resaltado AccentSoft, "Salir" en Danger). Los textos y
-    /// los atajos se actualizan cada vez que se abre: el atajo configurado va al lado de "Ocultar overlay".
+    /// los atajos se actualizan cada vez que se abre: el atajo configurado va al lado de "Ocultar overlay". También la
+    /// fuente y la escala de la interfaz (Configuración → Apariencia), que WinForms no toma del LayoutTransform de WPF.
     /// </summary>
     public static Forms.ContextMenuStrip CreateMenu(OverlayWindows windows, MeterSession session)
     {
         var colors = new TrayMenuColors();
+        var renderer = new TrayMenuRenderer(colors);
         var menu = new Forms.ContextMenuStrip
         {
-            Renderer = new TrayMenuRenderer(colors),
+            Renderer = renderer,
             ShowImageMargin = false,
             ShowCheckMargin = false,
         };
-        var menuFont = new MenuFont(session.Preferences.TextFont);
+        var menuFont = new MenuFont(session.Preferences.TextFont, UiScale.Normalize(session.Preferences.UiScale));
         menu.Font = menuFont.Value;
         menu.Disposed += (_, _) => menuFont.Dispose();
-        var scale = menu.DeviceDpi / 96f;
-        menu.MinimumSize = new System.Drawing.Size((int)Math.Round(220 * scale), 0);
 
-        var visibility = Item(menu, scale, "Ocultar overlay", () => ToggleVisible(windows));
-        var reset = Item(menu, scale, "Reiniciar la pelea", session.Reset);
-        Item(menu, scale, "Historial", () => OpenPanel(windows, history: true));
-        Item(menu, scale, "Configuración", () => OpenPanel(windows, history: false));
-        Item(menu, scale, "Abrir la carpeta de datos", OpenDataFolder);
-        menu.Items.Add(new Forms.ToolStripSeparator { AutoSize = false, Height = (int)Math.Round(9 * scale) });
-        var exit = Item(menu, scale, "Salir", () => Application.Current?.MainWindow?.Close());
+        var visibility = Item(menu, "Ocultar overlay", () => ToggleVisible(windows));
+        var reset = Item(menu, "Reiniciar la pelea", session.Reset);
+        Item(menu, "Historial", () => OpenPanel(windows, history: true));
+        Item(menu, "Configuración", () => OpenPanel(windows, history: false));
+        Item(menu, "Abrir la carpeta de datos", OpenDataFolder);
+        menu.Items.Add(new Forms.ToolStripSeparator { AutoSize = false });
+        var exit = Item(menu, "Salir", () => Application.Current?.MainWindow?.Close());
         exit.Tag = TrayMenuRenderer.DangerTag;
-
-        // El menú de WinForms recalcula su Padding (deja 2 px arriba y abajo): los 6 px del mock van como margen
-        // del primer y el último ítem. A los costados, el renderer deja el mismo margen al resaltar.
-        var edge = (int)Math.Round((TrayMenuRenderer.Inset - 2) * scale);
-        visibility.Margin = new Forms.Padding(0, edge, 0, 0);
-        exit.Margin = new Forms.Padding(0, 0, 0, edge);
+        Measure(menu, renderer, menuFont.Scale);
 
         menu.Opening += (_, _) =>
         {
-            if (menuFont.Name != session.Preferences.TextFont)
+            var scale = UiScale.Normalize(session.Preferences.UiScale);
+            if (menuFont.Name != session.Preferences.TextFont || menuFont.Scale != scale)
             {
                 var previous = menuFont;
-                menuFont = new MenuFont(session.Preferences.TextFont);
+                menuFont = new MenuFont(session.Preferences.TextFont, scale);
                 menu.Font = menuFont.Value;
                 previous.Dispose();
+                Measure(menu, renderer, scale);
             }
 
             colors.Refresh();
@@ -109,17 +107,43 @@ public sealed class TrayIcon : IDisposable
     /// <summary>"Ocultar overlay" si se ve alguna ventana; si están todas ocultas, "Mostrar overlay".</summary>
     public static string VisibilityText(bool anyVisible) => anyVisible ? "Ocultar overlay" : "Mostrar overlay";
 
-    private static Forms.ToolStripMenuItem Item(Forms.ContextMenuStrip menu, float scale, string text, Action onClick)
+    private static Forms.ToolStripMenuItem Item(Forms.ContextMenuStrip menu, string text, Action onClick)
     {
-        // Alto de 34 px como el mock: el texto mide unos 20, el resto es relleno. La posición del texto a los
-        // costados la decide TrayMenuRenderer (WinForms ignora el relleno izquierdo para ubicarlo).
-        var vertical = (int)Math.Round(7 * scale);
-        var item = new Forms.ToolStripMenuItem(text, null, (_, _) => onClick())
-        {
-            Padding = new Forms.Padding((int)Math.Round(4 * scale), vertical, 0, vertical),
-        };
+        var item = new Forms.ToolStripMenuItem(text, null, (_, _) => onClick());
         menu.Items.Add(item);
         return item;
+    }
+
+    /// <summary>
+    /// Las medidas del mock (px a 96 ppp) por el DPI del monitor y la escala de la interfaz: ancho mínimo, relleno de
+    /// los ítems, alto del separador y márgenes de los extremos. La fuente, en puntos, ya escala con el DPI.
+    /// </summary>
+    private static void Measure(Forms.ContextMenuStrip menu, TrayMenuRenderer renderer, double uiScale)
+    {
+        renderer.UiScale = uiScale;
+        var scale = menu.DeviceDpi / 96.0 * uiScale;
+        int Px(double value) => (int)Math.Round(value * scale);
+
+        menu.MinimumSize = new System.Drawing.Size(Px(220), 0);
+        foreach (Forms.ToolStripItem item in menu.Items)
+        {
+            if (item is Forms.ToolStripSeparator separator)
+            {
+                separator.Height = Px(9);
+            }
+            else
+            {
+                // Alto de 34 px como el mock: el texto mide unos 20, el resto es relleno. La posición del texto a los
+                // costados la decide TrayMenuRenderer (WinForms ignora el relleno izquierdo para ubicarlo).
+                item.Padding = new Forms.Padding(Px(4), Px(7), 0, Px(7));
+            }
+        }
+
+        // El menú de WinForms recalcula su Padding (deja 2 px arriba y abajo): los 6 px del mock van como margen
+        // del primer y el último ítem. A los costados, el renderer deja el mismo margen al resaltar.
+        var edge = (int)Math.Round(((TrayMenuRenderer.Inset * uiScale) - 2) * menu.DeviceDpi / 96.0);
+        menu.Items[0].Margin = new Forms.Padding(0, edge, 0, 0);
+        menu.Items[^1].Margin = new Forms.Padding(0, 0, 0, edge);
     }
 
     /// <summary>Las ventanas se ocultan o muestran todas juntas, como con el atajo.</summary>
@@ -236,11 +260,13 @@ public sealed class TrayIcon : IDisposable
         private IntPtr _memory;
         private IntPtr _registration;
 
-        public MenuFont(string name)
+        public MenuFont(string name, double scale)
         {
             Name = name;
-            // 13 px lógicos a 96 ppp; puntos para que WinForms escale con el DPI del monitor.
-            Value = new Font(name, 9.75f, System.Drawing.FontStyle.Regular, GraphicsUnit.Point);
+            Scale = scale;
+            // 13 px lógicos a 96 ppp, por la escala de la interfaz; puntos para que WinForms escale con el DPI del monitor.
+            var size = (float)(9.75 * scale);
+            Value = new Font(name, size, System.Drawing.FontStyle.Regular, GraphicsUnit.Point);
             var file = name switch
             {
                 "IBM Plex Sans" => "IBMPlexSans/IBMPlexSans-Regular.ttf",
@@ -278,7 +304,7 @@ public sealed class TrayIcon : IDisposable
                 _collection = new PrivateFontCollection();
                 _collection.AddMemoryFont(_memory, data.Length);
                 _family = _collection.Families[0];
-                var embedded = new Font(_family, 9.75f, System.Drawing.FontStyle.Regular, GraphicsUnit.Point);
+                var embedded = new Font(_family, size, System.Drawing.FontStyle.Regular, GraphicsUnit.Point);
                 Value.Dispose();
                 Value = embedded;
             }
@@ -290,6 +316,8 @@ public sealed class TrayIcon : IDisposable
         }
 
         public string Name { get; }
+
+        public double Scale { get; }
 
         public Font Value { get; }
 
@@ -443,6 +471,9 @@ public sealed class TrayMenuRenderer : Forms.ToolStripProfessionalRenderer
         RoundedEdges = false;
     }
 
+    /// <summary>Escala de la interfaz (1 = 100 %): los márgenes y el radio del resaltado crecen con el texto.</summary>
+    public double UiScale { get; set; } = 1;
+
     protected override void OnRenderToolStripBackground(Forms.ToolStripRenderEventArgs e)
     {
         using var brush = new SolidBrush(_colors.Background);
@@ -468,7 +499,7 @@ public sealed class TrayMenuRenderer : Forms.ToolStripProfessionalRenderer
             return;
         }
 
-        var scale = (e.ToolStrip?.DeviceDpi ?? 96) / 96f;
+        var scale = Scale(e.ToolStrip);
         var (left, right) = Inside(e.ToolStrip, e.Item, scale);
         using var path = Rounded(new Rectangle(left, 0, right - left, e.Item.Height - 1), (int)Math.Round(5 * scale));
         using var brush = new SolidBrush(_colors.Hover);
@@ -483,7 +514,7 @@ public sealed class TrayMenuRenderer : Forms.ToolStripProfessionalRenderer
         if (e.Item is Forms.ToolStripMenuItem)
         {
             // El texto a TextPadding del resaltado; el atajo, alineado a la derecha con el mismo margen.
-            var scale = (e.ToolStrip?.DeviceDpi ?? 96) / 96f;
+            var scale = Scale(e.ToolStrip);
             var (left, right) = Inside(e.ToolStrip, e.Item, scale);
             var padding = (int)Math.Round(TextPadding * scale);
             var text = e.TextRectangle;
@@ -498,10 +529,13 @@ public sealed class TrayMenuRenderer : Forms.ToolStripProfessionalRenderer
     protected override void OnRenderSeparator(Forms.ToolStripSeparatorRenderEventArgs e)
     {
         using var pen = new Pen(_colors.Separator);
-        var (left, right) = Inside(e.ToolStrip, e.Item, (e.ToolStrip?.DeviceDpi ?? 96) / 96f);
+        var (left, right) = Inside(e.ToolStrip, e.Item, Scale(e.ToolStrip));
         var y = e.Item.Height / 2;
         e.Graphics.DrawLine(pen, left, y, right, y);
     }
+
+    /// <summary>Píxeles por px del mock: el DPI del monitor por la escala de la interfaz.</summary>
+    private float Scale(Forms.ToolStrip? strip) => (float)((strip?.DeviceDpi ?? 96) / 96.0 * UiScale);
 
     /// <summary>
     /// De dónde a dónde pintar dentro del ítem (en sus coordenadas): el ancho del menú menos <see cref="Inset"/> por lado.

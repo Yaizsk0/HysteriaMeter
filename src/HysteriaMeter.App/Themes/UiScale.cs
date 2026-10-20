@@ -17,7 +17,8 @@ public interface IUiScaled
 /// <see cref="ResourceKey"/> de la App y cada ventana lo sigue desde su constructor (<see cref="Follow"/>): cambiarlo
 /// reescala en vivo lo que esté abierto. Un Popup toma al abrirse la transformación de su padre visual: los de un
 /// template (desplegables, submenús) ya salen escalados. Los que abren su propio Popup sin padre visual (tooltips y el
-/// menú "⋯" del overlay) no la heredan: Theme.xaml y el overlay les ponen <c>Factor</c> con el mismo recurso.
+/// menú "⋯" del overlay) no la heredan: Theme.xaml y el overlay les ponen <c>Factor</c> con el mismo recurso. El menú
+/// de la bandeja es de WinForms: TrayIcon agranda su fuente y sus medidas con la preferencia al abrirlo.
 /// Sin el recurso (los tests sin App) queda en 1.
 /// </summary>
 public static class UiScale
