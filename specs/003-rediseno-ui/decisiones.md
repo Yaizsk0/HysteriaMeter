@@ -77,10 +77,13 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 - Escala de la interfaz (Apariencia → ESCALA: 100, 110, 125 y 150 %): con Windows al 100 % en monitores grandes el texto se
   ve chico. `Themes/UiScale` pone un LayoutTransform en el contenido de cada ventana en vez de tocar los tamaños de fuente
   (están fijos en muchos estilos) y agranda en la misma proporción el tamaño y el mínimo de la ventana, sin pasarse del área
-  de trabajo. Se aplica en vivo por el recurso `UiScale` de la App. Los popups (tooltips, desplegables y el menú "⋯" del
-  overlay con su submenú) son otra ventana y llevan su propio `UiScale.Factor`. El overlay la multiplica por su zoom de
-  Ctrl + rueda y guarda su tamaño y zoom sin la escala. Las columnas PERF. a MULTI del detalle miden el contenido, no la
-  ventana. El perfil exportado no la lleva: depende del monitor de cada PC.
+  de trabajo. Se aplica en vivo por el recurso `UiScale` de la App. Un Popup toma al abrirse la transformación de su padre
+  visual: los de un template (desplegables, submenú del "⋯") ya salen escalados y no llevan nada; con su propio factor
+  quedaban al 1,56 en vez de al 1,25. Los que abren un Popup sin padre visual (tooltips y el menú "⋯" del overlay) llevan
+  `UiScale.Factor`. El overlay la multiplica por su zoom de Ctrl + rueda y guarda su tamaño y zoom sin la escala. Abierta,
+  una ventana que creció se corre lo justo para no salirse de su monitor (el overlay pegado al borde derecho se salía).
+  Las columnas PERF. a MULTI del detalle miden el contenido, no la ventana. El perfil exportado no la lleva: depende del
+  monitor de cada PC.
 
 ## Detalle (Detalle, Muertes, Comparar)
 - DetailWindow rediseñada como el mock: cabecera con avatar (emblema PNG o inicial de clase en su color), nombre, clase, perfil (formato actual con NumberStyle, no romper tests), "Comparar con" (sin preselección), cerrar.

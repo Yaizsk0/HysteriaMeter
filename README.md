@@ -154,6 +154,8 @@ En una pausa del daño, la pelea sigue abierta solo si pegan otros NPC (los adds
 
 Configuración → Apariencia tiene una escala de la interfaz (100, 110, 125 y 150 %) que agranda texto y controles de todas las ventanas, sus tooltips y desplegables, en vivo. En el overlay se suma al zoom de Ctrl + rueda. La escala depende del monitor de cada PC, así que el perfil exportado no la lleva.
 
+Con la escala, los desplegables y los submenús salen del mismo tamaño que su ventana (antes se agrandaban dos veces), y el overlay que crece pegado al borde se corre para no salirse del monitor.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).

@@ -65,6 +65,7 @@
     {"id": 108, "text": "Divine Auldor y Destroyer Tarka se ven con su nombre, como en Combat Analysis."},
     {"id": 102, "text": "Las invocaciones sin nombre suman al DPS de su dueño, que el meter lee del juego en vez de adivinarlo por la clase."},
     {"id": 103, "text": "En una pausa del daño, solo los golpes de los adds mantienen abierta la pelea, como en Combat Analysis."},
-    {"id": 109, "text": "Configuración → Apariencia suma ESCALA (100 a 150 %) para agrandar texto y controles de todas las ventanas."}
+    {"id": 109, "text": "Configuración → Apariencia suma ESCALA (100 a 150 %) para agrandar texto y controles de todas las ventanas."},
+    {"id": 110, "text": "Escala: desplegables y submenús del mismo tamaño que su ventana, y el overlay ya no se sale del monitor al agrandarlo."}
   ]
 }

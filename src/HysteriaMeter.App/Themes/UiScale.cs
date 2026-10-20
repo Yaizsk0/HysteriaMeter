@@ -15,8 +15,9 @@ public interface IUiScaled
 /// Escala de la interfaz (Configuración → Apariencia): agranda texto y controles de todas las ventanas con un
 /// LayoutTransform sobre su contenido, sin tocar los tamaños de fuente de cada estilo. El valor vive en el recurso
 /// <see cref="ResourceKey"/> de la App y cada ventana lo sigue desde su constructor (<see cref="Follow"/>): cambiarlo
-/// reescala en vivo lo que esté abierto. Los popups (tooltips, desplegables y menús) se dibujan en su propia ventana y
-/// no heredan la transformación de la de abajo: Theme.xaml y el overlay les ponen <c>Factor</c> con el mismo recurso.
+/// reescala en vivo lo que esté abierto. Un Popup toma al abrirse la transformación de su padre visual: los de un
+/// template (desplegables, submenús) ya salen escalados. Los que abren su propio Popup sin padre visual (tooltips y el
+/// menú "⋯" del overlay) no la heredan: Theme.xaml y el overlay les ponen <c>Factor</c> con el mismo recurso.
 /// Sin el recurso (los tests sin App) queda en 1.
 /// </summary>
 public static class UiScale
@@ -95,18 +96,29 @@ public static class UiScale
             }
         }
 
-        // Abierta, la que creció no queda colgando fuera de su monitor.
-        if (new WindowInteropHelper(window).Handle != IntPtr.Zero)
-        {
-            if (!double.IsNaN(window.Left) && !double.IsNaN(window.Width))
-            {
-                window.Left = Math.Max(area.Left, Math.Min(window.Left, area.Right - window.Width));
-            }
+        KeepOnScreen(window);
+    }
 
-            if (!double.IsNaN(window.Top) && !double.IsNaN(window.Height))
-            {
-                window.Top = Math.Max(area.Top, Math.Min(window.Top, area.Bottom - window.Height));
-            }
+    /// <summary>
+    /// Abierta, la ventana que creció con la escala no queda colgando fuera de su monitor: se corre lo justo para entrar
+    /// en el área de trabajo (pegada a un borde, sigue pegada). Sin mostrar, la ubica Windows o quien la abre.
+    /// </summary>
+    public static void KeepOnScreen(Window window)
+    {
+        if (new WindowInteropHelper(window).Handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var area = WorkArea(window);
+        if (!double.IsNaN(window.Left) && !double.IsNaN(window.Width))
+        {
+            window.Left = Math.Max(area.Left, Math.Min(window.Left, area.Right - window.Width));
+        }
+
+        if (!double.IsNaN(window.Top) && !double.IsNaN(window.Height))
+        {
+            window.Top = Math.Max(area.Top, Math.Min(window.Top, area.Bottom - window.Height));
         }
     }
 
