@@ -32,13 +32,16 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
 - Filas: radio 5, fondo Row, barra del color de clase con alfa ~0x55, puesto (Barlow 13 tenue), insignia circular 20 px: emblema PNG si existe (PR #68), si no círculo con la inicial de la clase en su color, sin clase la inicial del jugador; nombre (`NumberFont`, Barlow Condensed SemiBold 16 con fila de 30 px, TextBright; local en acento con contorno RowBorderLocal 1 px), flecha ▲/▼ (Success/Danger), DPS (Barlow Bold 17, tabular), % con un decimal ("31,5 %"). Se quita el sufijo " (vos)": lo marca el contorno + color (ajustar tests). Nombre, cruz de muertes y flecha se arman como los tramos del dungeon: si no entran, se recorta solo el nombre y la cruz y la flecha quedan pegadas a continuación, siempre a la vista (el nombre entero está en el tooltip). La cruz es un TextBlock propio en `SymbolFont`, también en la fila en pausa (puesto, nombre, cruz y DPS): como Run del mismo texto, la elipsis se la comía.
 - Encabezado de columnas: se oculta cuando solo se ven DPS y %; si hay columnas opcionales (CRIT, MÁX, total, etc.) se muestra.
 - Pie: "Total X · N jugadores" a la izquierda y "Clic en una fila: detalle" a la derecha (se mantiene clic simple = detalle; doble clic = compacto, como hoy). Crít./Máx. del local pasan al tooltip del total.
-- Defaults para instalaciones nuevas como el mock: texto IBM Plex Sans, Sparklines=false y ColorByClass=true, entre otros. No se reemplazan los valores guardados ni se fuerza una migración de fuente o de columnas al usuario.
-  Por eso quien venía de antes del rediseño seguía viendo su compacto, la línea de DPS, el item level y las columnas
-  TOTAL/HPS, CRIT y MÁX, y el overlay no se parecía al mock. Configuración → Apariencia tiene "Volver a la vista de
-  fábrica" (`ResetView`): pone en las filas los valores de `new MeterPreferences()` (línea de DPS, item level, colores por
-  clase, columnas TOTAL, %, 10 s, CRIT y MÁX, "Solo mi fila") y saca del compacto a la ventana de esa configuración. Lo
-  pide el usuario con un clic; tema, fuente, números, opacidad, alto de fila, máximo de jugadores, atajos, captura e
-  historial no se tocan.
+- Defaults para instalaciones nuevas como el mock: texto IBM Plex Sans, Sparklines=false y ColorByClass=true, entre otros.
+  Al principio no se migraban los valores guardados, y quien venía de antes del rediseño seguía viendo su compacto, la
+  línea de DPS, el item level y las columnas TOTAL/HPS, CRIT y MÁX: el overlay no se parecía al mock aunque el código ya
+  lo dibujara. Ahora lo guardado pasa una sola vez a la vista del mock al abrir el meter (`OverlayWindows.Migrate`, marca
+  `RedesignViewApplied`): las filas toman los valores de `new MeterPreferences()` (línea de DPS, item level, colores por
+  clase, columnas TOTAL, %, 10 s, CRIT y MÁX, "Solo mi fila") y las ventanas guardadas salen del compacto con el ancho
+  (380) y el alto del mock, en el mismo lugar y con la misma pestaña. Tema, fuente, números, opacidad, alto de fila, máximo
+  de jugadores, atajos, captura e historial no se tocan. Lo que se vuelva a prender después se respeta, y un perfil
+  importado no repite el paso. Configuración → Apariencia → "Volver a la vista de fábrica" (`ResetView`) hace lo mismo con
+  la ventana de esa configuración, para volver después de haber prendido columnas.
 - Compacto: como hoy (oculta pestañas, filas 22). Como también oculta el bloque del objetivo, con pelea la franja muestra en el lugar de las pestañas el rótulo del objetivo (el mismo `Title`: nombre, "NPC …" o "Encuentro") y su % de vida si hay dato, recortado con "…" antes de las acciones (`CompactTarget`).
 - Tarjeta de espera ("Listo para la próxima pelea"): solo cuando el overlay está vacío de verdad (arranque o después de Reiniciar). Entre peleas siguen visibles las filas de la última pelea, como hoy. Sin nombre de zona (no existe): muestra "Última: <objetivo> · <duración>" si hay.
 - Vista RUN: título "Run · entrada HH:mm" (no hay nombre de zona); chips por tramo (Trash agrupa tramos consecutivos; kill dorado/verde; wipe rojo con nombre del boss); tiempo = hasta el último golpe (como RunTitle).

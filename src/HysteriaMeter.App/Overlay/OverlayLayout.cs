@@ -16,6 +16,9 @@ public sealed record OverlayLayout(
     bool BossOnly = true,
     bool Run = false)
 {
+    /// <summary>Ancho de fábrica del overlay, el del mock (Width de OverlayWindow.xaml).</summary>
+    public const double FactoryWidth = 380;
+
     private const string FileName = "ventanas.json";
 
     // Versión anterior: una sola ventana en overlay.json.
@@ -27,4 +30,10 @@ public sealed record OverlayLayout(
         ?? (UserStore.Load<OverlayLayout>(LegacyFileName) is { } legacy ? [legacy] : []);
 
     public static void SaveAll(IEnumerable<OverlayLayout> layouts) => UserStore.Save(FileName, layouts.ToList());
+
+    /// <summary>
+    /// La ventana como el mock: sin compacto, con el ancho y el alto de fábrica. Conserva posición, zoom, pestaña, vista
+    /// y "solo boss".
+    /// </summary>
+    public OverlayLayout WithFactoryView() => this with { Compact = false, Width = FactoryWidth, Height = 0 };
 }

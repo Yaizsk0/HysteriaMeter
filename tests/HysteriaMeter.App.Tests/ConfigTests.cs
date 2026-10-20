@@ -3,6 +3,7 @@ using System.Runtime.ExceptionServices;
 using System.Windows;
 using System.Windows.Media;
 using HysteriaMeter.App.Config;
+using HysteriaMeter.App.Overlay;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.App.ViewModels;
 using HysteriaMeter.Combat;
@@ -281,7 +282,7 @@ public sealed class ConfigTests
     {
         RunOnSta(() =>
         {
-            // Preferencias guardadas antes del rediseño: el rediseño no las migra.
+            // Columnas prendidas a mano después del paso a la vista del rediseño: el link vuelve a la de fábrica.
             var old = new MeterPreferences
             {
                 Sparklines = true,
@@ -337,6 +338,67 @@ public sealed class ConfigTests
             Assert.Contains(nameof(MeterViewModel.ShowCritColumn), changed);
             Assert.Contains(nameof(MeterViewModel.IsCompact), changed);
         });
+    }
+
+    [Fact]
+    public void Saved_view_from_before_the_redesign_moves_to_the_mock_once()
+    {
+        // Lo que tenía guardado un usuario de antes del rediseño: compacto, ancho, columnas y línea de DPS.
+        var old = new MeterPreferences
+        {
+            BossOnlyDefaulted = true,
+            Sparklines = true,
+            ShowGear = true,
+            ShowTotalColumn = true,
+            ShowCritColumn = true,
+            ShowMaxHitColumn = true,
+            Theme = "Abismo",
+            Opacity = 0.7,
+            RowHeight = 36,
+        };
+        var window = new OverlayLayout(-682, 492, 586, 1.1, Height: 279, Tab: MeterTab.Healing, ShowHealing: true, Compact: true, BossOnly: true);
+
+        var (preferences, layouts) = OverlayWindows.Migrate(old, [window]);
+
+        Assert.Equal(old.WithFactoryView() with { RedesignViewApplied = true }, preferences);
+        Assert.False(preferences.Sparklines || preferences.ShowGear || preferences.ShowTotalColumn || preferences.ShowCritColumn || preferences.ShowMaxHitColumn);
+        Assert.Equal(("Abismo", 0.7, 36), (preferences.Theme, preferences.Opacity, preferences.RowHeight));
+
+        // La ventana sale del compacto con el ancho y el alto del mock, en el mismo lugar y con lo que mostraba.
+        var migrated = Assert.Single(layouts);
+        Assert.Equal(window with { Compact = false, Width = OverlayLayout.FactoryWidth, Height = 0 }, migrated);
+        Assert.Equal(380, OverlayLayout.FactoryWidth);
+
+        // Una sola vez: lo que se vuelva a prender después se respeta.
+        var later = preferences with { ShowCritColumn = true };
+        var compact = migrated with { Compact = true, Width = 500 };
+        var again = OverlayWindows.Migrate(later, [compact]);
+        Assert.Same(later, again.Preferences);
+        Assert.Equal(compact, Assert.Single(again.Layouts));
+    }
+
+    [Fact]
+    public void Migration_folds_boss_only_and_leaves_a_new_install_as_it_is()
+    {
+        // Muy vieja: tampoco tenía "solo boss" prendido en sus ventanas.
+        var fresh = new MeterPreferences();
+        var (oldest, layouts) = OverlayWindows.Migrate(fresh, [new OverlayLayout(0, 0, 380, 1, BossOnly: false)]);
+        Assert.True(oldest.BossOnlyDefaulted && oldest.RedesignViewApplied);
+        Assert.True(Assert.Single(layouts).BossOnly);
+
+        // Una instalación nueva ya tiene la vista de fábrica: solo quedan las marcas.
+        Assert.Equal(fresh with { BossOnlyDefaulted = true, RedesignViewApplied = true }, oldest);
+        Assert.Empty(OverlayWindows.Migrate(new MeterPreferences(), []).Layouts);
+    }
+
+    [Fact]
+    public void Imported_profile_does_not_repeat_the_redesign_view()
+    {
+        var json = ProfileFile.ToJson(new MeterPreferences { ShowCritColumn = true });
+        var imported = ProfileFile.FromJson(json, new MeterPreferences { RedesignViewApplied = true });
+        Assert.NotNull(imported);
+        Assert.True(imported.RedesignViewApplied);
+        Assert.True(imported.ShowCritColumn);
     }
 
     private static (MeterSession Session, MeterViewModel ViewModel) Meter(MeterPreferences preferences)

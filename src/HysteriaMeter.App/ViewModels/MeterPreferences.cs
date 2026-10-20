@@ -115,6 +115,12 @@ public sealed record MeterPreferences
     /// <summary>Ya se prendió "solo boss" en las ventanas guardadas antes de que viniera prendido de entrada (se hace una sola vez).</summary>
     public bool BossOnlyDefaulted { get; init; }
 
+    /// <summary>
+    /// Ya se pasaron a la vista del rediseño (<see cref="WithFactoryView"/> y el overlay sin compacto) las preferencias y
+    /// ventanas guardadas antes de él. Se hace una sola vez: lo que el usuario vuelva a prender después se respeta.
+    /// </summary>
+    public bool RedesignViewApplied { get; init; }
+
     /// <summary>Columna "10 s": el DPS de los últimos segundos, para ver quién está pegando ahora (como el Last10DPS de ACT).</summary>
     public bool ShowRecentColumn { get; init; }
 
@@ -171,4 +177,26 @@ public sealed record MeterPreferences
 
     /// <summary>Depende del monitor de cada PC: el perfil exportado no la lleva.</summary>
     public double UiScale { get; init; } = 1.0;
+
+    /// <summary>
+    /// Las filas como el diseño: línea de DPS, item level, colores por clase, columnas TOTAL, %, 10 s, CRIT y MÁX y "Solo
+    /// mi fila" con los valores de una instalación nueva. No toca tema, fuente, números, opacidad, alto de fila, máximo de
+    /// jugadores, atajos, captura ni historial.
+    /// </summary>
+    public MeterPreferences WithFactoryView()
+    {
+        var fresh = new MeterPreferences();
+        return this with
+        {
+            Sparklines = fresh.Sparklines,
+            ShowGear = fresh.ShowGear,
+            ColorByClass = fresh.ColorByClass,
+            ShowTotalColumn = fresh.ShowTotalColumn,
+            ShowShareColumn = fresh.ShowShareColumn,
+            ShowRecentColumn = fresh.ShowRecentColumn,
+            ShowCritColumn = fresh.ShowCritColumn,
+            ShowMaxHitColumn = fresh.ShowMaxHitColumn,
+            OnlyMe = fresh.OnlyMe,
+        };
+    }
 }

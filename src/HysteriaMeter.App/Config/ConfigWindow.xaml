@@ -430,7 +430,7 @@
                                           ToolTip="Los botones y las filas siguen andando" />
                                 <Button Style="{StaticResource ButtonLink}" Content="Ver barras de prueba" Command="{Binding ShowDemoCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"
                                         ToolTip="Una pelea inventada para acomodar tamaño, fuente y opacidad sin combatir" />
-                                <!-- Las preferencias de antes del rediseño no se migran: este link deja las filas como el mock. -->
+                                <!-- Lo mismo que se aplica una vez a lo guardado antes del rediseño (OverlayWindows.Migrate): vuelve a las filas del mock después de haber prendido columnas. -->
                                 <Button Style="{StaticResource ButtonLink}" Content="Volver a la vista de fábrica" Command="{Binding ResetViewCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"
                                         ToolTip="Filas como el diseño: DPS y %, colores por clase, sin línea de DPS, item level ni columnas extra, y esta ventana sin modo compacto. No toca tema, fuente, opacidad, alto de fila ni atajos" />
                             </StackPanel>

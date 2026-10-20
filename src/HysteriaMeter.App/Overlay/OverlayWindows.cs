@@ -17,12 +17,11 @@ public sealed class OverlayWindows(MeterSession session)
     /// <summary>Abre las ventanas de la sesión anterior (o una sola de daño) y devuelve la principal.</summary>
     public OverlayWindow OpenSaved()
     {
-        var layouts = OverlayLayout.LoadAll();
-        if (!session.Preferences.BossOnlyDefaulted)
+        var (preferences, layouts) = Migrate(session.Preferences, OverlayLayout.LoadAll());
+        if (!ReferenceEquals(preferences, session.Preferences))
         {
-            // "Solo boss" pasó a venir prendido (como cuenta Abyss): se prende una vez en las ventanas guardadas.
-            layouts = [.. layouts.Select(l => l with { BossOnly = true })];
-            session.Update(session.Preferences with { BossOnlyDefaulted = true });
+            session.Update(preferences);
+            OverlayLayout.SaveAll(layouts);
         }
 
         if (layouts.Count == 0)
@@ -36,6 +35,36 @@ public sealed class OverlayWindows(MeterSession session)
         }
 
         return _windows[0];
+    }
+
+    /// <summary>
+    /// Cambios de una sola vez sobre lo guardado por versiones anteriores; devuelve las mismas preferencias (la misma
+    /// instancia) si no hay nada que hacer.
+    /// <list type="bullet">
+    /// <item>"Solo boss" pasó a venir prendido (como cuenta Abyss): se prende en las ventanas guardadas.</item>
+    /// <item>
+    /// El rediseño: las preferencias de antes (modo compacto, línea de DPS, item level, columnas TOTAL, CRIT y MÁX...)
+    /// dejaban el overlay lejos del mock aunque el código ya lo dibujara. Pasan a la vista de fábrica y las ventanas salen
+    /// del compacto con el ancho del mock. Lo que se vuelva a prender después en Configuración se respeta.
+    /// </item>
+    /// </list>
+    /// </summary>
+    public static (MeterPreferences Preferences, IReadOnlyList<OverlayLayout> Layouts) Migrate(
+        MeterPreferences preferences, IReadOnlyList<OverlayLayout> layouts)
+    {
+        if (!preferences.BossOnlyDefaulted)
+        {
+            layouts = [.. layouts.Select(l => l with { BossOnly = true })];
+            preferences = preferences with { BossOnlyDefaulted = true };
+        }
+
+        if (!preferences.RedesignViewApplied)
+        {
+            layouts = [.. layouts.Select(l => l.WithFactoryView())];
+            preferences = preferences.WithFactoryView() with { RedesignViewApplied = true };
+        }
+
+        return (preferences, layouts);
     }
 
     /// <summary>Ventana nueva al lado de <paramref name="from"/>, mostrando curación para que se note la diferencia.</summary>

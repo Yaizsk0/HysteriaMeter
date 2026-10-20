@@ -26,7 +26,7 @@ Revisión local del 17/10/2026 sobre los HTML originales del rediseño. Compleme
 - No se inventan zona, nombres, métricas, percentiles ni estados que la sesión no proporciona. Se ocultan o adaptan los elementos sin datos. Los fixtures del arnés se identifican como datos de prueba.
 - Se conservan las acciones funcionales anteriores aunque el mock no las dibuje: siguen accesibles en botones, menús o tooltips. La interfaz también debe funcionar con ventanas redimensionadas, zoom y densidades distintas.
 - La opción de opacidad mantiene `Window.Opacity` sobre toda la ventana, junto con sus comportamientos al pasar el mouse y fuera de combate. No se convierte en una opacidad exclusiva del fondo.
-- IBM Plex Sans y Sparklines desactivadas son los valores por defecto para instalaciones nuevas. Los valores ya guardados de fuente, columnas y demás preferencias no se sobrescriben para imitar el mock.
+- IBM Plex Sans y Sparklines desactivadas son los valores por defecto para instalaciones nuevas. Lo guardado antes del rediseño pasa una sola vez a la vista del mock al abrir el meter: filas y columnas de fábrica y ventanas sin compacto con el ancho del mock (`OverlayWindows.Migrate`, marca `RedesignViewApplied`). Tema, fuente, opacidad, alto de fila y atajos guardados no se tocan, y lo que el usuario vuelva a prender después se respeta.
 - WPF y WinForms no reproducen todos los mecanismos de CSS: el espaciado entre letras se omite y la bandeja utiliza renderizado GDI con escalado DPI. Estas diferencias requieren revisión visual a los tamaños relevantes.
 
 ## Evidencia disponible y límites

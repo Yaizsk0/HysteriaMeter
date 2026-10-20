@@ -147,27 +147,16 @@ public sealed partial class MeterViewModel
 
     /// <summary>
     /// "Volver a la vista de fábrica": las filas como el diseño (DPS y %, colores por clase, sin línea de DPS, sin item
-    /// level ni las columnas TOTAL, 10 s, CRIT y MÁX, y no solo tu fila) y esta ventana sin modo compacto. Las preferencias
-    /// guardadas antes del rediseño no se migran solas (decisiones.md); esto les pone los valores de una instalación nueva.
-    /// No toca tema, fuente, números, opacidad, alto de fila, máximo de jugadores, atajos, captura ni historial.
+    /// level ni las columnas TOTAL, 10 s, CRIT y MÁX, y no solo tu fila) y esta ventana sin modo compacto. Lo mismo que se
+    /// aplica una vez a las preferencias de antes del rediseño al abrir (<see cref="HysteriaMeter.App.Overlay.OverlayWindows.Migrate"/>);
+    /// el link sirve para volver después de haber prendido columnas. No toca tema, fuente, números, opacidad, alto de
+    /// fila, máximo de jugadores, atajos, captura ni historial.
     /// </summary>
     [RelayCommand]
     private void ResetView()
     {
-        var fresh = new MeterPreferences();
         Update(
-            Preferences with
-            {
-                Sparklines = fresh.Sparklines,
-                ShowGear = fresh.ShowGear,
-                ColorByClass = fresh.ColorByClass,
-                ShowTotalColumn = fresh.ShowTotalColumn,
-                ShowShareColumn = fresh.ShowShareColumn,
-                ShowRecentColumn = fresh.ShowRecentColumn,
-                ShowCritColumn = fresh.ShowCritColumn,
-                ShowMaxHitColumn = fresh.ShowMaxHitColumn,
-                OnlyMe = fresh.OnlyMe,
-            },
+            Preferences.WithFactoryView(),
             nameof(ShowSparklines), nameof(ShowGear), nameof(ColorByClass), nameof(ShowTotalColumn), nameof(ShowShareColumn),
             nameof(ShowRecentColumn), nameof(ShowCritColumn), nameof(ShowMaxHitColumn), nameof(OnlyMe));
         IsCompact = false;

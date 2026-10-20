@@ -34,6 +34,8 @@ public static class ProfileFile
                     WelcomeDone = current.WelcomeDone,
                     LastSeenNews = current.LastSeenNews,
                     UiScale = current.UiScale,
+                    // Un perfil viejo no vuelve a disparar el paso a la vista del rediseño en el próximo arranque.
+                    RedesignViewApplied = current.RedesignViewApplied,
                 }
                 : null;
         }

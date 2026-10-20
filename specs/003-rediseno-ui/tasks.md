@@ -33,3 +33,4 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Historial: la cabecera queda en una línea con el filtro de personaje y en el ancho mínimo; se achica la búsqueda en vez de bajar el filtro abajo del título.
 - [X] Escala: el menú de la bandeja (WinForms, sin LayoutTransform) agranda su fuente, el relleno de los ítems, el separador y los márgenes y el radio del resaltado con la escala de la interfaz, cada vez que se abre.
 - [X] Combat: el filtro de party cuenta a quien estuvo en la party en esta zona aunque no mande HP/MP hace más de 10 s; ya no se pierde su daño (la apertura, por ejemplo).
+- [X] Overlay: lo guardado antes del rediseño pasa una sola vez a la vista del mock al abrir (filas y columnas de fábrica, ventanas sin compacto a 380 px); lo que se vuelva a prender después se respeta y un perfil importado no repite el paso.
