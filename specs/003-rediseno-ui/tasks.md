@@ -30,3 +30,4 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Configuración: escala de la interfaz (100–150 %) para todas las ventanas y sus popups, en vivo; el overlay la suma a su zoom y guarda su tamaño sin ella; el perfil exportado no la lleva.
 - [X] Escala: los desplegables y el submenú del "⋯" ya no se escalan dos veces (heredan la de su ventana) y el overlay que crece cerca del borde se corre para no salirse del monitor.
 - [X] Configuración → Apariencia: "Volver a la vista de fábrica" deja las filas como el diseño (DPS y %, colores por clase, sin línea de DPS, item level ni columnas extra, y no solo tu fila) y saca del compacto a esa ventana; no toca tema, fuente, opacidad, alto de fila, atajos ni captura.
+- [X] Historial: la cabecera queda en una línea con el filtro de personaje y en el ancho mínimo; se achica la búsqueda en vez de bajar el filtro abajo del título.

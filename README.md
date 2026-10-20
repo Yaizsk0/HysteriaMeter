@@ -158,6 +158,8 @@ Con la escala, los desplegables y los submenús salen del mismo tamaño que su v
 
 Si el overlay no se parece al diseño nuevo porque conserva opciones de antes (modo compacto, línea de DPS, item level o columnas extra), Configuración → Apariencia → "Volver a la vista de fábrica" deja las filas con DPS y % y saca del compacto a esa ventana, sin tocar tema, fuente, opacidad ni atajos.
 
+La cabecera del Historial queda en una sola línea aunque haya peleas de más de un personaje y la ventana esté en su ancho mínimo: se achica la búsqueda en vez de bajar el filtro de personaje abajo del título.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
