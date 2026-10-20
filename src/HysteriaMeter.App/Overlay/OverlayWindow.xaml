@@ -63,8 +63,9 @@
                         <TextBlock x:Name="Check" Text="✓" Visibility="Collapsed" Foreground="{DynamicResource Gold}" />
                         <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" />
                         <TextBlock x:Name="Arrow" Grid.Column="2" Text="›" Visibility="Collapsed" />
+                        <!-- El submenú toma la escala del menú, que es su padre visual (Themes/UiScale): no lleva Factor propio. -->
                         <Popup x:Name="PART_Popup" Placement="Right" IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}" AllowsTransparency="True" Focusable="False">
-                            <Border Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="5" ui:UiScale.Factor="{DynamicResource UiScale}"><ItemsPresenter/></Border>
+                            <Border Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource Stroke}" BorderThickness="1" CornerRadius="8" Padding="5"><ItemsPresenter/></Border>
                         </Popup>
                     </Grid>
                 </Border>

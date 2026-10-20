@@ -2,6 +2,7 @@ using System.Runtime.ExceptionServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Interop;
 using System.Windows.Media;
 using HysteriaMeter.App.Config;
 using HysteriaMeter.App.Detail;
@@ -135,9 +136,39 @@ public sealed class UiScaleTests
     }
 
     [Fact]
-    public void Tooltips_dropdowns_and_the_overlay_menu_follow_the_scale()
+    public void Overlay_near_the_edge_stays_on_its_monitor_when_it_grows()
     {
-        // Se dibujan en su propia ventana: la transformación de la de abajo no les llega.
+        // Al 150 % el overlay crece hacia la derecha y hacia abajo: pegado al borde, se corre lo justo para no salirse.
+        RunOnSta(() =>
+        {
+            var area = SystemParameters.WorkArea;
+            var window = new OverlayWindow(new MeterViewModel(Session()), new OverlayLayout(Left: area.Right - 410, Top: area.Bottom - 330, Width: 400, Zoom: 1, Height: 320));
+            try
+            {
+                window.Left = area.Right - 410;
+                window.Top = area.Bottom - 330;
+                // Con handle pero sin mostrarse: corregir la posición necesita saber en qué monitor está.
+                new WindowInteropHelper(window).EnsureHandle();
+
+                window.Resources[UiScale.ResourceKey] = 1.5;
+                Assert.Equal(600, window.Width, 3);
+                Assert.Equal(480, window.Height, 3);
+                Assert.Equal(area.Right - 600, window.Left, 1);
+                Assert.Equal(area.Bottom - 480, window.Top, 1);
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
+    [Fact]
+    public void Only_the_popups_without_a_visual_parent_take_the_scale()
+    {
+        // Un Popup toma al abrirse la transformación de su padre visual. El tooltip y el menú "⋯" del overlay abren el suyo
+        // sin padre: llevan la escala. El desplegable y el submenú, dentro de un template, ya la heredan de la ventana o del
+        // menú: con la escala propia quedaban al 1,56 en vez de al 1,25.
         RunOnSta(() =>
         {
             var vm = new MeterViewModel(Session());
@@ -151,7 +182,7 @@ public sealed class UiScaleTests
             Assert.True(combo.ApplyTemplate());
             var dropdown = Assert.IsType<Border>(Assert.IsType<Popup>(combo.Template.FindName("PART_Popup", combo)).Child);
             dropdown.Resources[UiScale.ResourceKey] = 1.25;
-            Assert.Equal(1.25, dropdown.LayoutTransform.Value.M11, 3);
+            Assert.True(dropdown.LayoutTransform.Value.IsIdentity);
 
             var window = new OverlayWindow(vm);
             try
@@ -159,6 +190,11 @@ public sealed class UiScaleTests
                 var menu = Assert.IsType<ContextMenu>(Assert.IsType<Button>(window.FindName("MoreButton")).ContextMenu);
                 menu.Resources[UiScale.ResourceKey] = 1.25;
                 Assert.Equal(1.25, menu.LayoutTransform.Value.M11, 3);
+
+                var tab = menu.Items.OfType<MenuItem>().First(i => (string)i.Header == "Pestaña");
+                Assert.True(tab.ApplyTemplate());
+                var submenu = Assert.IsType<Border>(Assert.IsType<Popup>(tab.Template.FindName("PART_Popup", tab)).Child);
+                Assert.True(submenu.LayoutTransform.Value.IsIdentity);
             }
             finally
             {

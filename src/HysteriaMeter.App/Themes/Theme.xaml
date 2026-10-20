@@ -743,10 +743,11 @@
                                           Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                           ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
                                           ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" />
-                        <!-- El desplegable se dibuja en su propia ventana: la escala de la interfaz (Themes/UiScale) va en su Border. -->
+                        <!-- Sin UiScale.Factor: un Popup del template toma la escala de su padre visual (la ventana) al abrirse;
+                             con el Factor quedaba escalado dos veces. -->
                         <Popup x:Name="PART_Popup" Placement="Bottom" VerticalOffset="4" AllowsTransparency="True" Focusable="False"
                                PopupAnimation="None" IsOpen="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
-                            <Border Style="{StaticResource MenuPanel}" MaxHeight="{TemplateBinding MaxDropDownHeight}" ui:UiScale.Factor="{DynamicResource UiScale}"
+                            <Border Style="{StaticResource MenuPanel}" MaxHeight="{TemplateBinding MaxDropDownHeight}"
                                     MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
                                 <ScrollViewer>
                                     <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
@@ -938,7 +939,7 @@
     <!-- ===================== Tooltip ===================== -->
     <!-- Oscuro, como el de la fila del mock Estados. El tooltip rico de la fila agrega su propio margen (14 × 12). -->
     <Style x:Key="ToolTipDark" TargetType="ToolTip">
-        <!-- El tooltip se dibuja en su propia ventana: la escala de la interfaz (Themes/UiScale) se le aplica acá. -->
+        <!-- El tooltip abre su propio Popup, sin padre visual: no hereda la escala de la ventana (Themes/UiScale) y la toma acá. -->
         <Setter Property="ui:UiScale.Factor" Value="{DynamicResource UiScale}" />
         <Setter Property="Background" Value="{DynamicResource PanelSolid}" />
         <Setter Property="Foreground" Value="{DynamicResource Text}" />

@@ -425,7 +425,7 @@ public partial class OverlayWindow : Window, IUiScaled
 
     /// <summary>
     /// La escala de la interfaz se suma al zoom propio: crecen el contenido, el tamaño y los límites de la ventana en la
-    /// misma proporción, y Ctrl + rueda sigue moviendo solo el zoom.
+    /// misma proporción, y Ctrl + rueda sigue moviendo solo el zoom. Cerca del borde, se corre para no salirse del monitor.
     /// </summary>
     public void ApplyUiScale(double before, double after)
     {
@@ -437,6 +437,7 @@ public partial class OverlayWindow : Window, IUiScaled
         ApplyZoom();
         Width = Math.Clamp(Width * after / before, MinWidth, MaxWidth);
         Height = Math.Clamp(Height * after / before, MinHeight, MaxHeight);
+        UiScale.KeepOnScreen(this);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
