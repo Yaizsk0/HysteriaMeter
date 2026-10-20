@@ -6,6 +6,7 @@
         xmlns:vm="clr-namespace:HysteriaMeter.App.ViewModels"
         xmlns:local="clr-namespace:HysteriaMeter.App.Detail"
         xmlns:conv="clr-namespace:HysteriaMeter.App.Converters"
+        xmlns:ui="clr-namespace:HysteriaMeter.App.Themes"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:ActorDetailViewModel}"
         Title="{Binding Name, StringFormat='Detalle · {0}'}"
@@ -567,7 +568,7 @@
                                                 <Border CornerRadius="5,0,0,5" Opacity="0.66" RenderTransformOrigin="0,0.5"
                                                         Background="{Binding DataContext.BarFill, RelativeSource={RelativeSource AncestorType=Window}}">
                                                     <Border.RenderTransform>
-                                                        <ScaleTransform ScaleX="{Binding Bar}" />
+                                                        <ScaleTransform ui:SmoothBar.ScaleX="{Binding Bar}" />
                                                     </Border.RenderTransform>
                                                 </Border>
                                                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SkillRowCells}" Margin="10,0" Focusable="False" />
