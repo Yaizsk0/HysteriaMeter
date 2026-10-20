@@ -156,6 +156,8 @@ Configuración → Apariencia tiene una escala de la interfaz (100, 110, 125 y 1
 
 Con la escala, los desplegables y los submenús salen del mismo tamaño que su ventana (antes se agrandaban dos veces), y el overlay que crece pegado al borde se corre para no salirse del monitor.
 
+El menú del ícono de la bandeja también sigue la escala: al 125 o 150 % su texto y sus opciones salen más grandes, como en las demás ventanas. El cambio se ve la próxima vez que se abre el menú.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
