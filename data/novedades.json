@@ -68,6 +68,7 @@
     {"id": 109, "text": "Configuración → Apariencia suma ESCALA (100 a 150 %) para agrandar texto y controles de todas las ventanas."},
     {"id": 110, "text": "Escala: desplegables y submenús del mismo tamaño que su ventana, y el overlay ya no se sale del monitor al agrandarlo."},
     {"id": 111, "text": "Configuración → Apariencia: \"Volver a la vista de fábrica\" deja el overlay como el diseño nuevo (DPS y %, sin compacto) si venías con opciones de antes."},
-    {"id": 113, "text": "Historial: con más de un personaje, el filtro de personaje ya no se baja abajo del título en la ventana angosta."}
+    {"id": 113, "text": "Historial: con más de un personaje, el filtro de personaje ya no se baja abajo del título en la ventana angosta."},
+    {"id": 112, "text": "El menú del ícono de la bandeja también se agranda con la escala de la interfaz."}
   ]
 }

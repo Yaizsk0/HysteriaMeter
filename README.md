@@ -160,6 +160,8 @@ Si el overlay no se parece al diseño nuevo porque conserva opciones de antes (m
 
 La cabecera del Historial queda en una sola línea aunque haya peleas de más de un personaje y la ventana esté en su ancho mínimo: se achica la búsqueda en vez de bajar el filtro de personaje abajo del título.
 
+El menú del ícono de la bandeja también sigue la escala: al 125 o 150 % su texto y sus opciones salen más grandes, como en las demás ventanas. El cambio se ve la próxima vez que se abre el menú.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
