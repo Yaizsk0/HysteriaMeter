@@ -34,3 +34,4 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Escala: el menú de la bandeja (WinForms, sin LayoutTransform) agranda su fuente, el relleno de los ítems, el separador y los márgenes y el radio del resaltado con la escala de la interfaz, cada vez que se abre.
 - [X] Combat: el filtro de party cuenta a quien estuvo en la party en esta zona aunque no mande HP/MP hace más de 10 s; ya no se pierde su daño (la apertura, por ejemplo).
 - [X] Overlay: lo guardado antes del rediseño pasa una sola vez a la vista del mock al abrir (filas y columnas de fábrica, ventanas sin compacto a 380 px); lo que se vuelva a prender después se respeta y un perfil importado no repite el paso.
+- [X] Overlay y Detalle: las barras de daño se deslizan hasta el valor nuevo (350 ms, salida suave, 30 cuadros por segundo) en vez de saltar en cada refresco; el primer valor va directo y con las animaciones de Windows apagadas saltan como antes.

@@ -166,6 +166,8 @@ Con el alcance "Party", cuenta el daño de todos los que estuvieron en la party 
 
 Al actualizar, las opciones guardadas de antes del rediseño pasan una sola vez a la vista del diseño nuevo: sin modo compacto, a 380 px de ancho, sin línea de DPS, item level ni columnas extra, en el mismo lugar y con la misma pestaña. Tema, fuente, opacidad, alto de fila y atajos quedan como estaban. Lo que vuelvas a prender después en Configuración → Apariencia se respeta, y "Volver a la vista de fábrica" sirve para volver a la vista del diseño.
 
+Las barras de daño del overlay y las de cada skill en el detalle ya no saltan en cada refresco: se deslizan hasta el valor nuevo y se ven moverse de forma continua durante la pelea. Si en Windows tenés apagado "Mostrar animaciones", saltan como antes.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).
