@@ -7,6 +7,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>HysteriaMeter</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Ícono del .exe; las ventanas de WPF lo toman de acá. Se genera con tools/icono/icono.py. -->
+    <ApplicationIcon>Assets\HysteriaMeter.ico</ApplicationIcon>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
@@ -29,6 +31,8 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Assets\Fonts\**\*.ttf" />
+    <!-- El mismo ícono para la bandeja, en el tamaño que pide Windows. -->
+    <Resource Include="Assets\HysteriaMeter.ico" />
     <None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\data\opcodes.json" Link="data\opcodes.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\data\skills.json" Link="data\skills.json" CopyToOutputDirectory="PreserveNewest" />

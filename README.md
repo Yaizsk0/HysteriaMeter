@@ -172,6 +172,8 @@ Las barras de daño del overlay y las de cada skill en el detalle ya no saltan e
 
 Un golpe de más de 100 millones ya no cuenta como daño. En dos peleas de boss, una skill del juego que no es de ninguna clase (la 1000007) mandó golpes de exactamente 500 millones, cada uno a algo que nadie más golpeaba. Parece una mecánica de esa pelea, no daño. Inflaba el total cientos de veces y daba vuelta los porcentajes: el que más daño hizo salía último. Además, la pelea quedaba sin boss, porque el objetivo pasaba a ser eso que recibió el golpe. El golpe real más grande registrado es de 399.000. Las peleas ya guardadas conservan sus números.
 
+Hysteria Meter tiene ícono propio: el rombo dorado del encabezado con tres barras de daño adentro. Lo usan el .exe, la barra de tareas, las ventanas y la bandeja, en el tamaño justo para cada escala de Windows. Se genera con `python tools/icono/icono.py`, que guarda `src/HysteriaMeter.App/Assets/HysteriaMeter.ico`.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).

@@ -7,7 +7,6 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using HysteriaMeter.App.Themes;
 using HysteriaMeter.App.ViewModels;
-using DPoint = System.Drawing.Point;
 using DrawingSystemColors = System.Drawing.SystemColors;
 using Forms = System.Windows.Forms;
 
@@ -24,7 +23,7 @@ public sealed class TrayIcon : IDisposable
 
     public TrayIcon(OverlayWindows windows, MeterSession session)
     {
-        _image = DrawIcon();
+        _image = LoadIcon();
         _icon = new Forms.NotifyIcon
         {
             Icon = _image,
@@ -215,30 +214,25 @@ public sealed class TrayIcon : IDisposable
     }
 
     /// <summary>
-    /// Un rombo como el del encabezado del overlay, dibujado en memoria (sin archivos .ico): acento #E8B04A (Gold de
-    /// Theme.xaml) sobre el fondo #0C0E13 (WindowBg). Fijo: se dibuja una vez, antes de que haya tema.
+    /// El ícono de la app (Assets/HysteriaMeter.ico, el mismo del .exe) en el tamaño de la bandeja para el DPI de
+    /// Windows: el .ico trae 16, 20, 24, 32 y 40 px, así no se agranda uno chico. Fijo: no sigue al tema.
     /// </summary>
-    private static Icon DrawIcon()
+    private static Icon LoadIcon()
     {
-        using var bitmap = new Bitmap(32, 32);
-        using (var g = Graphics.FromImage(bitmap))
+        try
         {
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.Clear(Color.Transparent);
-            DPoint[] diamond = [new(16, 2), new(30, 16), new(16, 30), new(2, 16)];
-            using var fill = new SolidBrush(Color.FromArgb(0x0C, 0x0E, 0x13));
-            using var pen = new Pen(Color.FromArgb(0xE8, 0xB0, 0x4A), 3);
-            g.FillPolygon(fill, diamond);
-            g.DrawPolygon(pen, diamond);
-            using var inner = new SolidBrush(Color.FromArgb(0xE8, 0xB0, 0x4A));
-            g.FillPolygon(inner, [new DPoint(16, 10), new DPoint(22, 16), new DPoint(16, 22), new DPoint(10, 16)]);
+            using var stream = Application.GetResourceStream(new Uri("/HysteriaMeter;component/Assets/HysteriaMeter.ico", UriKind.Relative))?.Stream;
+            if (stream is not null)
+            {
+                return new Icon(stream, Forms.SystemInformation.SmallIconSize);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException)
+        {
+            // Sin el recurso queda el ícono genérico de Windows: la bandeja sigue funcionando.
         }
 
-        var handle = bitmap.GetHicon();
-        using var temporary = Icon.FromHandle(handle);
-        var icon = (Icon)temporary.Clone();
-        NativeMethods.DestroyIcon(handle);
-        return icon;
+        return (Icon)System.Drawing.SystemIcons.Application.Clone();
     }
 
     public void Dispose()
@@ -359,10 +353,6 @@ public sealed class TrayIcon : IDisposable
         public const int WindowCornerPreference = 33; // DWMWA_WINDOW_CORNER_PREFERENCE
         public const int BorderColor = 34;            // DWMWA_BORDER_COLOR
         public const int CornerRound = 2;             // DWMWCP_ROUND
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-        public static extern bool DestroyIcon(IntPtr handle);
 
         [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
         public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
