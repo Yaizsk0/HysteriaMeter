@@ -1,0 +1,4 @@
+Este archivo activa el modo portable de Hysteria Meter.
+
+Mientras esté al lado de HysteriaMeter.exe, las preferencias, el historial, las grabaciones y los exportes se guardan
+en la carpeta "datos", en esta misma carpeta. Si lo borrás, se guardan en %LOCALAPPDATA%\HysteriaMeter.

@@ -1,0 +1,60 @@
+name: Release portable
+
+# Un tag v* arma el zip portable y crea el release (prerelease si la versión lleva guion, como v0.16.0-alpha.1).
+# En un PR que toca el empaquetado, o a mano, solo deja el zip como artefacto para revisarlo.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - packaging/**
+      - src/HysteriaMeter.App/HysteriaMeter.App.csproj
+
+permissions:
+  contents: write
+
+jobs:
+  portable:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Todo el historial y los tags: el tag anterior arma las notas y el commit va en la versión.
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Versión
+        run: |
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME -replace '^v', '' } else { "0.0.0-ci.$env:GITHUB_RUN_NUMBER" }
+          "VERSION=$version" | Add-Content $env:GITHUB_ENV
+      - name: Tests
+        if: github.ref_type == 'tag'
+        run: dotnet test -c Release
+      - name: Zip portable
+        run: ./packaging/portable.ps1 -Version $env:VERSION
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HysteriaMeter-${{ env.VERSION }}-portable-win-x64
+          path: |
+            artifacts/*.zip
+            artifacts/*.zip.sha256
+      - name: Release en GitHub
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $zip = "artifacts/HysteriaMeter-$env:VERSION-portable-win-x64.zip"
+          $options = @('--title', "Hysteria Meter $env:VERSION", '--notes-file', 'packaging/notas-release.md', '--verify-tag')
+          if ($env:VERSION.Contains('-')) { $options += '--prerelease' }
+          # Las notas de GitHub van desde el tag anterior; el primer release no las lleva (listaría todos los PR).
+          $previous = git describe --tags --abbrev=0 --match 'v*' "$tag^" 2>$null
+          if ($LASTEXITCODE -eq 0 -and $previous) { $options += '--generate-notes', '--notes-start-tag', $previous }
+          gh release create $tag $zip "$zip.sha256" @options
+          if ($LASTEXITCODE -ne 0) { throw "gh release create terminó con $LASTEXITCODE" }

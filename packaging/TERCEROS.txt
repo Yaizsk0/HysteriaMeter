@@ -1,0 +1,42 @@
+Componentes de terceros incluidos en Hysteria Meter
+====================================================
+
+La versión portable trae adentro el runtime de .NET y estas bibliotecas. Cada una mantiene su licencia; el texto
+completo está en el enlace de cada una.
+
+.NET (runtime, WPF y Windows Forms)
+  Licencia MIT. © .NET Foundation y colaboradores.
+  https://github.com/dotnet/dotnet
+
+Microsoft.Extensions.Hosting, Microsoft.Data.Sqlite y Microsoft.Bcl.Memory
+  Licencia MIT. © .NET Foundation y colaboradores.
+  https://github.com/dotnet/dotnet
+
+SQLitePCLRaw (e_sqlite3)
+  Licencia Apache 2.0. https://github.com/ericsink/SQLitePCL.raw
+  Incluye SQLite, de dominio público: https://sqlite.org/copyright.html
+
+SharpPcap
+  Licencia MIT. https://github.com/chmorgan/sharppcap
+
+PacketDotNet
+  Mozilla Public License 2.0 (https://mozilla.org/MPL/2.0/). Se usa sin cambios; su código fuente está en
+  https://github.com/dotpcap/packetnet
+
+K4os.Compression.LZ4
+  Licencia: https://github.com/MiloszKrajewski/K4os.Compression.LZ4/blob/master/LICENSE
+
+Dapper
+  Licencia Apache 2.0. https://github.com/DapperLib/Dapper
+
+CommunityToolkit.Mvvm
+  Licencia MIT. © .NET Foundation y colaboradores.
+  https://github.com/CommunityToolkit/dotnet
+
+Fuentes (SIL Open Font License 1.1, el texto está en esta carpeta)
+  IBM Plex Sans: OFL-IBM-Plex-Sans.txt
+  Barlow Condensed: OFL-Barlow-Condensed.txt
+  Barlow Semi Condensed: OFL-Barlow-Semi-Condensed.txt
+  Inter: OFL-Inter.txt
+
+Npcap no viene incluido: se instala aparte desde https://npcap.com y tiene su propia licencia.
