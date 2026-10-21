@@ -40,3 +40,4 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Zip portable (self-contained, un solo `.exe`, datos en `datos\`) con `packaging/portable.ps1`, y workflow "Release portable" que crea el release al subir un tag `v*` (prerelease si la versión lleva guion).
 - [X] Actualización automática del zip portable: cada 6 horas busca un release nuevo en GitHub, baja el zip, revisa su `.sha256` y lo instala al abrir el meter (o desde la bandeja); se apaga en Configuración → PROGRAMA.
 - [X] Licencia MIT y firma del `.exe` con SignPath Foundation: sección "Code signing policy" (roles y privacidad) en el README y las notas del release; el workflow firma en los tags cuando el repo tiene la cuenta de SignPath configurada y, si no, el release sale sin firma.
+- [X] README corto (de 206 a unas 100 líneas): sin un párrafo por PR; el uso, las funciones en una lista, los atajos en una tabla, y la licencia y la "Code signing policy" como estaban.
