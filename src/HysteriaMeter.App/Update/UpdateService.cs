@@ -1,4 +1,3 @@
-using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using HysteriaMeter.App.ViewModels;
@@ -32,13 +31,7 @@ public sealed class UpdateService(MeterSession session) : BackgroundService
             await Task.Delay(FirstCheck, stoppingToken).ConfigureAwait(false);
             while (!stoppingToken.IsCancellationRequested)
             {
-                // El .exe viejo ya cerró hace rato: sus .old se pueden borrar.
-                updater.CleanupLeftovers();
-                if (session.Preferences.AutoUpdate && UpdateState.RunningVersion is { } running)
-                {
-                    await CheckAsync(updater, running, stoppingToken).ConfigureAwait(false);
-                }
-
+                await CheckAsync(updater, stoppingToken).ConfigureAwait(false);
                 await Task.Delay(Interval, stoppingToken).ConfigureAwait(false);
             }
         }
@@ -48,22 +41,29 @@ public sealed class UpdateService(MeterSession session) : BackgroundService
         }
     }
 
-    private static async Task CheckAsync(Updater updater, ReleaseVersion running, CancellationToken stoppingToken)
+    private async Task CheckAsync(Updater updater, CancellationToken stoppingToken)
     {
         using var limit = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
         limit.CancelAfter(CheckLimit);
         try
         {
+            // El .exe viejo ya cerró hace rato: sus .old se pueden borrar.
+            updater.CleanupLeftovers();
+            if (!session.Preferences.AutoUpdate || UpdateState.RunningVersion is not { } running)
+            {
+                return;
+            }
+
             var json = await Http.GetStringAsync(ReleaseFeed.ReleasesApi, limit.Token).ConfigureAwait(false);
             if (ReleaseFeed.Newest(json, running) is { } offer && await updater.StageAsync(Http, offer, limit.Token).ConfigureAwait(false))
             {
                 UpdateState.Current.Staged = updater.Staged();
             }
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or UnauthorizedAccessException
-            || (ex is OperationCanceledException && !stoppingToken.IsCancellationRequested))
+        catch (Exception ex) when (ex is not OperationCanceledException || !stoppingToken.IsCancellationRequested)
         {
-            // Sin conexión, GitHub caído o una descarga rota: se vuelve a intentar en la próxima vuelta.
+            // Sin conexión, GitHub caído, una descarga rota o el disco lleno: se vuelve a intentar en la próxima vuelta.
+            // Ningún error de acá puede terminar el servicio: el host se pararía y con él la captura.
         }
     }
 

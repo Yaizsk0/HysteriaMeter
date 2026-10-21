@@ -154,8 +154,10 @@ public sealed class Updater(string programFolder, string stagingFolder)
                 replacement.Moved = true;
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception)
         {
+            // Cualquier error, no solo los de disco: corre al abrir el meter y una instalación a medias lo dejaría sin
+            // arrancar. Se deshace y se reintenta en el próximo arranque.
             Undo(done);
             return false;
         }
