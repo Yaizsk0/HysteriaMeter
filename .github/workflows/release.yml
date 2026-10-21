@@ -57,8 +57,8 @@ jobs:
         if: steps.firma.outputs.activa == 'true'
         with:
           name: HysteriaMeter-${{ env.VERSION }}-sin-firmar
-          # El contenido de la carpeta va en la raíz del artefacto: HysteriaMeter.exe, como en packaging/signpath.
-          path: artifacts/HysteriaMeter/
+          # Solo el .exe, en la raíz del artefacto: es lo único que nombra packaging/signpath/artifact-configuration.xml.
+          path: artifacts/HysteriaMeter/HysteriaMeter.exe
           retention-days: 1
       - name: Firma en SignPath
         if: steps.firma.outputs.activa == 'true'
@@ -78,8 +78,8 @@ jobs:
           $signed = 'artifacts/firmado/HysteriaMeter.exe'
           $signature = Get-AuthenticodeSignature $signed
           if ($signature.Status -ne 'Valid') { throw "La firma de HysteriaMeter.exe no es válida: $($signature.Status) $($signature.StatusMessage)" }
-          if ($signature.SignerCertificate.Subject -notmatch 'SignPath Foundation') { throw "Lo firmó otro certificado: $($signature.SignerCertificate.Subject)" }
-          # Vuelve solo el .exe: el resto del zip queda como lo armó el build.
+          if ($signature.SignerCertificate.Subject -notmatch 'SignPath') { throw "Lo firmó otro certificado: $($signature.SignerCertificate.Subject)" }
+          # El .exe firmado reemplaza al de la carpeta; el resto del zip queda como lo armó el build.
           Copy-Item $signed artifacts/HysteriaMeter/HysteriaMeter.exe -Force
           "Firmado por $($signature.SignerCertificate.Subject)"
       - name: Zip portable

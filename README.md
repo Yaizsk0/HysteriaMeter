@@ -189,7 +189,7 @@ Free code signing provided by [SignPath.io](https://about.signpath.io), certific
 - **Qué se firma:** `HysteriaMeter.exe` de los zips de [Releases](https://github.com/Yaizsk0/HysteriaMeter/releases). Lo compila el workflow "Release portable" en runners de GitHub, desde el tag del release y sin pasos a mano. Las bibliotecas de terceros que van al lado no se firman.
 - **Committers y revisores:** [Yaizsk0](https://github.com/Yaizsk0).
 - **Aprobadores:** [Yaizsk0](https://github.com/Yaizsk0). Cada firma se aprueba a mano en SignPath.
-- **Estado:** pedido a SignPath Foundation. Hasta que lo aprueben, los releases salen sin firma.
+- **Estado:** falta que SignPath Foundation apruebe el proyecto. Hasta entonces, los releases salen sin firma.
 
 ### Privacidad
 
