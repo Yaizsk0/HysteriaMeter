@@ -4,6 +4,7 @@ using HysteriaMeter.App.Config;
 using HysteriaMeter.App.Overlay;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.App.Themes;
+using HysteriaMeter.App.Update;
 using HysteriaMeter.App.ViewModels;
 using HysteriaMeter.App.Welcome;
 using HysteriaMeter.Combat;
@@ -25,9 +26,18 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // Reinicio desde la bandeja: espera a que cierre el meter anterior. Después, si hay una versión nueva bajada, se
+        // instala y se abre esa, antes de levantar nada.
+        var args = AppRestart.WaitForPrevious(e.Args);
+        if (InstallStagedUpdate() && AppRestart.Start(args))
+        {
+            Shutdown();
+            return;
+        }
+
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
         {
-            Args = e.Args,
+            Args = args,
             ContentRootPath = AppContext.BaseDirectory,
         });
 
@@ -96,6 +106,10 @@ public partial class App : Application
         });
         builder.Services.AddSingleton<OverlayWindows>();
         builder.Services.AddSingleton<TrayIcon>();
+        if (UpdateState.IsAvailable)
+        {
+            builder.Services.AddHostedService<UpdateService>();
+        }
 
         _host = builder.Build();
         await _host.StartAsync().ConfigureAwait(true);
@@ -144,6 +158,16 @@ public partial class App : Application
         {
         }
     }
+
+    /// <summary>
+    /// Instala la versión ya bajada si la hay y "Actualizar solo" sigue prendido (solo el zip portable de los releases).
+    /// Devuelve <c>true</c> si la instaló: hay que abrir el .exe nuevo.
+    /// </summary>
+    private static bool InstallStagedUpdate() =>
+        UpdateState.IsAvailable
+        && UpdateState.RunningVersion is { } running
+        && UserStore.Load<MeterPreferences>(PreferencesFile) is not { AutoUpdate: false }
+        && UpdateState.CreateUpdater().ApplyStaged(running);
 
     /// <summary>
     /// Bienvenida del primer arranque, encima del overlay. La captura ya corre (MeterPipeline arrancó con el host): la

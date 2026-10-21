@@ -24,3 +24,9 @@ MeterViewModel, OverlayWindow, preferencias y el arnés son archivos compartidos
 - El progreso por boss toma todos los intentos del personaje; los chips eligen las filas visibles, sin cambiar el denominador de kills.
 - Antes de cambiar una pelea se guarda la nota editada; las ventanas auxiliares se cierran al minimizar o bloquear el overlay y se ocultan con él.
 - Las ramas originales de Claude se conservan como recuperación; las correcciones y PR se preparan en un worktree de integración.
+
+## Complexity Tracking
+
+| Principio | Excepción | Por qué | Alternativa descartada |
+|---|---|---|---|
+| VI. Sin servicios en la nube | La actualización automática del zip portable consulta los releases de GitHub (GET anónimo a `api.github.com`) y baja el zip de `github.com`. | Pedido explícito: que el portable se actualice solo con cada release. Es la misma página de donde se baja a mano; sin cuenta, sin telemetría y sin datos del usuario. Solo en el build de release y en modo portable, y se apaga en Configuración. | Avisar y que cada uno baje el zip a mano (no cumple el pedido); un servidor propio (más infraestructura y una cuenta). |

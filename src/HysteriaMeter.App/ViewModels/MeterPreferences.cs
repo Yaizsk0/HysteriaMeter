@@ -141,6 +141,12 @@ public sealed record MeterPreferences
     /// </summary>
     public bool WelcomeDone { get; init; } = true;
 
+    /// <summary>
+    /// "Actualizar solo": el zip portable de los releases busca, baja e instala al abrirse las versiones nuevas
+    /// (<see cref="Update.UpdateService"/>). Es de cada PC: un perfil importado no lo cambia.
+    /// </summary>
+    public bool AutoUpdate { get; init; } = true;
+
     /// <summary>Tema visual (ver <see cref="MeterThemes"/>).</summary>
     public string Theme { get; init; } = MeterThemes.Default;
 
