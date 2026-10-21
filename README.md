@@ -176,6 +176,31 @@ Un golpe de más de 100 millones ya no cuenta como daño. En dos peleas de boss,
 
 Hysteria Meter tiene ícono propio: el rombo dorado del encabezado con tres barras de daño adentro. Lo usan el .exe, la barra de tareas, las ventanas y la bandeja, en el tamaño justo para cada escala de Windows. Se genera con `python tools/icono/icono.py`, que guarda `src/HysteriaMeter.App/Assets/HysteriaMeter.ico`.
 
+El código tiene licencia MIT y el zip portable la trae en `LICENSE.txt`. El release está listo para firmar `HysteriaMeter.exe` con SignPath: cuando el repositorio tiene configurada la cuenta, el workflow manda el `.exe` a firmar, espera la aprobación y arma el zip con el `.exe` firmado. Mientras no esté configurada, el release sale sin firma, como hasta ahora. Ver [Code signing policy](#code-signing-policy).
+
+## Licencia
+
+El código es [MIT](LICENSE). Las fuentes de `src/HysteriaMeter.App/Assets/Fonts` tienen su propia licencia (SIL Open Font License 1.1, el texto está al lado de cada una) y las bibliotecas que trae el zip, la suya: ver [`packaging/TERCEROS.txt`](packaging/TERCEROS.txt).
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+- **Qué se firma:** `HysteriaMeter.exe` de los zips de [Releases](https://github.com/Yaizsk0/HysteriaMeter/releases). Lo compila el workflow "Release portable" en runners de GitHub, desde el tag del release y sin pasos a mano. Las bibliotecas de terceros que van al lado no se firman.
+- **Committers y revisores:** [Yaizsk0](https://github.com/Yaizsk0).
+- **Aprobadores:** [Yaizsk0](https://github.com/Yaizsk0). Cada firma se aprueba a mano en SignPath.
+- **Estado:** falta que SignPath Foundation apruebe el proyecto. Hasta entonces, los releases salen sin firma.
+
+### Privacidad
+
+Hysteria Meter no manda información a otros sistemas, salvo en estos tres casos:
+
+- **Actualización automática** (solo el zip portable, prendida de fábrica): consulta la lista de releases en `api.github.com` y, si hay una versión nueva, baja el zip y su `.sha256` de `github.com`. El pedido no lleva datos tuyos ni de tus peleas: GitHub ve tu IP y la versión del meter. Se apaga en Configuración → PROGRAMA → "Actualizar solo".
+- **Discord:** solo si pegás la URL de un webhook en Configuración. Manda el resumen de una pelea a ese canal cuando tocás "Mandar ahora" o, si lo prendiste, al derrotar un boss. El resumen lleva los nombres de los jugadores, salvo que actives "Ocultar los nombres de los demás".
+- **Reportar un problema:** abre el navegador con un issue de GitHub ya escrito (versión, sistema, estado de la captura y diagnóstico, sin nombres). Se publica solo si lo mandás vos.
+
+La captura es local: el meter lee una copia del tráfico del juego y no la reenvía a ningún lado.
+
 ## Spec Kit
 
 El proyecto se desarrolla con [Spec Kit](https://github.com/github/spec-kit). Con Claude Code: `/speckit-specify` para una feature nueva, luego `/speckit-plan`, `/speckit-tasks` y `/speckit-implement`. La feature actual es [`specs/001-dps-meter-mvp`](specs/001-dps-meter-mvp/spec.md).

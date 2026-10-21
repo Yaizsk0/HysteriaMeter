@@ -36,4 +36,6 @@ Fecha: 2026-10-14. Fuentes públicas; no se leyó código fuente de terceros, so
 
 ## Licencia
 
-El conocimiento publicado del protocolo (opcodes, tablas de skills) está en proyectos GPL-3.0. Usarlo obliga a GPL-3.0 si se distribuye. Decisión pendiente del dueño del repo; por ahora el código es propio y no incluye datos de terceros.
+El conocimiento publicado del protocolo (opcodes, tablas de skills) está en proyectos GPL-3.0. Usarlo obliga a GPL-3.0 si se distribuye.
+
+**Decisión (2026-10-21): MIT.** El código es propio: de esos proyectos solo se leyeron README y artículos, y los opcodes de `data/opcodes.json` salen de capturas propias. Si algún día se incorporan opcodes o tablas de un proyecto GPL-3.0, el proyecto pasa a GPL-3.0-or-later antes de distribuirse (constitución, restricciones técnicas).

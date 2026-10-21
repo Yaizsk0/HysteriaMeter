@@ -2,6 +2,8 @@ name: Release portable
 
 # Un tag v* arma el zip portable y crea el release (prerelease si la versión lleva guion, como v0.16.0-alpha.1).
 # En un PR que toca el empaquetado, o a mano, solo deja el zip como artefacto para revisarlo.
+# Firma: si el repositorio tiene el secreto SIGNPATH_API_TOKEN y la variable SIGNPATH_ORGANIZATION_ID, el .exe de un
+# tag se firma en SignPath antes de armar el zip. Sin ellos el release sale sin firma.
 on:
   push:
     tags: ['v*']
@@ -14,6 +16,8 @@ on:
 
 permissions:
   contents: write
+  # SignPath lee los datos del job y baja el artefacto sin firmar con el token del workflow.
+  actions: read
 
 jobs:
   portable:
@@ -36,8 +40,50 @@ jobs:
       - name: Tests
         if: github.ref_type == 'tag'
         run: dotnet test -c Release
+      - name: Carpeta portable
+        run: ./packaging/portable.ps1 -Version $env:VERSION -Paso Carpeta
+      - name: Firma configurada
+        id: firma
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+          SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+        run: |
+          # Solo los tags: cada firma se aprueba a mano en SignPath y un PR no la necesita.
+          $active = $env:GITHUB_REF_TYPE -eq 'tag' -and [bool]$env:SIGNPATH_API_TOKEN -and [bool]$env:SIGNPATH_ORGANIZATION_ID
+          "activa=$($active.ToString().ToLowerInvariant())" | Add-Content $env:GITHUB_OUTPUT
+          if ($active) { 'El .exe se firma en SignPath.' } else { 'Sin firma: no es un tag o SignPath no está configurado.' }
+      - uses: actions/upload-artifact@v4
+        id: sin-firmar
+        if: steps.firma.outputs.activa == 'true'
+        with:
+          name: HysteriaMeter-${{ env.VERSION }}-sin-firmar
+          # Solo el .exe, en la raíz del artefacto: es lo único que nombra packaging/signpath/artifact-configuration.xml.
+          path: artifacts/HysteriaMeter/HysteriaMeter.exe
+          retention-days: 1
+      - name: Firma en SignPath
+        if: steps.firma.outputs.activa == 'true'
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'HysteriaMeter' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          github-artifact-id: ${{ steps.sin-firmar.outputs.artifact-id }}
+          # Espera la aprobación manual hasta 5 horas; el job entero tiene 6.
+          wait-for-completion-timeout-in-seconds: 18000
+          output-artifact-directory: artifacts/firmado
+      - name: Exe firmado
+        if: steps.firma.outputs.activa == 'true'
+        run: |
+          $signed = 'artifacts/firmado/HysteriaMeter.exe'
+          $signature = Get-AuthenticodeSignature $signed
+          if ($signature.Status -ne 'Valid') { throw "La firma de HysteriaMeter.exe no es válida: $($signature.Status) $($signature.StatusMessage)" }
+          if ($signature.SignerCertificate.Subject -notmatch 'SignPath') { throw "Lo firmó otro certificado: $($signature.SignerCertificate.Subject)" }
+          # El .exe firmado reemplaza al de la carpeta; el resto del zip queda como lo armó el build.
+          Copy-Item $signed artifacts/HysteriaMeter/HysteriaMeter.exe -Force
+          "Firmado por $($signature.SignerCertificate.Subject)"
       - name: Zip portable
-        run: ./packaging/portable.ps1 -Version $env:VERSION
+        run: ./packaging/portable.ps1 -Version $env:VERSION -Paso Zip
       - uses: actions/upload-artifact@v4
         with:
           name: HysteriaMeter-${{ env.VERSION }}-portable-win-x64

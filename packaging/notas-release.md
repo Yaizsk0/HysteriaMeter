@@ -4,7 +4,7 @@
 
 1. Instalá [Npcap](https://npcap.com/#download) con "WinPcap API-compatible Mode" (una sola vez).
 2. Bajá el zip `HysteriaMeter-…-portable-win-x64.zip` y descomprimilo en una carpeta tuya.
-3. Abrí `HysteriaMeter.exe`. No está firmado: si Windows muestra "Windows protegió su PC", tocá "Más información" y después "Ejecutar de todas formas".
+3. Abrí `HysteriaMeter.exe`. Si Windows muestra "Windows protegió su PC", tocá "Más información" y después "Ejecutar de todas formas". Windows lo muestra con los programas que todavía no conoce, estén firmados o no.
 
 Trae .NET adentro, no hace falta instalar nada más. Las preferencias, el historial y los exportes quedan en la carpeta `datos`, al lado del `.exe`. Para seguir con el historial de una versión compilada, copiá lo que hay en `%LOCALAPPDATA%\HysteriaMeter` a `datos` (más detalles en `LEEME.txt`).
 
@@ -25,3 +25,7 @@ El `.sha256` trae el hash del zip. En PowerShell, en la carpeta de la descarga:
 ```
 
 Tiene que coincidir con el primer campo del `.sha256` (sin importar mayúsculas).
+
+### Firma y privacidad
+
+Quién firma el `.exe`, cómo se aprueba cada firma y qué datos salen de la PC: [Code signing policy](https://github.com/Yaizsk0/HysteriaMeter#code-signing-policy). El código tiene licencia MIT.
