@@ -38,3 +38,4 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Combat: un golpe de más de 100 millones no cuenta como daño (`MaxRealHit`); los 500.000.000 de la skill 1000007 ya no inflan el total ni cambian el objetivo principal de la pelea.
 - [X] Ícono propio (rombo con barras de daño) en el .exe, las ventanas y la bandeja, con todos los tamaños de Windows; lo genera `tools/icono/icono.py`.
 - [X] Zip portable (self-contained, un solo `.exe`, datos en `datos\`) con `packaging/portable.ps1`, y workflow "Release portable" que crea el release al subir un tag `v*` (prerelease si la versión lleva guion).
+- [X] Actualización automática del zip portable: cada 6 horas busca un release nuevo en GitHub, baja el zip, revisa su `.sha256` y lo instala al abrir el meter (o desde la bandeja); se apaga en Configuración → PROGRAMA.

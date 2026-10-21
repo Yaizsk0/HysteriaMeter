@@ -4,7 +4,8 @@
 Arma el zip portable de Hysteria Meter y su .sha256.
 
 .DESCRIPTION
-Publica la app self-contained en un solo .exe (trae .NET adentro). Los archivos de data/ y appsettings.json quedan
+Publica la app self-contained en un solo .exe (trae .NET adentro), marcada como build de release (ReleaseBuild: solo
+así se actualiza sola). Los archivos de data/ y appsettings.json quedan
 sueltos al lado, porque la app los lee de su carpeta. Suma portable.txt (los datos van a la carpeta datos, junto al
 .exe), LEEME.txt y las licencias de terceros. Nunca lleva datos de nadie: la carpeta datos la crea el meter al abrirse.
 
@@ -26,7 +27,7 @@ if (Test-Path $publish) { Remove-Item $publish -Recurse -Force }
 dotnet publish (Join-Path $root 'src/HysteriaMeter.App/HysteriaMeter.App.csproj') `
     -c Release -r $Runtime --self-contained true `
     -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:DebugType=embedded `
-    -p:Version=$Version -o $publish
+    -p:Version=$Version -p:ReleaseBuild=true -o $publish
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish terminó con $LASTEXITCODE" }
 
 foreach ($required in 'HysteriaMeter.exe', 'appsettings.json', 'data/opcodes.json', 'data/novedades.json') {

@@ -18,8 +18,8 @@ public static class ProfileFile
         JsonSerializer.Serialize(preferences with { DiscordWebhook = string.Empty, DiscordOnKill = false, CaptureDevice = string.Empty, UiScale = 1.0 }, Json);
 
     /// <summary>
-    /// Las preferencias del archivo, conservando el webhook, la placa, la escala y el estado de bienvenida/novedades
-    /// propios; null si el archivo no es un perfil válido.
+    /// Las preferencias del archivo, conservando el webhook, la placa, la escala, la actualización automática y el estado
+    /// de bienvenida/novedades propios; null si el archivo no es un perfil válido.
     /// </summary>
     public static MeterPreferences? FromJson(string json, MeterPreferences current)
     {
@@ -34,6 +34,7 @@ public static class ProfileFile
                     WelcomeDone = current.WelcomeDone,
                     LastSeenNews = current.LastSeenNews,
                     UiScale = current.UiScale,
+                    AutoUpdate = current.AutoUpdate,
                     // Un perfil viejo no vuelve a disparar el paso a la vista del rediseño en el próximo arranque.
                     RedesignViewApplied = current.RedesignViewApplied,
                 }

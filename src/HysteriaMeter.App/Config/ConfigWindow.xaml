@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:HysteriaMeter.App.ViewModels"
         xmlns:conv="clr-namespace:HysteriaMeter.App.Converters"
+        xmlns:update="clr-namespace:HysteriaMeter.App.Update"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MeterViewModel}"
         Title="Configuración"
@@ -790,6 +791,21 @@
                                        ToolTip="Para el modo portable, creá un archivo portable.txt junto a HysteriaMeter.exe" />
                             <CheckBox Style="{StaticResource Switch}" Content="Iniciar con Windows" IsChecked="{Binding StartWithWindows}"
                                       Tag="Abre el meter al iniciar sesión. Si movés la carpeta del programa, se corrige sola al abrirlo." />
+                            <!-- Solo en el zip portable de los releases (Update/UpdateState.IsAvailable): un build local no se actualiza. -->
+                            <CheckBox Style="{StaticResource Switch}" Content="Actualizar solo" IsChecked="{Binding AutoUpdate}"
+                                      Visibility="{Binding Source={x:Static update:UpdateState.IsAvailable}, Converter={StaticResource Visible}}"
+                                      Tag="Busca versiones nuevas en los releases de GitHub cada 6 horas y las baja; se instalan la próxima vez que abrís el meter." />
+                            <TextBlock Text="{Binding Source={x:Static update:UpdateState.Current}, Path=StatusText}" Margin="0,4,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                                        <Style.Triggers>
+                                            <Trigger Property="Text" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>

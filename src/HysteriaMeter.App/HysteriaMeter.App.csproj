@@ -45,4 +45,8 @@
     <None Update="appsettings.json" ExcludeFromSingleFile="true" />
     <None Update="..\..\data\*.json" ExcludeFromSingleFile="true" />
   </ItemGroup>
+  <ItemGroup Condition="'$(ReleaseBuild)' == 'true'">
+    <!-- Solo el zip de los releases (packaging/portable.ps1) se actualiza solo: ver Update/UpdateState. -->
+    <AssemblyMetadata Include="ReleaseBuild" Value="true" />
+  </ItemGroup>
 </Project>

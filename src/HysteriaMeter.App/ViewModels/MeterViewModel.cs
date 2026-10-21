@@ -898,6 +898,13 @@ public sealed partial class MeterViewModel : ObservableObject
         }
     }
 
+    /// <summary>"Actualizar solo" (Configuración → PROGRAMA). Solo se ve en el zip portable de los releases.</summary>
+    public bool AutoUpdate
+    {
+        get => Preferences.AutoUpdate;
+        set => Update(Preferences with { AutoUpdate = value }, nameof(AutoUpdate));
+    }
+
     /// <summary>Datos en la carpeta del programa (portable) o en %LOCALAPPDATA%.</summary>
 #pragma warning disable CA1822 // propiedad de instancia para el binding de WPF
     public string DataFolderHint => AppPaths.IsPortable

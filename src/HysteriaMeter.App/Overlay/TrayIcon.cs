@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using HysteriaMeter.App.Themes;
+using HysteriaMeter.App.Update;
 using HysteriaMeter.App.ViewModels;
 using DrawingSystemColors = System.Drawing.SystemColors;
 using Forms = System.Windows.Forms;
@@ -64,6 +65,10 @@ public sealed class TrayIcon : IDisposable
         Item(menu, "Historial", () => OpenPanel(windows, history: true));
         Item(menu, "Configuración", () => OpenPanel(windows, history: false));
         Item(menu, "Abrir la carpeta de datos", OpenDataFolder);
+        // Solo con una versión nueva ya bajada (Update/UpdateService): reinicia el meter para instalarla. Ni primero ni
+        // último: Measure les da los márgenes de los extremos.
+        var update = Item(menu, string.Empty, RestartToUpdate);
+        update.Visible = false;
         menu.Items.Add(new Forms.ToolStripSeparator { AutoSize = false });
         var exit = Item(menu, "Salir", () => Application.Current?.MainWindow?.Close());
         exit.Tag = TrayMenuRenderer.DangerTag;
@@ -87,6 +92,9 @@ public sealed class TrayIcon : IDisposable
             visibility.Text = VisibilityText(windows.All.Any(w => w.IsVisible));
             visibility.ShortcutKeyDisplayString = session.Preferences.HotkeyVisibility;
             reset.ShortcutKeyDisplayString = session.Preferences.HotkeyReset;
+            var staged = session.Preferences.AutoUpdate ? UpdateState.Current.Staged : null;
+            update.Visible = staged is not null;
+            update.Text = UpdateText(staged);
         };
         menu.HandleCreated += (_, _) => RoundCorners(menu, colors.Border);
         return menu;
@@ -101,6 +109,21 @@ public sealed class TrayIcon : IDisposable
         var alpha = over.A / 255.0;
         int Mix(int top, int bottom) => (int)Math.Round((top * alpha) + (bottom * (1 - alpha)));
         return Color.FromArgb(Mix(over.R, under.R), Mix(over.G, under.G), Mix(over.B, under.B));
+    }
+
+    /// <summary>"Reiniciar con la versión 0.16.0-alpha.2" si hay una bajada; si no, el ítem está oculto.</summary>
+    public static string UpdateText(ReleaseVersion? staged) => staged is null ? string.Empty : $"Reiniciar con la versión {staged}";
+
+    /// <summary>
+    /// Abre el meter de nuevo (espera a que este cierre e instala la versión bajada al arrancar) y cierra este como
+    /// "Salir", que guarda todo.
+    /// </summary>
+    private static void RestartToUpdate()
+    {
+        if (AppRestart.StartAfterThis())
+        {
+            Application.Current?.MainWindow?.Close();
+        }
     }
 
     /// <summary>"Ocultar overlay" si se ve alguna ventana; si están todas ocultas, "Mostrar overlay".</summary>

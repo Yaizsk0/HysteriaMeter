@@ -20,6 +20,14 @@ DATOS
   adentro a "datos" para seguir con el mismo historial.
 - Si borrás portable.txt, los datos van a %LOCALAPPDATA%\HysteriaMeter.
 
+ACTUALIZACIONES
+- El meter busca versiones nuevas en los releases de GitHub cada 6 horas (sin cuenta: solo consulta la lista de
+  versiones). Si hay una, la baja, revisa su hash y la instala la próxima vez que lo abrís, o al tocar "Reiniciar
+  con la versión ..." en el ícono de la bandeja.
+- No toca la carpeta "datos" ni portable.txt.
+- Se apaga en Configuración, PROGRAMA, "Actualizar solo". Sin portable.txt no se actualiza.
+- Descomprimilo en una carpeta tuya (no en Archivos de programa): el meter reemplaza sus propios archivos.
+
 QUÉ HACE Y QUÉ NO
 Solo lee una copia del tráfico de red del juego (captura pasiva con Npcap). No envía ni modifica paquetes, no toca el
 proceso ni la memoria del juego y no automatiza acciones.

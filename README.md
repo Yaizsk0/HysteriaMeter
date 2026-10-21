@@ -29,6 +29,8 @@ Npcap ─► Capture ─► TcpFlowTracker ─► GameStreamDecoder ─► Comba
 
 Para usarlo sin compilar, en [Releases](https://github.com/Yaizsk0/HysteriaMeter/releases) está el zip portable (`HysteriaMeter-<versión>-portable-win-x64.zip`). Trae .NET adentro: se descomprime en cualquier carpeta y se abre `HysteriaMeter.exe`; solo hace falta Npcap. Con el `portable.txt` del zip, las preferencias, el historial y los exportes quedan en la carpeta `datos`, al lado del `.exe`. Lo arma `packaging/portable.ps1` y lo publica el workflow "Release portable" al subir un tag `v*`; si la versión lleva guion (`v0.16.0-alpha.1`), sale como prerelease.
 
+El zip portable se actualiza solo: a los 2 minutos de abrirlo y después cada 6 horas consulta los releases de GitHub (sin cuenta ni datos tuyos). Si hay una versión más nueva, la baja, la compara con su `.sha256` y la instala la próxima vez que abrís el meter, o al tocar "Reiniciar con la versión …" en el ícono de la bandeja. Desde una alfa sigue a la próxima alfa y a la estable; desde una estable no pasa sola a una de prueba. No toca la carpeta `datos` ni `portable.txt`. Se apaga en configuración, PROGRAMA, "Actualizar solo". Un build compilado a mano (o el zip sin `portable.txt`) nunca se actualiza.
+
 Requisitos para compilar: Windows 10/11, [Npcap](https://npcap.com/) en modo compatible WinPcap, .NET 10 SDK.
 
 ```powershell
