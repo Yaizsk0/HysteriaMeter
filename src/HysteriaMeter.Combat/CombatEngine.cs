@@ -34,6 +34,15 @@ public enum ActorScope
 /// </summary>
 public sealed class CombatEngine(CombatEngineOptions options)
 {
+    /// <summary>
+    /// Un monto de <c>0x3804</c> o <c>0x3805</c> por encima de esto no es daño y se ignora entero. En dos peleas de boss
+    /// del 2026-10-15, la skill 1000007 (no es de clase) pegó 14 veces exactamente 500.000.000, cada vez a una entidad
+    /// distinta que nadie más golpeó. INTERPRETADO: es una mecánica del juego, no un error del decoder; sin captura de
+    /// esas peleas no se sabe cuál. El golpe real más grande de la base es de 399.000 y la vida más grande verificada,
+    /// de 15.504.000 (ver protocol-notes, "Golpes de 500.000.000").
+    /// </summary>
+    public const long MaxRealHit = 100_000_000;
+
     private readonly Lock _gate = new();
     private Encounter? _current;
     private IReadOnlyList<CombatLogEntry> _lastLog = [];
@@ -237,7 +246,9 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
     private void OnDamage(DamageEvent e)
     {
-        if (e.Amount <= 0)
+        // Sin monto, o con uno imposible (MaxRealHit): no suma, no abre ni sostiene la pelea, no elige el objetivo
+        // principal y no entra en la verificación ni en el daño recibido.
+        if (e.Amount <= 0 || e.Amount > MaxRealHit)
         {
             return;
         }

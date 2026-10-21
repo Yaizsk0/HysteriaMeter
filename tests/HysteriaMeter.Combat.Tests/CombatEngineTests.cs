@@ -375,6 +375,43 @@ public class CombatEngineTests
     }
 
     [Fact]
+    public void A_hit_too_big_to_be_damage_does_not_count()
+    {
+        // En dos peleas de boss del 2026-10-15, cuatro jugadores por pelea pegaron con la skill 1000007 exactamente
+        // 500.000.000, cada golpe a una entidad distinta que nadie más golpeó: 7.000 millones, el 86 % del daño de la base. El
+        // golpe real más grande de la base es de 399.000. No suma, ni elige el objetivo principal (antes era esa entidad).
+        const ulong mechanic = 901;
+        var engine = CreateEngine();
+        engine.Apply(new EntitySpawnEvent(T0, mechanic, null, NpcId: 777));
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 12010350, 10_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(1), Me, mechanic, 1000007, 500_000_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Ally, Boss, 15030340, 5_000, HitModifiers.None));
+
+        var snapshot = engine.CurrentSnapshot()!;
+        Assert.Equal(("Boss", 15_000L), (snapshot.TargetName, snapshot.TotalDamage));
+        var me = snapshot.Actors.Single(a => a.IsLocalPlayer);
+        Assert.Equal((10_000L, 1, 10_000L, 10_000L), (me.Damage, me.Hits, me.MaxHit, me.MainTargetDamage));
+        Assert.Equal([12010350U], me.Skills.Select(s => s.SkillId));
+        Assert.Equal(10_000d / 15_000, me.Share, 3);
+    }
+
+    [Fact]
+    public void A_hit_too_big_to_be_damage_neither_opens_a_fight_nor_is_damage_taken()
+    {
+        var engine = CreateEngine();
+        engine.Apply(new DamageEvent(At(0), Me, Boss, 1000007, 500_000_000, HitModifiers.None));
+        Assert.Null(engine.CurrentSnapshot());
+
+        engine.Apply(new DamageEvent(At(1), Me, Boss, 12010350, 1_000, HitModifiers.None));
+        engine.Apply(new DamageEvent(At(2), Boss, Me, 1000007, 500_000_000, HitModifiers.None));
+
+        var snapshot = engine.CurrentSnapshot()!;
+        var me = Assert.Single(snapshot.Actors);
+        Assert.Equal(At(1), snapshot.Start);
+        Assert.Equal((1_000L, 0L, 0), (me.Damage, me.DamageTaken, me.HitsTaken));
+    }
+
+    [Fact]
     public void Active_dps_leaves_out_gaps_longer_than_the_tolerance()
     {
         // Golpes en 0, 1 y 7 s: la serie es [1000, 1000, 0, 0, 0, 0, 0, 2000]. Del primer golpe al último hay 8 s y los

@@ -35,3 +35,4 @@ Alcance aprobado: [spec.md](spec.md) y [decisiones.md](decisiones.md). Coordinac
 - [X] Combat: el filtro de party cuenta a quien estuvo en la party en esta zona aunque no mande HP/MP hace más de 10 s; ya no se pierde su daño (la apertura, por ejemplo).
 - [X] Overlay: lo guardado antes del rediseño pasa una sola vez a la vista del mock al abrir (filas y columnas de fábrica, ventanas sin compacto a 380 px); lo que se vuelva a prender después se respeta y un perfil importado no repite el paso.
 - [X] Overlay y Detalle: las barras de daño se deslizan hasta el valor nuevo (350 ms, salida suave, 30 cuadros por segundo) en vez de saltar en cada refresco; el primer valor va directo y con las animaciones de Windows apagadas saltan como antes.
+- [X] Combat: un golpe de más de 100 millones no cuenta como daño (`MaxRealHit`); los 500.000.000 de la skill 1000007 ya no inflan el total ni cambian el objetivo principal de la pelea.
