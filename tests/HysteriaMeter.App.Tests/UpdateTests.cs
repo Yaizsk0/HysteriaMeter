@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using HysteriaMeter.App.Overlay;
 using HysteriaMeter.App.Update;
 using HysteriaMeter.App.ViewModels;
@@ -336,7 +337,9 @@ public sealed class UpdateTests
     public void Auto_update_is_on_by_default_and_a_profile_does_not_change_it()
     {
         Assert.True(new MeterPreferences().AutoUpdate);
-        Assert.True(JsonSerializer.Deserialize<MeterPreferences>("{}")!.AutoUpdate);
+        // Mismas opciones que UserStore: un preferencias.json de antes de esta opción queda con la actualización prendida.
+        var options = new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } };
+        Assert.True(JsonSerializer.Deserialize<MeterPreferences>("{}", options)!.AutoUpdate);
 
         var json = ProfileFile.ToJson(new MeterPreferences { AutoUpdate = true });
         var imported = ProfileFile.FromJson(json, new MeterPreferences { AutoUpdate = false });
@@ -345,7 +348,6 @@ public sealed class UpdateTests
     }
 
     private static ReleaseVersion Version(string text) => ReleaseVersion.Parse(text)!;
-
 
     private static string Feed(params object[] releases) => JsonSerializer.Serialize(releases);
 
@@ -369,7 +371,7 @@ public sealed class UpdateTests
         {
             foreach (var (path, text) in entries)
             {
-                using var writer = new StreamWriter(archive.CreateEntry(path).Open(), Encoding.UTF8);
+                using var writer = new StreamWriter(archive.CreateEntry(path).Open(), new UTF8Encoding(false));
                 writer.Write(text);
             }
         }

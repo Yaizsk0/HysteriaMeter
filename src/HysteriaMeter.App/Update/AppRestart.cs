@@ -16,7 +16,7 @@ public static class AppRestart
     private static readonly TimeSpan WaitLimit = TimeSpan.FromSeconds(15);
 
     /// <summary>Los argumentos sin el par "--esperar-cierre &lt;pid&gt;", y ese pid si estaba.</summary>
-    public static (string[] Rest, int? Pid) Split(IReadOnlyList<string> args)
+    public static (string[] Args, int? Pid) Split(IReadOnlyList<string> args)
     {
         var rest = new List<string>();
         int? pid = null;
