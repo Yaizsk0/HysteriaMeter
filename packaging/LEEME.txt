@@ -10,8 +10,8 @@ CÓMO SE USA
 1. Descomprimí el zip en una carpeta tuya (por ejemplo, Documentos\HysteriaMeter). Trae .NET adentro: no hace falta
    instalar nada más.
 2. Abrí HysteriaMeter.exe. La primera vez aparece una bienvenida que revisa Npcap y la captura.
-3. El programa no está firmado. Si Windows muestra "Windows protegió su PC", tocá "Más información" y después
-   "Ejecutar de todas formas".
+3. Si Windows muestra "Windows protegió su PC", tocá "Más información" y después "Ejecutar de todas formas". Windows
+   lo muestra con los programas que todavía no conoce, estén firmados o no.
 
 DATOS
 - Con el archivo portable.txt, las preferencias, el historial, las grabaciones y los exportes se guardan en la carpeta
@@ -32,4 +32,8 @@ QUÉ HACE Y QUÉ NO
 Solo lee una copia del tráfico de red del juego (captura pasiva con Npcap). No envía ni modifica paquetes, no toca el
 proceso ni la memoria del juego y no automatiza acciones.
 
-Licencias de terceros: carpeta "licencias".
+FIRMA Y PRIVACIDAD
+Quién firma el .exe y qué datos salen de la PC (solo la consulta de actualizaciones a GitHub y, si lo configurás, el
+resumen a Discord): https://github.com/Yaizsk0/HysteriaMeter#code-signing-policy
+
+Licencia de Hysteria Meter: MIT (LICENSE.txt). Licencias de terceros: carpeta "licencias".

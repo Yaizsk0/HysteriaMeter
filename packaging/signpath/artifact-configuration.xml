@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Configuración del artefacto para el proyecto de SignPath (se carga a mano en SignPath, en el proyecto, como
+  configuración por defecto). El workflow "Release portable" sube la carpeta artifacts/HysteriaMeter como artefacto de
+  GitHub, que GitHub empaqueta en un zip: por eso la raíz es <zip-file>. Solo se firma el .exe del meter; las DLL de
+  terceros quedan como vienen.
+-->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <zip-file>
+    <pe-file path="HysteriaMeter.exe">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

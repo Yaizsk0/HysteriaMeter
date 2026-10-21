@@ -86,7 +86,7 @@ description: "Tareas del MVP de Hysteria Meter"
 - [X] T040 [P] Elegir automáticamente la placa con tráfico del juego en `LiveCaptureSource`
 - [X] T041 [P] `hysteria-rec replay` para correr el pipeline completo sobre un `.pcap`
 - [ ] T038 Medir CPU/RAM con party de 6 (SC-003)
-- [ ] T039 Decidir licencia (GPL-3.0 si se usan datos de A2Tools) y agregar `LICENSE`
+- [X] T039 Decidir licencia (GPL-3.0 si se usan datos de A2Tools) y agregar `LICENSE`: MIT, porque no hay código ni datos de proyectos GPL (ver research.md)
 
 ## Dependencies & Execution Order
 
