@@ -36,4 +36,9 @@
     <None Include="..\..\data\classes.json" Link="data\classes.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\data\novedades.json" Link="data\novedades.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- En el zip portable (un solo .exe) quedan sueltos al lado: la app los lee de su carpeta. -->
+    <None Update="appsettings.json" ExcludeFromSingleFile="true" />
+    <None Update="..\..\data\*.json" ExcludeFromSingleFile="true" />
+  </ItemGroup>
 </Project>

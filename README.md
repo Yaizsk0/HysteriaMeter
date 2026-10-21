@@ -27,7 +27,9 @@ Npcap ─► Capture ─► TcpFlowTracker ─► GameStreamDecoder ─► Comba
 
 ## Uso rápido
 
-Requisitos: Windows 10/11, [Npcap](https://npcap.com/) en modo compatible WinPcap, .NET 10 SDK.
+Para usarlo sin compilar, en [Releases](https://github.com/Yaizsk0/HysteriaMeter/releases) está el zip portable (`HysteriaMeter-<versión>-portable-win-x64.zip`). Trae .NET adentro: se descomprime en cualquier carpeta y se abre `HysteriaMeter.exe`; solo hace falta Npcap. Con el `portable.txt` del zip, las preferencias, el historial y los exportes quedan en la carpeta `datos`, al lado del `.exe`. Lo arma `packaging/portable.ps1` y lo publica el workflow "Release portable" al subir un tag `v*`; si la versión lleva guion (`v0.16.0-alpha.1`), sale como prerelease.
+
+Requisitos para compilar: Windows 10/11, [Npcap](https://npcap.com/) en modo compatible WinPcap, .NET 10 SDK.
 
 ```powershell
 dotnet build

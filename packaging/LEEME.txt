@@ -1,0 +1,27 @@
+Hysteria Meter: DPS meter para AION 2 (versión portable)
+https://github.com/Yaizsk0/HysteriaMeter
+
+REQUISITOS
+- Windows 10 u 11 de 64 bits.
+- Npcap (https://npcap.com/#download), instalado con "WinPcap API-compatible Mode". El meter no lo trae: se instala
+  una sola vez.
+
+CÓMO SE USA
+1. Descomprimí el zip en una carpeta tuya (por ejemplo, Documentos\HysteriaMeter). Trae .NET adentro: no hace falta
+   instalar nada más.
+2. Abrí HysteriaMeter.exe. La primera vez aparece una bienvenida que revisa Npcap y la captura.
+3. El programa no está firmado. Si Windows muestra "Windows protegió su PC", tocá "Más información" y después
+   "Ejecutar de todas formas".
+
+DATOS
+- Con el archivo portable.txt, las preferencias, el historial, las grabaciones y los exportes se guardan en la carpeta
+  "datos", al lado del .exe. Para llevarlo a otra PC, copiá la carpeta entera.
+- Si ya usabas Hysteria Meter compilado, tus datos están en %LOCALAPPDATA%\HysteriaMeter. Copiá lo que hay ahí
+  adentro a "datos" para seguir con el mismo historial.
+- Si borrás portable.txt, los datos van a %LOCALAPPDATA%\HysteriaMeter.
+
+QUÉ HACE Y QUÉ NO
+Solo lee una copia del tráfico de red del juego (captura pasiva con Npcap). No envía ni modifica paquetes, no toca el
+proceso ni la memoria del juego y no automatiza acciones.
+
+Licencias de terceros: carpeta "licencias".
