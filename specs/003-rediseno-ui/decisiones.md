@@ -137,6 +137,7 @@ Mocks: `scratchpad/redesign/project/*.dc.html`. Mapeo por pantalla: `scratchpad/
   alto desplazable. La barra de desplazamiento sale solo si queda texto afuera; con menos de 2 px sin entrar (la caja vacía
   debajo del último renglón) queda oculta y la rueda igual mueve ese píxel.
 - Renombrar skill (si existe el flujo): diálogo con estilo del mock y "Aplicar a todas las variantes" marcado por defecto (se aplica al ID base).
+- Ícono de la app (`Assets/HysteriaMeter.ico`, `ApplicationIcon`): el rombo del encabezado (12 × 14, borde Gold #E8B04A con degradé) sobre WindowBg, con tres barras de daño doradas, la del medio más alta. Lo dibuja `tools/icono/icono.py` (Pillow), cada tamaño por separado a 8 veces y achicado, con los bordes de las barras en píxeles enteros; en 24 px o menos las barras suben y se acortan, y nunca pisan el borde. Trae 16, 20, 24, 32, 40, 48 y 64 px como BMP (lo que mejor lee Windows en la bandeja) y 128 y 256 como PNG. Las ventanas de WPF lo toman del ensamblado; la bandeja lo carga como recurso en `SystemInformation.SmallIconSize`, así a 125 o 150 % usa el de 20 o 24 px en vez de achicar uno grande. Reemplaza al rombo que la bandeja dibujaba en memoria. Es fijo: no sigue al tema.
 
 
 ## Corrección de fidelidad visual
