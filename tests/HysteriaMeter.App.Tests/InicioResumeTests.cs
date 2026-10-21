@@ -333,11 +333,13 @@ public sealed class InicioResumeWindowTests
                 vm.DismissNoticeCommand.Execute(null);
                 Assert.False(vm.HasNotice);
 
-                // Crear el menú no muestra un NotifyIcon ni abre placas de red.
+                // Crear el menú no muestra un NotifyIcon ni abre placas de red. "Reiniciar con la versión …" está oculto
+                // mientras no haya una versión nueva bajada (Available: Visible depende de que el menú se esté viendo).
                 using var menu = TrayIcon.CreateMenu(new OverlayWindows(session), session);
                 Assert.Equal(
                     ["Ocultar overlay", "Reiniciar la pelea", "Historial", "Configuración", "Abrir la carpeta de datos", "Salir"],
-                    menu.Items.OfType<System.Windows.Forms.ToolStripMenuItem>().Select(i => i.Text));
+                    menu.Items.OfType<System.Windows.Forms.ToolStripMenuItem>().Where(i => i.Available).Select(i => i.Text));
+                Assert.Single(menu.Items.OfType<System.Windows.Forms.ToolStripMenuItem>(), i => !i.Available);
 
                 foreach (var family in new[] { (FontFamily)app.FindResource("NumberFont"), (FontFamily)app.FindResource("TitleFont"), MeterViewModel.FontOf("Barlow Semi Condensed") })
                 {
