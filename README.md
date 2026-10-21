@@ -12,7 +12,7 @@ Solo lectura pasiva: no envía ni modifica paquetes, no toca el proceso ni la me
 
 La primera vez, una bienvenida revisa Npcap y la captura. Las preferencias, el historial y los exportes quedan en la carpeta `datos`, al lado del `.exe`; sin `portable.txt` van a `%LOCALAPPDATA%\HysteriaMeter`.
 
-El zip se actualiza solo: baja la versión nueva de los releases de GitHub, revisa su `.sha256` y la instala la próxima vez que abrís el meter. Se apaga en Configuración → PROGRAMA → "Actualizar solo".
+El zip se actualiza solo: baja la versión nueva de los releases de GitHub, revisa su `.sha256` y la instala la próxima vez que abrís el meter. Se apaga en Configuración → PROGRAMA → "Actualizar solo". Un build compilado a mano no se actualiza.
 
 Si Npcap se instaló con "Restrict Npcap driver's access to Administrators only", Windows pide permiso cada vez que el meter abre la captura.
 
