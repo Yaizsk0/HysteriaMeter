@@ -166,6 +166,8 @@ Con el alcance "Party", cuenta el daño de todos los que estuvieron en la party 
 
 Al actualizar, las opciones guardadas de antes del rediseño pasan una sola vez a la vista del diseño nuevo: sin modo compacto, a 380 px de ancho, sin línea de DPS, item level ni columnas extra, en el mismo lugar y con la misma pestaña. Tema, fuente, opacidad, alto de fila y atajos quedan como estaban. Lo que vuelvas a prender después en Configuración → Apariencia se respeta, y "Volver a la vista de fábrica" sirve para volver a la vista del diseño.
 
+Las barras de daño del overlay y las de cada skill en el detalle ya no saltan en cada refresco: se deslizan hasta el valor nuevo y se ven moverse de forma continua durante la pelea. Si en Windows tenés apagado "Mostrar animaciones", saltan como antes.
+
 Un golpe de más de 100 millones ya no cuenta como daño. En dos peleas de boss, una skill del juego que no es de ninguna clase (la 1000007) mandó golpes de exactamente 500 millones, cada uno a algo que nadie más golpeaba. Parece una mecánica de esa pelea, no daño. Inflaba el total cientos de veces y daba vuelta los porcentajes: el que más daño hizo salía último. Además, la pelea quedaba sin boss, porque el objetivo pasaba a ser eso que recibió el golpe. El golpe real más grande registrado es de 399.000. Las peleas ya guardadas conservan sus números.
 
 ## Spec Kit

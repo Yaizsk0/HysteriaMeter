@@ -413,7 +413,7 @@
                                             </ToolTip></Border.ToolTip>
                                             <Grid x:Name="RowContent">
                                                 <Grid.Clip><MultiBinding Converter="{StaticResource RoundedClip}"><Binding Path="ActualWidth" ElementName="RowContent"/><Binding Path="ActualHeight" ElementName="RowContent"/><Binding Path="CornerRadius" ElementName="Row"/></MultiBinding></Grid.Clip>
-                                                <Rectangle Fill="{Binding BarFill}"><Rectangle.RenderTransform><ScaleTransform ScaleX="{Binding Bar}"/></Rectangle.RenderTransform></Rectangle>
+                                                <Rectangle Fill="{Binding BarFill}"><Rectangle.RenderTransform><ScaleTransform ui:SmoothBar.ScaleX="{Binding Bar}"/></Rectangle.RenderTransform></Rectangle>
                                                 <Polyline x:Name="RowSpark" Points="{Binding Spark}" Stretch="Fill" Stroke="{Binding Accent}" StrokeThickness="1" Opacity="0.35" Margin="0,5" IsHitTestVisible="False"/>
                                                 <Grid x:Name="FullRowCells" Margin="6,0,9,0">
                                                     <Grid.ColumnDefinitions><ColumnDefinition Width="14"/><ColumnDefinition Width="28"/><ColumnDefinition Width="*"/><ColumnDefinition Width="58"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
