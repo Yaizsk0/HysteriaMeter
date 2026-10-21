@@ -73,6 +73,7 @@
     {"id": 114, "text": "Party: ya no se pierde el daño de un compañero que lleva un rato con la vida llena; el total del boss coincide con su vida."},
     {"id": 115, "text": "El overlay pasó una vez a la vista del diseño nuevo: sin compacto y sin columnas extra. Para volver a prenderlas: Configuración → Apariencia."},
     {"id": 116, "text": "Las barras de daño del overlay y del detalle se deslizan hasta el valor nuevo en vez de saltar en cada refresco."},
-    {"id": 117, "text": "Los golpes de 500 millones de una mecánica del juego ya no cuentan como daño: no inflan el total ni te cambian el boss de la pelea."}
+    {"id": 117, "text": "Los golpes de 500 millones de una mecánica del juego ya no cuentan como daño: no inflan el total ni te cambian el boss de la pelea."},
+    {"id": 118, "text": "Hysteria Meter tiene ícono propio: el rombo dorado con barras de daño, en el programa, la barra de tareas y la bandeja."}
   ]
 }
