@@ -20,6 +20,9 @@ public sealed class UpdateTests
 {
     private const string Download = "https://github.com/Yaizsk0/HysteriaMeter/releases/download/";
 
+    /// <summary>Mismas opciones que UserStore al leer preferencias.json.</summary>
+    private static readonly JsonSerializerOptions PreferencesJson = new() { Converters = { new JsonStringEnumConverter() } };
+
     [Theory]
     [InlineData("0.16.0-alpha.1", 0, 16, 0, "alpha.1")]
     [InlineData("v0.16.0", 0, 16, 0, "")]
@@ -337,9 +340,8 @@ public sealed class UpdateTests
     public void Auto_update_is_on_by_default_and_a_profile_does_not_change_it()
     {
         Assert.True(new MeterPreferences().AutoUpdate);
-        // Mismas opciones que UserStore: un preferencias.json de antes de esta opción queda con la actualización prendida.
-        var options = new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } };
-        Assert.True(JsonSerializer.Deserialize<MeterPreferences>("{}", options)!.AutoUpdate);
+        // Un preferencias.json de antes de esta opción queda con la actualización prendida.
+        Assert.True(JsonSerializer.Deserialize<MeterPreferences>("{}", PreferencesJson)!.AutoUpdate);
 
         var json = ProfileFile.ToJson(new MeterPreferences { AutoUpdate = true });
         var imported = ProfileFile.FromJson(json, new MeterPreferences { AutoUpdate = false });
