@@ -185,7 +185,9 @@ public sealed partial class WindowSmokeTests
         Assert.Equal("v0.15.0 · a352982", AppVersion.Format("0.15.0+a352982e972d3725ee7c7428b76c584d8d57f3c"));
         Assert.Equal("v0.15.0", AppVersion.Format("0.15.0"));
         Assert.Equal("versión desconocida", AppVersion.Format(null));
-        Assert.StartsWith("v0.15.0 · ", AppVersion.Text, StringComparison.Ordinal);
+        Assert.Equal("v0.16.0-dev · a352982", AppVersion.Format("0.16.0-dev+a352982e972d3725ee7c7428b76c584d8d57f3c"));
+        // El build de los tests no lleva -p:Version: muestra la de Directory.Build.props.
+        Assert.StartsWith("v0.16.0-dev · ", AppVersion.Text, StringComparison.Ordinal);
     }
 
     [Fact]
