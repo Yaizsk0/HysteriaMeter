@@ -9,4 +9,6 @@ Capturas grabadas en la PC de Mati (`captures/`, fuera del repo) con su Combat A
 
 Para validarlas, con las capturas en la PC: `$env:HYSTERIA_CAPTURES = '<ruta absoluta de la carpeta de las capturas>'; dotnet test tests/HysteriaMeter.Protocol.Tests --filter FullyQualifiedName~ReferenceFightsTests`. Sin la variable o sin el `.pcap`, el test se saltea. Cada fila nueva lleva su caso en `ReferenceFightsTests`.
 
-Pendiente: muñeco, campo, party con healer, invocador (T001), y una pelea de jefe en party con pausas de fase, para validar contra Combat Analysis que los golpes de los adds la sostengan (ver "Solo los golpes de otro NPC" en `combat-regressions.md` de la 001).
+En las dos peleas el local es de clase 12 y no tiene invocaciones: no sirven para saber si Combat Analysis las cuenta (ver "Validación contra el juego" en `protocol-notes.md` de la 001).
+
+Pendiente: muñeco, campo, party con healer, invocador (T001; también dice si Combat Analysis cuenta las invocaciones), y una pelea de jefe en party con pausas de fase, para validar contra Combat Analysis que los golpes de los adds la sostengan (ver "Solo los golpes de otro NPC" en `combat-regressions.md` de la 001).
