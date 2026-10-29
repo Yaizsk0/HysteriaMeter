@@ -51,6 +51,12 @@ public sealed partial class ActorDetailViewModel
     [RelayCommand]
     private void StartRenameSkill(SkillRowViewModel? skill)
     {
+        // La fila "Invocaciones" junta varias skills: no tiene un ID para nombrar.
+        if (skill is { IsSummonGroup: true })
+        {
+            return;
+        }
+
         RenamingSkill = skill;
         ApplyToVariants = true;
         SkillNameDraft = skill is null || skill.Name.StartsWith("Skill ", StringComparison.Ordinal) ? string.Empty : skill.Name;
@@ -78,7 +84,7 @@ public sealed partial class ActorDetailViewModel
 
             // Cambia el nombre de todas las filas: las otras variantes de la misma skill también.
             skill.Name = names.Of(skill.SkillId);
-            foreach (var row in Skills)
+            foreach (var row in Skills.Where(r => !r.IsSummonGroup))
             {
                 row.Name = names.Of(row.SkillId);
             }

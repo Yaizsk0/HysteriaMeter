@@ -590,6 +590,8 @@
                                 <RadioButton Style="{StaticResource ChoiceChip}" GroupName="Scope" Content="Todos los jugadores cerca" IsChecked="{Binding ScopeEveryone}" />
                             </WrapPanel>
                             <TextBlock Style="{StaticResource Hint}" Text="Al cambiarlo se arranca de cero, para no mezclar criterios en la misma pelea" />
+                            <CheckBox Style="{StaticResource Switch}" Content="Invocaciones separadas" IsChecked="{Binding SeparateSummons}" Margin="0,8,0,4"
+                                      Tag="En el detalle, el daño de las invocaciones en una fila propia y el total del jugador sin ellas. El overlay las sigue sumando" />
                         </StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="PELEAS" Style="{StaticResource BlockLabel}" />
