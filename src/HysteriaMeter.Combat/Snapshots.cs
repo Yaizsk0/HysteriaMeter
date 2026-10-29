@@ -112,12 +112,20 @@ public sealed record ActorSnapshot(
     IReadOnlyList<TakenSkillSnapshot>? DamageTakenBySkill = null)
 {
     public double CritRate => Hits == 0 ? 0 : (double)Crits / Hits;
+
+    /// <summary>
+    /// Daño de sus invocaciones, ya sumado en <see cref="Damage"/>: el de sus skills con <see cref="SkillSnapshot.FromSummon"/>.
+    /// 0 en las peleas guardadas antes de que existiera, aunque haya tenido invocaciones.
+    /// </summary>
+    public long SummonDamage => Skills.Sum(s => s.FromSummon ? s.Damage : 0);
 }
 
 /// <summary>Daño y golpes que un jugador recibió de la skill <paramref name="SkillId"/> de un monstruo.</summary>
 public sealed record TakenSkillSnapshot(uint SkillId, long Damage, int Hits);
 
-public sealed record SkillSnapshot(uint SkillId, long Damage, int Hits, int Crits, long MaxHit, double Share, HitCounts? Counts = null, long PeriodicDamage = 0)
+/// <param name="FromSummon">Los golpes son de una invocación del jugador (la entidad que pegó tiene su dueño). Si él y una
+/// invocación suya usan la misma skill, son dos filas.</param>
+public sealed record SkillSnapshot(uint SkillId, long Damage, int Hits, int Crits, long MaxHit, double Share, HitCounts? Counts = null, long PeriodicDamage = 0, bool FromSummon = false)
 {
     public long DirectDamage => Damage - PeriodicDamage;
 }

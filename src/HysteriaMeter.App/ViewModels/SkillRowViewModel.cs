@@ -20,22 +20,34 @@ public sealed partial class SkillRowViewModel : ObservableObject
     /// <summary>ID de la skill, para renombrarla.</summary>
     public uint SkillId { get; private set; }
 
-    /// <summary>"sin nombre" si el juego solo mandó el ID, y la parte del daño que viene de ticks de DoT, si tiene.</summary>
+    /// <summary>
+    /// "sin nombre" si el juego solo mandó el ID, "invocación" si la pegó una invocación del jugador y la parte del daño
+    /// que viene de ticks de DoT, si tiene. En la fila de las invocaciones juntas, el total del jugador sin ellas.
+    /// </summary>
     [ObservableProperty]
     public partial string Note { get; set; } = string.Empty;
 
-    private string _dotNote = string.Empty;
+    private string _extraNote = string.Empty;
+
+    /// <summary>Fila de "Invocaciones separadas": junta las skills de las invocaciones y no se renombra.</summary>
+    public bool IsSummonGroup { get; private set; }
 
     /// <summary>Tooltip de la fila: PROM., ESPALDA (su columna se oculta con la ventana angosta) y cómo renombrarla.</summary>
     [ObservableProperty]
     public partial string Tip { get; set; } = string.Empty;
 
     // Al renombrarla cambia el nombre y, con él, la nota "sin nombre".
-    partial void OnNameChanged(string value) => Note = NoteText(value, _dotNote);
+    partial void OnNameChanged(string value)
+    {
+        if (!IsSummonGroup)
+        {
+            Note = NoteText(value, _extraNote);
+        }
+    }
 
-    /// <summary>"sin nombre · DoT 62%": las partes que correspondan, separadas por " · ".</summary>
-    public static string NoteText(string name, string dotNote) =>
-        string.Join(" · ", new[] { name.StartsWith("Skill ", StringComparison.Ordinal) ? "sin nombre" : null, dotNote.Length > 0 ? dotNote : null }.OfType<string>());
+    /// <summary>"sin nombre · invocación · DoT 62%": las partes que correspondan, separadas por " · ".</summary>
+    public static string NoteText(string name, string extraNote) =>
+        string.Join(" · ", new[] { name.StartsWith("Skill ", StringComparison.Ordinal) ? "sin nombre" : null, extraNote.Length > 0 ? extraNote : null }.OfType<string>());
 
     [ObservableProperty]
     public partial string Damage { get; set; } = string.Empty;
@@ -82,9 +94,11 @@ public sealed partial class SkillRowViewModel : ObservableObject
         var culture = CultureInfo.CurrentCulture;
         var counts = skill.Counts ?? HitCounts.Empty;
         SkillId = skill.SkillId;
-        _dotNote = skill.PeriodicDamage == 0 ? string.Empty : $"DoT {((double)skill.PeriodicDamage / skill.Damage).ToString("P0", culture)}";
+        IsSummonGroup = false;
+        var dotNote = skill.PeriodicDamage == 0 ? null : $"DoT {((double)skill.PeriodicDamage / skill.Damage).ToString("P0", culture)}";
+        _extraNote = string.Join(" · ", new[] { skill.FromSummon ? "invocación" : null, dotNote }.OfType<string>());
         Name = name;
-        Note = NoteText(name, _dotNote);
+        Note = NoteText(name, _extraNote);
         Icon = icon;
         Damage = ActorRowViewModel.Compact(skill.Damage);
         Share = skill.Share.ToString("P1", culture);
@@ -96,6 +110,18 @@ public sealed partial class SkillRowViewModel : ObservableObject
         Dps = ActorRowViewModel.Compact(skill.Damage / duration.TotalSeconds);
         Bar = top == 0 ? 0 : (double)skill.Damage / top;
         Tip = TipText(Back, Average) + Environment.NewLine + "Doble clic para ponerle nombre";
+    }
+
+    /// <summary>
+    /// La fila "Invocaciones" de "Invocaciones separadas": <paramref name="group"/> suma las skills de las invocaciones y
+    /// <paramref name="withoutSummons"/> es el total del jugador sin ellas.
+    /// </summary>
+    public void UpdateSummons(SkillSnapshot group, long top, TimeSpan duration, string withoutSummons)
+    {
+        Update("Invocaciones", group, top, duration);
+        IsSummonGroup = true;
+        Note = withoutSummons;
+        Tip = TipText(Back, Average) + Environment.NewLine + "Las skills de sus invocaciones juntas";
     }
 
     /// <summary>

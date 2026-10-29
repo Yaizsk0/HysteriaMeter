@@ -119,7 +119,8 @@ internal sealed class ActorStats
 
     public long PeriodicDamage { get; private set; }
 
-    public Dictionary<uint, SkillStats> Skills { get; } = [];
+    /// <summary>Por skill y por si pegó el jugador o una invocación suya: la misma skill de los dos son dos filas.</summary>
+    public Dictionary<(uint SkillId, bool FromSummon), SkillStats> Skills { get; } = [];
 
     /// <summary>Daño en cada segundo desde el inicio del encuentro (índice = segundo).</summary>
     public List<long> DamageBySecond { get; } = [];
@@ -151,7 +152,7 @@ internal sealed class ActorStats
     /// <summary>Golpes por modificador separados por objetivo: Combat Analysis cuenta solo los del objetivo elegido.</summary>
     public Dictionary<ulong, HitCounter> CountsByTarget { get; } = [];
 
-    public void AddHit(uint skillId, ulong targetId, long amount, HitModifiers modifiers)
+    public void AddHit(uint skillId, ulong targetId, long amount, HitModifiers modifiers, bool fromSummon = false)
     {
         DamageByTarget[targetId] = DamageByTarget.GetValueOrDefault(targetId) + amount;
         if (!CountsByTarget.TryGetValue(targetId, out var counts))
@@ -171,10 +172,10 @@ internal sealed class ActorStats
         Crits += critical ? 1 : 0;
         MaxHit = periodic ? MaxHit : Math.Max(MaxHit, amount);
 
-        if (!Skills.TryGetValue(skillId, out var skill))
+        if (!Skills.TryGetValue((skillId, fromSummon), out var skill))
         {
             skill = new SkillStats();
-            Skills[skillId] = skill;
+            Skills[(skillId, fromSummon)] = skill;
         }
 
         skill.Counts.Add(modifiers);

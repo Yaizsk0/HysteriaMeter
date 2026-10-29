@@ -83,6 +83,7 @@ public sealed partial class MeterViewModel : ObservableObject
         {
             LogSource = session.Engine.CombatLog,
             NicknameOf = name => Preferences.Nicknames.GetValueOrDefault(name),
+            SeparateSummons = () => Preferences.SeparateSummons,
             PastAttempts = LoadPastAttemptsAsync,
             PastDps = ActorDetailViewModel.PastDpsFrom(session.History),
         };
@@ -127,7 +128,7 @@ public sealed partial class MeterViewModel : ObservableObject
             }
 
             _timer.Interval = TimeSpan.FromMilliseconds(Preferences.RefreshMs);
-            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)) || names.Contains(nameof(ShowRecentColumn)) || names.Contains(nameof(ShowCritColumn)) || names.Contains(nameof(ShowMaxHitColumn)) || names.Contains(nameof(ShowGear)) || names.Contains(nameof(ColorByClass)) || names.Contains(nameof(OnlyMe)) || names.Contains(nameof(MaxRows)) || names.Contains(nameof(Preferences)) || names.Contains(string.Empty))
+            if (names.Contains(nameof(SelectedNumberStyle)) || names.Contains(nameof(ShowSparklines)) || names.Contains(nameof(ShowRecentColumn)) || names.Contains(nameof(ShowCritColumn)) || names.Contains(nameof(ShowMaxHitColumn)) || names.Contains(nameof(ShowGear)) || names.Contains(nameof(ColorByClass)) || names.Contains(nameof(OnlyMe)) || names.Contains(nameof(SeparateSummons)) || names.Contains(nameof(MaxRows)) || names.Contains(nameof(Preferences)) || names.Contains(string.Empty))
             {
                 Refresh();
             }
@@ -361,6 +362,13 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         get => Preferences.ColorByClass;
         set => Update(Preferences with { ColorByClass = value }, nameof(ColorByClass));
+    }
+
+    /// <summary>En el detalle, las invocaciones en una fila propia con el total sin ellas.</summary>
+    public bool SeparateSummons
+    {
+        get => Preferences.SeparateSummons;
+        set => Update(Preferences with { SeparateSummons = value }, nameof(SeparateSummons));
     }
 
     public bool ShowTotalColumn

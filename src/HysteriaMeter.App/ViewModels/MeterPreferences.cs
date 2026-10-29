@@ -132,6 +132,12 @@ public sealed record MeterPreferences
     /// <summary>Solo tu fila, para tener el overlay mínimo mientras jugás (como el modo colapsado de Ember).</summary>
     public bool OnlyMe { get; init; }
 
+    /// <summary>
+    /// "Invocaciones separadas": en el detalle, las skills de las invocaciones van juntas en una fila que dice el total del
+    /// jugador sin ellas. El overlay, el historial y los récords siguen contándolas.
+    /// </summary>
+    public bool SeparateSummons { get; init; }
+
     /// <summary>Última novedad vista (id de <c>data/novedades.json</c>); 0 = nunca abrió el meter.</summary>
     public int LastSeenNews { get; init; }
 

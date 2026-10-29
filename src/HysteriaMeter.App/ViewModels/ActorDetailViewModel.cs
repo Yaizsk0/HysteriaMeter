@@ -22,6 +22,9 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     /// <summary>Apodo puesto a un nombre real, o <c>null</c>.</summary>
     public Func<string, string?>? NicknameOf { get; set; }
 
+    /// <summary>"Invocaciones separadas" está prendida (las skills de las invocaciones en una fila); <c>null</c> = apagada.</summary>
+    public Func<bool>? SeparateSummons { get; set; }
+
     /// <summary>Hora actual, para "HOY 21:37" en Comparar (el arnés de capturas la fija).</summary>
     public Func<DateTimeOffset> Now { get; set; } = () => DateTimeOffset.Now;
 
@@ -660,37 +663,72 @@ public sealed partial class ActorDetailViewModel(SkillNames names) : ObservableO
     {
         var culture = CultureInfo.CurrentCulture;
         var skills = actor.Skills;
-        var top = skills.Count > 0 ? skills[0].Damage : 0;
-        for (var i = 0; i < skills.Count; i++)
+        // Con "Invocaciones separadas", las skills de sus invocaciones van juntas en una fila, ordenada por daño con las demás.
+        var grouped = SeparateSummons?.Invoke() == true && skills.Any(s => s.FromSummon);
+        var rows = grouped
+            ? skills.Where(s => !s.FromSummon).Append(SummonGroup(skills)).OrderByDescending(s => s.Damage).ToList()
+            : skills;
+        var top = rows.Count > 0 ? rows.Max(s => s.Damage) : 0;
+        for (var i = 0; i < rows.Count; i++)
         {
             if (i >= Skills.Count)
             {
                 Skills.Add(new SkillRowViewModel());
             }
 
-            Skills[i].Update(names.Of(skills[i].SkillId), skills[i], top, duration, names.IconOf(skills[i].SkillId));
+            if (grouped && rows[i].FromSummon)
+            {
+                Skills[i].UpdateSummons(rows[i], top, duration, WithoutSummonsText(actor));
+            }
+            else
+            {
+                Skills[i].Update(names.Of(rows[i].SkillId), rows[i], top, duration, names.IconOf(rows[i].SkillId));
+            }
         }
 
-        while (Skills.Count > skills.Count)
+        while (Skills.Count > rows.Count)
         {
             Skills.RemoveAt(Skills.Count - 1);
         }
 
         var hits = skills.Sum(s => s.Hits);
-        var counts = skills.Select(s => s.Counts ?? HitCounts.Empty).ToList();
         var direct = skills.Sum(s => s.DirectDamage);
         Totals.Name = "TOTAL";
         Totals.Damage = ActorRowViewModel.Compact(actor.Damage);
         Totals.Share = actor.Damage == 0 ? "–" : 1d.ToString("P0", culture);
         Totals.Hits = hits.ToString("N0", culture);
         Totals.Critical = SkillRowViewModel.Rate(hits, skills.Sum(s => s.Crits));
-        Totals.SetModifiers(new HitCounts(
-            counts.Sum(c => c.Hits), counts.Sum(c => c.Critical), counts.Sum(c => c.Perfect), counts.Sum(c => c.DoubleHit),
-            counts.Sum(c => c.Front), counts.Sum(c => c.Back), counts.Sum(c => c.MultiHit)));
+        Totals.SetModifiers(SumCounts(skills));
         Totals.MaxHit = hits == 0 ? "–" : ActorRowViewModel.Compact(actor.MaxHit);
         Totals.Average = hits == 0 ? "–" : ActorRowViewModel.Compact((double)direct / hits);
         Totals.Dps = ActorRowViewModel.Compact(actor.Dps);
-        Totals.Tip = SkillRowViewModel.TipText(Totals.Back, Totals.Average);
+        Totals.Tip = SkillRowViewModel.TipText(Totals.Back, Totals.Average)
+            + (actor.SummonDamage > 0 ? Environment.NewLine + "Incluye sus invocaciones; " + WithoutSummonsText(actor) : string.Empty);
+    }
+
+    /// <summary>Las skills de las invocaciones sumadas en una sola, para la fila "Invocaciones".</summary>
+    private static SkillSnapshot SummonGroup(IReadOnlyList<SkillSnapshot> skills)
+    {
+        var summons = skills.Where(s => s.FromSummon).ToList();
+        return new SkillSnapshot(
+            0, summons.Sum(s => s.Damage), summons.Sum(s => s.Hits), summons.Sum(s => s.Crits), summons.Max(s => s.MaxHit),
+            summons.Sum(s => s.Share), SumCounts(summons), summons.Sum(s => s.PeriodicDamage), FromSummon: true);
+    }
+
+    private static HitCounts SumCounts(IEnumerable<SkillSnapshot> skills)
+    {
+        var counts = skills.Select(s => s.Counts ?? HitCounts.Empty).ToList();
+        return new HitCounts(
+            counts.Sum(c => c.Hits), counts.Sum(c => c.Critical), counts.Sum(c => c.Perfect), counts.Sum(c => c.DoubleHit),
+            counts.Sum(c => c.Front), counts.Sum(c => c.Back), counts.Sum(c => c.MultiHit));
+    }
+
+    /// <summary>"sin ellas 1.2M · 4.0k DPS": el total del jugador sin el daño de sus invocaciones.</summary>
+    internal static string WithoutSummonsText(ActorSnapshot actor)
+    {
+        var own = actor.Damage - actor.SummonDamage;
+        var dps = actor.Damage == 0 ? 0 : actor.Dps * own / actor.Damage;
+        return $"sin ellas {ActorRowViewModel.Compact(own)} · {ActorRowViewModel.Compact(dps)} DPS";
     }
 
     private string Display(string name) => NicknameOf?.Invoke(name) ?? name;

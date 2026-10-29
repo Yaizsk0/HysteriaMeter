@@ -312,9 +312,12 @@ public sealed class CombatEngine(CombatEngineOptions options)
         var before = HealthPercent(e.TargetId);
         var overkill = Entities.ApplyDamage(e.TargetId, e.Amount);
         TrackPhases(e.TargetId, before, e.Timestamp);
-        RecordHit(encounter, source, e, overkill);
-        RecordHit(_session!, source, e, overkill);
-        RecordHit(_run!, source, e, overkill);
+        // Solo las invocaciones tienen dueño (por su spawn o adoptadas por clase): si el dueño reemplazó a quien pegó, el
+        // golpe es de una invocación y se anota aparte para "Invocaciones separadas".
+        var fromSummon = source != e.SourceId;
+        RecordHit(encounter, source, e, overkill, fromSummon);
+        RecordHit(_session!, source, e, overkill, fromSummon);
+        RecordHit(_run!, source, e, overkill, fromSummon);
         encounter.AddLog(Entry(e, LogKind.Damage, source, Entities.Canonical(e.TargetId), e.SkillId, e.Amount, e.Modifiers));
     }
 
@@ -372,10 +375,10 @@ public sealed class CombatEngine(CombatEngineOptions options)
         count.AddHit(e.Amount);
     }
 
-    private static void RecordHit(Encounter encounter, ulong source, DamageEvent e, long overkill)
+    private static void RecordHit(Encounter encounter, ulong source, DamageEvent e, long overkill, bool fromSummon)
     {
         var actor = encounter.Actor(source);
-        actor.AddHit(e.SkillId, e.TargetId, e.Amount, e.Modifiers);
+        actor.AddHit(e.SkillId, e.TargetId, e.Amount, e.Modifiers, fromSummon);
         actor.AddToTimeline((int)Math.Max((e.Timestamp - encounter.Start).TotalSeconds, 0), e.Amount, e.Modifiers.HasFlag(HitModifiers.DamageOverTime));
         actor.Overkill += overkill;
         encounter.RegisterDamage(e.TargetId, e.Amount, e.Timestamp);
@@ -593,7 +596,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
                 var profile = Entities.Profile(id);
                 var targetDamage = target is { } t0 ? stats.DamageByTarget.GetValueOrDefault(t0) : 0;
                 var skills = stats.Skills
-                    .Select(s => new SkillSnapshot(s.Key, s.Value.Damage, s.Value.Hits, s.Value.Crits, s.Value.MaxHit, Share(s.Value.Damage, stats.Damage), s.Value.Counts.Snapshot(), s.Value.PeriodicDamage))
+                    .Select(s => new SkillSnapshot(s.Key.SkillId, s.Value.Damage, s.Value.Hits, s.Value.Crits, s.Value.MaxHit, Share(s.Value.Damage, stats.Damage), s.Value.Counts.Snapshot(), s.Value.PeriodicDamage, s.Key.FromSummon))
                     .OrderByDescending(s => s.Damage)
                     .ToArray();
                 long[] timeline = [.. stats.DamageBySecond];

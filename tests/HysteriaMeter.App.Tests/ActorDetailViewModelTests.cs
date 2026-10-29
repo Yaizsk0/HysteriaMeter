@@ -561,6 +561,63 @@ public class ActorDetailViewModelTests
         row.Name = "Rayo";
         Assert.StartsWith("DoT", row.Note, StringComparison.Ordinal);
     }
+
+    // ===================== Invocaciones separadas =====================
+
+    private static ActorSnapshot WithSummons() => Actor(1, "Vos", local: true, skills:
+    [
+        Skill(9002, 3_000, 6) with { FromSummon = true },
+        Skill(9001, 1_000, 4),
+        Skill(9003, 500, 2) with { FromSummon = true },
+    ]);
+
+    [Fact]
+    public void Separate_summons_puts_their_skills_in_one_row_with_the_total_without_them()
+    {
+        using var _ = new CultureScope(CultureInfo.InvariantCulture);
+        var actor = WithSummons();
+        var detail = DetailOf(Fight(Guid.NewGuid(), null, actor), 1, setup: d => d.SeparateSummons = () => true);
+
+        Assert.Equal(["Invocaciones", "Skill 9001"], detail.Skills.Select(s => s.Name));
+        var summons = detail.Skills[0];
+        Assert.True(summons.IsSummonGroup);
+        Assert.Equal((ActorRowViewModel.Compact(3_500), "8"), (summons.Damage, summons.Hits));
+        // 4.500 de daño a 100 DPS: sin los 3.500 de las invocaciones quedan 1.000 y 22,2 DPS.
+        Assert.Equal($"sin ellas {ActorRowViewModel.Compact(1_000)} · {ActorRowViewModel.Compact(100d * 1_000 / 4_500)} DPS", summons.Note);
+        Assert.Equal("sin nombre", detail.Skills[1].Note);
+
+        // El TOTAL es el de siempre, con las invocaciones, y el tooltip dice cuánto queda sin ellas.
+        Assert.Equal((ActorRowViewModel.Compact(4_500), "12"), (detail.Totals.Damage, detail.Totals.Hits));
+        Assert.Contains(summons.Note, detail.Totals.Tip, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Without_separate_summons_each_summon_skill_is_its_own_row_noted_as_a_summon()
+    {
+        var detail = DetailOf(Fight(Guid.NewGuid(), null, WithSummons()), 1, setup: d => d.SeparateSummons = () => false);
+
+        Assert.Equal(["Skill 9002", "Skill 9001", "Skill 9003"], detail.Skills.Select(s => s.Name));
+        Assert.Equal(["sin nombre · invocación", "sin nombre", "sin nombre · invocación"], detail.Skills.Select(s => s.Note));
+        Assert.DoesNotContain(detail.Skills, s => s.IsSummonGroup);
+    }
+
+    [Fact]
+    public void The_summons_row_cannot_be_renamed_and_renaming_another_skill_keeps_it()
+    {
+        var names = new SkillNames(new Dictionary<uint, string>());
+        var detail = DetailOf(Fight(Guid.NewGuid(), null, WithSummons()), 1, names, d => d.SeparateSummons = () => true);
+        detail.SkillRenamed += (id, name) => names.Custom = SkillNames.With(names.Custom, id, name);
+
+        detail.StartRenameSkillCommand.Execute(detail.Skills[0]);
+        Assert.False(detail.IsRenamingSkill);
+
+        detail.StartRenameSkillCommand.Execute(detail.Skills[1]);
+        detail.SkillNameDraft = "Golpe";
+        detail.SaveSkillNameCommand.Execute(null);
+
+        Assert.Equal(["Invocaciones", "Golpe"], detail.Skills.Select(s => s.Name));
+        Assert.StartsWith("sin ellas", detail.Skills[0].Note, StringComparison.Ordinal);
+    }
 }
 
 /// <summary>Fija la cultura del hilo durante un test (los textos del VM usan CurrentCulture) y la devuelve al terminar.</summary>
