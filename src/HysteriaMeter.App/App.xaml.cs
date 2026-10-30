@@ -84,7 +84,7 @@ public partial class App : Application
         });
         builder.Services.AddSingleton(sp => new EncounterRepository(
             AppPaths.Database(sp.GetRequiredService<IOptions<MeterSettings>>().Value.DatabasePath)));
-        builder.Services.AddSingleton<CaptureRecorder>();
+        builder.Services.AddSingleton(_ => new CaptureRecorder());
         builder.Services.AddSingleton<CaptureStatus>();
         builder.Services.AddSingleton<HysteriaMeter.Protocol.Decoding.DecoderStats>();
         builder.Services.AddHostedService<MeterPipeline>();

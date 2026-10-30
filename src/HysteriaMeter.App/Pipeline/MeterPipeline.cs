@@ -54,6 +54,7 @@ public sealed partial class MeterPipeline(
             Volatile.Write(ref _live, live);
             forwardRecording = live.SetRecordPath;
             recorder.Changed += forwardRecording;
+            recorder.RecentSource = live.SaveRecent;
             if (recorder.CurrentPath is { } path)
             {
                 live.SetRecordPath(path);
@@ -113,6 +114,7 @@ public sealed partial class MeterPipeline(
         if (forwardRecording is not null)
         {
             recorder.Changed -= forwardRecording;
+            recorder.RecentSource = null;
         }
 
         await ticker.CancelAsync().ConfigureAwait(false);
@@ -136,6 +138,7 @@ public sealed partial class MeterPipeline(
             {
                 Device = _settings.Device,
                 RecordPath = string.IsNullOrWhiteSpace(_settings.RecordPath) ? null : _settings.RecordPath,
+                RecentWindow = CaptureRecorder.RecentWindow,
             },
             filter);
     }

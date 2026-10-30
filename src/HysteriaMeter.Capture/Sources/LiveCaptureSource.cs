@@ -22,6 +22,9 @@ public sealed class LiveCaptureSource(LiveCaptureOptions options, IConnectionFil
     private ILiveDevice? _selected;
     private CaptureFileWriterDevice? _writer;
     private string? _recordPath = options.RecordPath;
+    private readonly RecentPacketBuffer? _recent = options.RecentWindow > TimeSpan.Zero
+        ? new RecentPacketBuffer(options.RecentWindow, options.RecentMaxBytes)
+        : null;
     private long _dropped;
 
     /// <summary>
@@ -49,6 +52,12 @@ public sealed class LiveCaptureSource(LiveCaptureOptions options, IConnectionFil
             }
         }
     }
+
+    /// <summary>
+    /// Vuelca a <paramref name="path"/> el tráfico del juego de los últimos <see cref="LiveCaptureOptions.RecentWindow"/>
+    /// (grabación retroactiva). <c>null</c> si el buffer está apagado o todavía no llegó tráfico del juego.
+    /// </summary>
+    public SavedPackets? SaveRecent(string path) => _recent?.SaveTo(path);
 
     public static IReadOnlyList<(string Name, string Description)> ListDevices() =>
         [.. CaptureDeviceList.Instance.Select(d => (d.Name, d.Description ?? string.Empty))];
@@ -113,6 +122,8 @@ public sealed class LiveCaptureSource(LiveCaptureOptions options, IConnectionFil
         {
             _writer?.Write(raw);
         }
+
+        _recent?.Add(raw);
 
         // Solo da false con la captura ya cerrada; los descartes por cola llena los cuenta CreateQueue.
         _ = writer.TryWrite(segment);
