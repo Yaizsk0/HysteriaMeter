@@ -12,8 +12,8 @@ internal sealed class Encounter(DateTimeOffset start)
     public DateTimeOffset LastActivity { get; set; } = start;
 
     /// <summary>
-    /// Último daño aceptado, hecho o recibido de un NPC que no es el objetivo principal; solo determina el cierre por
-    /// inactividad.
+    /// Último daño aceptado, hecho o recibido de un NPC que no es el objetivo principal (pasada la inactividad configurada,
+    /// solo de uno que ya es parte de la pelea); solo determina el cierre por inactividad.
     /// </summary>
     public DateTimeOffset LastCombatActivity { get; private set; } = start;
 
@@ -42,6 +42,15 @@ internal sealed class Encounter(DateTimeOffset start)
 
     /// <summary>Fases cruzadas por cada objetivo (75, 50 y 25 %), en orden.</summary>
     public Dictionary<ulong, List<HealthPhase>> Phases { get; } = [];
+
+    /// <summary>Objetivos cuya vida, según el servidor, bajó del máximo en esta pelea.</summary>
+    public HashSet<ulong> HurtTargets { get; } = [];
+
+    /// <summary>
+    /// Objetivos que se resetearon: de <see cref="HurtTargets"/> con la última lectura de vuelta al máximo, o el objetivo
+    /// principal cuando aparece otra entidad de su NPC sin herir (el boss que vuelve).
+    /// </summary>
+    public HashSet<ulong> ResetTargets { get; } = [];
 
     /// <summary>Cuenta de cada NPC golpeado en esta pelea para <see cref="TargetVerification"/>. Solo la lleva la pelea.</summary>
     public Dictionary<ulong, VerificationCount> Verifications { get; } = [];
@@ -241,10 +250,16 @@ internal sealed class VerificationCount
 
     public bool Killed { get; private set; }
 
+    /// <summary>
+    /// La cuenta se cortó con la pelea todavía viva (ver <c>CombatEngine.VerifyingFight</c>): lo que siga no se vio entero,
+    /// así que se ignora, también la muerte, y la verificación queda en la última lectura de antes.
+    /// </summary>
+    public bool Frozen { get; private set; }
+
     /// <summary>Sin vida inicial todavía, el golpe no se cuenta: la primera lectura ya lo refleja.</summary>
     public void AddHit(long amount)
     {
-        if (StartHp is not null && !Killed)
+        if (StartHp is not null && !Killed && !Frozen)
         {
             Counted += amount;
         }
@@ -257,7 +272,7 @@ internal sealed class VerificationCount
     /// </summary>
     public void Reading(long hp)
     {
-        if (hp <= 0 || Killed)
+        if (hp <= 0 || Killed || Frozen)
         {
             return;
         }
@@ -273,7 +288,15 @@ internal sealed class VerificationCount
         HasReading = true;
     }
 
-    public void Kill() => Killed = true;
+    public void Kill()
+    {
+        if (!Frozen)
+        {
+            Killed = true;
+        }
+    }
+
+    public void Freeze() => Frozen = true;
 
     /// <summary>
     /// La verificación, o <c>null</c> sin vida inicial, sin lectura después de empezar ni muerte, o sin vida perdida.
