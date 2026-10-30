@@ -1,3 +1,4 @@
+using System.IO;
 using HysteriaMeter.App.Pipeline;
 using HysteriaMeter.Combat;
 using HysteriaMeter.Protocol.Decoding;
@@ -77,6 +78,8 @@ public sealed class MeterSession
             _runFights.Add(RunFight.From(snapshot));
         }
 
+        await SaveRecentIfMismatchAsync(snapshot, DateTime.Now).ConfigureAwait(false);
+
         if (!Preferences.DiscordOnKill || !snapshot.TargetKilled || !DiscordWebhook.IsValidUrl(Preferences.DiscordWebhook))
         {
             return;
@@ -107,6 +110,27 @@ public sealed class MeterSession
     public Action<AlertSound>? PlaySound { get; init; }
 
     public CaptureRecorder Recorder { get; }
+
+    /// <summary>
+    /// El guardado automático de la grabación retroactiva (<see cref="CaptureRecorder.SaveIfMismatch"/>), si se prendió.
+    /// Escribe fuera del hilo del pipeline, que es el que termina la pelea, y un error de disco no corta nada.
+    /// </summary>
+    internal async Task SaveRecentIfMismatchAsync(EncounterSnapshot fight, DateTime now)
+    {
+        if (!Preferences.SaveRecentOnMismatch || !CaptureRecorder.HasMismatch(fight))
+        {
+            return;
+        }
+
+        try
+        {
+            await Task.Run(() => Recorder.SaveIfMismatch(fight, now)).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Sin espacio o sin permiso en la carpeta: la pelea ya se guardó en el historial y la próxima vuelve a intentar.
+        }
+    }
 
     public SkillNames SkillNames { get; }
 
