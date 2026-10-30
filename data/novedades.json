@@ -78,6 +78,7 @@
     {"id": 119, "text": "Hysteria Meter se puede bajar listo para usar: zip portable en Releases de GitHub, con .NET adentro y los datos en la carpeta del programa."},
     {"id": 120, "text": "El zip portable se actualiza solo: baja la versión nueva de GitHub y la instala al volver a abrirlo. Se apaga en Configuración, PROGRAMA, Actualizar solo."},
     {"id": 121, "text": "Hysteria Meter tiene licencia MIT (LICENSE.txt en el zip). El README explica qué datos salen de tu PC y cómo se va a firmar el programa."},
-    {"id": 123, "text": "Detalle: las skills de tus invocaciones dicen \"invocación\". Con Configuración, Captura, Invocaciones separadas, van juntas en una fila con tu total sin ellas."}
+    {"id": 123, "text": "Detalle: las skills de tus invocaciones dicen \"invocación\". Con Configuración, Captura, Invocaciones separadas, van juntas en una fila con tu total sin ellas."},
+    {"id": 126, "text": "Las peleas de boss ya no se parten en dos en una pausa de fase: mientras el boss siga vivo, la pelea espera hasta 30 s a que se le vuelva a pegar al boss o a sus adds."}
   ]
 }

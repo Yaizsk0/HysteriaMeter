@@ -601,7 +601,7 @@
                                       Tag="Si estás mirando una pelea guardada y arranca otra, el overlay vuelve solo a la actual" />
                             <TextBlock Text="Termina tras estos segundos sin daño" Margin="0,8,0,8" />
                             <ListBox Style="{StaticResource Chips}" ItemsSource="{x:Static vm:MeterPreferences.IdleOptions}" SelectedItem="{Binding IdleSeconds}"
-                                     ToolTip="Más alto para bosses con fases sin daño; más bajo para separar el trash">
+                                     ToolTip="Más bajo para separar el trash; más alto para bosses con fases sin daño que no estén marcados como boss en la lista de NPCs (data/npcs.json o Juego/npcs.json). Si el objetivo principal es un boss marcado, se espera hasta 30 s mientras siga vivo y no se resetee">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding StringFormat='{}{0} s'}" />

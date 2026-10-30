@@ -22,7 +22,7 @@ Mientras peleo, una ventana chica encima del juego muestra mi daño por segundo,
 
 1. **Given** el juego abierto y el meter corriendo, **When** golpeo a un monstruo, **Then** en menos de 1 s aparece mi fila con DPS y daño total.
 2. **Given** una pelea terminada, **When** comparo con Combat Analysis, **Then** el daño total difiere menos de 1 %.
-3. **Given** ningún golpe durante 8 s, **When** vuelvo a pegar, **Then** empieza un encuentro nuevo y el anterior queda guardado.
+3. **Given** ningún golpe durante 8 s (30 s si el objetivo principal es un boss del catálogo vivo y sin resetear, ver FR-008), **When** vuelvo a pegar, **Then** empieza un encuentro nuevo y el anterior queda guardado.
 
 ---
 
@@ -105,7 +105,7 @@ Como desarrollador, grabo una sesión de juego a `.pcap` y la inspecciono: qué 
 - **FR-005**: El sistema MUST mapear opcodes a tipos de paquete desde un archivo de configuración editable sin recompilar.
 - **FR-006**: El sistema MUST calcular por jugador: daño total, DPS, % del total, golpes, % de críticos, golpe máximo, curación y desglose por skill.
 - **FR-007**: El sistema MUST atribuir el daño de invocaciones y entidades transitorias al jugador dueño.
-- **FR-008**: El sistema MUST cerrar un encuentro tras un tiempo configurable sin daño (por defecto 8 s) o cuando muere el objetivo principal.
+- **FR-008**: El sistema MUST cerrar un encuentro tras un tiempo configurable sin daño (por defecto 8 s) o cuando muere el objetivo principal. Si el objetivo principal es un boss del catálogo vivo y sin resetear, espera hasta 30 s: las pausas de fase no lo cortan si después se le vuelve a pegar a algo de la pelea (ver `combat-regressions.md`).
 - **FR-009**: El sistema MUST mostrar un overlay siempre visible, movible, con modo click-through y atajo global para alternarlo.
 - **FR-010**: El sistema MUST guardar cada encuentro terminado en una base local.
 - **FR-011**: El sistema MUST poder reproducir un `.pcap` en lugar de capturar en vivo, a velocidad real o máxima.
