@@ -18,8 +18,9 @@ public static class ProfileFile
         JsonSerializer.Serialize(preferences with { DiscordWebhook = string.Empty, DiscordOnKill = false, CaptureDevice = string.Empty, UiScale = 1.0 }, Json);
 
     /// <summary>
-    /// Las preferencias del archivo, conservando el webhook, la placa, la escala, la actualización automática y el estado
-    /// de bienvenida/novedades propios; null si el archivo no es un perfil válido.
+    /// Las preferencias del archivo, conservando el webhook, la placa, la escala, la actualización automática, el
+    /// guardado automático de grabaciones y el estado de bienvenida/novedades propios; null si el archivo no es un perfil
+    /// válido.
     /// </summary>
     public static MeterPreferences? FromJson(string json, MeterPreferences current)
     {
@@ -35,6 +36,8 @@ public static class ProfileFile
                     LastSeenNews = current.LastSeenNews,
                     UiScale = current.UiScale,
                     AutoUpdate = current.AutoUpdate,
+                    // Juntar .pcap en el disco lo decide cada uno, no el perfil de otro.
+                    SaveRecentOnMismatch = current.SaveRecentOnMismatch,
                     // Un perfil viejo no vuelve a disparar el paso a la vista del rediseño en el próximo arranque.
                     RedesignViewApplied = current.RedesignViewApplied,
                 }

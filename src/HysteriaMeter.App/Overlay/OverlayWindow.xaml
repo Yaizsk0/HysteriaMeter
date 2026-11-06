@@ -108,6 +108,7 @@
                                             <MenuItem Header="Historial" Command="{Binding ToggleHistoryCommand}"/>
                                             <MenuItem Header="Reiniciar" Command="{Binding ResetCommand}"/>
                                             <MenuItem Header="Copiar resumen" Command="{Binding CopySummaryCommand}"/>
+                                            <MenuItem Header="Guardar lo último (.pcap)" Command="{Binding SaveRecentCommand}" ToolTip="Los últimos 10 min del tráfico del juego, a la carpeta Grabaciones"/>
                                             <MenuItem Header="Nueva ventana" Command="{Binding NewWindowCommand}"/>
                                             <Separator/>
                                             <MenuItem Header="Pestaña">
@@ -487,8 +488,8 @@
                             </Grid>
                             <Border Style="{StaticResource ToastPanel}" BorderBrush="{DynamicResource SuccessLine}" Padding="14,10" Margin="0,0,0,5" Visibility="{Binding HasSavedNotice, Converter={StaticResource Visible}}">
                                 <DockPanel>
-                                    <Button DockPanel.Dock="Right" Content="Abrir" Command="{Binding OpenExportsCommand}" Style="{StaticResource ButtonLink}" FontSize="12" Margin="10,0,0,0"/>
-                                    <TextBlock DockPanel.Dock="Left" Text="✓" Foreground="{DynamicResource Success}" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                    <Button DockPanel.Dock="Right" Content="Abrir" Command="{Binding OpenSavedNoticeCommand}" Style="{StaticResource ButtonLink}" FontSize="12" Margin="10,0,0,0" Visibility="{Binding HasSavedNoticeFile, Converter={StaticResource Visible}}"/>
+                                    <TextBlock DockPanel.Dock="Left" Text="✓" Foreground="{DynamicResource Success}" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center" Visibility="{Binding HasSavedNoticeFile, Converter={StaticResource Visible}}"/>
                                     <TextBlock Text="{Binding SavedNoticeText}" ToolTip="{Binding SavedNoticePath}" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center"/>
                                 </DockPanel>
                             </Border>

@@ -58,6 +58,12 @@ public sealed record MeterPreferences
     /// <summary>Mandar el resumen a Discord solo al derrotar un boss.</summary>
     public bool DiscordOnKill { get; init; }
 
+    /// <summary>
+    /// Guardar solo los últimos 10 min del tráfico a un .pcap cuando una pelea no cierra (Configuración → Captura →
+    /// GRABACIÓN). Viene apagado: quien usa el release no junta grabaciones sin saberlo.
+    /// </summary>
+    public bool SaveRecentOnMismatch { get; init; }
+
     /// <summary>Guardar una imagen del overlay en Exportes al derrotar un boss, para tener el registro sin acordarse.</summary>
     public bool ImageOnKill { get; init; }
 

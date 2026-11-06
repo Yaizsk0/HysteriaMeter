@@ -12,4 +12,10 @@ public sealed record LiveCaptureOptions
     public string? RecordPath { get; init; }
 
     public int QueueCapacity { get; init; } = 50_000;
+
+    /// <summary>Cuánto tráfico del juego guardar en memoria para volcarlo después (<see cref="RecentPacketBuffer"/>). Cero = no guardar.</summary>
+    public TimeSpan RecentWindow { get; init; }
+
+    /// <summary>Tope de memoria de ese buffer.</summary>
+    public long RecentMaxBytes { get; init; } = 64L * 1024 * 1024;
 }

@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HysteriaMeter.App.Config;
 using HysteriaMeter.App.Pipeline;
+using HysteriaMeter.Capture.Sources;
 using HysteriaMeter.Combat;
 
 namespace HysteriaMeter.App.ViewModels;
@@ -571,6 +572,13 @@ public sealed partial class MeterViewModel
     [ObservableProperty]
     public partial string SavedNoticePath { get; set; } = string.Empty;
 
+    /// <summary>El aviso es de un archivo guardado (✓ y "Abrir"); sin archivo dice por qué no se guardó.</summary>
+    [ObservableProperty]
+    public partial bool HasSavedNoticeFile { get; set; }
+
+    // "Abrir" lleva a Grabaciones si lo guardado es un .pcap y a Exportes si es la imagen del overlay.
+    private bool _savedNoticeIsRecording;
+
     /// <summary>
     /// Lo que se mira de la pelea en curso en cada refresco, antes de cambiarla por la run o la sesión y aunque el
     /// overlay esté en pausa: el aviso de boss sale al empezar la pelea (o cuando el objetivo pasa a ser un boss).
@@ -595,10 +603,40 @@ public sealed partial class MeterViewModel
     /// <summary>La vista guardó la imagen del overlay: aviso con el link a la carpeta.</summary>
     public void ShowSavedImage(string path)
     {
-        SavedNoticePath = path;
-        SavedNoticeText = $"Captura guardada en {Path.GetFileName(Path.GetDirectoryName(path))}";
+        _savedNoticeIsRecording = false;
+        ShowSavedNotice($"Captura guardada en {Path.GetFileName(Path.GetDirectoryName(path))}", path);
+    }
+
+    /// <summary>
+    /// "Guardar lo último" terminó: el archivo con lo que cubre de verdad y el link a Grabaciones o, sin archivo,
+    /// <paramref name="problem"/> (sin captura en vivo, sin tráfico todavía, error de disco).
+    /// </summary>
+    public void ShowSavedRecording(SavedPackets? saved, string? problem)
+    {
+        _savedNoticeIsRecording = true;
+        ShowSavedNotice(saved is null ? problem ?? string.Empty : CaptureRecorder.SavedText(saved), saved?.Path);
+    }
+
+    private void ShowSavedNotice(string text, string? path)
+    {
+        SavedNoticePath = path ?? string.Empty;
+        SavedNoticeText = text;
+        HasSavedNoticeFile = path is not null;
         HasSavedNotice = true;
         _savedNoticeUntilUtc = DateTime.UtcNow + SavedNoticeDuration;
+    }
+
+    [RelayCommand]
+    private void OpenSavedNotice()
+    {
+        if (_savedNoticeIsRecording)
+        {
+            OpenRecordings();
+        }
+        else
+        {
+            OpenExports();
+        }
     }
 
     // ===================== Filas, pie y pastilla =====================

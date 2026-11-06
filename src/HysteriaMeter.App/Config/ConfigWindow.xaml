@@ -617,6 +617,13 @@
                                 <TextBlock Text="{Binding RecordingHint}" Style="{StaticResource Hint}" VerticalAlignment="Center" />
                                 <Button Style="{StaticResource ButtonLink}" Content="Abrir carpeta" Command="{Binding OpenRecordingsCommand}" Margin="12,0,0,0" />
                             </StackPanel>
+                            <DockPanel Margin="0,12,0,0">
+                                <Button DockPanel.Dock="Right" Style="{StaticResource ButtonGhost}" Content="Guardar lo último" Command="{Binding SaveRecentCommand}" Margin="10,0,0,0"
+                                        ToolTip="Vuelca a un .pcap lo que ya pasó, por si no apretaste ● REC antes de la pelea" />
+                                <TextBlock Text="{Binding RecentHint}" Style="{StaticResource Hint}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                            </DockPanel>
+                            <CheckBox Style="{StaticResource Switch}" Content="Guardar solo si una pelea no cierra" IsChecked="{Binding SaveRecentOnMismatch}" Margin="0,12,0,0"
+                                      Tag="Cuando la verificación de un objetivo no cierra, guarda los últimos 10 min en auto-*.pcap. Uno cada 10 min como mucho; quedan los 20 más nuevos." />
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>

@@ -140,6 +140,7 @@ public sealed partial class MeterViewModel : ObservableObject
             OnPropertyChanged(nameof(IsRecording));
             OnPropertyChanged(nameof(RecordingHint));
         };
+        _recorder.RecentSaved += _ => dispatcher.InvokeAsync(() => OnPropertyChanged(nameof(RecentHint)));
         InitializeLive(dispatcher);
     }
 
@@ -628,6 +629,39 @@ public sealed partial class MeterViewModel : ObservableObject
     public string RecordingHint => _recorder.CurrentPath is { } path
         ? $"Grabando en {Path.GetFileName(path)}"
         : "Para comparar una pelea con Combat Analysis";
+
+    /// <summary>Guarda solo los últimos 10 min cuando una pelea no cierra. Se recuerda entre sesiones; viene apagado.</summary>
+    public bool SaveRecentOnMismatch
+    {
+        get => Preferences.SaveRecentOnMismatch;
+        set => Update(Preferences with { SaveRecentOnMismatch = value }, nameof(SaveRecentOnMismatch));
+    }
+
+    /// <summary>Al lado de "Guardar lo último" en Configuración → Captura: qué guarda o el último archivo (a pedido o automático).</summary>
+    public string RecentHint => _recorder.LastSaved is { } saved
+        ? $"Último: {Path.GetFileName(saved.Path)}"
+        : $"El meter tiene en memoria los últimos {(int)CaptureRecorder.RecentWindow.TotalMinutes} min del tráfico del juego";
+
+    /// <summary>"Guardar lo último" (menú ⋯ y Configuración → Captura): vuelca el buffer de la captura en vivo sin trabar la UI.</summary>
+    [RelayCommand]
+    private async Task SaveRecentAsync()
+    {
+        if (!_recorder.CanSaveRecent)
+        {
+            ShowSavedRecording(null, "No hay captura en vivo para guardar");
+            return;
+        }
+
+        try
+        {
+            var saved = await Task.Run(() => _recorder.SaveRecent(DateTime.Now)).ConfigureAwait(true);
+            ShowSavedRecording(saved, "Todavía no llegó tráfico del juego para guardar");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ShowSavedRecording(null, $"No se pudo guardar: {ex.Message}");
+        }
+    }
 
     /// <summary>Opacidad de toda la ventana del overlay (Window.Opacity), de 0,3 a 1: el slider de Configuración.</summary>
     public double OverlayOpacity
