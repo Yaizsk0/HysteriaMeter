@@ -23,9 +23,16 @@ public class BossRulesTests
         { 95, null, false, 1000, 900, false, null, RunSegmentKind.Trash },
         // El objetivo principal aguantó menos que la pelea: cuenta lo que aguantó él.
         { 95, "Lobo", true, 1000, 900, false, 10, RunSegmentKind.Trash },
-        // Marcado como boss en data/npcs.json: alcanza aunque sea corto.
+        // Marcado como boss en la lista de NPCs: alcanza con 10 s en vez de 30, aunque el daño se reparta.
         { 12, "Kromede", true, 1000, 100, true, null, RunSegmentKind.Kill },
         { 12, "Kromede", false, 1000, 100, true, null, RunSegmentKind.Wipe },
+        { 10, "Kromede", true, 1000, 900, true, null, RunSegmentKind.Kill },
+        { 10, "Kromede", false, 1000, 900, true, null, RunSegmentKind.Wipe },
+        { 10, "Kromede", true, 1000, 900, false, null, RunSegmentKind.Trash },
+        // Un toque de pocos segundos a un boss marcado (un totem que muere en 2 s, un pull que se resetea) es trash.
+        { 3, "Kromede", true, 1000, 900, true, null, RunSegmentKind.Trash },
+        { 9, "Kromede", false, 1000, 900, true, null, RunSegmentKind.Trash },
+        { 95, "Kromede", true, 1000, 900, true, 8, RunSegmentKind.Trash },
     };
 
     [Theory]

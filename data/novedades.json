@@ -81,6 +81,7 @@
     {"id": 123, "text": "Detalle: las skills de tus invocaciones dicen \"invocación\". Con Configuración, Captura, Invocaciones separadas, van juntas en una fila con tu total sin ellas."},
     {"id": 126, "text": "Las peleas de boss ya no se parten en dos en una pausa de fase: mientras el boss siga vivo, la pelea espera hasta 30 s a que se le vuelva a pegar al boss o a sus adds."},
     {"id": 127, "text": "\"Guardar lo último\" en el menú ⋯: guarda en un .pcap los últimos 10 minutos del tráfico del juego, aunque no hayas prendido REC. En Configuración, Captura, puede guardarlos solo cuando una pelea no cierra."},
-    {"id": 128, "text": "Casi todos los monstruos tienen nombre: trash, invocaciones y bosses, con la lista de taengu/AION2-DPS-Meter (licencia MIT). Las peleas que guardaste como \"NPC 2100664\" muestran el nombre de hoy."}
+    {"id": 128, "text": "Casi todos los monstruos tienen nombre: trash, invocaciones y bosses, con la lista de taengu/AION2-DPS-Meter (licencia MIT). Las peleas que guardaste como \"NPC 2100664\" muestran el nombre de hoy."},
+    {"id": 129, "text": "El historial reconoce a los bosses de la lista de NPCs como el vivo: insignia, ★ y récords. Un boss cuenta desde los 10 s, así que un totem que muere en 2 s ya no saca tarjeta ni aviso de récord."}
   ]
 }

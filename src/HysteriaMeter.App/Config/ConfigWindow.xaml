@@ -509,7 +509,7 @@
                             <TextBlock Text="AL DERROTAR UN BOSS" Style="{StaticResource BlockLabel}" />
                             <CheckBox Style="{StaticResource Switch}" Content="Guardar una imagen" IsChecked="{Binding ImageOnKill}"
                                       Tag="Un .png del overlay en Exportes, con el nombre del boss y la hora"
-                                      ToolTip="Cuenta como boss lo marcado en la lista de NPCs o lo que aguantó al menos 30 s" />
+                                      ToolTip="Cuenta como boss lo marcado en la lista de NPCs que aguantó al menos 10 s, o cualquier objetivo que aguantó 30 s" />
                             <CheckBox Style="{StaticResource Switch}" Content="Mandar a Discord" IsChecked="{Binding DiscordOnKill}" IsEnabled="{Binding IsDiscordConfigured}"
                                       Tag="Necesita el webhook de Discord (Historial)" />
                         </StackPanel>
@@ -740,7 +740,7 @@
                                       Tag="En el resumen, el CSV, el JSON y Discord: vos quedás como &quot;Yo&quot; y el resto como &quot;Jugador 1&quot;, &quot;Jugador 2&quot;..." />
                             <CheckBox Style="{StaticResource Switch}" Content="Guardar una imagen al derrotar un boss" IsChecked="{Binding ImageOnKill}"
                                       Tag="Un .png del overlay en Exportes, con el nombre del boss y la hora"
-                                      ToolTip="Cuenta como boss lo marcado en la lista de NPCs o lo que aguantó al menos 30 s" />
+                                      ToolTip="Cuenta como boss lo marcado en la lista de NPCs que aguantó al menos 10 s, o cualquier objetivo que aguantó 30 s" />
                         </StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="DISCORD" Style="{StaticResource BlockLabel}" />
