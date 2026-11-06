@@ -280,15 +280,25 @@ public sealed record HistoryItem(
         return result;
     }
 
-    public static HistoryItem From(EncounterSummary summary)
+    /// <summary>
+    /// La fila con lo que la lista de NPCs dice hoy de su objetivo, solo para mostrarla (la base no cambia): el nombre si
+    /// se guardó sin nombre ("NPC 2400123" cuando la lista todavía no tenía la plantilla) y la marca de boss, que no se
+    /// guarda. Así la insignia y la ★ salen como en vivo y como compara el SQL del historial (EncounterRepository.Npcs).
+    /// </summary>
+    public static HistoryItem From(EncounterSummary summary, NpcCatalog npcs) =>
+        From(summary with { TargetName = npcs.NameOf(summary.TargetName, summary.TargetNpcId) }, npcs.IsBoss(summary.TargetNpcId));
+
+    /// <summary>La fila sin lista de NPCs: sin marca de boss, con la regla de 30 s.</summary>
+    public static HistoryItem From(EncounterSummary summary) => From(summary, targetIsBoss: false);
+
+    private static HistoryItem From(EncounterSummary summary, bool targetIsBoss)
     {
         var start = DateTimeOffset.Parse(summary.StartedAt, CultureInfo.InvariantCulture).ToLocalTime();
         var end = DateTimeOffset.Parse(summary.EndedAt, CultureInfo.InvariantCulture).ToLocalTime();
 
-        // TargetIsBoss no se guarda (sale de data/npcs.json en vivo): acá queda la regla de duración y daño al objetivo.
         var target = FightTarget.NameOrNpc(summary.TargetName, summary.TargetNpcId);
         var bossAttempt = BossRules.IsBossAttempt(
-            summary.TargetKilled, target is not null, targetIsBoss: false, end - start,
+            summary.TargetKilled, target is not null, targetIsBoss, end - start,
             summary.MainTargetSeconds is { } main ? TimeSpan.FromSeconds(main) : null, summary.ActorsDamage, summary.MainTargetDamage);
         return new HistoryItem(
             summary.Id,

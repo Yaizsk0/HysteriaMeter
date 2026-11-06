@@ -15,6 +15,13 @@ public sealed class EncounterRepository(string databasePath)
     private readonly Lock _initLock = new();
     private Task? _init;
 
+    /// <summary>
+    /// La lista de NPCs con la que se clasifican las peleas guardadas: la marca de boss no se guarda, así que sale de acá
+    /// (<see cref="NpcCatalog.Bosses"/>), la misma que usa el motor en vivo. Se lee en cada consulta: una lista nueva
+    /// cuenta enseguida. Sin lista (herramientas, tests) queda la regla de 30 s para todo.
+    /// </summary>
+    public Func<NpcCatalog> Npcs { get; set; } = static () => NpcCatalog.Empty;
+
     public Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         lock (_initLock)
@@ -192,6 +199,8 @@ public sealed class EncounterRepository(string databasePath)
     private async Task<IReadOnlyList<EncounterSummary>> QuerySummariesAsync(string filter, object parameters, CancellationToken cancellationToken)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
+        var arguments = new DynamicParameters(parameters);
+        arguments.Add("bossNpcs", BossNpcs());
 
         // Intento: cuántas veces se peleó contra ese objetivo hasta esta pelea (todas, trash incluido). Récord: el mejor DPS
         // propio entre los intentos de boss contra ese objetivo (BossAttemptOf: un pull corto no se lo lleva).
@@ -221,7 +230,7 @@ public sealed class EncounterRepository(string databasePath)
             {filter}
             ORDER BY e.started_at DESC LIMIT @limit
             """,
-            parameters).ConfigureAwait(false);
+            arguments).ConfigureAwait(false);
         return [.. rows.Select(r => new EncounterSummary(
             r.Id,
             r.StartedAt,
@@ -271,25 +280,33 @@ public sealed class EncounterRepository(string databasePath)
 
     /// <summary>
     /// La pelea <paramref name="alias"/> es un intento contra un boss, con la regla de
-    /// <see cref="BossRules.IsBossAttempt(bool, bool, bool, TimeSpan, TimeSpan?, long, long)"/> como la aplica el historial
-    /// (HistoryItem: la marca de boss de data/npcs.json no se guarda): un kill de al menos 30 s contra el objetivo principal,
-    /// o una pelea sin kill de al menos 30 s en la que el objetivo principal se llevó la mayor parte del daño. Un pull corto
-    /// o con el daño repartido es trash y no entra en las comparaciones (su DPS de arranque no es un récord). El objetivo ya
+    /// <see cref="BossRules.IsBossAttempt(bool, bool, bool, TimeSpan, TimeSpan?, long, long)"/> que usa el vivo: un kill
+    /// contra el objetivo principal, o una pelea sin kill en la que el objetivo principal se llevó la mayor parte del daño o
+    /// está marcado como boss, que duró al menos 30 s, o 10 s si está marcado (<see cref="BossRules.MinDuration"/>). La
+    /// marca no se guarda: llega en <c>@bossNpcs</c> (<see cref="BossNpcs"/>) desde la lista de NPCs de hoy. Un pull corto o
+    /// con el daño repartido es trash y no entra en las comparaciones (su DPS de arranque no es un récord). El objetivo ya
     /// lo filtran <see cref="TargetIs"/> o <see cref="SameTarget"/>: tiene nombre o plantilla. Los segundos se redondean a
     /// milésimas porque julianday da 29,999998 para 30 s justos.
     /// </summary>
     private static string BossAttemptOf(string alias)
     {
         var seconds = $"ROUND((julianday({alias}.ended_at) - julianday({alias}.started_at)) * 86400, 3)";
-        var minimum = BossRules.BossKillMinDuration.TotalSeconds.ToString(CultureInfo.InvariantCulture);
+        var marked = $"{alias}.target_npc_id IN (SELECT value FROM json_each(@bossNpcs))";
+        var minimum = $"(CASE WHEN {marked} THEN {Seconds(BossRules.MarkedBossMinDuration)} ELSE {Seconds(BossRules.BossKillMinDuration)} END)";
         var share = BossRules.BossFightShare.ToString(CultureInfo.InvariantCulture);
         return $"""
             (({alias}.target_killed = 1 AND COALESCE(ROUND({alias}.main_target_seconds, 3), {seconds}) >= {minimum})
              OR ({alias}.target_killed = 0 AND {seconds} >= {minimum}
-                 AND EXISTS (SELECT 1 FROM encounter_actors x WHERE x.encounter_id = {alias}.id GROUP BY x.encounter_id
-                             HAVING SUM(x.damage) > 0 AND SUM(x.main_target_damage) >= {share} * SUM(x.damage))))
+                 AND ({marked}
+                      OR EXISTS (SELECT 1 FROM encounter_actors x WHERE x.encounter_id = {alias}.id GROUP BY x.encounter_id
+                                 HAVING SUM(x.damage) > 0 AND SUM(x.main_target_damage) >= {share} * SUM(x.damage)))))
             """;
+
+        static string Seconds(TimeSpan duration) => duration.TotalSeconds.ToString(CultureInfo.InvariantCulture);
     }
+
+    /// <summary>Las plantillas marcadas como boss en la lista de <see cref="Npcs"/>, como el arreglo JSON que lee <c>@bossNpcs</c>.</summary>
+    private string BossNpcs() => JsonSerializer.Serialize(Npcs().Bosses);
 
     /// <summary>Filtro de las consultas viejas por nombre: solo el texto guardado, sin mirar la plantilla.</summary>
     private const string NameIs = "e.target_name = @targetName";
@@ -332,7 +349,7 @@ public sealed class EncounterRepository(string databasePath)
             SELECT MAX(a.dps) FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
             WHERE a.is_local = 1 AND {target} AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
             """,
-            new { targetName, npcId, excludeId, localName }).ConfigureAwait(false);
+            new { targetName, npcId, excludeId, localName, bossNpcs = BossNpcs() }).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -363,7 +380,7 @@ public sealed class EncounterRepository(string databasePath)
               AND e.started_at < COALESCE((SELECT started_at FROM encounters WHERE id = @excludeId), '9999')
             ORDER BY e.started_at DESC LIMIT 1
             """,
-            new { targetName, npcId, excludeId, localName }).ConfigureAwait(false);
+            new { targetName, npcId, excludeId, localName, bossNpcs = BossNpcs() }).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -393,7 +410,7 @@ public sealed class EncounterRepository(string databasePath)
             SELECT a.dps FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id
             WHERE a.is_local = 1 AND {target} AND e.id <> @excludeId AND (@localName IS NULL OR a.name = @localName)
             """,
-            new { targetName, npcId, excludeId, localName }).ConfigureAwait(false);
+            new { targetName, npcId, excludeId, localName, bossNpcs = BossNpcs() }).ConfigureAwait(false);
         return [.. dps];
     }
 
@@ -417,7 +434,7 @@ public sealed class EncounterRepository(string databasePath)
         string target, string? targetName, long? npcId, string excludeId, string? localName, CancellationToken cancellationToken)
     {
         await using var connection = await OpenAsync(cancellationToken).ConfigureAwait(false);
-        var parameters = new { targetName, npcId, excludeId, localName };
+        var parameters = new { targetName, npcId, excludeId, localName, bossNpcs = BossNpcs() };
         var previous = await connection.ExecuteScalarAsync<string?>(
             $"""
             SELECT e.id FROM encounter_actors a JOIN encounters e ON e.id = a.encounter_id

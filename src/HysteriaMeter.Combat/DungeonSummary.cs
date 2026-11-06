@@ -5,14 +5,24 @@ namespace HysteriaMeter.Combat;
 /// <summary>Cómo distinguir un boss de los bichos normales, con lo que trae una pelea guardada.</summary>
 public static class BossRules
 {
-    /// <summary>Peleas de al menos este largo cuentan como boss aunque no estén marcadas en data/npcs.json (el trash muere antes).</summary>
+    /// <summary>Peleas de al menos este largo cuentan como boss aunque no estén marcadas en la lista de NPCs (el trash muere antes).</summary>
     public static readonly TimeSpan BossKillMinDuration = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Lo mínimo para un boss marcado en la lista de NPCs (<see cref="NpcInfo.IsBoss"/>). La marca baja el piso de 30 s, no
+    /// lo saca: un totem marcado que muere en 2 s no es un kill de boss ni su DPS de arranque un récord (las cifras están
+    /// en decisiones.md).
+    /// </summary>
+    public static readonly TimeSpan MarkedBossMinDuration = TimeSpan.FromSeconds(10);
 
     /// <summary>Parte del daño que tiene que ir al objetivo principal para tomar la pelea como de boss.</summary>
     public const double BossFightShare = 0.6;
 
+    /// <summary>Lo que tiene que durar una pelea para contar como boss: <see cref="MarkedBossMinDuration"/> si está marcado, si no <see cref="BossKillMinDuration"/>.</summary>
+    public static TimeSpan MinDuration(bool targetIsBoss) => targetIsBoss ? MarkedBossMinDuration : BossKillMinDuration;
+
     /// <summary>
-    /// Pelea contra un boss: marcado en data/npcs.json, o un objetivo que se llevó la mayor parte del daño.
+    /// Pelea contra un boss: marcado en la lista de NPCs, o un objetivo que se llevó la mayor parte del daño.
     /// En un pull de trash el daño se reparte entre varios bichos.
     /// </summary>
     public static bool LooksLikeBossFight(EncounterSnapshot snapshot) =>
@@ -22,16 +32,20 @@ public static class BossRules
     public static bool LooksLikeBossFight(bool targetIsBoss, long actorsDamage, long mainTargetDamage) =>
         targetIsBoss || (actorsDamage > 0 && mainTargetDamage >= actorsDamage * BossFightShare);
 
-    /// <summary>Un boss derrotado: marcado como boss en data/npcs.json, o un objetivo que aguantó al menos 30 s.</summary>
+    /// <summary>
+    /// Un boss derrotado: el objetivo aguantó al menos 30 s, o 10 s si está marcado como boss en la lista de NPCs
+    /// (<see cref="MinDuration"/>). Cuenta lo que aguantó el objetivo principal si se midió.
+    /// </summary>
     public static bool IsBossKill(EncounterSnapshot snapshot) =>
         IsBossKill(snapshot.TargetKilled, snapshot.TargetIsBoss, snapshot.Duration, snapshot.MainTargetDuration);
 
     public static bool IsBossKill(bool killed, bool targetIsBoss, TimeSpan duration, TimeSpan? mainTargetDuration) =>
-        killed && (targetIsBoss || (mainTargetDuration ?? duration) >= BossKillMinDuration);
+        killed && (mainTargetDuration ?? duration) >= MinDuration(targetIsBoss);
 
     /// <summary>
     /// Intento contra un boss (kill o wipe). Un objetivo que no murió cuenta si tiene nombre o plantilla de NPC, se llevó
-    /// la mayor parte del daño y la pelea duró lo que dura un boss; si no, es trash.
+    /// la mayor parte del daño (o está marcado como boss) y la pelea duró lo que dura un boss (<see cref="MinDuration"/>);
+    /// si no, es trash.
     /// </summary>
     public static bool IsBossAttempt(EncounterSnapshot snapshot) =>
         IsBossAttempt(
@@ -47,7 +61,7 @@ public static class BossRules
         bool killed, bool hasTarget, bool targetIsBoss, TimeSpan duration, TimeSpan? mainTargetDuration, long actorsDamage, long mainTargetDamage) =>
         IsBossKill(killed, targetIsBoss, duration, mainTargetDuration)
         || (!killed && hasTarget && LooksLikeBossFight(targetIsBoss, actorsDamage, mainTargetDamage)
-            && (targetIsBoss || duration >= BossKillMinDuration));
+            && duration >= MinDuration(targetIsBoss));
 
     /// <summary>
     /// Junta los intentos de boss (de la más vieja a la más nueva) por objetivo, en el orden en que aparecieron: la misma

@@ -262,12 +262,14 @@ public sealed partial class WindowSmokeTests
     }
 
     [Fact]
-    public void Boss_kill_needs_a_boss_or_a_long_fight()
+    public void Boss_kill_needs_a_marked_boss_of_10_s_or_a_long_fight()
     {
         var start = DateTimeOffset.UtcNow;
         var trash = new EncounterSnapshot(Guid.NewGuid(), start, start.AddSeconds(8), "Trash", true, 100, []);
         Assert.False(MeterViewModel.IsBossKill(trash));
-        Assert.True(MeterViewModel.IsBossKill(trash with { TargetIsBoss = true }));
+        // La marca de la lista baja el piso a 10 s, no lo saca: un totem marcado de 8 s no es un kill de boss.
+        Assert.False(MeterViewModel.IsBossKill(trash with { TargetIsBoss = true }));
+        Assert.True(MeterViewModel.IsBossKill(trash with { TargetIsBoss = true, End = start.AddSeconds(12) }));
         Assert.True(MeterViewModel.IsBossKill(trash with { End = start.AddSeconds(45) }));
         Assert.False(MeterViewModel.IsBossKill(trash with { End = start.AddSeconds(45), TargetKilled = false }));
     }
