@@ -32,12 +32,12 @@
 ```text
 (sin encuentro) --primer daño de un no-NPC--> En curso
 En curso --daño--> En curso (LastActivity = t)
-En curso --t - LastActivity > IdleTimeout (daño nuevo o Tick)--> Terminado → EncounterFinished
+En curso --t - LastCombatActivity > IdleTimeout, o BossPauseTimeout contra un boss (daño nuevo o Tick)--> Terminado → EncounterFinished
 En curso --muere el objetivo principal (NPC)--> Terminado (TargetKilled = true)
 En curso --Reset manual--> Terminado
 ```
 
-Objetivo principal = el que más daño recibió en el encuentro.
+Objetivo principal = el que más daño recibió en el encuentro. Si es un boss del catálogo vivo y sin resetear, la inactividad que cierra es `BossPauseTimeout` (30 s), o `IdleTimeout` si es mayor. Pasada `IdleTimeout`, solo siguen la pelea los NPCs que ya recibieron daño en ella: pegarle a otro la cierra y abre otra (ver `combat-regressions.md`, "Pausas de fase de un boss").
 
 ## Capa Storage (SQLite)
 
