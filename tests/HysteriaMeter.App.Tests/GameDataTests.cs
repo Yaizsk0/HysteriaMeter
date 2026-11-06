@@ -106,6 +106,40 @@ public class GameDataTests
         Assert.Null(npcs.Of(2400123));
     }
 
+    [Fact]
+    public void Published_npc_list_names_the_mobs_of_real_fights()
+    {
+        var npcs = NpcTable.Load(FindRepoFile("npcs-taengu.json"));
+
+        // Un archivo generado que no se pueda leer queda vacío sin avisar: el conteo es lo que lo detecta.
+        Assert.True(npcs.Count > 6000, $"{npcs.Count} NPCs");
+        // Monstruos de peleas reales que quedaban como "NPC 2100664": trash, invocaciones y objetos, no solo bosses.
+        Assert.Equal(new NpcInfo("Hellfire Spirit"), npcs.Of(2100664));
+        Assert.Equal(new NpcInfo("Summoned Duduka Worker"), npcs.Of(2300900));
+        Assert.Equal(new NpcInfo("Dark Spirit's Sealed Apparition"), npcs.Of(2600205));
+        // Los bosses vienen marcados (pausa de fase, tarjeta del kill), sin dungeon ni enrage: eso es de MetaBot.GG.
+        Assert.Equal(new NpcInfo("Ferocious Horn Nuakum", IsBoss: true), npcs.Of(2300910));
+    }
+
+    [Fact]
+    public void Installed_npc_lists_go_from_the_published_one_to_the_hand_written_one()
+    {
+        var folder = Directory.CreateTempSubdirectory().FullName;
+        Directory.CreateDirectory(Path.Combine(folder, "data"));
+        var extracted = Path.Combine(folder, "juego.json");
+        File.WriteAllText(Path.Combine(folder, "data", "npcs-taengu.json"), """{ "npcs": { "1": "Publicada", "2": "Publicada", "3": { "name": "Publicada", "boss": true } } }""");
+        File.WriteAllText(extracted, """{ "npcs": { "2": "Juego", "3": "Juego" } }""");
+        File.WriteAllText(Path.Combine(folder, "data", "npcs.json"), """{ "npcs": { "3": { "name": "A mano", "boss": true, "enrage": 480 } } }""");
+
+        var npcs = NpcTable.LoadInstalled(folder, extracted);
+
+        Assert.Equal(new NpcInfo("Publicada"), npcs.Of(1));
+        Assert.Equal(new NpcInfo("Juego"), npcs.Of(2));
+        Assert.Equal(new NpcInfo("A mano", IsBoss: true, EnrageSeconds: 480), npcs.Of(3));
+        // Sin la copia del juego (lo normal) quedan la publicada y la del repo.
+        Assert.Equal("Publicada", NpcTable.LoadInstalled(folder, Path.Combine(folder, "no-existe.json")).Of(2)?.Name);
+    }
+
     /// <summary>Sube desde la carpeta de salida hasta la raíz del repo y devuelve <c>data/&lt;archivo&gt;</c>.</summary>
     private static string FindRepoFile(string name)
     {

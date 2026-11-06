@@ -10,6 +10,14 @@ namespace HysteriaMeter.App.ViewModels;
 /// </summary>
 public static class NpcTable
 {
+    /// <summary>
+    /// Las listas que usa el meter, de menor a mayor prioridad: la publicada (<c>data/npcs-taengu.json</c>, generada con
+    /// tools/npcs), la copia local de <paramref name="extracted"/> (<c>Juego/npcs.json</c>, con dungeon y enrage) y la
+    /// escrita a mano (<c>data/npcs.json</c>), que pisa a todas.
+    /// </summary>
+    public static NpcCatalog LoadInstalled(string baseDirectory, string extracted) =>
+        Load(Path.Combine(baseDirectory, "data", "npcs-taengu.json"), extracted, Path.Combine(baseDirectory, "data", "npcs.json"));
+
     /// <summary>Une varios archivos: los posteriores pisan a los anteriores (lo extraído del juego, después <c>data/</c>).</summary>
     public static NpcCatalog Load(params string[] paths)
     {

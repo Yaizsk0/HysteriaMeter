@@ -178,6 +178,31 @@ public sealed class TargetIdentityHistoryTests
     }
 
     [Fact]
+    public void Fights_saved_without_a_name_show_the_name_the_npc_list_has_today()
+    {
+        WithHistory((vm, repository, engine) =>
+        {
+            // Guardadas antes de que la lista nombrara su plantilla ("NPC 2400123"), y una que ya quedó con nombre.
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: false, minute: 0)));
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: true, minute: 10)));
+            Pump(repository.SaveAsync(Snapshot(2400124, killed: true, minute: 20, name: "Nombre guardado")));
+            engine.Entities.Npcs = new NpcCatalog(new Dictionary<uint, NpcInfo> { [2400123] = new("Kromede"), [2400124] = new("Otro nombre") });
+
+            Pump(vm.ToggleHistoryCommand.ExecuteAsync(null));
+            var rows = vm.HistoryRuns.SelectMany(r => r.Fights).ToArray();
+
+            Assert.Equal(["Nombre guardado", "Kromede", "Kromede"], rows.Select(r => r.Target));
+            Assert.DoesNotContain("Sin nombre", rows[1].RowTip, StringComparison.Ordinal);
+            Assert.Equal(2, rows[1].Attempt); // siguen siendo intentos del mismo objetivo
+
+            // Abierta desde el historial, el detalle también la nombra.
+            Pump(vm.OpenEncounterCommand.ExecuteAsync(rows[1]));
+            vm.ShowDetailCommand.Execute(vm.Actors[0]);
+            Assert.Equal("Kromede", vm.Detail.Target);
+        });
+    }
+
+    [Fact]
     public void Compare_with_offers_the_past_attempts_of_an_unnamed_template()
     {
         WithHistory((vm, repository, _) =>
