@@ -132,8 +132,9 @@ public sealed record BossWipe(Guid FightId, TimeSpan Duration, int? BelowPercent
 /// <paramref name="Identified"/>: el boss tiene nombre o plantilla (<see cref="FightTarget.Identity(string?, uint?)"/>).
 /// Sin identidad ("Boss N", peleas viejas) sus wipes no se pueden reconocer, así que no se sabe cuántos intentos hubo.
 /// <paramref name="OtherPulls"/>: antes del intento que cuenta hubo en la run otra pelea contra el mismo objetivo que no
-/// pasó como intento de boss (<see cref="BossRules.IsBossAttempt(EncounterSnapshot)"/>: duró menos de 30 s o el daño se
-/// repartió) y quedó como trash; con eso no se puede afirmar que el kill fue al primer intento.
+/// pasó como intento de boss (<see cref="BossRules.IsBossAttempt(EncounterSnapshot)"/>: duró menos de
+/// <see cref="BossRules.MinDuration"/>, 10 s un boss marcado y 30 s si no, o, sin marca, el daño se repartió) y quedó como
+/// trash; con eso no se puede afirmar que el kill fue al primer intento.
 /// </summary>
 public sealed record BossSummary(
     string Name,

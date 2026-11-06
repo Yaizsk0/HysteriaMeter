@@ -149,7 +149,7 @@ public sealed class DungeonSummaryViewModel
         !boss.Identified
             ? "Sin nombre ni plantilla: los wipes de estas peleas no se reconocen (quedan \"Encuentro\" en la línea de tiempo), así que no se sabe cuántos intentos hubo."
             : boss.OtherPulls
-                ? "Antes hubo otra pelea contra este objetivo que no cuenta como intento (duró menos de 30 s o el daño se repartió): queda como trash en la línea de tiempo."
+                ? "Antes hubo otra pelea contra este objetivo que no cuenta como intento (un boss marcado cuenta desde los 10 s; sin marca, desde los 30 s y con casi todo el daño a él): queda como trash en la línea de tiempo."
                 : null;
 
     /// <summary>
