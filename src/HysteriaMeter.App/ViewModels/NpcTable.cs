@@ -18,7 +18,7 @@ public static class NpcTable
     public static NpcCatalog LoadInstalled(string baseDirectory, string extracted) =>
         Load(Path.Combine(baseDirectory, "data", "npcs-taengu.json"), extracted, Path.Combine(baseDirectory, "data", "npcs.json"));
 
-    /// <summary>Une varios archivos: los posteriores pisan a los anteriores (lo extraído del juego, después <c>data/</c>).</summary>
+    /// <summary>Une varios archivos: los posteriores pisan a los anteriores (el orden de la app está en <see cref="LoadInstalled"/>).</summary>
     public static NpcCatalog Load(params string[] paths)
     {
         var npcs = new Dictionary<uint, NpcInfo>();

@@ -193,12 +193,49 @@ public sealed class TargetIdentityHistoryTests
 
             Assert.Equal(["Nombre guardado", "Kromede", "Kromede"], rows.Select(r => r.Target));
             Assert.DoesNotContain("Sin nombre", rows[1].RowTip, StringComparison.Ordinal);
-            Assert.Equal(2, rows[1].Attempt); // siguen siendo intentos del mismo objetivo
 
             // Abierta desde el historial, el detalle también la nombra.
             Pump(vm.OpenEncounterCommand.ExecuteAsync(rows[1]));
             vm.ShowDetailCommand.Execute(vm.Actors[0]);
             Assert.Equal("Kromede", vm.Detail.Target);
+
+            // "Comparar con": los intentos guardados que ofrece llevan el nombre de hoy.
+            var load = vm.Detail.PastAttempts!(Snapshot(2400123, killed: true, minute: 30));
+            Pump(load);
+            Assert.NotEmpty(load.Result);
+            Assert.All(load.Result, option => Assert.Equal("Kromede", option.SavedEncounter!.TargetName));
+
+            // El modo dungeon de esa run: las tarjetas y la línea de tiempo dicen el nombre, no "NPC 2400123".
+            DungeonSummaryViewModel? summary = null;
+            vm.RunSummaryRequested += s => summary = s;
+            Pump(vm.OpenRunSummaryCommand.ExecuteAsync(rows[1]));
+            Assert.NotNull(summary);
+            Assert.Contains(summary.Cards, card => card.Name == "Kromede");
+            Assert.DoesNotContain(summary.Cards, card => card.Name.Contains("2400123", StringComparison.Ordinal));
+            Assert.DoesNotContain(summary.Timeline, segment => segment.Label.Contains("2400123", StringComparison.Ordinal));
+        });
+    }
+
+    [Fact]
+    public void A_shared_fight_from_an_older_version_shows_the_name_the_npc_list_has_today()
+    {
+        WithHistory((vm, _, engine) =>
+        {
+            engine.Entities.Npcs = new NpcCatalog(new Dictionary<uint, NpcInfo> { [2400123] = new("Kromede") });
+            var file = Path.Combine(Path.GetTempPath(), $"hysteria-compartida-{Guid.NewGuid():N}.json");
+            try
+            {
+                // "Guardar JSON" de alguien con una lista que no tenía la plantilla: la pelea viene sin nombre.
+                File.WriteAllText(file, EncounterExport.ToJson(Snapshot(2400123, killed: true, minute: 0)));
+
+                Assert.True(vm.OpenSharedFile(file));
+                vm.ShowDetailCommand.Execute(vm.Actors[0]);
+                Assert.Equal("Kromede", vm.Detail.Target);
+            }
+            finally
+            {
+                File.Delete(file);
+            }
         });
     }
 

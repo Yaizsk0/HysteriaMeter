@@ -50,11 +50,11 @@ public sealed partial class UiSnapshotTests
             return new HistoryWindow(vm);
         }),
 
-        // Después se agregó la primera plantilla a data/npcs.json: la kill nueva dice "Kromede" y es el intento 3 contra
-        // ella (el wipe y la kill de antes siguen diciendo "NPC 2400123"); TU PROGRESO junta los tres con el nombre de hoy.
+        // Después se agregó la primera plantilla a data/npcs.json: la kill nueva es el intento 3 contra ella, y el wipe y
+        // la kill de antes, guardados como "NPC 2400123", también dicen "Kromede"; TU PROGRESO junta los tres.
         new("07i-historial-nombre-agregado", _ =>
         {
-            var vm = RealDataHistory(NamedLater());
+            var vm = RealDataHistory(new NpcCatalog(new Dictionary<uint, NpcInfo> { [FirstBoss] = new(NamedBoss) }), NamedLater());
             Pump(vm.OpenEncounterCommand.ExecuteAsync(vm.HistoryRuns.SelectMany(r => r.Fights).First(i => i.NpcId == FirstBoss && i.Target == NamedBoss)));
             return new HistoryWindow(vm);
         }),
@@ -98,7 +98,10 @@ public sealed partial class UiSnapshotTests
     /// Historial abierto, con el reloj fijo, sobre una base propia con las peleas de <see cref="RealDataFights"/> y las
     /// <paramref name="extra"/>.
     /// </summary>
-    private static MeterViewModel RealDataHistory(params EncounterSnapshot[] extra)
+    private static MeterViewModel RealDataHistory(params EncounterSnapshot[] extra) => RealDataHistory(NpcCatalog.Empty, extra);
+
+    /// <summary>Lo mismo, con la lista de NPCs <paramref name="npcs"/> (la que nombra las filas guardadas sin nombre).</summary>
+    private static MeterViewModel RealDataHistory(NpcCatalog npcs, params EncounterSnapshot[] extra)
     {
         var database = Path.Combine(Path.GetTempPath(), $"hysteria-snapshots-datos-{Guid.NewGuid():N}.db");
         SeparateDatabases.Add(database);
@@ -112,7 +115,7 @@ public sealed partial class UiSnapshotTests
         var status = new CaptureStatus(DateTime.UtcNow);
         status.MarkTraffic(DateTime.UtcNow);
         var vm = new MeterViewModel(new MeterSession(
-            new CombatEngine(), new CaptureRecorder(), SkillNames.Empty, new MeterPreferences { LastSeenNews = 1 }, _ => { },
+            new CombatEngine { Entities = { Npcs = npcs } }, new CaptureRecorder(), SkillNames.Empty, new MeterPreferences { LastSeenNews = 1 }, _ => { },
             history: repository, status: status))
         {
             HistoryClock = () => HistoryNow,
