@@ -32,8 +32,8 @@ public sealed class MeterSession
         SkillNames = skillNames.Copy();
         SkillNames.Custom = preferences.SkillAliases ?? new Dictionary<uint, string>();
         History = history;
-        // El historial clasifica bosses con la misma lista de NPCs que el motor en vivo. Se lee en cada consulta: la
-        // lista puede cambiar después (otra ruta del juego, una lista nueva) y los tests la ponen recién armada la sesión.
+        // El historial clasifica bosses con la misma lista de NPCs que el motor en vivo. Se lee en cada consulta, así vale
+        // la que tenga el motor en ese momento: la app la carga al arrancar y los tests la ponen después de armar la sesión.
         if (history is not null) history.Npcs = () => engine.Entities.Npcs;
         Status = status ?? new CaptureStatus();
         Decoder = decoder ?? new DecoderStats();

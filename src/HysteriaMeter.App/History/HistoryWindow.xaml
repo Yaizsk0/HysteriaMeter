@@ -109,7 +109,7 @@
                             <RadioButton Style="{StaticResource FilterChip}" GroupName="HistoryFilter" Content="Solo kills" IsChecked="{Binding OnlyKills}" VerticalAlignment="Center"
                                          ToolTip="Bosses derrotados (✓)" />
                             <RadioButton Style="{StaticResource FilterChip}" GroupName="HistoryFilter" Content="Solo bosses" IsChecked="{Binding FilterBosses}" VerticalAlignment="Center"
-                                         ToolTip="Kills y wipes: peleas de al menos 30 s con casi todo el daño a un objetivo, como en el modo dungeon" />
+                                         ToolTip="Kills y wipes: un boss marcado en la lista de NPCs desde los 10 s; sin marca, peleas de al menos 30 s con casi todo el daño a un objetivo, como en el modo dungeon" />
                             <RadioButton Style="{StaticResource FilterChip}" GroupName="HistoryFilter" Content="Esta semana" IsChecked="{Binding FilterThisWeek}" VerticalAlignment="Center"
                                          ToolTip="Los últimos 7 días" />
                             <!-- Ancho topeado: un nombre largo se corta en vez de empujar el contador fuera de la ventana. -->
