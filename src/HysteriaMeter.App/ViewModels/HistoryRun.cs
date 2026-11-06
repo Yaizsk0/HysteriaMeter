@@ -164,8 +164,8 @@ public sealed record BossProgress(
     /// El boss de la fila seleccionada; sin selección, el que deja el filtro si deja uno solo (como el progreso de antes).
     /// La serie usa todos los intentos cargados contra ese objetivo (<see cref="HistoryItem.TargetKey"/>: la plantilla o,
     /// sin plantilla, el nombre) y personaje, sin que Solo kills quite los wipes. El trash no entra: no es un intento
-    /// contra un boss. El título lleva el rótulo del intento más nuevo: si la plantilla ya tiene nombre en data/npcs.json,
-    /// el nombre, aunque las peleas viejas sigan diciendo "NPC 2400123".
+    /// contra un boss. El título lleva el rótulo del intento más nuevo: el nombre que la lista de NPCs le da hoy a la
+    /// plantilla, que las filas guardadas sin nombre también muestran, o "NPC 2400123" si la lista no la tiene.
     /// </summary>
     public static BossProgress For(IReadOnlyList<HistoryItem> matchingNewestFirst, HistoryItem? selected, DateTimeOffset now, IReadOnlyList<HistoryItem>? allNewestFirst = null)
     {

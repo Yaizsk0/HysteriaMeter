@@ -39,4 +39,9 @@ Fuentes (SIL Open Font License 1.1, el texto está en esta carpeta)
   Barlow Semi Condensed: OFL-Barlow-Semi-Condensed.txt
   Inter: OFL-Inter.txt
 
+Lista de NPCs (data/npcs-taengu.json)
+  Nombres de NPC de taengu/AION2-DPS-Meter (src/main/resources/i18n/npcs/en.json). Licencia MIT,
+  © 2026 TK-open-public; el texto completo está al principio del archivo.
+  https://github.com/taengu/AION2-DPS-Meter
+
 Npcap no viene incluido: se instala aparte desde https://npcap.com y tiene su propia licencia.

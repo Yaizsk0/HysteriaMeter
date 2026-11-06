@@ -178,6 +178,68 @@ public sealed class TargetIdentityHistoryTests
     }
 
     [Fact]
+    public void Fights_saved_without_a_name_show_the_name_the_npc_list_has_today()
+    {
+        WithHistory((vm, repository, engine) =>
+        {
+            // Guardadas antes de que la lista nombrara su plantilla ("NPC 2400123"), y una que ya quedó con nombre.
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: false, minute: 0)));
+            Pump(repository.SaveAsync(Snapshot(2400123, killed: true, minute: 10)));
+            Pump(repository.SaveAsync(Snapshot(2400124, killed: true, minute: 20, name: "Nombre guardado")));
+            engine.Entities.Npcs = new NpcCatalog(new Dictionary<uint, NpcInfo> { [2400123] = new("Kromede"), [2400124] = new("Otro nombre") });
+
+            Pump(vm.ToggleHistoryCommand.ExecuteAsync(null));
+            var rows = vm.HistoryRuns.SelectMany(r => r.Fights).ToArray();
+
+            Assert.Equal(["Nombre guardado", "Kromede", "Kromede"], rows.Select(r => r.Target));
+            Assert.DoesNotContain("Sin nombre", rows[1].RowTip, StringComparison.Ordinal);
+
+            // Abierta desde el historial, el detalle también la nombra.
+            Pump(vm.OpenEncounterCommand.ExecuteAsync(rows[1]));
+            vm.ShowDetailCommand.Execute(vm.Actors[0]);
+            Assert.Equal("Kromede", vm.Detail.Target);
+
+            // "Comparar con": los intentos guardados que ofrece llevan el nombre de hoy.
+            var load = vm.Detail.PastAttempts!(Snapshot(2400123, killed: true, minute: 30));
+            Pump(load);
+            Assert.NotEmpty(load.Result);
+            Assert.All(load.Result, option => Assert.Equal("Kromede", option.SavedEncounter!.TargetName));
+
+            // El modo dungeon de esa run: las tarjetas y la línea de tiempo dicen el nombre, no "NPC 2400123".
+            DungeonSummaryViewModel? summary = null;
+            vm.RunSummaryRequested += s => summary = s;
+            Pump(vm.OpenRunSummaryCommand.ExecuteAsync(rows[1]));
+            Assert.NotNull(summary);
+            Assert.Contains(summary.Cards, card => card.Name == "Kromede");
+            Assert.DoesNotContain(summary.Cards, card => card.Name.Contains("2400123", StringComparison.Ordinal));
+            Assert.DoesNotContain(summary.Timeline, segment => segment.Label.Contains("2400123", StringComparison.Ordinal));
+        });
+    }
+
+    [Fact]
+    public void A_shared_fight_from_an_older_version_shows_the_name_the_npc_list_has_today()
+    {
+        WithHistory((vm, _, engine) =>
+        {
+            engine.Entities.Npcs = new NpcCatalog(new Dictionary<uint, NpcInfo> { [2400123] = new("Kromede") });
+            var file = Path.Combine(Path.GetTempPath(), $"hysteria-compartida-{Guid.NewGuid():N}.json");
+            try
+            {
+                // "Guardar JSON" de alguien con una lista que no tenía la plantilla: la pelea viene sin nombre.
+                File.WriteAllText(file, EncounterExport.ToJson(Snapshot(2400123, killed: true, minute: 0)));
+
+                Assert.True(vm.OpenSharedFile(file));
+                vm.ShowDetailCommand.Execute(vm.Actors[0]);
+                Assert.Equal("Kromede", vm.Detail.Target);
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        });
+    }
+
+    [Fact]
     public void Compare_with_offers_the_past_attempts_of_an_unnamed_template()
     {
         WithHistory((vm, repository, _) =>
