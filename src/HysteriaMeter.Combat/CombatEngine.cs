@@ -6,9 +6,17 @@ public sealed record CombatEngineOptions
 {
     /// <summary>
     /// Sin daño hecho, ni recibido de un NPC que no sea el objetivo principal, durante este tiempo, el encuentro se cierra
-    /// (valor inicial de <see cref="CombatEngine.IdleTimeout"/>).
+    /// (valor inicial de <see cref="CombatEngine.IdleTimeout"/>). Una pelea de boss espera hasta
+    /// <see cref="BossPauseTimeout"/>.
     /// </summary>
     public TimeSpan IdleTimeout { get; init; } = TimeSpan.FromSeconds(8);
+
+    /// <summary>
+    /// Inactividad que cierra una pelea cuyo objetivo principal es un boss del catálogo de NPCs vivo y sin resetear, si es
+    /// más larga que <see cref="IdleTimeout"/>: las pausas de fase, sin daño hecho, no la cortan si después se le vuelve a
+    /// pegar a algo que ya es parte de la pelea.
+    /// </summary>
+    public TimeSpan BossPauseTimeout { get; init; } = TimeSpan.FromSeconds(30);
 
     /// <summary>Cerrar el encuentro cuando muere el objetivo principal.</summary>
     public bool EndOnMainTargetDeath { get; init; } = true;
@@ -69,7 +77,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
     /// <summary>
     /// Sin daño hecho, ni recibido de un NPC que no sea el objetivo principal, durante este tiempo, el encuentro se cierra.
-    /// Se puede cambiar en caliente.
+    /// Una pelea de boss espera hasta <see cref="CombatEngineOptions.BossPauseTimeout"/>. Se puede cambiar en caliente.
     /// </summary>
     public TimeSpan IdleTimeout
     {
@@ -118,11 +126,20 @@ public sealed class CombatEngine(CombatEngineOptions options)
                     break;
                 case HealthEvent health:
                     TrackPhases(health.EntityId, null, health.Timestamp);
-                    if (LiveFight(health.Timestamp) is { } fight && fight.Verifications.TryGetValue(health.EntityId, out var count))
+                    TrackReset(health.EntityId);
+                    if (VerifyingFight(health.Timestamp, health.EntityId) is { } fight && fight.Verifications.TryGetValue(health.EntityId, out var count))
                     {
                         count.Reading(health.Hp);
                     }
 
+                    break;
+                case EntitySpawnEvent spawn:
+                    if (spawn.Hp is not null)
+                    {
+                        TrackReset(spawn.EntityId);
+                    }
+
+                    TrackRespawn(spawn);
                     break;
             }
         }
@@ -280,7 +297,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
             // se pegan a sí mismas y las curaciones del boss leídas como daño no son daño de jugadores. Volver acá no saltea
             // nada: con un objetivo NPC, OnDamageTaken no hace nada.
             if (source != target && Entities.IsNpc(target) && EntityRegistry.ClassOfSkill(e.SkillId) is not null
-                && LiveFight(e.Timestamp) is { } fight)
+                && VerifyingFight(e.Timestamp, e.TargetId) is { } fight)
             {
                 CountForVerification(fight, e);
                 return;
@@ -294,7 +311,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
         if (!InScope(source))
         {
             // Jugadores fuera del filtro no cuentan ni abren encuentros, pero le bajan la vida al objetivo: la verificación los suma.
-            if (LiveFight(e.Timestamp) is { } fight)
+            if (VerifyingFight(e.Timestamp, e.TargetId) is { } fight)
             {
                 CountForVerification(fight, e);
             }
@@ -302,12 +319,12 @@ public sealed class CombatEngine(CombatEngineOptions options)
             return;
         }
 
-        if (OpensEncounter(e.Timestamp) && !CanOpenEncounter(source, Entities.Canonical(e.TargetId)))
+        if (OpensEncounter(e.Timestamp, e.TargetId) && !CanOpenEncounter(source, target))
         {
             return;
         }
 
-        var encounter = EnsureEncounter(e.Timestamp);
+        var encounter = EnsureEncounter(e.Timestamp, e.TargetId);
         CountForVerification(encounter, e);
         var before = HealthPercent(e.TargetId);
         var overkill = Entities.ApplyDamage(e.TargetId, e.Amount);
@@ -422,8 +439,11 @@ public sealed class CombatEngine(CombatEngineOptions options)
         // Solo los golpes de otro NPC sostienen la pelea en una pausa del daño hecho. Los del objetivo principal no:
         // Combat Analysis cortó a Destroyer Tarka en una pausa de 9,7 s aunque el boss le siguió pegando al local. En la
         // comparación del 2026-10-17 (en party, sin Combat Analysis; la referencia es otro medidor) la pelea contra
-        // 2300371 sigue en pausas de 8,5 y 9,1 s en las que solo pegan sus entidades (npc 2920343 y 2920347).
-        var sustains = _current.MainTarget is not { } main || (main != npc && main != e.SourceId);
+        // 2300371 sigue en pausas de 8,5 y 9,1 s en las que solo pegan sus entidades (npc 2920343 y 2920347). Pasada la
+        // inactividad configurada (en la pausa de boss), solo los de un NPC que ya es parte de la pelea: los de otro boss
+        // que hace el pull, o de sus adds, no la sostienen, y el primer golpe del grupo a ellos abre otra pelea.
+        var sustains = (_current.MainTarget is not { } main || (main != npc && main != e.SourceId))
+            && (e.Timestamp - _current.LastCombatActivity <= _idleTimeout || IsPartOf(_current, npc) || IsPartOf(_current, e.SourceId));
         foreach (var encounter in Running())
         {
             if (sustains)
@@ -476,8 +496,12 @@ public sealed class CombatEngine(CombatEngineOptions options)
 
     private void OnDeath(DeathEvent e)
     {
-        // Antes del cierre por la muerte del objetivo principal: su cuenta queda congelada acá.
-        if (LiveFight(e.Timestamp) is { } fight && fight.Verifications.TryGetValue(e.EntityId, out var count))
+        // La muerte del objetivo principal cierra la pelea con este mismo evento, y su cuenta registra la muerte. Sin
+        // preguntar si la pelea sigue viva: el registro ya lo marcó muerto, y un boss muerto no sostiene la pausa de boss.
+        var killsMainTarget = _current is not null && _splitEncounters && options.EndOnMainTargetDeath
+            && _current.MainTarget == e.EntityId && Entities.IsNpc(e.EntityId);
+        if ((killsMainTarget ? _current : VerifyingFight(e.Timestamp, e.EntityId)) is { } fight
+            && fight.Verifications.TryGetValue(e.EntityId, out var count))
         {
             count.Kill();
         }
@@ -501,7 +525,7 @@ public sealed class CombatEngine(CombatEngineOptions options)
             _current.AddLog(Entry(e, LogKind.Death, dead, dead, 0, 0));
         }
 
-        if (_current is not null && _splitEncounters && options.EndOnMainTargetDeath && _current.MainTarget == e.EntityId && Entities.IsNpc(e.EntityId))
+        if (killsMainTarget && _current is not null)
         {
             _current.TargetKilled = true;
             _current.LastActivity = e.Timestamp;
@@ -509,14 +533,119 @@ public sealed class CombatEngine(CombatEngineOptions options)
         }
     }
 
-    private bool IsIdle(DateTimeOffset at) =>
-        _splitEncounters && _current is not null && at - _current.LastCombatActivity > _idleTimeout;
+    /// <summary>
+    /// Pasó la inactividad configurada o, si el objetivo principal es un boss del catálogo vivo que no se reseteó, la pausa
+    /// de boss. Para un evento de un NPC que no es parte de la pelea (<see cref="IsPartOf"/>) alcanza con la inactividad
+    /// configurada. Ferocious Horn Nuakum tiene pausas de fase de 8,3 a 8,6 s sin daño hecho (2026-10-19 y 2026-10-29): con
+    /// 8 s la pelea quedaba en dos, y en la del 2026-10-29 la segunda arrancaba con la misma vida del boss con que terminaba
+    /// la primera. Destroyer Tarka también está marcado como boss: sus 3 s de intento y el kill, 9,7 s después, quedan en
+    /// una sola pelea si el primer golpe después de la pausa va a algo de ella, aunque Combat Analysis los separa.
+    /// </summary>
+    /// <param name="involved">El NPC del evento que se evalúa (al que se le pega, o del que llega la vida o la muerte), si lo hay.</param>
+    private bool IsIdle(DateTimeOffset at, ulong? involved = null)
+    {
+        if (!_splitEncounters || _current is null)
+        {
+            return false;
+        }
 
-    private bool OpensEncounter(DateTimeOffset at) =>
-        _current is null || IsIdle(at);
+        // Primero la inactividad configurada: el objetivo principal se calcula solo pasada esa, no en cada golpe.
+        var quiet = at - _current.LastCombatActivity;
+        return quiet > _idleTimeout
+            && (quiet > options.BossPauseTimeout || !IsLiveBoss(_current) || involved is { } other && !IsPartOf(_current, other));
+    }
+
+    private bool IsLiveBoss(Encounter encounter) =>
+        encounter.MainTarget is { } target
+        && IsBoss(target) && !Entities.IsDeadNpc(target) && !encounter.ResetTargets.Contains(target);
+
+    /// <summary>
+    /// Parte de la pelea: un NPC que recibió daño del filtro en ella (la entidad cruda, como en
+    /// <see cref="Encounter.DamageTaken"/>). Pasada la inactividad configurada, solo lo que ya es parte de la pelea la sigue
+    /// en la pausa de boss: pegarle a otra cosa abre otra pelea, como antes, y que otra cosa le pegue a la party no la corta
+    /// ni la sostiene. En las pausas medidas (Nuakum, Kwapo, Duanka), el grupo volvió a pegarle al boss. El 2026-10-29,
+    /// Silver Blade Rotan quedó vivo 13,8 s antes del pull de Kromede's Desire: si no se reseteó, ese pull, o sus adds, se
+    /// sumaban a su pelea. La copia del catálogo del usuario marca boss también a entidades de mecánica, como las de Atiel
+    /// (npc 2920445 y 2920446), que le pegan a la party en sus pausas sin que nadie les pegue. Un jugador nunca es parte: el
+    /// "daño" a sí mismo o a un compañero (costos de vida) también queda en <see cref="Encounter.DamageTaken"/>. Un monstruo
+    /// sin spawn capturado (sin npcId) tampoco: para él vale la regla de antes.
+    /// </summary>
+    private bool IsPartOf(Encounter encounter, ulong entity) =>
+        Entities.IsNpc(Entities.Canonical(entity)) && encounter.DamageTaken.ContainsKey(entity);
+
+    private bool IsBoss(ulong entity) =>
+        Entities.Profile(entity).NpcId is { } npc && Entities.Npcs.Of(npc) is { IsBoss: true };
+
+    /// <summary>
+    /// Sigue la vida que informa el servidor de los objetivos de la pelea: volver al máximo después de verse por debajo es
+    /// un reset (wipe, o el boss se fue de rango y se regeneró). Si es el objetivo principal, la pelea vuelve a la
+    /// inactividad configurada; se siguen todos porque el objetivo principal puede cambiar. La lectura llena antes de verlo
+    /// herido no cuenta: en el pull puede llegar después del primer golpe.
+    /// </summary>
+    private void TrackReset(ulong target)
+    {
+        if (_current is not { } encounter || !encounter.DamageTaken.ContainsKey(target)
+            || Entities.ServerHealthOf(target) is not { MaxHp: > 0 } health)
+        {
+            return;
+        }
+
+        if (health.Hp < health.MaxHp)
+        {
+            encounter.HurtTargets.Add(target);
+            encounter.ResetTargets.Remove(target);
+        }
+        else if (encounter.HurtTargets.Contains(target))
+        {
+            encounter.ResetTargets.Add(target);
+        }
+    }
+
+    /// <summary>
+    /// Otra entidad del mismo NPC que el objetivo principal, sin herir, es el boss que volvió: un reset. Atiel (2026-10-20 y
+    /// 21) reaparece como otra entidad en cada intento, con la vida llena, y de la vieja no llega la muerte ni una lectura
+    /// llena: sin esto, la pelea del wipe seguía abierta hasta el primer golpe del intento siguiente, y se unía con él si
+    /// ese golpe iba a algo que ya era parte de ella o si un add de ella le pegaba a la party en el hueco. Una que llega
+    /// herida es una copia, no un reset.
+    /// </summary>
+    private void TrackRespawn(EntitySpawnEvent spawn)
+    {
+        if (_current is not { } encounter || spawn.NpcId is not { } npc || Entities.Npcs.Of(npc) is not { IsBoss: true }
+            || encounter.MainTarget is not { } main || main == spawn.EntityId || Entities.Profile(main).NpcId != npc
+            || spawn is { Hp: { } hp, MaxHp: { } maxHp } && hp < maxHp)
+        {
+            return;
+        }
+
+        encounter.ResetTargets.Add(main);
+    }
+
+    private bool OpensEncounter(DateTimeOffset at, ulong? involved = null) =>
+        _current is null || IsIdle(at, involved);
 
     /// <summary>La pelea en curso si sigue viva en <paramref name="at"/>: pasada la inactividad, el próximo golpe abre otra.</summary>
-    private Encounter? LiveFight(DateTimeOffset at) => OpensEncounter(at) ? null : _current;
+    private Encounter? LiveFight(DateTimeOffset at, ulong? involved = null) => OpensEncounter(at, involved) ? null : _current;
+
+    /// <summary>
+    /// La pelea en curso para lo que solo va a la verificación de <paramref name="entity"/> (lecturas de vida, muertes,
+    /// golpes de jugadores fuera del filtro o de invocaciones sin dueño). Si para él ya no está viva, su cuenta se congela:
+    /// en la pausa de boss la pelea puede seguir para otros, y lo que le llegue después no se vería entero. La muerte del
+    /// objetivo principal no pasa por acá (ver <see cref="OnDeath"/>).
+    /// </summary>
+    private Encounter? VerifyingFight(DateTimeOffset at, ulong entity)
+    {
+        if (LiveFight(at, entity) is { } fight)
+        {
+            return fight;
+        }
+
+        if (_current is not null && _current.Verifications.TryGetValue(entity, out var count))
+        {
+            count.Freeze();
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// Solo un golpe a un monstruo vivo abre una pelea. Al morir el boss siguen llegando golpes que ya estaban
@@ -526,9 +655,9 @@ public sealed class CombatEngine(CombatEngineOptions options)
     private bool CanOpenEncounter(ulong source, ulong target) =>
         target != source && !Entities.IsKnownPlayer(target) && !Entities.IsDeadNpc(target);
 
-    private Encounter EnsureEncounter(DateTimeOffset at)
+    private Encounter EnsureEncounter(DateTimeOffset at, ulong? involved = null)
     {
-        if (IsIdle(at))
+        if (IsIdle(at, involved))
         {
             Finish();
         }
