@@ -509,7 +509,7 @@
                             <TextBlock Text="AL DERROTAR UN BOSS" Style="{StaticResource BlockLabel}" />
                             <CheckBox Style="{StaticResource Switch}" Content="Guardar una imagen" IsChecked="{Binding ImageOnKill}"
                                       Tag="Un .png del overlay en Exportes, con el nombre del boss y la hora"
-                                      ToolTip="Cuenta como boss lo marcado en data/npcs.json o lo que aguantó al menos 30 s" />
+                                      ToolTip="Cuenta como boss lo marcado en la lista de NPCs o lo que aguantó al menos 30 s" />
                             <CheckBox Style="{StaticResource Switch}" Content="Mandar a Discord" IsChecked="{Binding DiscordOnKill}" IsEnabled="{Binding IsDiscordConfigured}"
                                       Tag="Necesita el webhook de Discord (Historial)" />
                         </StackPanel>
@@ -601,7 +601,7 @@
                                       Tag="Si estás mirando una pelea guardada y arranca otra, el overlay vuelve solo a la actual" />
                             <TextBlock Text="Termina tras estos segundos sin daño" Margin="0,8,0,8" />
                             <ListBox Style="{StaticResource Chips}" ItemsSource="{x:Static vm:MeterPreferences.IdleOptions}" SelectedItem="{Binding IdleSeconds}"
-                                     ToolTip="Más bajo para separar el trash; más alto para bosses con fases sin daño que no estén marcados como boss en la lista de NPCs (data/npcs.json o Juego/npcs.json). Si el objetivo principal es un boss marcado, se espera hasta 30 s mientras siga vivo y no se resetee">
+                                     ToolTip="Más bajo para separar el trash; más alto para bosses con fases sin daño que no estén marcados como boss en la lista de NPCs (data/npcs-taengu.json, Juego/npcs.json o data/npcs.json). Si el objetivo principal es un boss marcado, se espera hasta 30 s mientras siga vivo y no se resetee">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding StringFormat='{}{0} s'}" />
@@ -740,7 +740,7 @@
                                       Tag="En el resumen, el CSV, el JSON y Discord: vos quedás como &quot;Yo&quot; y el resto como &quot;Jugador 1&quot;, &quot;Jugador 2&quot;..." />
                             <CheckBox Style="{StaticResource Switch}" Content="Guardar una imagen al derrotar un boss" IsChecked="{Binding ImageOnKill}"
                                       Tag="Un .png del overlay en Exportes, con el nombre del boss y la hora"
-                                      ToolTip="Cuenta como boss lo marcado en data/npcs.json o lo que aguantó al menos 30 s" />
+                                      ToolTip="Cuenta como boss lo marcado en la lista de NPCs o lo que aguantó al menos 30 s" />
                         </StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="DISCORD" Style="{StaticResource BlockLabel}" />

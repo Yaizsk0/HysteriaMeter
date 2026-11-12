@@ -42,10 +42,11 @@ Alt+← y Alt+→ (o las flechas ‹ ›) recorren las peleas guardadas, y Esc v
 
 El juego manda solo el ID de los monstruos y de las skills. Los nombres salen de:
 
-- `data/npcs.json`: nombre, dungeon, si es boss y segundos hasta el enrage. Una pelea que sale como "NPC 2001234" se arregla con `"2001234": { "name": "...", "dungeon": "...", "boss": true, "enrage": 480 }`.
+- `data/npcs-taengu.json`: unos 6.000 NPCs (monstruos, invocaciones y bosses marcados) de la lista MIT de [taengu/AION2-DPS-Meter](https://github.com/taengu/AION2-DPS-Meter), generada con `tools/npcs/npcs_taengu.py <commit>`. Las peleas guardadas sin nombre se muestran con el de hoy.
+- `data/npcs.json`: le gana a esa lista y a `Juego\npcs.json`, con nombre, dungeon, si es boss y segundos hasta el enrage. Una pelea que sale como "NPC 2001234" se arregla con `"2001234": { "name": "...", "dungeon": "...", "boss": true, "enrage": 480 }`.
 - `data/skills.json`, que completa la lista de MetaBot.GG de `Juego\skills.json`, o doble clic en una skill del detalle (queda en tus preferencias). En las skills de clase alcanza con nombrar la base: 15280143 usa el nombre de 15280000.
 - `data/classes.json`: las clases y sus colores.
-- `tools/HysteriaMeter.Extractor` (`hysteria-extract`): lee los archivos del juego instalado, con el juego cerrado y la clave que pongas vos, y deja nombres e íconos en `%LOCALAPPDATA%\HysteriaMeter\Juego`. Lo que cargues en `data/` les gana. Nada extraído va al repo.
+- `tools/HysteriaMeter.Extractor` (`hysteria-extract`): lee los archivos del juego instalado, con el juego cerrado y la clave que pongas vos, y deja nombres e íconos en `%LOCALAPPDATA%\HysteriaMeter\Juego`. Lo que escribas en `data/npcs.json` o `data/skills.json` les gana. Nada extraído va al repo.
 
 ## Compilar
 

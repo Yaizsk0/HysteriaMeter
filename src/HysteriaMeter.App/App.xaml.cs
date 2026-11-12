@@ -80,7 +80,7 @@ public partial class App : Application
             IdleTimeout = TimeSpan.FromSeconds(sp.GetRequiredService<IOptions<MeterSettings>>().Value.IdleTimeoutSeconds),
         })
         {
-            Entities = { Npcs = NpcTable.Load(AppPaths.In("Juego", "npcs.json"), Path.Combine(AppContext.BaseDirectory, "data", "npcs.json")) },
+            Entities = { Npcs = NpcTable.LoadInstalled(AppContext.BaseDirectory, AppPaths.In("Juego", "npcs.json")) },
         });
         builder.Services.AddSingleton(sp => new EncounterRepository(
             AppPaths.Database(sp.GetRequiredService<IOptions<MeterSettings>>().Value.DatabasePath)));

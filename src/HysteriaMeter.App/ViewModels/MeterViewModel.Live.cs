@@ -312,7 +312,7 @@ public sealed partial class MeterViewModel
                 && DateTimeOffset.TryParse(last.StartedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var start)
                 && DateTimeOffset.TryParse(last.EndedAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var end))
             {
-                LastFightText = LastFightLine(FightTarget.Label(last.TargetName, last.TargetNpcId), end - start);
+                LastFightText = LastFightLine(Row(last).Target, end - start);
             }
         }
         catch (DbException)

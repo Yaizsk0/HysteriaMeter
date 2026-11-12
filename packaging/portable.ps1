@@ -37,7 +37,7 @@ if ($Paso -ne 'Zip') {
         -p:Version=$Version -p:ReleaseBuild=true -o $publish
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish terminó con $LASTEXITCODE" }
 
-    foreach ($required in 'HysteriaMeter.exe', 'appsettings.json', 'data/opcodes.json', 'data/novedades.json') {
+    foreach ($required in 'HysteriaMeter.exe', 'appsettings.json', 'data/opcodes.json', 'data/novedades.json', 'data/npcs-taengu.json') {
         if (-not (Test-Path (Join-Path $publish $required))) { throw "Falta $required en la publicación" }
     }
     if (Test-Path (Join-Path $publish 'datos')) { throw 'La publicación no puede traer la carpeta datos' }

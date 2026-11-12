@@ -244,7 +244,7 @@ public sealed record HistoryItem(
         {
             TargetText != Target ? $"Objetivo principal: {Target}" : string.Empty,
             NpcId is { } npc && Target == FightTarget.NpcLabel(npc)
-                ? $"Sin nombre en data/npcs.json: agregá el ID {npc.ToString(CultureInfo.InvariantCulture)} para nombrar las peleas que vengan. Los intentos se siguen contando juntos por ese ID."
+                ? $"Sin nombre en data/npcs.json: agregá el ID {npc.ToString(CultureInfo.InvariantCulture)} para nombrar todas sus peleas, también las guardadas. Los intentos se siguen contando juntos por ese ID."
                 : string.Empty,
             $"{When} · daño total {Total}{(Deaths is > 0 and var d ? $" · {d} {(d == 1 ? "muerte" : "muertes")}" : string.Empty)}",
             string.Join(" ", new[] { IsRecord ? "★ récord personal" : string.Empty, AttemptLabel, VsBest, FastestTag, CharacterTag }.Where(t => t.Length > 0)).TrimStart('·', ' '),
