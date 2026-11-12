@@ -118,6 +118,82 @@ public sealed class TargetComparisonTests : IDisposable
         Assert.Equal(4, await repository.CountEarlierAttemptsAsync(null, 333u, current.Start, id, "Mati"));
     }
 
+    /// <summary>La lista de NPCs de los tests de abajo: 444 es un boss marcado y 555 un NPC con nombre, sin marca.</summary>
+    private static readonly NpcCatalog Marked = new(new Dictionary<uint, NpcInfo>
+    {
+        [444] = new("Ferocious Horn Nuakum", IsBoss: true),
+        [555] = new("Hellfire Spirit"),
+    });
+
+    /// <summary>
+    /// Las comparaciones del historial (récord, intento anterior, percentil, "Comparar con" y la ★) toman las mismas peleas
+    /// que el vivo llama intento de boss: <see cref="BossRules.IsBossAttempt(EncounterSnapshot)"/> con la marca de la lista.
+    /// Un boss marcado cuenta desde los 10 s aunque el daño se reparta; un toque más corto es trash, como sin marca.
+    /// </summary>
+    [Theory]
+    [InlineData(true, true, 3, null, 1.0)]
+    [InlineData(true, true, 10, null, 1.0)]
+    [InlineData(true, true, 15, null, 1.0)]
+    [InlineData(true, true, 95, 8, 1.0)]
+    [InlineData(true, false, 5, null, 1.0)]
+    [InlineData(true, false, 12, null, 0.2)]
+    [InlineData(false, true, 15, null, 1.0)]
+    [InlineData(false, false, 12, null, 1.0)]
+    [InlineData(false, true, 35, null, 1.0)]
+    [InlineData(false, false, 35, null, 0.2)]
+    [InlineData(false, false, 35, null, 0.9)]
+    public async Task A_saved_fight_is_compared_when_the_live_rule_calls_it_a_boss_attempt(
+        bool marked, bool killed, int seconds, int? mainSeconds, double mainShare)
+    {
+        var repository = new EncounterRepository(_path) { Npcs = () => Marked };
+        await repository.InitializeAsync();
+        var npc = marked ? 444u : 555u;
+        var fight = Fight(Start, null, npc, 700, seconds, killed, mainShare) with
+        {
+            MainTargetDuration = mainSeconds is { } main ? TimeSpan.FromSeconds(main) : null,
+        };
+        var current = Fight(Start.AddMinutes(5), null, npc, 300);
+        await repository.SaveAsync(fight);
+        await repository.SaveAsync(current);
+
+        // Lo que el vivo dice de esa pelea cuando terminó: el motor le puso la marca de la lista.
+        var live = BossRules.IsBossAttempt(fight with { TargetIsBoss = Marked.IsBoss(npc) });
+
+        var id = current.Id.ToString();
+        double? expected = live ? 700 : null;
+        Assert.Equal(live, (await repository.LocalDpsAsync(null, npc, id, "Mati")).Contains(700));
+        Assert.Equal(expected, await repository.BestLocalDpsAsync(null, npc, id, "Mati"));
+        Assert.Equal(expected, await repository.PreviousLocalDpsAsync(null, npc, id, "Mati"));
+        Assert.Equal(live ? fight.Id.ToString() : null, (await repository.PastAttemptsAsync(null, npc, id, "Mati")).Best);
+
+        // La ★ del historial: si la de 700 fue un intento de boss, la actual (300) no es el récord.
+        var listed = await repository.ListRecentAsync();
+        Assert.Equal(!live, listed.Single(s => s.Id == id).IsRecord);
+        Assert.Equal(!live, (await repository.LoadSummaryAsync(id))!.IsRecord);
+    }
+
+    [Fact]
+    public async Task The_list_is_read_on_every_query_so_a_new_list_counts_at_once()
+    {
+        var npcs = NpcCatalog.Empty;
+        var repository = new EncounterRepository(_path) { Npcs = () => npcs };
+        await repository.InitializeAsync();
+        var kill = Fight(Start, null, 444, 700, seconds: 15);
+        var current = Fight(Start.AddMinutes(5), null, 444, 300);
+        await repository.SaveAsync(kill);
+        await repository.SaveAsync(current);
+        var id = current.Id.ToString();
+
+        // Sin la marca, un kill de 15 s es trash (la regla de 30 s); con la lista que lo marca, es un intento.
+        Assert.Null(await repository.BestLocalDpsAsync(null, 444u, id, "Mati"));
+        npcs = Marked;
+        Assert.Equal(700, await repository.BestLocalDpsAsync(null, 444u, id, "Mati"));
+
+        // Un repositorio sin lista (las herramientas, los tests viejos) se queda con la regla de 30 s.
+        var withoutList = new EncounterRepository(_path);
+        Assert.Null(await withoutList.BestLocalDpsAsync(null, 444u, id, "Mati"));
+    }
+
     private async Task<(EncounterRepository Repository, (EncounterSnapshot Unnamed, EncounterSnapshot Named, EncounterSnapshot OldNamed, EncounterSnapshot Other, EncounterSnapshot Current) Fights)> SeedAsync()
     {
         var repository = new EncounterRepository(_path);

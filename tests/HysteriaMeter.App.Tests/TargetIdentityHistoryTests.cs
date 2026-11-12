@@ -217,6 +217,47 @@ public sealed class TargetIdentityHistoryTests
     }
 
     [Fact]
+    public void A_marked_boss_counts_the_same_in_the_history_and_the_run_summary_as_live()
+    {
+        WithHistory((vm, repository, engine) =>
+        {
+            // La marca de boss no se guarda: el historial la toma de la misma lista que el motor, aunque se cambie después.
+            engine.Entities.Npcs = new NpcCatalog(new Dictionary<uint, NpcInfo> { [2400123] = new("Kromede", IsBoss: true) });
+            // Un toque de 3 s a 90k (el arranque), un kill de 15 s y un wipe de 12 s, todos de menos de 30 s.
+            EncounterSnapshot[] saved =
+            [
+                Snapshot(2400123, killed: true, minute: 0, seconds: 3, dps: 90_000),
+                Snapshot(2400123, killed: true, minute: 5, seconds: 15, dps: 50_000),
+                Snapshot(2400123, killed: false, minute: 10, seconds: 12, dps: 30_000),
+            ];
+            foreach (var fight in saved)
+            {
+                Pump(repository.SaveAsync(fight));
+            }
+
+            // Lo que dijo el vivo de cada una: el motor les puso la marca de la lista.
+            var live = saved.Select(f => f with { TargetIsBoss = true }).ToArray();
+            RunSegmentKind[] liveKinds = [.. live.Select(f => BossRules.Classify(BossRules.IsBossAttempt(f), f.TargetKilled))];
+            Assert.Equal([RunSegmentKind.Trash, RunSegmentKind.Kill, RunSegmentKind.Wipe], liveKinds);
+
+            Pump(vm.ToggleHistoryCommand.ExecuteAsync(null));
+            var rows = vm.HistoryRuns.SelectMany(r => r.Fights).OrderBy(r => r.Started).ToArray();
+            Assert.Equal(liveKinds, rows.Select(r => r.Kind));
+            // La ★: el kill de 15 s es el mejor intento de boss; el toque de 90k es trash y no compite.
+            Assert.Equal([false, true, false], rows.Select(r => r.IsRecord));
+
+            // El modo dungeon abierto desde el historial cuenta los bosses como el de la run en vivo.
+            DungeonSummaryViewModel? summary = null;
+            vm.RunSummaryRequested += s => summary = s;
+            Pump(vm.OpenRunSummaryCommand.ExecuteAsync(rows[1]));
+            Assert.NotNull(summary);
+            var fromLive = DungeonSummary.From(live, Base);
+            Assert.Equal(fromLive.Timeline.Select(t => t.Kind), summary.Summary.Timeline.Select(t => t.Kind));
+            Assert.Equal((1, 1), (summary.Summary.BossesKilled, summary.Summary.Wipes));
+        });
+    }
+
+    [Fact]
     public void A_shared_fight_from_an_older_version_shows_the_name_the_npc_list_has_today()
     {
         WithHistory((vm, _, engine) =>

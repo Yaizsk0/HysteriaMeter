@@ -39,7 +39,7 @@ public class SavedFightNameTests
     {
         var saved = new EncounterSnapshot(Guid.NewGuid(), Start, Start.AddSeconds(30), null, true, 1000, [], TargetNpcId: 2400123);
 
-        var named = Npcs.Named(saved);
+        var named = Npcs.Resolve(saved);
 
         Assert.Equal(saved with { TargetName = "Kromede" }, named);
         Assert.Equal("Kromede", FightTarget.Label(named));
@@ -47,8 +47,8 @@ public class SavedFightNameTests
         Assert.Equal(FightTarget.Identity(saved), FightTarget.Identity(named));
 
         var unknown = saved with { TargetNpcId = 7 };
-        Assert.Same(unknown, Npcs.Named(unknown));
+        Assert.Same(unknown, Npcs.Resolve(unknown));
         var withName = saved with { TargetName = "Nombre guardado" };
-        Assert.Same(withName, Npcs.Named(withName));
+        Assert.Same(withName, Npcs.Resolve(withName));
     }
 }

@@ -1665,14 +1665,13 @@ public sealed partial class MeterViewModel : ObservableObject
     public static string TitleOf(EncounterSnapshot snapshot) => FightTarget.Label(snapshot);
 
     /// <summary>
-    /// Una fila del historial con el nombre que la lista de NPCs trae hoy si la pelea se guardó sin nombre ("NPC 2400123"
-    /// cuando la lista todavía no tenía la plantilla). Solo para mostrarla: la base no cambia.
+    /// Una fila del historial con lo que la lista de NPCs dice hoy de su objetivo: el nombre si se guardó sin nombre y la
+    /// marca de boss (<see cref="HistoryItem.From(EncounterSummary, NpcCatalog)"/>). Solo para mostrarla: la base no cambia.
     /// </summary>
-    private HistoryItem Row(EncounterSummary summary) =>
-        HistoryItem.From(summary with { TargetName = _engine.Entities.Npcs.NameOf(summary.TargetName, summary.TargetNpcId) });
+    private HistoryItem Row(EncounterSummary summary) => HistoryItem.From(summary, _engine.Entities.Npcs);
 
-    /// <summary>Una pelea leída de la base, con el nombre como en <see cref="Row"/>.</summary>
-    private EncounterSnapshot? Named(EncounterSnapshot? saved) => saved is null ? null : _engine.Entities.Npcs.Named(saved);
+    /// <summary>Una pelea leída de la base, con el nombre y la marca de boss de la lista de hoy, como en <see cref="Row"/>.</summary>
+    private EncounterSnapshot? Resolved(EncounterSnapshot? saved) => saved is null ? null : _engine.Entities.Npcs.Resolve(saved);
 
     /// <summary>"¡Récord en Tarka! 12.4k DPS (antes 11.0k)", o <c>null</c> si no lo superó o es la primera vez.</summary>
     public static string? RecordText(string target, double dps, double? previousBest) =>
@@ -1695,8 +1694,8 @@ public sealed partial class MeterViewModel : ObservableObject
         {
             var localName = snapshot.Actors.FirstOrDefault(a => a.IsLocalPlayer)?.Name;
             var (previousId, bestId) = await _history.PastAttemptsAsync(snapshot.TargetName, snapshot.TargetNpcId, snapshot.Id.ToString(), localName).ConfigureAwait(true);
-            var previous = previousId is null ? null : Named(await _history.LoadAsync(previousId).ConfigureAwait(true));
-            var best = bestId is null || bestId == previousId ? null : Named(await _history.LoadAsync(bestId).ConfigureAwait(true));
+            var previous = previousId is null ? null : Resolved(await _history.LoadAsync(previousId).ConfigureAwait(true));
+            var best = bestId is null || bestId == previousId ? null : Resolved(await _history.LoadAsync(bestId).ConfigureAwait(true));
             return
             [
                 .. new[]
@@ -1785,7 +1784,7 @@ public sealed partial class MeterViewModel : ObservableObject
         EncounterSnapshot? snapshot;
         try
         {
-            snapshot = Named(await _history.LoadAsync(item.Id).ConfigureAwait(true));
+            snapshot = Resolved(await _history.LoadAsync(item.Id).ConfigureAwait(true));
         }
         catch (DbException)
         {
@@ -1827,7 +1826,7 @@ public sealed partial class MeterViewModel : ObservableObject
         {
             foreach (var fight in _allHistory.Where(i => i.Run == run))
             {
-                if (Named(await _history.LoadAsync(fight.Id).ConfigureAwait(true)) is { } snapshot)
+                if (Resolved(await _history.LoadAsync(fight.Id).ConfigureAwait(true)) is { } snapshot)
                 {
                     fights.Add(snapshot);
                 }
@@ -1908,7 +1907,7 @@ public sealed partial class MeterViewModel : ObservableObject
         // Un archivo editado a mano puede traer verificaciones null ("Verifications": [null]): se descartan acá, como
         // FromJson descarta los jugadores null. Sin ninguna queda como una pelea guardada sin verificación.
         // Una pelea de una versión vieja puede venir sin nombre ("NPC 2400123"): se le pone el de la lista de hoy.
-        snapshot = _engine.Entities.Npcs.Named(snapshot) with
+        snapshot = _engine.Entities.Npcs.Resolve(snapshot) with
         {
             Verifications = snapshot.Verifications?.OfType<TargetVerification>().ToArray() is { Length: > 0 } verifications ? verifications : null,
         };
