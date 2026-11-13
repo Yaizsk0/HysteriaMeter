@@ -38,6 +38,7 @@
     <None Include="..\..\data\skills.json" Link="data\skills.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\data\npcs.json" Link="data\npcs.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\data\npcs-taengu.json" Link="data\npcs-taengu.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\data\skills-taengu.json" Link="data\skills-taengu.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\data\classes.json" Link="data\classes.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\data\novedades.json" Link="data\novedades.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

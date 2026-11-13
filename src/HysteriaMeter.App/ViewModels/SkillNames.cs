@@ -90,8 +90,15 @@ public sealed class SkillNames(IReadOnlyDictionary<uint, string> names)
     public const int MaxLength = 32;
 
     /// <summary>
-    /// Une varios archivos: los posteriores pisan a los anteriores. Así lo extraído del juego
-    /// (<c>%LOCALAPPDATA%\HysteriaMeter\Juego\skills.json</c>) se completa con lo cargado a mano en <c>data/</c>.
+    /// Las listas que usa el meter, de menor a mayor prioridad: la publicada (<c>data/skills-taengu.json</c>, generada con
+    /// tools/skills, la única que trae el zip), la copia local de <paramref name="extracted"/> (<c>Juego/skills.json</c>)
+    /// y la escrita a mano (<c>data/skills.json</c>), que pisa a todas.
+    /// </summary>
+    public static SkillNames LoadInstalled(string baseDirectory, string extracted) =>
+        Load(Path.Combine(baseDirectory, "data", "skills-taengu.json"), extracted, Path.Combine(baseDirectory, "data", "skills.json"));
+
+    /// <summary>
+    /// Une varios archivos: los posteriores pisan a los anteriores (el orden de la app está en <see cref="LoadInstalled"/>).
     /// </summary>
     public static SkillNames Load(params string[] paths)
     {

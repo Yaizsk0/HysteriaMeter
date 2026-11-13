@@ -44,4 +44,9 @@ Lista de NPCs (data/npcs-taengu.json)
   © 2026 TK-open-public; el texto completo está al principio del archivo.
   https://github.com/taengu/AION2-DPS-Meter
 
+Lista de skills (data/skills-taengu.json)
+  Nombres de skills de taengu/AION2-DPS-Meter (src/main/resources/i18n/skills/en.json). Licencia MIT,
+  © 2026 TK-open-public; el texto completo está al principio del archivo.
+  https://github.com/taengu/AION2-DPS-Meter
+
 Npcap no viene incluido: se instala aparte desde https://npcap.com y tiene su propia licencia.
