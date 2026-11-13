@@ -91,7 +91,7 @@ public partial class App : Application
         builder.Services.AddSingleton(sp => new MeterSession(
             sp.GetRequiredService<CombatEngine>(),
             sp.GetRequiredService<CaptureRecorder>(),
-            SkillNames.Load(AppPaths.In("Juego", "skills.json"), Path.Combine(AppContext.BaseDirectory, "data", "skills.json")).WithIcons(AppPaths.In("Juego", "iconos")),
+            SkillNames.LoadInstalled(AppContext.BaseDirectory, AppPaths.In("Juego", "skills.json")).WithIcons(AppPaths.In("Juego", "iconos")),
             // Quien ya tenía preferencias guardadas no es nuevo: ve las novedades al actualizar. Quien llega sin
             // preferencias ve la bienvenida (su propia ventana) y no la lista de novedades de versiones que no usó.
             UserStore.Load<MeterPreferences>(PreferencesFile) is { } saved

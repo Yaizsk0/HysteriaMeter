@@ -140,6 +140,40 @@ public class GameDataTests
         Assert.Equal("Publicada", NpcTable.LoadInstalled(folder, Path.Combine(folder, "no-existe.json")).Of(2)?.Name);
     }
 
+    [Fact]
+    public void Published_skill_list_names_the_skills_without_the_local_game_folder()
+    {
+        var file = FindRepoFile("skills-taengu.json");
+        var names = SkillNames.Load(file);
+
+        // Es lo que ve quien bajó el zip y no tiene Juego/skills.json: un archivo que no se lea queda vacío sin avisar.
+        Assert.True(SkillNames.CountIn(file) > 7000, $"{SkillNames.CountIn(file)} skills");
+        // Variantes de clase como llegan en el paquete (nivel y variante en los últimos 4 dígitos) y un ítem por ID exacto.
+        Assert.Equal("Punishing Strike", names.Of(12060240));
+        Assert.Equal("Bittercold Wind", names.Of(15280143));
+        Assert.Equal("Keen Strike", names.Of(11020010));
+        Assert.Equal("Theostone: Kaisinel's Vestige", names.Of(30000071));
+    }
+
+    [Fact]
+    public void Installed_skill_lists_go_from_the_published_one_to_the_hand_written_one()
+    {
+        var folder = Directory.CreateTempSubdirectory().FullName;
+        Directory.CreateDirectory(Path.Combine(folder, "data"));
+        var extracted = Path.Combine(folder, "juego.json");
+        File.WriteAllText(Path.Combine(folder, "data", "skills-taengu.json"), """{ "skills": { "1": "Publicada", "2": "Publicada", "3": "Publicada" } }""");
+        File.WriteAllText(extracted, """{ "skills": { "2": "Juego", "3": "Juego" } }""");
+        File.WriteAllText(Path.Combine(folder, "data", "skills.json"), """{ "skills": { "3": "A mano" } }""");
+
+        var names = SkillNames.LoadInstalled(folder, extracted);
+
+        Assert.Equal("Publicada", names.Of(1));
+        Assert.Equal("Juego", names.Of(2));
+        Assert.Equal("A mano", names.Of(3));
+        // Sin Juego/skills.json (lo normal en el zip) quedan la publicada y la del repo.
+        Assert.Equal("Publicada", SkillNames.LoadInstalled(folder, Path.Combine(folder, "no-existe.json")).Of(2));
+    }
+
     /// <summary>Sube desde la carpeta de salida hasta la raíz del repo y devuelve <c>data/&lt;archivo&gt;</c>.</summary>
     private static string FindRepoFile(string name)
     {

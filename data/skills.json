@@ -2,7 +2,7 @@
   // Nombres de skills por ID (el paquete de daño 0x3804 solo trae el ID, u32).
   // Se completan comparando una pelea grabada con la vista detallada de Combat Analysis.
   // Formato: "ID decimal": "Nombre". Los que falten se muestran como "Skill <ID>".
-  // Pisan a los de %LOCALAPPDATA%\HysteriaMeter\Juego\skills.json (MetaBot.GG), que no trae estas.
+  // Pisan a data/skills-taengu.json y a %LOCALAPPDATA%\HysteriaMeter\Juego\skills.json, si existe.
   "skills": {
     // Templario, pelea del 2026-10-19: mismo daño, golpes y críticos que Combat Analysis. Van por la skill base:
     // los últimos cuatro dígitos son nivel y variante (Punishing Strike llegó como 12060240).
