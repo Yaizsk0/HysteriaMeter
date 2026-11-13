@@ -199,8 +199,12 @@ public sealed class InicioTests
         try
         {
             var empty = WelcomeViewModel.GameDataStep(GameDataSummary.Read(folder));
-            Assert.Equal(("Revisar", false), (empty.State, empty.IsReady));
+            Assert.Equal(("Se bajan solos", false), (empty.State, empty.IsReady));
             Assert.Equal(new SetupAction("Abrir carpeta", folder, IsFolder: true), empty.Action);
+            var off = WelcomeViewModel.GameDataStep(GameDataSummary.Read(folder), downloadIcons: false);
+            Assert.Equal("Revisar", off.State);
+            Assert.Contains("apagada", off.Hint, StringComparison.Ordinal);
+            Assert.Equal("Bajando íconos de MetaBot.GG…", WelcomeViewModel.GameDataStep(GameDataSummary.Read(folder), true, "Bajando íconos de MetaBot.GG…").Hint);
 
             Directory.CreateDirectory(Path.Combine(folder, "iconos"));
             Directory.CreateDirectory(Path.Combine(folder, "clases"));

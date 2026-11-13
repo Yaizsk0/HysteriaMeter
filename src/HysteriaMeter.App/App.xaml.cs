@@ -106,6 +106,7 @@ public partial class App : Application
         });
         builder.Services.AddSingleton<OverlayWindows>();
         builder.Services.AddSingleton<TrayIcon>();
+        builder.Services.AddHostedService<Icons.IconService>();
         if (UpdateState.IsAvailable)
         {
             builder.Services.AddHostedService<UpdateService>();

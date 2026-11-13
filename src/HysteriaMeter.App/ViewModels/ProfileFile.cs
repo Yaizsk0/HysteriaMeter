@@ -36,6 +36,7 @@ public static class ProfileFile
                     LastSeenNews = current.LastSeenNews,
                     UiScale = current.UiScale,
                     AutoUpdate = current.AutoUpdate,
+                    DownloadIcons = current.DownloadIcons,
                     // Juntar .pcap en el disco lo decide cada uno, no el perfil de otro.
                     SaveRecentOnMismatch = current.SaveRecentOnMismatch,
                     // Un perfil viejo no vuelve a disparar el paso a la vista del rediseño en el próximo arranque.

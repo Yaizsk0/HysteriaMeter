@@ -76,6 +76,11 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         _session = session;
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(session.Preferences.RefreshMs), DispatcherPriority.Background, (_, _) => Refresh(), Dispatcher.CurrentDispatcher);
+        // Al terminar la descarga de íconos, Datos del juego vuelve a contar la carpeta (en el hilo de la ventana). Evento
+        // débil: IconState vive toda la sesión y no tiene que retener las ventanas cerradas.
+        var windowDispatcher = Dispatcher.CurrentDispatcher;
+        _iconsChanged = (_, _) => windowDispatcher.InvokeAsync(RefreshGameData);
+        System.ComponentModel.PropertyChangedEventManager.AddHandler(Icons.IconState.Current, _iconsChanged, nameof(Icons.IconState.Last));
         _engine = session.Engine;
         _recorder = session.Recorder;
         _history = session.History;
@@ -945,6 +950,13 @@ public sealed partial class MeterViewModel : ObservableObject
     {
         get => Preferences.AutoUpdate;
         set => Update(Preferences with { AutoUpdate = value }, nameof(AutoUpdate));
+    }
+
+    /// <summary>"Bajar íconos de MetaBot.GG" (Configuración → Datos del juego); se aplica al volver a abrir el meter.</summary>
+    public bool DownloadIcons
+    {
+        get => Preferences.DownloadIcons;
+        set => Update(Preferences with { DownloadIcons = value }, nameof(DownloadIcons));
     }
 
     /// <summary>Datos en la carpeta del programa (portable) o en %LOCALAPPDATA%.</summary>

@@ -76,7 +76,10 @@ public sealed partial class WelcomeViewModel : ObservableObject
 
     private readonly MeterSession _session;
     private readonly CaptureSetup _capture;
-    private readonly GameDataSummary _gameData;
+    private GameDataSummary _gameData;
+
+    /// <summary>La última vuelta de la descarga de íconos que se vio: al cambiar, se vuelve a contar la carpeta.</summary>
+    private Icons.IconResult? _iconsSeen;
 
     public WelcomeViewModel(MeterSession session, CaptureSetup capture, GameDataSummary gameData)
     {
@@ -99,6 +102,12 @@ public sealed partial class WelcomeViewModel : ObservableObject
     /// <summary>Vuelve a mirar la captura (llegó tráfico, se cortó). Lo llama la ventana cada segundo: solo lee memoria.</summary>
     public void Refresh()
     {
+        if (Icons.IconState.Current.Last is { } icons && !ReferenceEquals(icons, _iconsSeen))
+        {
+            _iconsSeen = icons;
+            _gameData = GameDataSummary.Read(_gameData.Folder);
+        }
+
         var steps = BuildSteps();
         if (!steps.SequenceEqual(Steps))
         {
@@ -147,7 +156,7 @@ public sealed partial class WelcomeViewModel : ObservableObject
     ];
 
     private IReadOnlyList<SetupStep> BuildSteps() =>
-        [NpcapStep(_capture.NpcapInstalled, _capture.NpcapAdminOnly), DeviceStep(_capture, _session.Status), GameDataStep(_gameData)];
+        [NpcapStep(_capture.NpcapInstalled, _capture.NpcapAdminOnly), DeviceStep(_capture, _session.Status), GameDataStep(_gameData, _session.Preferences.DownloadIcons, Icons.IconState.Current.StatusText)];
 
     /// <summary>Qué hacer sin Npcap (mock Inicio): lo comparten la bienvenida y la tarjeta del overlay.</summary>
     public const string NpcapMissingText =
@@ -211,13 +220,18 @@ public sealed partial class WelcomeViewModel : ObservableObject
         return new SetupStep(2, Title, fixedDevice ?? "Automática · se elige cuando llegue tráfico del juego", "Esperando tráfico", false);
     }
 
-    public static SetupStep GameDataStep(GameDataSummary data)
+    /// <param name="downloadIcons">"Bajar íconos de MetaBot.GG" prendido: sin eso no se promete que lleguen solos.</param>
+    /// <param name="iconStatus">Cómo va la descarga (<see cref="Icons.IconState.StatusText"/>); vacío si todavía no empezó.</param>
+    public static SetupStep GameDataStep(GameDataSummary data, bool downloadIcons = true, string iconStatus = "")
     {
         const string Title = "Datos del juego (opcional)";
         var folder = DisplayPath(data.Folder);
-        return data.HasSkillFile
+        // Los nombres vienen en el zip (data/skills-taengu.json); los íconos los baja Icons.IconService al abrir.
+        return data.HasSkillFile || data.Icons > 0 || data.Emblems > 0
             ? new SetupStep(3, Title, $"Nombres e íconos en {folder}: {Count(data.Skills, "skill", "skills")}, {Count(data.Icons, "ícono", "íconos")}, {Count(data.Emblems, "emblema", "emblemas")}", "Listo", true)
-            : new SetupStep(3, Title, $"Nombres e íconos en {folder}: todavía no hay skills.json", "Revisar", false, new SetupAction("Abrir carpeta", data.Folder, IsFolder: true));
+            : downloadIcons
+                ? new SetupStep(3, Title, iconStatus.Length > 0 ? iconStatus : $"Los nombres vienen con el meter; los íconos se bajan solos de MetaBot.GG a {folder} en unos minutos", "Se bajan solos", false, new SetupAction("Abrir carpeta", data.Folder, IsFolder: true))
+                : new SetupStep(3, Title, $"Los nombres vienen con el meter; sin íconos: la descarga de MetaBot.GG está apagada en Configuración → Datos del juego", "Revisar", false, new SetupAction("Abrir carpeta", data.Folder, IsFolder: true));
     }
 
     /// <summary>La ruta real, con %LOCALAPPDATA% en vez de la carpeta del usuario (como el mock); en modo portable, entera.</summary>

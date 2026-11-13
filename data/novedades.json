@@ -83,6 +83,7 @@
     {"id": 127, "text": "\"Guardar lo último\" en el menú ⋯: guarda en un .pcap los últimos 10 minutos del tráfico del juego, aunque no hayas prendido REC. En Configuración, Captura, puede guardarlos solo cuando una pelea no cierra."},
     {"id": 128, "text": "Casi todos los monstruos tienen nombre: trash, invocaciones y bosses, con la lista de taengu/AION2-DPS-Meter (licencia MIT). Las peleas que guardaste como \"NPC 2100664\" muestran el nombre de hoy."},
     {"id": 129, "text": "El historial reconoce a los bosses de la lista de NPCs como el vivo: insignia, ★ y récords. Un boss cuenta desde los 10 s, así que un totem que muere en 2 s ya no saca tarjeta ni aviso de récord."},
-    {"id": 130, "text": "Las skills tienen nombre recién bajado el zip: unas 7.000 de la lista de taengu/AION2-DPS-Meter (licencia MIT), sin armar la carpeta Juego. Los íconos siguen saliendo solo de esa carpeta."}
+    {"id": 130, "text": "Las skills tienen nombre recién bajado el zip: unas 7.000 de la lista de taengu/AION2-DPS-Meter (licencia MIT), sin armar la carpeta Juego. Los íconos siguen saliendo solo de esa carpeta."},
+    {"id": 131, "text": "Íconos de skills y emblemas de clase sin hacer nada: al abrir, el meter baja de MetaBot.GG los que falten (unos 5 minutos la primera vez). Se apaga en Configuración → Datos del juego."}
   ]
 }
