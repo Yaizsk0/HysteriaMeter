@@ -1,7 +1,7 @@
 <!--
 Sync Impact Report
-- Versión: 1.0.0 → 1.1.0
-- Principios agregados: VII (datos del cliente instalado, solo locales)
+- Versión: 1.1.0 → 1.2.0
+- Principio ampliado: VII suma los íconos que el meter baja de un sitio público (MetaBot.GG) en la PC de cada usuario
 - Secciones sin cambios; plantillas revisadas: plan-template.md ✅, spec-template.md ✅, tasks-template.md ✅ (sin cambios necesarios)
 - TODOs pendientes: ninguno
 -->
@@ -56,6 +56,7 @@ Nombres de skills y NPCs e íconos se pueden extraer de los archivos del juego i
 - Solo lee los `.pak`/`.utoc`/`.ucas` en disco, con el juego cerrado. No abre el proceso del juego ni su memoria (principio I).
 - La clave de los archivos la provee el usuario por parámetro o variable de entorno; nunca se guarda en el repo.
 - Lo extraído queda en `%LOCALAPPDATA%\HysteriaMeter\Juego` y NUNCA se sube al repo ni se distribuye: es contenido de NCSOFT.
+- Excepción para los íconos: el meter puede bajar íconos de skills y emblemas de clase de un sitio público que lo permita (hoy MetaBot.GG, con atribución y a un ritmo razonable) directo a la carpeta `Juego` de cada PC. Se puede apagar, no manda datos del usuario y las imágenes tampoco van al repo ni al zip: el repo lleva solo la lista de IDs (`data/iconos-metabot.json`).
 
 **Por qué**: es lo que hacen los meters y bases de datos de la comunidad para mostrar nombres e íconos, pero aislado del meter para que este siga siendo 100 % pasivo, y sin redistribuir arte ni datos del juego.
 
@@ -77,4 +78,4 @@ Nombres de skills y NPCs e íconos se pueden extraer de los archivos del juego i
 
 Esta constitución tiene prioridad sobre cualquier otra práctica del repo. Cambiarla requiere un PR que actualice este archivo, suba la versión (MAJOR si se quita o redefine un principio, MINOR si se agrega uno, PATCH para aclaraciones) y revise las plantillas en `.specify/templates/`. Todo plan debe pasar el "Constitution Check" contra estos principios; las excepciones se justifican en la tabla "Complexity Tracking" del plan.
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-14 | **Last Amended**: 2026-10-16
+**Version**: 1.2.0 | **Ratified**: 2026-10-14 | **Last Amended**: 2026-11-13

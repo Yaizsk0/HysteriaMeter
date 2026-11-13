@@ -49,4 +49,9 @@ Lista de skills (data/skills-taengu.json)
   © 2026 TK-open-public; el texto completo está al principio del archivo.
   https://github.com/taengu/AION2-DPS-Meter
 
+Íconos de skills y emblemas de clase
+  No vienen en el zip: el meter los baja de MetaBot.GG en cada PC (https://metabot.gg/en/aion-2/skills y
+  https://metabot.gg/en/aion-2/classes), con atribución según sus términos. El arte es de NCSOFT.
+  data/iconos-metabot.json lleva solo la lista de IDs.
+
 Npcap no viene incluido: se instala aparte desde https://npcap.com y tiene su propia licencia.

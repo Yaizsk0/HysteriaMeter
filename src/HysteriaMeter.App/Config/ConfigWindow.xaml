@@ -6,6 +6,7 @@
         xmlns:vm="clr-namespace:HysteriaMeter.App.ViewModels"
         xmlns:conv="clr-namespace:HysteriaMeter.App.Converters"
         xmlns:update="clr-namespace:HysteriaMeter.App.Update"
+        xmlns:icons="clr-namespace:HysteriaMeter.App.Icons"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance vm:MeterViewModel}"
         Title="Configuración"
@@ -685,8 +686,27 @@
                         </StackPanel>
                         <StackPanel Style="{StaticResource Block}">
                             <TextBlock Text="DE DÓNDE SALEN" Style="{StaticResource BlockLabel}" />
+                            <CheckBox Style="{StaticResource Switch}" Content="Bajar íconos de MetaBot.GG" IsChecked="{Binding DownloadIcons}"
+                                      Tag="Al abrir el meter baja los íconos de skills y los emblemas de clase que falten, de a uno. Se aplica la próxima vez que lo abrís." />
+                            <TextBlock Text="{Binding Source={x:Static icons:IconState.Current}, Path=StatusText}" Margin="0,4,0,8">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                                        <Style.Triggers>
+                                            <Trigger Property="Text" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                             <TextBlock Style="{StaticResource SecondaryText}" TextWrapping="Wrap" LineHeight="18"
-                                       Text="Los deja hysteria-extract (tools/HysteriaMeter.Extractor), que lee los archivos de AION 2 en disco con el juego cerrado. Lo que cargues a mano en data/ les gana. Se leen al abrir el meter; nada de esto va al repo." />
+                                       Text="Los íconos y emblemas son de MetaBot.GG y el arte es de NCSOFT: se bajan en esta PC y no viajan en el repo ni en el zip. Los nombres de skills y NPCs vienen con el meter (lista MIT de taengu/AION2-DPS-Meter). Lo que cargues a mano en data/ o en esta carpeta les gana." />
+                            <WrapPanel Margin="0,6,0,0">
+                                <Button Style="{StaticResource ButtonLink}" Content="Íconos: metabot.gg/en/aion-2/skills" Command="{Binding OpenLinkCommand}"
+                                        CommandParameter="{x:Static icons:IconManifest.SkillsPage}" Margin="0,0,16,0" />
+                                <Button Style="{StaticResource ButtonLink}" Content="Emblemas: metabot.gg/en/aion-2/classes" Command="{Binding OpenLinkCommand}"
+                                        CommandParameter="{x:Static icons:IconManifest.ClassesPage}" />
+                            </WrapPanel>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>

@@ -33,7 +33,12 @@ Solo lee una copia del tráfico de red del juego (captura pasiva con Npcap). No 
 proceso ni la memoria del juego y no automatiza acciones.
 
 FIRMA Y PRIVACIDAD
-Quién firma el .exe y qué datos salen de la PC (solo la consulta de actualizaciones a GitHub y, si lo configurás, el
-resumen a Discord): https://github.com/Yaizsk0/HysteriaMeter#code-signing-policy
+Quién firma el .exe y qué datos salen de la PC (la consulta de actualizaciones a GitHub, la descarga de íconos de
+MetaBot.GG y, si lo configurás, el resumen a Discord): https://github.com/Yaizsk0/HysteriaMeter#code-signing-policy
+
+ÍCONOS
+- Al abrir, el meter baja de MetaBot.GG (https://metabot.gg/en/aion-2/skills) los íconos de skills y los emblemas de
+  clase que falten, a datos\Juego. La primera vez tarda unos 5 minutos. El arte es de NCSOFT: no viene en el zip.
+- Se apaga en Configuración, Datos del juego, "Bajar íconos de MetaBot.GG".
 
 Licencia de Hysteria Meter: MIT (LICENSE.txt). Licencias de terceros: carpeta "licencias".

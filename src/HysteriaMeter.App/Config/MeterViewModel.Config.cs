@@ -138,6 +138,26 @@ public sealed partial class MeterViewModel
     public IReadOnlyList<ThemeCard> ThemeCards => ThemeCard.All();
 #pragma warning restore CA1822
 
+    /// <summary>Los links de la atribución (Datos del juego): solo las páginas de MetaBot de las que salen los íconos.</summary>
+    [RelayCommand]
+    private static void OpenLink(string? url)
+    {
+        if (url is Icons.IconManifest.SkillsPage or Icons.IconManifest.ClassesPage)
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+    }
+
+    /// <summary>Lo sostiene la instancia: el evento de <see cref="Icons.IconState"/> es débil.</summary>
+    private readonly EventHandler<System.ComponentModel.PropertyChangedEventArgs> _iconsChanged;
+
+    /// <summary>Vuelve a contar la carpeta Juego (lo llama la descarga de íconos al terminar).</summary>
+    private void RefreshGameData()
+    {
+        _gameData = null;
+        OnPropertyChanged(nameof(GameData));
+    }
+
     [RelayCommand]
     private void OpenGameData()
     {

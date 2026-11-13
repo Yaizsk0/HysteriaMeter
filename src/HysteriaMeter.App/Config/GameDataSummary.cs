@@ -4,14 +4,14 @@ using HysteriaMeter.App.ViewModels;
 namespace HysteriaMeter.App.Config;
 
 /// <summary>
-/// Qué hay en la carpeta <c>Juego</c> (lo que deja <c>hysteria-extract</c>), para Configuración → Datos del juego y el
+/// Qué hay en la carpeta <c>Juego</c> (los íconos que baja <c>Icons.IconService</c> y lo que deje <c>hysteria-extract</c>), para Configuración → Datos del juego y el
 /// paso "Datos del juego" de la bienvenida: las dos cuentan con este tipo y dan el mismo número. Skills con nombre en
 /// <c>skills.json</c>, íconos en <c>iconos\</c> y emblemas de clase en <c>clases\</c>. Solo cuenta archivos en disco;
 /// los mismos que lee App al arrancar.
 /// </summary>
 /// <param name="Folder">La carpeta real (<c>AppPaths.In("Juego")</c>; en modo portable, <c>datos\Juego</c> junto al .exe).</param>
 /// <param name="Exists">Si existe la carpeta: sin ella, Configuración avisa que las skills se ven con su número.</param>
-/// <param name="HasSkillFile">Si existe <c>skills.json</c>: es lo que decide "Listo" o "Revisar" en la bienvenida.</param>
+/// <param name="HasSkillFile">Si existe <c>skills.json</c>: con eso o con íconos, la bienvenida marca "Listo".</param>
 public sealed record GameDataSummary(string Folder, bool Exists, bool HasSkillFile, int Skills, int Icons, int Emblems)
 {
     /// <summary>Cuenta lo que hay en <paramref name="folder"/>. Una carpeta que falta o un archivo roto dan 0, no un error.</summary>

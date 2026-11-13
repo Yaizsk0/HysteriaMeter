@@ -159,6 +159,12 @@ public sealed record MeterPreferences
     /// </summary>
     public bool AutoUpdate { get; init; } = true;
 
+    /// <summary>
+    /// "Bajar íconos de MetaBot.GG": al abrir, el meter baja los íconos de skills y emblemas de clase que falten en
+    /// <c>Juego</c> (<see cref="Icons.IconService"/>). Es de cada PC: un perfil importado no lo cambia.
+    /// </summary>
+    public bool DownloadIcons { get; init; } = true;
+
     /// <summary>Tema visual (ver <see cref="MeterThemes"/>).</summary>
     public string Theme { get; init; } = MeterThemes.Default;
 

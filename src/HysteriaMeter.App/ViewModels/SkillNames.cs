@@ -38,13 +38,26 @@ public sealed class SkillNames(IReadOnlyDictionary<uint, string> names)
     /// <summary>Una copia propia, para no tocar la tabla compartida (por ejemplo <see cref="Empty"/>) al poner nombres.</summary>
     public SkillNames Copy() => new(names) { Custom = Custom, IconFolder = IconFolder };
 
-    /// <summary>La misma tabla con íconos desde esa carpeta (si existe).</summary>
-    public SkillNames WithIcons(string folder) => new(names) { Custom = Custom, IconFolder = Directory.Exists(folder) ? folder : null };
+    /// <summary>
+    /// La misma tabla con íconos desde esa carpeta. Puede no existir todavía: en una PC nueva la crea la descarga de
+    /// MetaBot (<see cref="Icons.IconService"/>) después de abrir el meter.
+    /// </summary>
+    public SkillNames WithIcons(string folder) => new(names) { Custom = Custom, IconFolder = folder };
 
     /// <summary>Carpeta con los íconos (<c>&lt;id&gt;.png</c>), por ejemplo <c>Juego\iconos</c>; <c>null</c> si no hay.</summary>
     public string? IconFolder { get; init; }
 
     private readonly Dictionary<uint, string?> _icons = [];
+
+    private static int _iconGeneration;
+
+    private int _seenGeneration;
+
+    /// <summary>
+    /// Avisa que aparecieron íconos nuevos en disco (los bajó <see cref="Icons.IconDownloader"/>): las tablas olvidan
+    /// los que tenían anotados como faltantes y los vuelven a buscar.
+    /// </summary>
+    public static void IconsChanged() => Interlocked.Increment(ref _iconGeneration);
 
     /// <summary>Ruta del ícono de la skill o, si no está, el de su skill base; <c>null</c> si no hay ninguno.</summary>
     public string? IconOf(uint skillId)
@@ -52,6 +65,12 @@ public sealed class SkillNames(IReadOnlyDictionary<uint, string> names)
         if (IconFolder is null)
         {
             return null;
+        }
+
+        if (Volatile.Read(ref _iconGeneration) is var generation && generation != _seenGeneration)
+        {
+            _icons.Clear();
+            _seenGeneration = generation;
         }
 
         if (!_icons.TryGetValue(skillId, out var icon))

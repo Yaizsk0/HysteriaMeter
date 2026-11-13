@@ -47,6 +47,7 @@ El juego manda solo el ID de los monstruos y de las skills. Los nombres salen de
 - `data/skills-taengu.json`: unos 7.000 nombres de skills de la misma lista MIT, generada con `tools/skills/skills_taengu.py <commit>`. Es la que trae el zip; `Juego\skills.json`, si la armaste, le gana.
 - `data/skills.json`, que le gana a las dos, o doble clic en una skill del detalle (queda en tus preferencias). En las skills de clase alcanza con nombrar la base: 15280143 usa el nombre de 15280000.
 - `data/classes.json`: las clases y sus colores.
+- Íconos de skills y emblemas de clase: al abrir, el meter baja los que falten de [MetaBot.GG](https://metabot.gg/en/aion-2/skills) a la carpeta `Juego` de tu PC (la lista de IDs está en `data/iconos-metabot.json`). El arte es de NCSOFT: no va en el repo ni en el zip. Se apaga en Configuración → Datos del juego.
 - `tools/HysteriaMeter.Extractor` (`hysteria-extract`): lee los archivos del juego instalado, con el juego cerrado y la clave que pongas vos, y deja nombres e íconos en `%LOCALAPPDATA%\HysteriaMeter\Juego`. Lo que escribas en `data/npcs.json` o `data/skills.json` les gana. Nada extraído va al repo.
 
 ## Compilar
@@ -91,9 +92,10 @@ Free code signing provided by [SignPath.io](https://about.signpath.io), certific
 
 ### Privacidad
 
-Hysteria Meter no manda información a otros sistemas, salvo en estos tres casos:
+Hysteria Meter no manda información a otros sistemas, salvo en estos cuatro casos:
 
 - **Actualización automática** (solo el zip portable, prendida de fábrica): consulta la lista de releases en `api.github.com` y, si hay una versión nueva, baja el zip y su `.sha256` de `github.com`. El pedido no lleva datos tuyos ni de tus peleas: GitHub ve tu IP y la versión del meter. Se apaga en Configuración → PROGRAMA → "Actualizar solo".
+- **Íconos** (prendido de fábrica): al abrir, baja de `metabot.gg` los íconos de skills y emblemas de clase que falten, de a uno. Son pedidos de imágenes públicas sin datos tuyos: MetaBot ve tu IP y la versión del meter. Se apaga en Configuración → Datos del juego → "Bajar íconos de MetaBot.GG".
 - **Discord:** solo si pegás la URL de un webhook en Configuración. Manda el resumen de una pelea a ese canal cuando tocás "Mandar ahora" o, si lo prendiste, al derrotar un boss. El resumen lleva los nombres de los jugadores, salvo que actives "Ocultar los nombres de los demás".
 - **Reportar un problema:** abre el navegador con un issue de GitHub ya escrito (versión, sistema, estado de la captura y diagnóstico, sin nombres). Se publica solo si lo mandás vos.
 
